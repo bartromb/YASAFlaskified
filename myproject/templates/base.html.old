@@ -29,24 +29,24 @@
                 <h2>About YASA Library</h2>
                 <div>
                     <h3>Nederlands:</h3>
-                    <p>De YASA (Yet Another Spindle Algorithm) Python-bibliotheek is ontworpen voor slaapanalyse met behulp van machine learning-technieken om de slaapstadia en slaapgebeurtenissen te automatiseren en te verbeteren. Machine learning helpt bij het identificeren van patronen en anomalieën in slaapgegevens, waardoor een nauwkeurigere en efficiëntere analyse mogelijk is dan traditionele methoden.</p>
+                    <p>De YASA (Yet Another Sleep Algorithm) Python-bibliotheek is ontworpen voor slaapanalyse met behulp van machine learning-technieken om de slaapstadia en slaapgebeurtenissen te automatiseren en te verbeteren. Machine learning helpt bij het identificeren van patronen en anomalieën in slaapgegevens, waardoor een nauwkeurigere en efficiëntere analyse mogelijk is dan traditionele methoden.</p>
                     <p>Dank aan Raphaël Vallat, de oorspronkelijke auteur, voor zijn belangrijke bijdrage aan de slaapwetenschap door de ontwikkeling van YASA.</p>
                     <p>Lees meer over YASA: <a href="https://raphaelvallat.com/yasa/build/html/index.html">YASA Library</a></p>
                 </div>
                 <div>
                     <h3>Français:</h3>
-                    <p>La bibliothèque Python YASA (Yet Another Spindle Algorithm) est conçue pour l'analyse du sommeil, en utilisant des techniques d'apprentissage automatique pour automatiser et améliorer le classement des stades de sommeil et la détection des événements de sommeil. L'apprentissage automatique aide à identifier les modèles et les anomalies dans les données de sommeil, fournissant une analyse plus précise et efficace que les méthodes traditionnelles.</p>
+                    <p>La bibliothèque Python YASA (Yet Another Sleep Algorithm) est conçue pour l'analyse du sommeil, en utilisant des techniques d'apprentissage automatique pour automatiser et améliorer le classement des stades de sommeil et la détection des événements de sommeil. L'apprentissage automatique aide à identifier les modèles et les anomalies dans les données de sommeil, fournissant une analyse plus précise et efficace que les méthodes traditionnelles.</p>
                     <p>Merci à Raphaël Vallat, l'auteur original, pour sa contribution significative à la science du sommeil grâce au développement de YASA.</p>
                     <p>En savoir plus sur YASA: <a href="https://raphaelvallat.com/yasa/build/html/index.html">YASA Library</a></p>
                 </div>
                 <div>
                     <h3>English:</h3>
-                    <p>The YASA (Yet Another Spindle Algorithm) Python library is designed for sleep analysis, using machine learning techniques to automate and improve sleep staging and sleep event detection. Machine learning helps identify patterns and anomalies in sleep data, providing more accurate and efficient analysis than traditional methods.</p>
+                    <p>The YASA (Yet Another Sleep Algorithm) Python library is designed for sleep analysis, using machine learning techniques to automate and improve sleep staging and sleep event detection. Machine learning helps identify patterns and anomalies in sleep data, providing more accurate and efficient analysis than traditional methods.</p>
                     <p>Thanks to Raphaël Vallat, the original author, for his significant contribution to sleep science through the development of YASA.</p>
                     <p>Learn more about YASA: <a href="https://raphaelvallat.com/yasa/build/html/index.html">YASA Library</a></p>
                 </div>
                 <p><a href="https://elifesciences.org/articles/70092">Read the article on eLife Sciences</a></p>
-                <p>This application is distributed under the BSD 3-Clause License. <a href="https://github.com/bartromb/YASAFlaskified">View on GitHub</a></p>
+                <p>© Bart Rombaut 2024</p>
             </section>
         </footer>
     </div>
