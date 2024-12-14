@@ -5,8 +5,6 @@ This project is built on the YASA Python library, a powerful tool for sleep anal
 
 YASA Flaskified is a web application leveraging Flask, Redis, Gunicorn, and Nginx to provide an accessible platform for EEG data processing, sleep analysis, and results visualization. It integrates YASA for advanced scientific analysis while offering a user-friendly interface for researchers and practitioners.
 
-You can find the full project on GitHub at: [YASA Flaskified Repository](https://github.com/bartromb/YASAFlaskified)
-
 ---
 
 ## Features
@@ -14,29 +12,6 @@ You can find the full project on GitHub at: [YASA Flaskified Repository](https:/
 - File upload and processing
 - Task queue using Redis
 - Result visualization and download
-
----
-
-## Screenshots
-
-### Login Page
-The login page allows users to securely access the application. Administrators can create new user accounts.
-
-![Login Page](images/Screenshot_01.png)
-
----
-
-### Upload Page
-Users can upload EEG data files (e.g., EDF format). The application automatically identifies EEG channels and begins processing the files.
-
-![Upload Page](images/Screenshot_02.png)
-
----
-
-### Results Page
-Once processing is complete, users can download the generated hypnogram as a PDF and the corresponding data in CSV format. The system also provides a visualization of the results.
-
-![Results Page](images/Screenshot_04.png)
 
 ---
 
@@ -60,8 +35,8 @@ To use this application, ensure you have the following:
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/bartromb/YASAFlaskified.git
-   cd YASAFlaskified
+   git clone https://github.com/<your-username>/<repository-name>.git
+   cd <repository-name>
    ```
 
 2. **Set Up Python Environment**
@@ -334,5 +309,5 @@ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
 SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN
-
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+```

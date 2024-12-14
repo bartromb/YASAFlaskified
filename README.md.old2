@@ -17,29 +17,6 @@ You can find the full project on GitHub at: [YASA Flaskified Repository](https:/
 
 ---
 
-## Screenshots
-
-### Login Page
-The login page allows users to securely access the application. Administrators can create new user accounts.
-
-![Login Page](images/Screenshot_01.png)
-
----
-
-### Upload Page
-Users can upload EEG data files (e.g., EDF format). The application automatically identifies EEG channels and begins processing the files.
-
-![Upload Page](images/Screenshot_02.png)
-
----
-
-### Results Page
-Once processing is complete, users can download the generated hypnogram as a PDF and the corresponding data in CSV format. The system also provides a visualization of the results.
-
-![Results Page](images/Screenshot_04.png)
-
----
-
 ## Requirements
 - Python 3.8+
 - Redis
