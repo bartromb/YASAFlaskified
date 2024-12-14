@@ -1,7 +1,9 @@
-YASA Flaskified
+# YASA Flaskified
 
 ## Overview
-This project is a Flask web application designed to process and analyze EEG data. It uses Redis for task management, Gunicorn for application serving, and Nginx for reverse proxy. This application integrates the YASA library for advanced sleep analysis, with gratitude to Raphaël Vallat, the original author of YASA, for his significant contributions to sleep science. Learn more about YASA on [Raphaël Vallat's website](https://raphaelvallat.com/yasa/) and explore the related [eLife article](https://elifesciences.org/articles/70092).
+This project is built on the YASA Python library, a powerful tool for sleep analysis using machine learning techniques to automate and enhance sleep staging and event detection. Developed by Raphaël Vallat, YASA provides precise and efficient analysis of sleep data. Learn more about YASA on [Raphaël Vallat's website](https://raphaelvallat.com/yasa/) and explore the related [eLife article](https://elifesciences.org/articles/70092).
+
+YASA Flaskified is a web application leveraging Flask, Redis, Gunicorn, and Nginx to provide an accessible platform for EEG data processing, sleep analysis, and results visualization. It integrates YASA for advanced scientific analysis while offering a user-friendly interface for researchers and practitioners.
 
 ---
 
@@ -281,7 +283,7 @@ This project is licensed under the BSD 3-Clause License. See the LICENSE file fo
 ```text
 BSD 3-Clause License
 
-Copyright (c) 2024, Your Name
+Copyright (c) 2024
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -309,4 +311,3 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
-
