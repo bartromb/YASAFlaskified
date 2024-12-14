@@ -1,4 +1,4 @@
-# My Flask Project
+YASA Flaskified
 
 ## Overview
 This project is a Flask web application designed to process and analyze EEG data. It uses Redis for task management, Gunicorn for application serving, and Nginx for reverse proxy. This application integrates the YASA library for advanced sleep analysis, with gratitude to Raphaël Vallat, the original author of YASA, for his significant contributions to sleep science. Learn more about YASA on [Raphaël Vallat's website](https://raphaelvallat.com/yasa/) and explore the related [eLife article](https://elifesciences.org/articles/70092).
