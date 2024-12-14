@@ -5,6 +5,8 @@ This project is built on the YASA Python library, a powerful tool for sleep anal
 
 YASA Flaskified is a web application leveraging Flask, Redis, Gunicorn, and Nginx to provide an accessible platform for EEG data processing, sleep analysis, and results visualization. It integrates YASA for advanced scientific analysis while offering a user-friendly interface for researchers and practitioners.
 
+You can find the full project on GitHub at: [YASA Flaskified Repository](https://github.com/bartromb/YASAFlaskified)
+
 ---
 
 ## Features
@@ -35,8 +37,8 @@ To use this application, ensure you have the following:
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/<your-username>/<repository-name>.git
-   cd <repository-name>
+   git clone https://github.com/bartromb/YASAFlaskified.git
+   cd YASAFlaskified
    ```
 
 2. **Set Up Python Environment**
@@ -309,5 +311,5 @@ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
 SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-```
+OF THIS SOFTWARE, EVEN
+
