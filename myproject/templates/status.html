@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block title %}Processed Files Status{% endblock %}
+
+{% block header %}
+    <h1>Processed Files</h1>
+{% endblock %}
+
+{% block content %}
+    <ul>
+        {% for file in files %}
+            <li><a href="{{ url_for('download_file', filename=file) }}">{{ file }}</a></li>
+        {% endfor %}
+    </ul>
+{% endblock %}

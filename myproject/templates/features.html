@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>App Features</h1>
+    <p class="lead">Welcome to our EEG Sleep Staging Application! Below is a summary of the app's capabilities:</p>
+
+    <h2>1. User Authentication</h2>
+    <ul>
+        <li>Secure login/logout for registered users.</li>
+        <li>New user registration with password encryption.</li>
+    </ul>
+
+    <h2>2. File Upload</h2>
+    <ul>
+        <li>Supports uploading multiple `.edf` EEG files.</li>
+        <li>Ensures only valid files are processed.</li>
+    </ul>
+
+    <h2>3. Background Processing</h2>
+    <ul>
+        <li>Handles long-running EEG file processing tasks using Redis-backed RQ workers.</li>
+        <li>Processes EEG data to generate hypnograms (PDF) and sleep stage data (CSV).</li>
+    </ul>
+
+    <h2>4. Real-Time Job Monitoring</h2>
+    <ul>
+        <li>Tracks job progress on the "Processing" page.</li>
+        <li>Automatically redirects to results upon completion.</li>
+    </ul>
+
+    <h2>5. Results Display and Download</h2>
+    <ul>
+        <li>Displays processed files with links to download PDF and CSV results.</li>
+        <li>Organized storage of results in the `processed/` folder.</li>
+    </ul>
+
+    <h2>6. Admin and Logging</h2>
+    <ul>
+        <li>Automatically creates an admin account for database initialization.</li>
+        <li>Logs all actions for auditing and debugging purposes.</li>
+    </ul>
+
+    <h2>Future Possibilities</h2>
+    <p>The app is designed for scalability and can support additional features such as visualizations, extended file format support, and more advanced analytics.</p>
+
+    <a href="{{ url_for('login') }}" class="btn btn-primary mt-3">Back to Login</a>
+</div>
+{% endblock %}

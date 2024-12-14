@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h1>Processing Results</h1>
+    <ul>
+        {% for file in files %}
+            <li>
+                <strong>{{ file.filename }}</strong><br>
+                <a href="{{ file.pdf_url }}" target="_blank">Download PDF</a> |
+                <a href="{{ file.csv_url }}" target="_blank">Download CSV</a>
+            </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}

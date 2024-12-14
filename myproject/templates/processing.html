@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>Processing Files</h1>
+    <p>Your files are being processed. Please wait...</p>
+    <ul id="job-status-list">
+        {% for job in job_statuses %}
+        <li>{{ job.filename }}: {{ job.status }}</li>
+        {% endfor %}
+    </ul>
+</div>
+
+<script>
+    // Function to poll job statuses
+    function pollJobStatus() {
+        fetch("{{ url_for('processing') }}?ajax=true")
+            .then(response => response.json())
+            .then(data => {
+                // Update the job statuses dynamically
+                const jobStatusList = document.getElementById('job-status-list');
+                jobStatusList.innerHTML = '';
+                data.job_statuses.forEach(job => {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = `${job.filename}: ${job.status}`;
+                    jobStatusList.appendChild(listItem);
+                });
+
+                // Redirect to results if all jobs are finished
+                if (data.all_finished) {
+                    window.location.href = "{{ url_for('results') }}";
+                } else {
+                    setTimeout(pollJobStatus, 5000); // Continue polling every 5 seconds
+                }
+            })
+            .catch(error => {
+                console.error("Error polling job statuses:", error);
+            });
+    }
+
+    // Start polling
+    pollJobStatus();
+</script>
+{% endblock %}

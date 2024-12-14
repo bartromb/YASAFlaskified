@@ -1,0 +1,10 @@
+
+{
+    "UPLOAD_FOLDER": "/path/to/uploads",
+    "PROCESSED_FOLDER": "/path/to/processed",
+    "SECRET_KEY": "your_secret_key_here",
+    "SQLALCHEMY_DATABASE_URI": "sqlite:///your_database.db",
+    "LOG_FILE": "/path/to/logs/app.log",
+    "ADMIN_PASSWORD": "your_admin_password_here",
+    "JOB_TIMEOUT": 6000
+}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>Login</h2>
+    <form method="POST">
+        <div class="form-group">
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" class="form-control" required>
+        </div>
+        <div class="form-group">
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" class="form-control" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Login</button>
+    </form>
+    <p>
+        Don't have an account? <a href="{{ url_for('register') }}">Register here</a><br>
+        <small><i>Note: For the moment, only administrators can add new users.</i></small>
+    </p>
+
+    <!-- New Message for Experimental Server -->
+    <p class="alert alert-warning mt-3">
+        <strong>Warning:</strong> This is an experimental server. Use with caution.
+    </p>
+{% endblock %}
