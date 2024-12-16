@@ -1,14 +1,14 @@
 {% extends 'base.html' %}
 
-{% block title %}Upload File{% endblock %}
+{% block title %}Upload EDF File{% endblock %}
 
-{% block header %}
-<h1>Upload Your File(s)</h1>
-{% endblock %}
+{% block header %}Upload EDF File{% endblock %}
 
 {% block content %}
-<form method="POST" enctype="multipart/form-data">
-    <input type="file" name="files[]" multiple>
-    <button type="submit">Upload Files</button>
-</form>
+<main>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".edf" required>  
+        <input type="submit" value="Upload">
+    </form>
+</main>
 {% endblock %}
