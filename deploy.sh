@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Ensure root privileges
+# Ensure the script is run as root
 if [[ $EUID -ne 0 ]]; then
     echo "This script must be run as root."
     exit 1
@@ -18,56 +18,76 @@ MPLCONFIGDIR="$PROJECT_DIR/.config/matplotlib"
 CONFIG_FILE="$PROJECT_DIR/config.json"
 REPO_URL="https://github.com/bartromb/YASAFlaskified.git"
 
-# Prompt for deployment type
-read -p "Do you want to deploy locally (localhost) or on a domain? Enter 'local' or 'domain': " DEPLOY_OPTION
+# Deployment type prompt
+read -p "Deploy locally (localhost) or on a domain? Enter 'local' or 'domain': " DEPLOY_OPTION
 if [[ $DEPLOY_OPTION == "local" ]]; then
     DOMAIN="0.0.0.0"
-    echo "Deploying locally. Accessible via the server's IP on port 80."
+    echo "Deploying locally. Accessible via the server's IP address on port 80."
 elif [[ $DEPLOY_OPTION == "domain" ]]; then
     read -p "Enter the domain name for your website (e.g., example.com): " DOMAIN
     echo "Deploying on the domain: $DOMAIN"
 else
-    echo "Invalid option. Please run the script again and choose 'local' or 'domain'."
+    echo "Invalid option. Re-run the script and choose 'local' or 'domain'."
     exit 1
 fi
 
-# Install system packages
-apt update && apt upgrade -y
-apt install -y python3 python3-venv python3-pip nginx redis-server git certbot python3-certbot-nginx sqlite3 supervisor
+# Clean up previous installations
+echo "Cleaning up previous installations..."
 
-# Clone the repository
+# Stop and disable services
+systemctl stop $PROJECT_NAME.service
+systemctl disable $PROJECT_NAME.service
+systemctl stop nginx.service
+systemctl stop redis-server.service
+
+# Remove systemd service files
+rm -f /etc/systemd/system/$PROJECT_NAME.service
+
+# Remove Nginx configuration
+rm -f /etc/nginx/sites-available/$PROJECT_NAME
+rm -f /etc/nginx/sites-enabled/$PROJECT_NAME
+rm -f /etc/nginx/sites-enabled/default
+
+# Remove project directory
 if [[ -d "$PROJECT_DIR" ]]; then
-    read -p "$PROJECT_DIR exists. Overwrite? (y/N) " overwrite
-    [[ "$overwrite" != "y" ]] && exit 1
     rm -rf "$PROJECT_DIR"
 fi
-git clone "$REPO_URL" "$PROJECT_DIR" || { echo "Failed to clone repository"; exit 1; }
+
+echo "Previous installations cleaned."
+
+# Install system packages
+apt update && apt upgrade -y
+apt install -y python3 python3-venv python3-pip nginx redis-server git certbot python3-certbot-nginx sqlite3
+
+# Clone the repository
+git clone "$REPO_URL" "$PROJECT_DIR" || { echo "Cloning repository failed"; exit 1; }
 
 # Ensure correct project structure
 if [[ -d "$PROJECT_DIR/myproject" ]]; then
-    mv "$PROJECT_DIR/myproject"/* "$PROJECT_DIR/" || { echo "Failed to restructure project files"; exit 1; }
+    mv "$PROJECT_DIR/myproject"/* "$PROJECT_DIR/" || { echo "Reorganizing project files failed"; exit 1; }
     rm -rf "$PROJECT_DIR/myproject"
 fi
 
-# Verify the presence of app.py
+# Check for app.py
 if [[ ! -f "$PROJECT_DIR/app.py" ]]; then
-    echo "app.py not found in $PROJECT_DIR. Please check your repository structure."
+    echo "app.py not found in $PROJECT_DIR. Check your repository structure."
     exit 1
 fi
 
 # Set up virtual environment and install requirements
-python3 -m venv "$VENV_DIR" || { echo "Failed to create virtual environment"; exit 1; }
+python3 -m venv "$VENV_DIR" || { echo "Creating virtual environment failed"; exit 1; }
 source "$VENV_DIR/bin/activate"
 pip install --upgrade pip
-pip install -r "$PROJECT_DIR/requirements.txt" || { echo "Failed to install requirements"; exit 1; }
+pip install -r "$PROJECT_DIR/requirements.txt" || { echo "Installing requirements failed"; exit 1; }
 deactivate
 
 # Configure directories
 mkdir -p "$RUN_DIR" "$LOGS_DIR" "$UPLOAD_FOLDER" "$PROCESSED_FOLDER" "$INSTANCE_FOLDER" "$MPLCONFIGDIR"
 chown -R www-data:www-data "$PROJECT_DIR"
 chmod -R 755 "$PROJECT_DIR"
+chmod -R 777 "$MPLCONFIGDIR"
 
-# Create application config
+# Create application configuration
 cat > "$CONFIG_FILE" <<EOL
 {
     "UPLOAD_FOLDER": "$UPLOAD_FOLDER",
@@ -79,18 +99,15 @@ cat > "$CONFIG_FILE" <<EOL
 }
 EOL
 
-# Set PYTHONPATH to the project directory for module resolution
-export PYTHONPATH="$PROJECT_DIR"
-
-# Initialize the database and create admin user
+# Initialize database and create admin user
 source "$VENV_DIR/bin/activate"
-cd "$PROJECT_DIR"  # Change working directory to the project directory
+cd "$PROJECT_DIR"
 python3 -c "
 import os, json
 from app import app, db, User
 from werkzeug.security import generate_password_hash
 
-with open('config.json') as f: # Now uses relative path since working directory is set
+with open('config.json') as f:
     config = json.load(f)
 app.config.from_mapping(config)
 with app.app_context():
@@ -104,29 +121,35 @@ with app.app_context():
 " || { echo "Database initialization failed"; exit 1; }
 deactivate
 
-# Gunicorn configuration (using Supervisor)
-cat > /etc/supervisor/conf.d/$PROJECT_NAME.conf <<EOL
-[program:$PROJECT_NAME]
-command=$VENV_DIR/bin/gunicorn --worker-class gevent -w 3 --timeout 6000 --bind unix:$RUN_DIR/gunicorn.sock app:app
-directory=$PROJECT_DIR
-user=www-data
-autostart=true
-autorestart=true
-stdout_logfile=$LOGS_DIR/gunicorn_stdout.log
-stderr_logfile=$LOGS_DIR/gunicorn_stderr.log
-environment=MPLCONFIGDIR="$MPLCONFIGDIR"
+# Ensure users.db is writable
+chown www-data:www-data "$INSTANCE_FOLDER/users.db"
+chmod 664 "$INSTANCE_FOLDER/users.db"
+
+# Create systemd service for Gunicorn
+cat > /etc/systemd/system/$PROJECT_NAME.service <<EOL
+[Unit]
+Description=Gunicorn instance to serve $PROJECT_NAME
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=$PROJECT_DIR
+Environment="PATH=$VENV_DIR/bin"
+Environment="MPLCONFIGDIR=$MPLCONFIGDIR"
+ExecStart=$VENV_DIR/bin/gunicorn --worker-class gevent -w 3 --timeout 6000 --bind unix:$RUN_DIR/gunicorn.sock app:app
+
+[Install]
+WantedBy=multi-user.target
 EOL
 
-# Reload Supervisor configuration and start Gunicorn process
-supervisorctl reread
-supervisorctl update
-supervisorctl restart $PROJECT_NAME
-
-# Configure Nginx
+# Create Nginx configuration
 cat > /etc/nginx/sites-available/$PROJECT_NAME <<EOL
 server {
     listen 80;
     server_name $DOMAIN;
+
+    client_max_body_size 2000M;
 
     location / {
         proxy_pass http://unix:$RUN_DIR/gunicorn.sock;
@@ -142,31 +165,20 @@ server {
 EOL
 
 ln -sf /etc/nginx/sites-available/$PROJECT_NAME /etc/nginx/sites-enabled/
-nginx -t && systemctl restart nginx || { echo "Failed to start Nginx"; exit 1; }
 
-# Redis configuration and RQ worker setup
-systemctl enable redis-server
-systemctl start redis-server
+# Enable and start services
+systemctl daemon-reload
+systemctl enable $PROJECT_NAME.service
+systemctl start $PROJECT_NAME.service
+systemctl enable nginx.service
+systemctl restart nginx.service
+systemctl enable redis-server.service
+systemctl start redis-server.service
 
-cat > /etc/supervisor/conf.d/rq-worker.conf <<EOL
-[program:rq-worker]
-command=$VENV_DIR/bin/rq worker
-directory=$PROJECT_DIR
-user=www-data
-autostart=true
-autorestart=true
-stdout_logfile=$LOGS_DIR/rq_worker_stdout.log
-stderr_logfile=$LOGS_DIR/rq_worker_stderr.log
-EOL
-
-supervisorctl reread
-supervisorctl update
-supervisorctl restart rq-worker
-
-# Set up Let's Encrypt if deploying on a domain
+# Set up Let's Encrypt for domain-based deployments
 if [[ $DEPLOY_OPTION == "domain" ]]; then
     certbot --nginx -d $DOMAIN --non-interactive --agree-tos --email admin@$DOMAIN || { echo "Let's Encrypt setup failed"; exit 1; }
 fi
 
 # Final message
-echo "Deployment completed successfully. If deploying locally, access the application at http://<server-ip>."
+echo "Deployment completed successfully. Access your application at http://$DOMAIN."
