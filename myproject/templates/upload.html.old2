@@ -7,7 +7,7 @@
 {% block content %}
 <main>
     <form method="POST" enctype="multipart/form-data">
-        <input type="file" name="files[]" accept=".edf" multiple required>  
+        <input type="file" name="file" accept=".edf" required>  
         <input type="submit" value="Upload">
     </form>
 </main>
