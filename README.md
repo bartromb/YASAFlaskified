@@ -50,20 +50,19 @@ Once processing is complete, users can download the generated hypnogram as a PDF
 
 ## Deployment Guide (Using `deploy.sh`)
 
-The easiest way to deploy this application is by using the `deploy.sh` script provided at the root of this repository. The script automates the installation and configuration process, ensuring all dependencies and services are set up correctly.
+The easiest way to deploy this application is by using the `deploy.sh` script provided at the root of this repository. The script automates the installation and configuration process, ensuring all dependencies and services are set up correctly. It is tested on a vanilla Ubuntu 24.04 server.
 
 ### Steps to Deploy
 
-1. **Clone the Repository**
+1. **Download the Deployment Script**
    ```bash
-   git clone https://github.com/bartromb/YASAFlaskified.git
-   cd YASAFlaskified
+   wget https://raw.githubusercontent.com/bartromb/YASAFlaskified/main/deploy.sh
+   chmod +x deploy.sh
    ```
 
 2. **Run the Deployment Script**
-   Make the script executable and run it:
+   Run the script with sudo privileges:
    ```bash
-   chmod +x deploy.sh
    sudo ./deploy.sh
    ```
 
@@ -87,22 +86,23 @@ If you prefer to manually set up the application, follow these steps:
 
 ### Prerequisites
 Ensure you have the following:
-- A server running Ubuntu 20.04 or later.
+- A server running Ubuntu 24.04 or later.
 - Basic knowledge of terminal commands.
 - A valid domain name (optional but recommended).
 
 ### Step-by-Step Instructions
 
-1. **Clone the Repository**
+1. **Download the Repository**
    ```bash
-   git clone https://github.com/bartromb/YASAFlaskified.git
-   cd YASAFlaskified
+   wget https://github.com/bartromb/YASAFlaskified/archive/main.zip
+   unzip main.zip
+   cd YASAFlaskified-main
    ```
 
 2. **Install System Dependencies**
    ```bash
    sudo apt update && sudo apt upgrade -y
-   sudo apt install -y python3 python3-venv python3-pip nginx redis-server git certbot python3-certbot-nginx sqlite3
+   sudo apt install -y python3 python3-venv python3-pip nginx redis-server certbot python3-certbot-nginx sqlite3
    ```
 
 3. **Set Up Python Environment**
