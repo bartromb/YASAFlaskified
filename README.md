@@ -3,6 +3,11 @@
 ## Overview
 YASA Flaskified is a web application designed to streamline EEG data processing and sleep analysis. Built on Flask, Redis, Gunicorn, and Nginx, it integrates the **YASA** Python library for automated sleep staging and hypnogram generation. This platform allows users to upload EEG files, process them asynchronously, and visualize the results in an easy-to-use interface.
 
+YASA Flaskified is built upon the **YASA** library developed by Raphaël Vallat. YASA is a powerful tool for sleep analysis using machine learning techniques, enabling precise and efficient sleep staging and event detection. Special thanks to the original author for his contributions to the scientific community.
+
+- Learn more about the YASA library on [Raphaël Vallat’s website](https://raphaelvallat.com/yasa/)
+- Explore the related article published in **eLife**: [Automated sleep staging with YASA](https://elifesciences.org/articles/70092)
+
 The deployment is simplified with an automated script (`deploy.sh`) to set up the application on a fresh Ubuntu 24.04 server.
 
 You can find the full project on GitHub at: [YASA Flaskified Repository](https://github.com/bartromb/YASAFlaskified)
