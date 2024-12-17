@@ -34,6 +34,11 @@ fi
 # Clean up previous installations
 echo "Cleaning up previous installations..."
 
+systemctl stop $PROJECT_NAME.service nginx redis-server
+for i in {1..4}; do
+    systemctl stop rq-worker@$i
+done
+
 # Stop and disable services
 systemctl stop $PROJECT_NAME.service
 systemctl disable $PROJECT_NAME.service
@@ -142,6 +147,30 @@ ExecStart=$VENV_DIR/bin/gunicorn --worker-class gevent -w 3 --timeout 6000 --bin
 [Install]
 WantedBy=multi-user.target
 EOL
+
+# Create systemd template for RQ Workers
+cat > /etc/systemd/system/rq-worker@.service <<EOL
+[Unit]
+Description=RQ Worker instance %i for $PROJECT_NAME
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=$PROJECT_DIR
+Environment="PATH=$VENV_DIR/bin"
+ExecStart=$VENV_DIR/bin/rq worker
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOL
+
+# Start 4 RQ Workers
+for i in {1..4}; do
+    systemctl enable rq-worker@$i
+    systemctl start rq-worker@$i
+done
 
 # Create Nginx configuration
 cat > /etc/nginx/sites-available/$PROJECT_NAME <<EOL
