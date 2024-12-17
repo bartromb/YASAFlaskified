@@ -1,5 +1,7 @@
 # YASA Flaskified
 
+![YASA Flaskified Logo](logo.png)
+
 ## Overview
 YASA Flaskified is a web application designed to streamline EEG data processing and sleep analysis. Built on Flask, Redis, Gunicorn, and Nginx, it integrates the **YASA** Python library for automated sleep staging and hypnogram generation. This platform allows users to upload EEG files, process them asynchronously, and visualize the results in an easy-to-use interface.
 
@@ -196,6 +198,11 @@ For users who prefer manual installation, follow these detailed steps:
      sudo systemctl enable rq-worker
      ```
 
+   - **Check RQ Worker Status**:
+     ```bash
+     sudo systemctl status rq-worker
+     ```
+
 ---
 
 ## Detailed Description of app.py
@@ -232,6 +239,10 @@ The `app.py` file is the core of YASA Flaskified. It includes:
 - View logs:
    ```bash
    tail -f logs/app.log
+   ```
+- Check RQ Worker status:
+   ```bash
+   sudo systemctl status rq-worker
    ```
 
 ---
