@@ -72,34 +72,51 @@ def process_file(file_path, output_folder):
         available_channels = edf.info['ch_names']
         logging.info(f"Available channels: {available_channels}")
 
+        # Dynamically detect EEG channels based on standard naming conventions
         eeg_prefixes = ['Fp', 'F', 'C', 'P', 'O', 'T']  # Standard prefixes for EEG channels
         eeg_channels = [
             ch for ch in available_channels
             if any(ch.upper().startswith(prefix.upper()) for prefix in eeg_prefixes) and any(c.isdigit() for c in ch)
         ]
 
+        # Detect EOG and EMG channels
+        eog_channels = [ch for ch in available_channels if 'EOG' in ch.upper()]
+        emg_channels = [ch for ch in available_channels if 'EMG' in ch.upper()]
+
+        # Handle missing EEG channels gracefully
         if not eeg_channels:
             logging.error(f"No EEG channels found in the file: {file_path}.")
-            flash(f"No EEG channels found in {fname}. Skipping file.", 'warning')
+            flash(f"No EEG channels found in {os.path.basename(file_path)}. Skipping file.", 'warning')
             return None, None
 
+        # Log detected channels
+        logging.info(f"Detected EEG Channels: {eeg_channels}")
+        logging.info(f"Detected EOG Channels: {eog_channels}")
+        logging.info(f"Detected EMG Channels: {emg_channels}")
+
+        # Use the first EEG channel for staging or process all and average results
         hypno_results = {}
         for eeg_channel in eeg_channels:
             logging.info(f'Processing EEG channel: {eeg_channel}')
-            sls = yasa.SleepStaging(edf, eeg_name=eeg_channel)
+            eog_name = eog_channels[0] if eog_channels else None
+            emg_name = emg_channels[0] if emg_channels else None
+            sls = yasa.SleepStaging(edf, eeg_name=eeg_channel, eog_name=eog_name, emg_name=emg_name)
             hypno_pred = sls.predict()
             hypno_pred = yasa.hypno_str_to_int(hypno_pred)
             hypno_results[eeg_channel] = hypno_pred
 
+        # Combine hypnograms from all EEG channels by averaging predictions
         combined_hypno = np.round(np.mean(list(hypno_results.values()), axis=0)).astype(int)
 
+        # Plot and save combined hypnogram as PDF with channel names in the title
         plt.figure(figsize=(11.69, 8.27))
         yasa.plot_hypnogram(combined_hypno)
-        plt.title(f'Hypnogram for {fname}')
+        plt.title(f'Hypnogram for {fname} (EEG Channels: {", ".join(eeg_channels)})')  # Adding channel names to title
         pdf_path = os.path.join(output_folder, f'{fname}_hypnogram.pdf')
         plt.savefig(pdf_path)
         plt.close()
 
+        # Export combined hypnogram to CSV
         hypno_export = pd.DataFrame({
             "onset": np.arange(len(combined_hypno)) * 30,
             "label": combined_hypno,
@@ -109,15 +126,16 @@ def process_file(file_path, output_folder):
         hypno_export.to_csv(csv_path, index=False)
 
         logging.info(f'Finished processing {file_path}')
-        return pdf_path, csv_path
     except Exception as e:
         logging.error(f'Error processing {file_path}: {e}')
         raise
+    return pdf_path, csv_path
 
 # RQ task wrapper for process_file
 def background_task(filepath):
     return process_file(filepath, app.config['PROCESSED_FOLDER'])
 
+# Routes
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -167,6 +185,7 @@ def upload_file():
                 logging.info(f"Saving file to {filepath}")
                 file.save(filepath)
 
+                # Enqueue job with timeout set to 6000 seconds
                 job_timeout = config.get('JOB_TIMEOUT', 6000)
                 job = queue.enqueue(background_task, filepath, job_timeout=job_timeout)
                 processed_files.append({'filename': file.filename, 'job_id': job.id})
@@ -208,9 +227,11 @@ def processing():
             logging.error(f"Error fetching job {file_info['job_id']}: {e}")
             job_statuses.append({'filename': file_info['filename'], 'status': 'Error'})
 
+    # Handle AJAX requests
     if request.args.get('ajax') == 'true':
         return jsonify({'job_statuses': job_statuses, 'all_finished': all_finished})
 
+    # Render the page for normal requests
     return render_template('processing.html', job_statuses=job_statuses)
 
 @app.route('/results')
@@ -290,6 +311,7 @@ def change_password():
         return redirect(url_for('upload_file'))
 
     return render_template('change_password.html')
+
 
 @app.route('/job_status/<job_id>')
 @login_required
