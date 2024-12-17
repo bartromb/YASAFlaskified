@@ -1,228 +1,235 @@
 # YASA Flaskified
 
 ## Overview
-This project is built on the YASA Python library, a powerful tool for sleep analysis using machine learning techniques to automate and enhance sleep staging and event detection. Developed by Raphaël Vallat, YASA provides precise and efficient analysis of sleep data. Learn more about YASA on [Raphaël Vallat's website](https://raphaelvallat.com/yasa/) and explore the related [eLife article](https://elifesciences.org/articles/70092).
+YASA Flaskified is a web application designed to streamline EEG data processing and sleep analysis. Built on Flask, Redis, Gunicorn, and Nginx, it integrates the **YASA** Python library for automated sleep staging and hypnogram generation. This platform allows users to upload EEG files, process them asynchronously, and visualize the results in an easy-to-use interface.
 
-YASA Flaskified is a web application leveraging Flask, Redis, Gunicorn, and Nginx to provide an accessible platform for EEG data processing, sleep analysis, and results visualization. It integrates YASA for advanced scientific analysis while offering a user-friendly interface for researchers and practitioners.
+The deployment is simplified with an automated script (`deploy.sh`) to set up the application on a fresh Ubuntu 24.04 server.
 
 You can find the full project on GitHub at: [YASA Flaskified Repository](https://github.com/bartromb/YASAFlaskified)
 
 ---
 
-## Features
-- User authentication (login, logout, registration)
-- File upload and processing
-- Task queue using Redis
-- Result visualization and download
-
----
-
-## Screenshots
-
-### Login Page
-The login page allows users to securely access the application. Administrators can create new user accounts.
-
-![Login Page](images/Screenshot_01.png)
-
----
-
-### Upload Page
-Users can upload EEG data files (e.g., EDF format). The application automatically identifies EEG channels and begins processing the files.
-
-![Upload Page](images/Screenshot_02.png)
-
----
-
-### Results Page
-Once processing is complete, users can download the generated hypnogram as a PDF and the corresponding data in CSV format. The system also provides a visualization of the results.
-
-![Results Page](images/Screenshot_04.png)
-
----
-
-## Requirements
-- Python 3.8+
-- Redis
-- Nginx
-- Gunicorn
-
----
-
 ## Deployment Guide (Using `deploy.sh`)
 
-The easiest way to deploy this application is by using the `deploy.sh` script provided at the root of this repository. The script automates the installation and configuration process, ensuring all dependencies and services are set up correctly. It is tested on a vanilla Ubuntu 24.04 server.
+The **`deploy.sh`** script automates the installation and configuration process, ensuring all dependencies and services are set up. Follow these steps to deploy YASA Flaskified:
 
 ### Steps to Deploy
 
 1. **Download the Deployment Script**
+   Start by downloading the script:
    ```bash
    wget https://raw.githubusercontent.com/bartromb/YASAFlaskified/main/deploy.sh
    chmod +x deploy.sh
    ```
 
 2. **Run the Deployment Script**
-   Run the script with sudo privileges:
+   Execute the script with `sudo` privileges to install required dependencies and configure services:
    ```bash
    sudo ./deploy.sh
    ```
 
 3. **Follow the Prompts**
-   - Choose whether to deploy locally or on a domain.
-   - If deploying on a domain, provide the domain name when prompted.
+   - Choose between a **local** deployment (default IP: `0.0.0.0`) or a **domain-based** deployment.
+   - If deploying to a domain, provide the domain name when prompted.
 
-4. **Access the Application**
-   - For local deployments: Visit `http://<server-ip>`.
-   - For domain-based deployments: Visit `http://<your-domain>`.
+4. **What the Script Does**:
+   - Installs essential packages: Python, Redis, Nginx, SQLite, and Certbot.
+   - Sets up the virtual environment and installs project dependencies.
+   - Initializes the database and creates an `admin` user with the default password `admin`.
+   - Configures Gunicorn to serve the Flask app.
+   - Sets up Nginx as a reverse proxy.
+   - Starts and enables Redis, RQ Worker, Gunicorn, and Nginx as system services.
 
-5. **Post-Deployment**
-   - Change the default admin password immediately after the first login.
-   - Verify that all services (Redis, Gunicorn, Nginx) are running.
+5. **Access the Application**
+   - For local deployments: Visit `http://<server-ip>`
+   - For domain-based deployments: Visit `http://<your-domain>`
+
+6. **Post-Deployment Checklist**
+   - **Change the Default Admin Password**:
+     Log in with `admin` (username) and `admin` (password), then change the password.
+   - **Verify Running Services**:
+     ```bash
+     sudo systemctl status redis-server
+     sudo systemctl status rq-worker
+     sudo systemctl status YASAFlaskified
+     sudo systemctl status nginx
+     ```
+   - **Monitor Application Logs**:
+     ```bash
+     tail -f /var/www/YASAFlaskified/logs/app.log
+     ```
 
 ---
 
 ## Manual Installation Guide
-
-If you prefer to manually set up the application, follow these steps:
+For users who prefer manual installation, follow these detailed steps:
 
 ### Prerequisites
-Ensure you have the following:
-- A server running Ubuntu 24.04 or later.
-- Basic knowledge of terminal commands.
-- A valid domain name (optional but recommended).
+- Ubuntu 24.04 server
+- Python 3.8+
+- Redis server
+- Nginx
+- Basic terminal knowledge
 
 ### Step-by-Step Instructions
 
-1. **Download the Repository**
-   ```bash
-   wget https://github.com/bartromb/YASAFlaskified/archive/main.zip
-   unzip main.zip
-   cd YASAFlaskified-main
-   ```
-
-2. **Install System Dependencies**
+1. **Install Dependencies**
+   Update and install required system packages:
    ```bash
    sudo apt update && sudo apt upgrade -y
-   sudo apt install -y python3 python3-venv python3-pip nginx redis-server certbot python3-certbot-nginx sqlite3
+   sudo apt install -y python3 python3-venv python3-pip nginx redis-server git sqlite3 certbot python3-certbot-nginx
+   ```
+
+2. **Clone the Repository**
+   ```bash
+   git clone https://github.com/bartromb/YASAFlaskified.git /var/www/YASAFlaskified
+   cd /var/www/YASAFlaskified
    ```
 
 3. **Set Up Python Environment**
-   - Create and activate a Python virtual environment:
-     ```bash
-     python3 -m venv venv
-     source venv/bin/activate
-     ```
-   - Install dependencies:
-     ```bash
-     pip install --upgrade pip
-     pip install -r requirements.txt
-     ```
-
-4. **Configure Directories**
    ```bash
-   mkdir -p logs uploads processed instance .config/matplotlib
-   chown -R www-data:www-data .
-   chmod -R 755 .
-   chmod -R 777 .config/matplotlib
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install --upgrade pip
+   pip install -r requirements.txt
    ```
 
-5. **Create Configuration File**
+4. **Initialize the Database**
    ```bash
-   cat > config.json <<EOL
-   {
-       "UPLOAD_FOLDER": "uploads",
-       "PROCESSED_FOLDER": "processed",
-       "SQLALCHEMY_DATABASE_URI": "sqlite:///instance/users.db",
-       "SQLALCHEMY_TRACK_MODIFICATIONS": false,
-       "LOG_FILE": "logs/app.log",
-       "JOB_TIMEOUT": 6000
-   }
-   EOL
-   ```
-
-6. **Initialize the Database**
-   ```bash
+   mkdir -p instance logs uploads processed
    python3 -c "
    from app import app, db
    with app.app_context():
        db.create_all()
-   "
-   chown www-data:www-data instance/users.db
+   print('Database initialized.')"
+   chown -R www-data:www-data instance
    chmod 664 instance/users.db
    ```
 
-7. **Run the Application Locally**
-   ```bash
-   python app.py
-   ```
-   Visit `http://127.0.0.1:5000` in your browser.
+5. **Configure Gunicorn and Nginx**
+   - Create a systemd service for Gunicorn:
+     ```bash
+     sudo nano /etc/systemd/system/YASAFlaskified.service
+     ```
+     Add the following:
+     ```ini
+     [Unit]
+     Description=Gunicorn service for YASA Flaskified
+     After=network.target
 
-8. **Set Up Gunicorn and Nginx**
-   Follow the steps in the Administrator Setup section below.
+     [Service]
+     User=www-data
+     Group=www-data
+     WorkingDirectory=/var/www/YASAFlaskified
+     Environment="PATH=/var/www/YASAFlaskified/venv/bin"
+     ExecStart=/var/www/YASAFlaskified/venv/bin/gunicorn --workers 3 --timeout 6000 --bind unix:/var/www/YASAFlaskified/run/gunicorn.sock app:app
+
+     [Install]
+     WantedBy=multi-user.target
+     ```
+   - Enable and start the service:
+     ```bash
+     sudo systemctl daemon-reload
+     sudo systemctl start YASAFlaskified
+     sudo systemctl enable YASAFlaskified
+     ```
+
+   - Configure Nginx as a reverse proxy:
+     ```bash
+     sudo nano /etc/nginx/sites-available/YASAFlaskified
+     ```
+     Add the following:
+     ```nginx
+     server {
+         listen 80;
+         server_name <your-domain>;
+
+         location / {
+             proxy_pass http://unix:/var/www/YASAFlaskified/run/gunicorn.sock;
+             proxy_set_header Host $host;
+             proxy_set_header X-Real-IP $remote_addr;
+             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+         }
+
+         location /static/ {
+             alias /var/www/YASAFlaskified/static/;
+         }
+     }
+     ```
+     Enable the site and restart Nginx:
+     ```bash
+     sudo ln -s /etc/nginx/sites-available/YASAFlaskified /etc/nginx/sites-enabled
+     sudo nginx -t
+     sudo systemctl restart nginx
+     ```
+
+6. **Set Up RQ Worker**
+   - Create a systemd service for RQ Worker:
+     ```bash
+     sudo nano /etc/systemd/system/rq-worker.service
+     ```
+     Add the following:
+     ```ini
+     [Unit]
+     Description=RQ Worker for YASA Flaskified
+     After=network.target
+
+     [Service]
+     User=www-data
+     Group=www-data
+     WorkingDirectory=/var/www/YASAFlaskified
+     Environment="PATH=/var/www/YASAFlaskified/venv/bin"
+     ExecStart=/var/www/YASAFlaskified/venv/bin/rq worker
+
+     [Install]
+     WantedBy=multi-user.target
+     ```
+     Enable and start the worker:
+     ```bash
+     sudo systemctl daemon-reload
+     sudo systemctl start rq-worker
+     sudo systemctl enable rq-worker
+     ```
 
 ---
 
-## Administrator Setup Manual
+## Detailed Description of app.py
+The `app.py` file is the core of YASA Flaskified. It includes:
 
-### Nginx Configuration
-1. **Create an Nginx Configuration File**
+1. **Flask Routes**:
+   - `/` : File upload page (requires login).
+   - `/results` : Processed results download.
+   - `/login` and `/logout` : User authentication.
+
+2. **File Upload**:
+   - EDF files are uploaded and saved in a specified directory.
+
+3. **Processing**:
+   - Files are processed using the YASA library.
+   - Sleep staging generates hypnograms and CSV outputs.
+
+4. **Asynchronous Task Queue**:
+   - RQ and Redis handle background processing.
+
+5. **Logging**:
+   - Logs detailed events for debugging.
+
+6. **Authentication**:
+   - Uses Flask-Login for secure user sessions.
+
+---
+
+## Administrator Commands
+- Restart services:
    ```bash
-   sudo nano /etc/nginx/sites-available/YASAFlaskified
+   sudo systemctl restart redis-server rq-worker YASAFlaskified nginx
    ```
-2. **Add Configuration**
-   ```nginx
-   server {
-       listen 80;
-       server_name your_domain_or_ip;
-
-       location / {
-           proxy_pass http://unix:/var/www/YASAFlaskified/run/gunicorn.sock;
-           proxy_set_header Host $host;
-           proxy_set_header X-Real-IP $remote_addr;
-           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-       }
-
-       location /static/ {
-           alias /var/www/YASAFlaskified/static/;
-       }
-   }
-   ```
-3. **Enable and Restart Nginx**
+- View logs:
    ```bash
-   sudo ln -s /etc/nginx/sites-available/YASAFlaskified /etc/nginx/sites-enabled
-   sudo nginx -t
-   sudo systemctl restart nginx
-   ```
-
-### Gunicorn Configuration
-1. **Create a Gunicorn Service File**
-   ```bash
-   sudo nano /etc/systemd/system/YASAFlaskified.service
-   ```
-2. **Add Configuration**
-   ```ini
-   [Unit]
-   Description=Gunicorn instance to serve YASA Flaskified
-   After=network.target
-
-   [Service]
-   User=www-data
-   Group=www-data
-   WorkingDirectory=/var/www/YASAFlaskified
-   Environment="PATH=/var/www/YASAFlaskified/venv/bin"
-   ExecStart=/var/www/YASAFlaskified/venv/bin/gunicorn --worker-class gevent -w 3 --timeout 6000 --bind unix:/var/www/YASAFlaskified/run/gunicorn.sock app:app
-
-   [Install]
-   WantedBy=multi-user.target
-   ```
-3. **Start and Enable the Service**
-   ```bash
-   sudo systemctl daemon-reload
-   sudo systemctl enable YASAFlaskified
-   sudo systemctl start YASAFlaskified
+   tail -f logs/app.log
    ```
 
 ---
 
 ## License
-
 This project is licensed under the BSD 3-Clause License. See the LICENSE file for details.
