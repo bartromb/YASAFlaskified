@@ -1,6 +1,6 @@
 # YASA Flaskified
 
-<img src="logo.png" alt="YASA Flaskified Logo" width="150" height="150">
+![YASA Flaskified Logo](logo.png)
 
 ## Overview
 YASA Flaskified is a web application designed to streamline EEG data processing and sleep analysis. Built on Flask, Redis, Gunicorn, and Nginx, it integrates the **YASA** Python library for automated sleep staging and hypnogram generation. This platform allows users to upload EEG files, process them asynchronously, and visualize the results in an easy-to-use interface.
@@ -14,26 +14,6 @@ The deployment is simplified with an automated script (`deploy.sh`) to set up th
 
 You can find the full project on GitHub at: [YASA Flaskified Repository](https://github.com/bartromb/YASAFlaskified)
 
-Disclaimer
-
-Use of this software is at your own risk. YASA Flaskified is provided "as is," without warranty of any kind, express or implied. The developers assume no responsibility for any damages or consequences resulting from the use of this application.
-
----
-
-## Screenshots
-
-### 1. **Login Page**
-The secure login page ensures access control for authenticated users:
-![Login Page](images/login.png)
-
-### 2. **Upload Page**
-Easily upload EEG files (e.g., `.edf`) for processing:
-![Upload Page](images/upload.png)
-
-### 3. **Results Page**
-View and download processed results, including hypnograms and CSV files:
-![Results Page](images/results.png)
-
 ---
 
 ## Deployment Guide (Using `deploy.sh`)
@@ -41,7 +21,6 @@ View and download processed results, including hypnograms and CSV files:
 The **`deploy.sh`** script automates the installation and configuration process, ensuring all dependencies and services are set up. Follow these steps to deploy YASA Flaskified:
 
 ### Steps to Deploy
-
 
 1. **Download the Deployment Script**
    Start by downloading the script:
