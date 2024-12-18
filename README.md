@@ -14,7 +14,7 @@ The deployment is simplified with an automated script (`deploy.sh`) to set up th
 
 You can find the full project on GitHub at: [YASA Flaskified Repository](https://github.com/bartromb/YASAFlaskified)
 
-Disclaimer
+**Disclaimer**
 
 Use of this software is at your own risk. YASA Flaskified is provided "as is," without warranty of any kind, express or implied. The developers assume no responsibility for any damages or consequences resulting from the use of this application.
 
@@ -42,7 +42,6 @@ The **`deploy.sh`** script automates the installation and configuration process,
 
 ### Steps to Deploy
 
-
 1. **Download the Deployment Script**
    Start by downloading the script:
    ```bash
@@ -60,17 +59,13 @@ The **`deploy.sh`** script automates the installation and configuration process,
    - Choose between a **local** deployment (default IP: `0.0.0.0`) or a **domain-based** deployment.
    - If deploying to a domain, provide the domain name when prompted.
 
-    Let’s Encrypt for Domain-Based Deployments
-
-    If you select a domain-based deployment, the script will automatically configure and request a Let's Encrypt SSL certificate for secure HTTPS access.
-    Ensure your domain name points to the server's IP address before running the script.
-    Let's Encrypt certificates are free, but they need to be renewed every 90 days. You can automate renewal using certbot:
+4. **Let’s Encrypt for Domain-Based Deployments**
+   If you select a domain-based deployment, the script will automatically configure and request a Let's Encrypt SSL certificate for secure HTTPS access. Ensure your domain name points to the server's IP address before running the script. Let's Encrypt certificates are free, but they need to be renewed every 90 days. You can automate renewal using certbot:
    ```bash
    sudo certbot renew --quiet
    ```
 
-
-4. **What the Script Does**:
+5. **What the Script Does**:
    - Installs essential packages: Python, Redis, Nginx, SQLite, and Certbot.
    - Sets up the virtual environment and installs project dependencies.
    - Initializes the database and creates an `admin` user with the default password `admin`.
@@ -78,11 +73,11 @@ The **`deploy.sh`** script automates the installation and configuration process,
    - Sets up Nginx as a reverse proxy.
    - Starts and enables Redis, RQ Worker, Gunicorn, and Nginx as system services.
 
-5. **Access the Application**
+6. **Access the Application**
    - For local deployments: Visit `http://<server-ip>`
    - For domain-based deployments: Visit `https://<your-domain>`
 
-6. **Post-Deployment Checklist**
+7. **Post-Deployment Checklist**
    - **Change the Default Admin Password**:
      Log in with `admin` (username) and `admin` (password), then change the password.
    - **Verify Running Services**:
@@ -99,148 +94,54 @@ The **`deploy.sh`** script automates the installation and configuration process,
 
 ---
 
-## Manual Installation Guide
-For users who prefer manual installation, follow these detailed steps:
+## Swap Creation
 
-### Prerequisites
-- Ubuntu 24.04 server
-- Python 3.8+
-- Redis server
-- Nginx
-- Basic terminal knowledge
+The deploy script automatically configures a 2GB swap file to support low-memory environments. If you need to manage swap space manually:
 
-### Step-by-Step Instructions
-
-1. **Install Dependencies**
-   Update and install required system packages:
+### Adding Swap Space
+1. Create a swap file:
    ```bash
-   sudo apt update && sudo apt upgrade -y
-   sudo apt install -y python3 python3-venv python3-pip nginx redis-server git sqlite3 certbot python3-certbot-nginx
+   sudo fallocate -l 2G /swapfile
+   sudo chmod 600 /swapfile
+   sudo mkswap /swapfile
+   sudo swapon /swapfile
+   ```
+2. Make the swap file permanent by adding it to `/etc/fstab`:
+   ```bash
+   echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
    ```
 
-2. **Clone the Repository**
+### Removing Swap Space
+1. Turn off and remove the swap file:
    ```bash
-   git clone https://github.com/bartromb/YASAFlaskified.git /var/www/YASAFlaskified
-   cd /var/www/YASAFlaskified
+   sudo swapoff /swapfile
+   sudo rm /swapfile
+   sudo sed -i '/\/swapfile/d' /etc/fstab
    ```
 
-3. **Set Up Python Environment**
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-   pip install --upgrade pip
-   pip install -r requirements.txt
-   ```
+---
 
-4. **Initialize the Database**
-   ```bash
-   mkdir -p instance logs uploads processed
-   python3 -c "
-   from app import app, db
-   with app.app_context():
-       db.create_all()
-   print('Database initialized.')"
-   chown -R www-data:www-data instance
-   chmod 664 instance/users.db
-   ```
+## Maximum Upload Limit
 
-5. **Configure Gunicorn and Nginx**
-   - Create a systemd service for Gunicorn:
-     ```bash
-     sudo nano /etc/systemd/system/YASAFlaskified.service
-     ```
-     Add the following:
-     ```ini
-     [Unit]
-     Description=Gunicorn service for YASA Flaskified
-     After=network.target
+The application limits uploads to a maximum of **2 files** to ensure stability in environments with limited computational resources. If your server has more computing power, you can modify the file upload limit in `upload.html` by adjusting the JavaScript validation logic or the backend configuration.
 
-     [Service]
-     User=www-data
-     Group=www-data
-     WorkingDirectory=/var/www/YASAFlaskified
-     Environment="PATH=/var/www/YASAFlaskified/venv/bin"
-     ExecStart=/var/www/YASAFlaskified/venv/bin/gunicorn --workers 3 --timeout 6000 --bind unix:/var/www/YASAFlaskified/run/gunicorn.sock app:app
+For example, in `upload.html`:
+```html
+<input type="file" name="files[]" accept=".edf" multiple required onchange="validateFiles(this)" />
+<script>
+function validateFiles(input) {
+    if (input.files.length > 2) {
+        alert("You can upload a maximum of 2 files.");
+        input.value = ''; // Clear the input
+    }
+}
+</script>
+```
 
-     [Install]
-     WantedBy=multi-user.target
-     ```
-   - Enable and start the service:
-     ```bash
-     sudo systemctl daemon-reload
-     sudo systemctl start YASAFlaskified
-     sudo systemctl enable YASAFlaskified
-     ```
-
-   - Configure Nginx as a reverse proxy:
-     ```bash
-     sudo nano /etc/nginx/sites-available/YASAFlaskified
-     ```
-     Add the following:
-     ```nginx
-     server {
-         listen 80;
-         server_name <your-domain>;
-
-         location / {
-             proxy_pass http://unix:/var/www/YASAFlaskified/run/gunicorn.sock;
-             proxy_set_header Host $host;
-             proxy_set_header X-Real-IP $remote_addr;
-             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-         }
-
-         location /static/ {
-             alias /var/www/YASAFlaskified/static/;
-         }
-     }
-     ```
-     Enable the site and restart Nginx:
-     ```bash
-     sudo ln -s /etc/nginx/sites-available/YASAFlaskified /etc/nginx/sites-enabled
-     sudo nginx -t
-     sudo systemctl restart nginx
-     ```
-
-6. **Set Up RQ Worker**
-   - Create a systemd service for RQ Worker:
-     ```bash
-     sudo nano /etc/systemd/system/rq-worker.service
-     ```
-     Add the following:
-     ```ini
-     [Unit]
-     Description=RQ Worker for YASA Flaskified
-     After=network.target
-
-     [Service]
-     User=www-data
-     Group=www-data
-     WorkingDirectory=/var/www/YASAFlaskified
-     Environment="PATH=/var/www/YASAFlaskified/venv/bin"
-     ExecStart=/var/www/YASAFlaskified/venv/bin/rq worker
-
-     [Install]
-     WantedBy=multi-user.target
-     ```
-     Enable and start the worker:
-     ```bash
-     sudo systemctl daemon-reload
-     sudo systemctl start rq-worker
-     sudo systemctl enable rq-worker
-     ```
-
-   - **Check RQ Worker Status**:
-     ```bash
-     sudo systemctl status rq-worker
-     ```
-7. **Let’s Encrypt for Domain-Based Deployments**
-   - If you select a domain-based deployment, the deploy.sh script will automatically configure and request a Let's Encrypt SSL certificate for secure HTTPS access. Ensure that your domain name points to the server's IP address before running    the script. Let's Encrypt certificates are free but need to be renewed every 90 days. To automate renewal, you can use the following command:
-     ```bash
-     sudo certbot renew --quiet
-     ```
 ---
 
 ## Detailed Description of app.py
+
 The `app.py` file is the core of YASA Flaskified. It includes:
 
 1. **Flask Routes**:
@@ -284,3 +185,4 @@ The `app.py` file is the core of YASA Flaskified. It includes:
 
 ## License
 This project is licensed under the BSD 3-Clause License. See the LICENSE file for details.
+

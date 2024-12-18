@@ -6,6 +6,38 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
+# Add or remove swap space
+if [[ $1 == "remove-swap" ]]; then
+    echo "Removing swap space..."
+    swapoff /swapfile
+    rm -f /swapfile
+    sed -i '/\/swapfile/d' /etc/fstab  # Remove existing swap entry from /etc/fstab
+    echo "Swap space removed."
+    exit 0
+fi
+
+# Add 8GB of swap space
+echo "Configuring swap space..."
+SWAPFILE="/swapfile"
+
+if [[ ! -f "$SWAPFILE" ]]; then
+    fallocate -l 8G "$SWAPFILE"
+    chmod 600 "$SWAPFILE"
+    mkswap "$SWAPFILE"
+    swapon "$SWAPFILE"
+    # Check and add entry to /etc/fstab only if it doesn't already exist
+    if ! grep -q "^$SWAPFILE " /etc/fstab; then
+        echo "$SWAPFILE none swap sw 0 0" | tee -a /etc/fstab
+    else
+        echo "Swap entry already exists in /etc/fstab."
+    fi
+    echo "Swap space added and enabled."
+else
+    echo "Swap space already exists."
+fi
+
+# Deployment script continues...
+
 PROJECT_NAME="YASAFlaskified"
 PROJECT_DIR="/var/www/$PROJECT_NAME"
 VENV_DIR="$PROJECT_DIR/venv"
@@ -35,7 +67,7 @@ fi
 echo "Cleaning up previous installations..."
 
 systemctl stop $PROJECT_NAME.service nginx redis-server
-for i in {1..4}; do
+for i in {1..2}; do
     systemctl stop rq-worker@$i
 done
 
@@ -100,7 +132,7 @@ cat > "$CONFIG_FILE" <<EOL
     "SQLALCHEMY_DATABASE_URI": "sqlite:///$INSTANCE_FOLDER/users.db",
     "SQLALCHEMY_TRACK_MODIFICATIONS": false,
     "LOG_FILE": "$LOGS_DIR/app.log",
-    "JOB_TIMEOUT": 6000
+    "JOB_TIMEOUT": 12000
 }
 EOL
 
@@ -142,11 +174,21 @@ Group=www-data
 WorkingDirectory=$PROJECT_DIR
 Environment="PATH=$VENV_DIR/bin"
 Environment="MPLCONFIGDIR=$MPLCONFIGDIR"
-ExecStart=$VENV_DIR/bin/gunicorn --worker-class gevent -w 3 --timeout 6000 --bind unix:$RUN_DIR/gunicorn.sock app:app
+ExecStart=$VENV_DIR/bin/gunicorn --worker-class gevent -w 2 --timeout 18000 --bind unix:$RUN_DIR/gunicorn.sock app:app
 
 [Install]
 WantedBy=multi-user.target
 EOL
+
+# Ensure Redis is configured correctly
+echo "maxmemory 4096mb" >> /etc/redis/redis.conf
+echo "maxmemory-policy allkeys-lru" >> /etc/redis/redis.conf
+echo "appendonly yes" >> /etc/redis/redis.conf
+echo "maxclients 1000" >> /etc/redis/redis.conf
+systemctl restart redis-server
+
+mkdir -p "$LOGS_DIR/rq-workers"
+chown www-data:www-data "$LOGS_DIR/rq-workers"
 
 # Create systemd template for RQ Workers
 cat > /etc/systemd/system/rq-worker@.service <<EOL
@@ -159,15 +201,18 @@ User=www-data
 Group=www-data
 WorkingDirectory=$PROJECT_DIR
 Environment="PATH=$VENV_DIR/bin"
-ExecStart=$VENV_DIR/bin/rq worker
+ExecStart=$VENV_DIR/bin/rq worker --verbose
 Restart=always
+StandardOutput=append:$LOGS_DIR/rq-worker-%i.log
+StandardError=append:$LOGS_DIR/rq-worker-%i-error.log
 
 [Install]
 WantedBy=multi-user.target
 EOL
 
-# Start 4 RQ Workers
-for i in {1..4}; do
+
+# Start 2 RQ Workers
+for i in {1..2}; do
     systemctl enable rq-worker@$i
     systemctl start rq-worker@$i
 done

@@ -1,14 +1,33 @@
 {% extends 'base.html' %}
 
-{% block title %}Upload EDF File{% endblock %}
+{% block title %}Upload EDF Files{% endblock %}
 
-{% block header %}Upload EDF File{% endblock %}
+{% block header %}Upload EDF Files{% endblock %}
 
 {% block content %}
 <main>
-    <form method="POST" enctype="multipart/form-data">
-        <input type="file" name="files[]" accept=".edf" multiple required>  
+    <form method="POST" enctype="multipart/form-data" onsubmit="return validateFileCount()">
+        <input type="file" name="files[]" accept=".edf" multiple required id="fileInput" />
+        <p id="fileCountMessage" style="color: red; display: none;">
+            You can upload a maximum of 2 files.
+        </p>
         <input type="submit" value="Upload">
     </form>
 </main>
+
+<script>
+    function validateFileCount() {
+        const fileInput = document.getElementById('fileInput');
+        const fileCountMessage = document.getElementById('fileCountMessage');
+
+        if (fileInput.files.length > 2) {
+            fileCountMessage.style.display = 'block';
+            return false; // Prevent form submission
+        }
+
+        fileCountMessage.style.display = 'none';
+        return true; // Allow form submission
+    }
+</script>
 {% endblock %}
+
