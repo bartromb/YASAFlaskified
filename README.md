@@ -96,12 +96,12 @@ The **`deploy.sh`** script automates the installation and configuration process,
 
 ## Swap Creation
 
-The deploy script automatically configures a 2GB swap file to support low-memory environments. If you need to manage swap space manually:
+The deploy script automatically configures a 8GB swap file to support low-memory environments. If you need to manage swap space manually:
 
 ### Adding Swap Space
 1. Create a swap file:
    ```bash
-   sudo fallocate -l 2G /swapfile
+   sudo fallocate -l 8G /swapfile
    sudo chmod 600 /swapfile
    sudo mkswap /swapfile
    sudo swapon /swapfile
