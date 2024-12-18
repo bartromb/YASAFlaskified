@@ -60,6 +60,16 @@ The **`deploy.sh`** script automates the installation and configuration process,
    - Choose between a **local** deployment (default IP: `0.0.0.0`) or a **domain-based** deployment.
    - If deploying to a domain, provide the domain name when prompted.
 
+    Let’s Encrypt for Domain-Based Deployments
+
+    If you select a domain-based deployment, the script will automatically configure and request a Let's Encrypt SSL certificate for secure HTTPS access.
+    Ensure your domain name points to the server's IP address before running the script.
+    Let's Encrypt certificates are free, but they need to be renewed every 90 days. You can automate renewal using certbot:
+   ```bash
+   sudo certbot renew --quiet
+   ```
+
+
 4. **What the Script Does**:
    - Installs essential packages: Python, Redis, Nginx, SQLite, and Certbot.
    - Sets up the virtual environment and installs project dependencies.
@@ -70,7 +80,7 @@ The **`deploy.sh`** script automates the installation and configuration process,
 
 5. **Access the Application**
    - For local deployments: Visit `http://<server-ip>`
-   - For domain-based deployments: Visit `http://<your-domain>`
+   - For domain-based deployments: Visit `https://<your-domain>`
 
 6. **Post-Deployment Checklist**
    - **Change the Default Admin Password**:
@@ -223,7 +233,11 @@ For users who prefer manual installation, follow these detailed steps:
      ```bash
      sudo systemctl status rq-worker
      ```
-
+7. **Let’s Encrypt for Domain-Based Deployments**
+   - If you select a domain-based deployment, the deploy.sh script will automatically configure and request a Let's Encrypt SSL certificate for secure HTTPS access. Ensure that your domain name points to the server's IP address before running    the script. Let's Encrypt certificates are free but need to be renewed every 90 days. To automate renewal, you can use the following command:
+     ```bash
+     sudo certbot renew --quiet
+     ```
 ---
 
 ## Detailed Description of app.py
