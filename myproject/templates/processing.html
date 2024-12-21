@@ -1,44 +1,30 @@
 {% extends 'base.html' %}
 
+{% block title %}
+Processing Status
+{% endblock %}
+
 {% block content %}
-<div class="container mt-5">
-    <h1>Processing Files</h1>
-    <p>Your files are being processed. Please wait...</p>
-    <ul id="job-status-list">
+<meta http-equiv="refresh" content="10"> <!-- Refresh every 10 seconds -->
+<div class="container">
+    <h1>File Processing Status</h1>
+    <ul>
         {% for job in job_statuses %}
-        <li>{{ job.filename }}: {{ job.status }}</li>
+            <li>
+                <strong>{{ job.filename }}</strong>: 
+                {% if job.status == "Processing" %}
+                    <span style="color: orange;">{{ job.status }}</span>
+                {% elif job.status == "Finished" %}
+                    <span style="color: green;">{{ job.status }}</span>
+                {% elif job.status == "Failed" %}
+                    <span style="color: red;">{{ job.status }}</span>
+                {% else %}
+                    <span style="color: gray;">{{ job.status }}</span>
+                {% endif %}
+            </li>
         {% endfor %}
     </ul>
+    <a href="{{ url_for('upload_file') }}" class="btn btn-primary">Upload More Files</a>
 </div>
-
-<script>
-    // Function to poll job statuses
-    function pollJobStatus() {
-        fetch("{{ url_for('processing') }}?ajax=true")
-            .then(response => response.json())
-            .then(data => {
-                // Update the job statuses dynamically
-                const jobStatusList = document.getElementById('job-status-list');
-                jobStatusList.innerHTML = '';
-                data.job_statuses.forEach(job => {
-                    const listItem = document.createElement('li');
-                    listItem.textContent = `${job.filename}: ${job.status}`;
-                    jobStatusList.appendChild(listItem);
-                });
-
-                // Redirect to results if all jobs are finished
-                if (data.all_finished) {
-                    window.location.href = "{{ url_for('results') }}";
-                } else {
-                    setTimeout(pollJobStatus, 5000); // Continue polling every 5 seconds
-                }
-            })
-            .catch(error => {
-                console.error("Error polling job statuses:", error);
-            });
-    }
-
-    // Start polling
-    pollJobStatus();
-</script>
 {% endblock %}
+

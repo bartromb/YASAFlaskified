@@ -2,32 +2,114 @@
 
 {% block title %}Upload EDF Files{% endblock %}
 
-{% block header %}Upload EDF Files{% endblock %}
+{% block header %}
+<h1>Upload and Analyze EDF Files</h1>
+<p class="lead">Upload an EDF file to analyze its metadata and select channels for processing.</p>
+{% endblock %}
 
 {% block content %}
-<main>
-    <form method="POST" enctype="multipart/form-data" onsubmit="return validateFileCount()">
-        <input type="file" name="files[]" accept=".edf" multiple required id="fileInput" />
-        <p id="fileCountMessage" style="color: red; display: none;">
-            You can upload a maximum of 2 files.
-        </p>
-        <input type="submit" value="Upload">
+<div class="container">
+    <!-- File Upload Form -->
+    <form id="fileUploadForm" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="fileInput">Select EDF File:</label>
+            <input type="file" id="fileInput" name="edf_file" class="form-control" accept=".edf" required>
+        </div>
+        <button type="button" id="uploadFileButton" class="btn btn-primary mt-3">Analyze File</button>
     </form>
-</main>
 
+    <!-- Channel Selection Form -->
+    <div id="channelSelection" style="display: none; margin-top: 20px;">
+        <h3>Detected Channels</h3>
+        <form id="channelSelectForm" method="POST" action="/process_file" onsubmit="return prepareFormSubmission();">
+            <input type="hidden" name="filepath" id="filepath">
+            <div id="channelLists"></div>
+            <input type="hidden" name="selected_channels" id="selectedChannels">
+            <button type="submit" class="btn btn-success mt-3">Start Processing</button>
+        </form>
+    </div>
+</div>
+
+<!-- JavaScript Section -->
 <script>
-    function validateFileCount() {
+    // File upload and analysis
+    document.getElementById('uploadFileButton').addEventListener('click', async () => {
         const fileInput = document.getElementById('fileInput');
-        const fileCountMessage = document.getElementById('fileCountMessage');
-
-        if (fileInput.files.length > 2) {
-            fileCountMessage.style.display = 'block';
-            return false; // Prevent form submission
+        if (!fileInput.files[0]) {
+            alert('Please select an EDF file to upload.');
+            return;
         }
 
-        fileCountMessage.style.display = 'none';
+        const formData = new FormData();
+        formData.append('edf_file', fileInput.files[0]);
+
+        try {
+            const response = await fetch('/upload_and_parse', { method: 'POST', body: formData });
+            const text = await response.text(); // Raw response for debugging
+            console.log("Raw server response:", text);
+
+            if (response.ok) {
+                const data = JSON.parse(text); // Parse raw text to JSON
+                console.log("Parsed server response:", data);
+                populateChannels(data);
+                document.getElementById('channelSelection').style.display = 'block';
+            } else {
+                const errorData = JSON.parse(text);
+                alert(`Error analyzing file: ${errorData.error}`);
+            }
+        } catch (error) {
+            console.error("Unexpected error during file upload and analysis:", error);
+            alert('An unexpected error occurred. Please try again.');
+        }
+    });
+
+    // Populate channel selection dropdowns
+    function populateChannels(data) {
+        const container = document.getElementById('channelLists');
+        container.innerHTML = '';
+
+        const categories = ['eeg', 'eog', 'emg', 'others'];
+        categories.forEach(category => {
+            if (data[category] && data[category].length > 0) {
+                const group = document.createElement('div');
+                group.classList.add('form-group', 'mt-3');
+
+                const label = document.createElement('label');
+                label.textContent = `${category.toUpperCase()} Channels:`;
+                group.appendChild(label);
+
+                const select = document.createElement('select');
+                select.id = `${category}Channels`; // Add unique ID for JavaScript
+                select.name = `${category}[]`;
+                select.classList.add('form-control');
+                select.multiple = true;
+
+                data[category].forEach(channel => {
+                    const option = document.createElement('option');
+                    option.value = channel;
+                    option.textContent = channel;
+                    select.appendChild(option);
+                });
+
+                group.appendChild(select);
+                container.appendChild(group);
+            }
+        });
+
+        document.getElementById('filepath').value = data.filepath;
+    }
+
+    // Prepare selected channels for form submission
+    function prepareFormSubmission() {
+        const selectedChannels = {
+            eeg: Array.from(document.querySelector('#eegChannels')?.selectedOptions || []).map(option => option.value),
+            eog: Array.from(document.querySelector('#eogChannels')?.selectedOptions || []).map(option => option.value),
+            emg: Array.from(document.querySelector('#emgChannels')?.selectedOptions || []).map(option => option.value)
+        };
+
+        document.getElementById('selectedChannels').value = JSON.stringify(selectedChannels);
+        console.log("Selected channels prepared for submission:", selectedChannels);
         return true; // Allow form submission
     }
 </script>
 {% endblock %}
-

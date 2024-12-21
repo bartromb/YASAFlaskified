@@ -18,34 +18,41 @@ from rq.job import Job
 # Suppress warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-# Load configuration from JSON
+# Load configuration
 with open('config.json', 'r') as config_file:
     config = json.load(config_file)
 
-# Setup app and configurations
+# Flask app setup
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = config.get('UPLOAD_FOLDER', '/home/bart/myproject/uploads')
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-app.config['PROCESSED_FOLDER'] = config.get('PROCESSED_FOLDER', '/home/bart/myproject/processed')
-os.makedirs(app.config['PROCESSED_FOLDER'], exist_ok=True)
+app.config['UPLOAD_FOLDER'] = config.get('UPLOAD_FOLDER', '/path/to/uploads')
+app.config['PROCESSED_FOLDER'] = config.get('PROCESSED_FOLDER', '/path/to/processed')
 app.config['SECRET_KEY'] = config.get('SECRET_KEY', 'supersecretkey')
 app.config['SQLALCHEMY_DATABASE_URI'] = config.get('SQLALCHEMY_DATABASE_URI', 'sqlite:///users.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = config.get('SQLALCHEMY_TRACK_MODIFICATIONS', False)
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs(app.config['PROCESSED_FOLDER'], exist_ok=True)
 
-# Setup database and login manager
+# Setup database
 db = SQLAlchemy(app)
+
+# Login manager setup
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-# Setup Redis and RQ
+# Redis and RQ setup
 redis_conn = Redis(host='localhost', port=6379)
 queue = Queue(connection=redis_conn)
 
-# Setup logging
-log_file = config.get('LOG_FILE', '/home/bart/myproject/logs/app.log')
+# Logging setup
+log_file = config.get('LOG_FILE', '/path/to/logs/app.log')
 os.makedirs(os.path.dirname(log_file), exist_ok=True)
-logging.basicConfig(level=logging.DEBUG, filename=log_file, filemode='a', format='%(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.DEBUG,
+    filename=log_file,
+    filemode='a',
+    format='%(name)s - %(levelname)s - %(message)s'
+)
 
 # User model
 class User(UserMixin, db.Model):
@@ -57,213 +64,58 @@ class User(UserMixin, db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Helper function to check allowed file extensions
+# Allowed file extensions
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'edf'}
 
-# Function to process EEG file
-def process_file(file_path, output_folder):
-    logging.info(f'Start processing {file_path}')
-    try:
-        fname = os.path.basename(file_path)
-        edf = mne.io.read_raw_edf(file_path, preload=True)
-
-        # Log all available channels
-        available_channels = edf.info['ch_names']
-        logging.info(f"Available channels: {available_channels}")
-
-        eeg_prefixes = ['Fp', 'F', 'C', 'P', 'O', 'T']  # Standard prefixes for EEG channels
-        eeg_channels = [
-            ch for ch in available_channels
-            if any(ch.upper().startswith(prefix.upper()) for prefix in eeg_prefixes) and any(c.isdigit() for c in ch)
-        ]
-
-        if not eeg_channels:
-            logging.error(f"No EEG channels found in the file: {file_path}.")
-            flash(f"No EEG channels found in {fname}. Skipping file.", 'warning')
-            return None, None
-
-        hypno_results = {}
-        for eeg_channel in eeg_channels:
-            logging.info(f'Processing EEG channel: {eeg_channel}')
-            sls = yasa.SleepStaging(edf, eeg_name=eeg_channel)
-            hypno_pred = sls.predict()
-            hypno_pred = yasa.hypno_str_to_int(hypno_pred)
-            hypno_results[eeg_channel] = hypno_pred
-
-        combined_hypno = np.round(np.mean(list(hypno_results.values()), axis=0)).astype(int)
-
-        plt.figure(figsize=(11.69, 8.27))
-        yasa.plot_hypnogram(combined_hypno)
-        plt.title(f'Hypnogram for {fname}')
-        pdf_path = os.path.join(output_folder, f'{fname}_hypnogram.pdf')
-        plt.savefig(pdf_path)
-        plt.close()
-
-        hypno_export = pd.DataFrame({
-            "onset": np.arange(len(combined_hypno)) * 30,
-            "label": combined_hypno,
-            "duration": 30
-        })
-        csv_path = os.path.join(output_folder, f'{fname}.csv')
-        hypno_export.to_csv(csv_path, index=False)
-
-        logging.info(f'Finished processing {file_path}')
-        return pdf_path, csv_path
-    except Exception as e:
-        logging.error(f'Error processing {file_path}: {e}')
-        raise
-
-# RQ task wrapper for process_file
-def background_task(filepath):
-    return process_file(filepath, app.config['PROCESSED_FOLDER'])
-
+# Route: Login
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        logging.info("Login attempt received.")
         username = request.form['username']
         password = request.form['password']
         user = User.query.filter_by(username=username).first()
         if user and check_password_hash(user.password, password):
             login_user(user)
             flash('Login successful!', 'success')
-            logging.info(f"User {username} logged in successfully.")
             return redirect(url_for('upload_file'))
         else:
             flash('Invalid credentials.', 'danger')
-            logging.warning(f"Failed login attempt for user {username}.")
     return render_template('login.html')
 
+# Route: Logout
 @app.route('/logout')
 @login_required
 def logout():
-    logging.info(f"User {current_user.username} logged out.")
     logout_user()
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
 
-@app.route('/', methods=['GET', 'POST'])
-@login_required
-def upload_file():
-    logging.info("Accessed upload route.")
-    if request.method == 'POST':
-        logging.info("Received POST request for file upload.")
-        if 'files[]' not in request.files:
-            flash('No files part', 'danger')
-            logging.error("No files part in the request.")
-            return redirect(request.url)
-
-        files = request.files.getlist('files[]')
-        processed_files = []
-
-        for file in files:
-            if file.filename == '':
-                logging.warning("File with empty filename skipped.")
-                continue
-
-            if file and allowed_file(file.filename):
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-                logging.info(f"Saving file to {filepath}")
-                file.save(filepath)
-
-                job_timeout = config.get('JOB_TIMEOUT', 6000)
-                job = queue.enqueue(background_task, filepath, job_timeout=job_timeout)
-                processed_files.append({'filename': file.filename, 'job_id': job.id})
-                logging.info(f"Enqueued job for file {file.filename} with job ID {job.id}")
-
-        if not processed_files:
-            flash('No files could be processed. Please try again.', 'danger')
-            return redirect(request.url)
-
-        flash('Files successfully uploaded and processing started!', 'success')
-        session['processed_files'] = processed_files
-        return redirect(url_for('processing'))
-
-    return render_template('upload.html')
-
-@app.route('/processing')
-@login_required
-def processing():
-    logging.info("Accessed processing page.")
-    processed_files = session.get('processed_files', [])
-    if not processed_files:
-        flash('No jobs are being processed.', 'info')
-        return redirect(url_for('upload_file'))
-
-    job_statuses = []
-    all_finished = True
-
-    for file_info in processed_files:
-        try:
-            job = Job.fetch(file_info['job_id'], connection=redis_conn)
-            if not job.is_finished:
-                all_finished = False
-                job_statuses.append({'filename': file_info['filename'], 'status': 'Processing'})
-            elif job.is_failed:
-                job_statuses.append({'filename': file_info['filename'], 'status': 'Failed'})
-            else:
-                job_statuses.append({'filename': file_info['filename'], 'status': 'Finished'})
-        except Exception as e:
-            logging.error(f"Error fetching job {file_info['job_id']}: {e}")
-            job_statuses.append({'filename': file_info['filename'], 'status': 'Error'})
-
-    if request.args.get('ajax') == 'true':
-        return jsonify({'job_statuses': job_statuses, 'all_finished': all_finished})
-
-    return render_template('processing.html', job_statuses=job_statuses)
-
-@app.route('/results')
-@login_required
-def results():
-    logging.info("Accessed results route.")
-    processed_files = session.get('processed_files', [])
-    if not processed_files:
-        flash('No files have been processed yet or session expired.', 'info')
-        return redirect(url_for('upload_file'))
-
-    file_links = []
-    for file_info in processed_files:
-        try:
-            job = Job.fetch(file_info['job_id'], connection=redis_conn)
-            if job.is_finished and job.result:
-                file_links.append({
-                    'filename': os.path.basename(job.result[0]),
-                    'pdf_url': url_for('download_file', filename=f"{os.path.basename(job.result[0])}"),
-                    'csv_url': url_for('download_file', filename=f"{os.path.basename(job.result[1])}")
-                })
-        except rq.exceptions.NoSuchJobError:
-            logging.warning(f"Job {file_info['job_id']} no longer exists.")
-
-    return render_template('results.html', files=file_links)
-
-@app.route('/download/<path:filename>')
-@login_required
-def download_file(filename):
-    logging.info(f"Download request received for file: {filename}")
-    return send_from_directory(app.config['PROCESSED_FOLDER'], filename, as_attachment=True)
-
+# Route: Register
 @app.route('/register', methods=['GET', 'POST'])
 @login_required
 def register():
-    # Only allow the administrator to access this route
     if current_user.username != 'admin':
-        flash('You are not authorized to access this page.', 'danger')
+        flash('Only administrators can register new users.', 'danger')
         return redirect(url_for('upload_file'))
 
     if request.method == 'POST':
-        logging.info("Received registration request.")
         username = request.form['username']
         password = request.form['password']
+        if User.query.filter_by(username=username).first():
+            flash('Username already exists.', 'danger')
+            return redirect(url_for('register'))
+
         hashed_password = generate_password_hash(password, method='pbkdf2:sha256', salt_length=8)
         new_user = User(username=username, password=hashed_password)
         db.session.add(new_user)
         db.session.commit()
-        logging.info(f"New user registered: {username}")
-        flash('User registered successfully', 'success')
+        flash('User registered successfully.', 'success')
         return redirect(url_for('login'))
+
     return render_template('register.html')
 
+# Route: Change Password
 @app.route('/change_password', methods=['GET', 'POST'])
 @login_required
 def change_password():
@@ -272,39 +124,243 @@ def change_password():
         new_password = request.form['new_password']
         confirm_password = request.form['confirm_password']
 
-        # Verify the current password
         if not check_password_hash(current_user.password, current_password):
             flash('Current password is incorrect.', 'danger')
             return redirect(url_for('change_password'))
 
-        # Check if the new password and confirmation match
         if new_password != confirm_password:
             flash('New password and confirmation do not match.', 'danger')
             return redirect(url_for('change_password'))
 
-        # Update the password
         current_user.password = generate_password_hash(new_password, method='pbkdf2:sha256', salt_length=8)
         db.session.commit()
-        logging.info(f"Password changed for user: {current_user.username}")
         flash('Password changed successfully.', 'success')
         return redirect(url_for('upload_file'))
 
     return render_template('change_password.html')
 
-@app.route('/job_status/<job_id>')
+# Route: Upload and Parse File
+@app.route('/upload_and_parse', methods=['POST'])
 @login_required
-def job_status(job_id):
-    logging.info(f"Job status request received for job: {job_id}")
-    job = Job.fetch(job_id, connection=redis_conn)
-    if job.is_finished:
-        logging.info(f"Job {job_id} finished successfully.")
-        return jsonify({'status': 'finished', 'result': job.result})
-    elif job.is_failed:
-        logging.error(f"Job {job_id} failed with error: {job.exc_info}")
-        return jsonify({'status': 'failed', 'error': str(job.exc_info)})
-    else:
-        logging.info(f"Job {job_id} is in progress.")
-        return jsonify({'status': 'in progress'})
+def upload_and_parse():
+    if 'edf_file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+
+    file = request.files['edf_file']
+    if file and allowed_file(file.filename):
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+        file.save(filepath)
+
+        try:
+            # Parse the EDF file
+            edf = mne.io.read_raw_edf(filepath, preload=False)
+            edf.load_data()  # Explicitly load data into memory
+
+            logging.debug(f"Loaded EDF file: {filepath}")
+            channels = edf.info['ch_names']
+
+            # Categorize channels
+            eeg_channels = [ch for ch in channels if ch.startswith(('Fp', 'F', 'C', 'P', 'O', 'T'))]
+            eog_channels = [ch for ch in channels if 'EOG' in ch.upper()]
+            emg_channels = [ch for ch in channels if 'EMG' in ch.upper()]
+            other_channels = [ch for ch in channels if ch not in eeg_channels + eog_channels + emg_channels]
+
+            logging.debug(f"Channels categorized: EEG={len(eeg_channels)}, EOG={len(eog_channels)}, EMG={len(emg_channels)}, Others={len(other_channels)}")
+            return jsonify({
+                'eeg': eeg_channels,
+                'eog': eog_channels,
+                'emg': emg_channels,
+                'others': other_channels,
+                'filepath': filepath
+            })
+        except Exception as e:
+            logging.error(f"Error parsing EDF file: {e}")
+            flash('Error analyzing file. Processing aborted.', 'danger')
+            return redirect(url_for('upload_file'))
+
+
+    return jsonify({'error': 'Invalid file type'}), 400
+
+# Route: Upload Files
+@app.route('/', methods=['GET', 'POST'])
+@login_required
+def upload_file():
+    if request.method == 'POST':
+        # Handle file upload
+        if 'files[]' not in request.files:
+            flash('No file part in the request.', 'danger')
+            return redirect(request.url)
+
+        files = request.files.getlist('files[]')
+        processed_files = []
+
+        for file in files:
+            if file and allowed_file(file.filename):
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+                file.save(filepath)
+                job = queue.enqueue(process_file_with_channels, filepath, {}, job_timeout=6000)
+                processed_files.append({'filename': file.filename, 'job_id': job.id})
+
+        session['processed_files'] = processed_files
+        flash('Files uploaded and processing started.', 'success')
+        return redirect(url_for('processing'))
+
+    return render_template('upload.html')
+
+# Route: Process File
+@app.route('/process_file', methods=['POST'])
+@login_required
+def process_file():
+    raw_selected_channels = request.form.get('selected_channels', '{}').strip()
+    filepath = request.form.get('filepath')
+
+    if not filepath:
+        flash('Invalid file path received.', 'danger')
+        return redirect(url_for('upload_file'))
+
+    try:
+        if raw_selected_channels:
+            selected_channels = json.loads(raw_selected_channels)
+        else:
+            selected_channels = {}
+
+        job = queue.enqueue(
+            process_file_with_channels,
+            filepath,
+            selected_channels,  # Ensure channels are passed here
+            job_timeout=6000,
+            result_ttl=3600
+        )
+        logging.debug(f"Job {job.id} enqueued with selected channels: {selected_channels}")
+        session['processed_files'] = session.get('processed_files', []) + [{'filename': os.path.basename(filepath), 'job_id': job.id}]
+        flash('Processing started successfully!', 'success')
+        return redirect(url_for('processing'))
+    except json.JSONDecodeError as e:
+        logging.error(f"Invalid JSON for selected_channels: {e}")
+        flash('Invalid channel selection. Please try again.', 'danger')
+        return redirect(url_for('upload_file'))
+    except Exception as e:
+        logging.error(f"Error enqueuing file processing: {e}")
+        flash('Failed to start processing. Please try again.', 'danger')
+        return redirect(url_for('upload_file'))
+
+# Route: Processing Status
+@app.route('/processing')
+@login_required
+def processing():
+    processed_files = session.get('processed_files', [])
+    job_statuses = []
+    updated_files = []  # Store valid jobs here
+    all_finished = True  # Flag to track if all jobs are finished
+
+    for file_info in processed_files:
+        try:
+            job = Job.fetch(file_info['job_id'], connection=redis_conn)
+            if not job.is_finished:
+                job_statuses.append({'filename': file_info['filename'], 'status': 'Processing'})
+                updated_files.append(file_info)
+                all_finished = False
+            elif job.is_failed:
+                job_statuses.append({'filename': file_info['filename'], 'status': 'Failed'})
+                updated_files.append(file_info)
+            else:
+                job_statuses.append({'filename': file_info['filename'], 'status': 'Finished'})
+                updated_files.append(file_info)
+        except Exception as e:
+            logging.error(f"Error fetching job {file_info['job_id']}: {e}")
+            job_statuses.append({'filename': file_info['filename'], 'status': 'Missing'})
+            all_finished = False
+
+    # Update the session to remove old or invalid jobs
+    session['processed_files'] = updated_files
+
+    # Redirect to results if all jobs are finished
+    if all_finished and processed_files:
+        return redirect(url_for('results'))
+
+    return render_template('processing.html', job_statuses=job_statuses)
+
+
+
+# File processing logic
+def process_file_with_channels(filepath, selected_channels):
+    try:
+        edf = mne.io.read_raw_edf(filepath, preload=True)
+
+        # Extract selected channels and construct metadata
+        eeg_channels = selected_channels.get('eeg', [])
+        eog_channels = selected_channels.get('eog', [])
+        emg_channels = selected_channels.get('emg', [])
+        channels_used = ", ".join(eeg_channels + eog_channels + emg_channels) or "None Selected"
+
+        # Log selected channels for debugging
+        logging.debug(f"Selected channels: EEG={eeg_channels}, EOG={eog_channels}, EMG={emg_channels}")
+
+        # Extract additional metadata
+        start_time = edf.info['meas_date'] if edf.info['meas_date'] else "Unknown"
+        patient_info = edf.info.get('subject_info', {})
+        patient_id = patient_info.get('id', "Unknown")
+        patient_name = patient_info.get('name', "Unknown")
+
+        # Process the EEG data
+        eeg_name = eeg_channels[0] if eeg_channels else edf.info['ch_names'][0]
+        sls = yasa.SleepStaging(edf, eeg_name=eeg_name)
+        hypno_pred = sls.predict()
+        hypno_pred = yasa.hypno_str_to_int(hypno_pred)
+
+        # Save results
+        output_folder = app.config['PROCESSED_FOLDER']
+        os.makedirs(output_folder, exist_ok=True)
+
+        fname = os.path.basename(filepath)
+        pdf_path = os.path.join(output_folder, f"{fname}_hypnogram.pdf")
+        csv_path = os.path.join(output_folder, f"{fname}.csv")
+
+        # Generate the hypnogram with metadata
+        plt.figure(figsize=(11.69, 8.27))  # A4 landscape dimensions in inches
+        yasa.plot_hypnogram(hypno_pred)
+        plt.suptitle(f"Hypnogram for {fname}\n"
+                     f"Date: {start_time}\n"
+                     f"Channels Used: {channels_used}\n"
+                     f"Patient ID: {patient_id}, Name: {patient_name}",
+                     x=0.5, y=0.98, fontsize=10, ha='center', va='top')
+        plt.tight_layout(rect=[0, 0, 1, 0.92])
+        plt.savefig(pdf_path, orientation='landscape', format='pdf')
+        plt.close()
+
+        # Save hypnogram predictions as CSV
+        pd.DataFrame({
+            "onset": np.arange(len(hypno_pred)) * 30,  # Assuming 30-second epochs
+            "label": hypno_pred,
+            "duration": 30
+        }).to_csv(csv_path, index=False)
+
+        return pdf_path, csv_path
+    except Exception as e:
+        logging.error(f"Error processing file {filepath}: {e}")
+        raise
+
+# Route: Results Page
+@app.route('/results')
+@login_required
+def results():
+    processed_files = session.get('processed_files', [])
+    file_links = []
+
+    for file_info in processed_files:
+        file_links.append({
+            "filename": os.path.basename(file_info['filename']),
+            "pdf_url": url_for('download_file', filename=f"{file_info['filename']}_hypnogram.pdf"),
+            "csv_url": url_for('download_file', filename=f"{file_info['filename']}.csv")
+        })
+
+    return render_template('results.html', files=file_links)
+
+# Route: File Download
+@app.route('/download/<path:filename>')
+@login_required
+def download_file(filename):
+    return send_from_directory(app.config['PROCESSED_FOLDER'], filename, as_attachment=True)
 
 # Initialize database
 def initialize_database():
@@ -315,7 +371,6 @@ def initialize_database():
             admin = User(username='admin', password=admin_password)
             db.session.add(admin)
             db.session.commit()
-            logging.info("Admin user created.")
 
 if __name__ == '__main__':
     initialize_database()

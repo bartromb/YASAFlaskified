@@ -20,6 +20,29 @@ Use of this software is at your own risk. YASA Flaskified is provided "as is," w
 
 ---
 
+## New Features
+
+1. **Channel Selection Before Processing**
+   - When a file is uploaded, the script extracts metadata and channels (EEG, EOG, EMG, etc.) from the EDF file.
+   - Users can select specific channels to use for processing.
+   - Processing is currently limited to **one file at a time** to ensure stability.
+
+2. **Enhanced Hypnogram Output**
+   - The generated hypnogram PDF now includes:
+     - The selected channels.
+     - Additional metadata such as the date of the PSG (Polysomnography), patient identification, and more.
+   - The output is formatted for A4 landscape printing.
+
+3. **Improved User Experience**
+   - Detailed error handling for file uploads and processing.
+   - Clear instructions and feedback at every step.
+
+4. **Showcase Deployment**
+   - The platform is deployed at [sleepai.be](https://sleepai.be) and [sleepai.eu](https://sleepai.eu) for demonstration purposes.
+   - For the best results, it is recommended to deploy the application on your own server.
+
+---
+
 ## Screenshots
 
 ### 1. **Login Page**
@@ -30,7 +53,11 @@ The secure login page ensures access control for authenticated users:
 Easily upload EEG files (e.g., `.edf`) for processing:
 ![Upload Page](images/upload.png)
 
-### 3. **Results Page**
+### 3. **Channel Selection Page**
+Select specific channels for processing after file analysis:
+![Channel Selection Page](images/channelselect.png)
+
+### 4. **Results Page**
 View and download processed results, including hypnograms and CSV files:
 ![Results Page](images/results.png)
 
@@ -94,92 +121,17 @@ The **`deploy.sh`** script automates the installation and configuration process,
 
 ---
 
-## Swap Creation
+## Additional Notes
 
-The deploy script automatically configures a 8GB swap file to support low-memory environments. If you need to manage swap space manually:
+1. **Single File Limitation**
+   - Currently, the application processes one file at a time to ensure performance and stability. Batch processing may be introduced in future updates.
 
-### Adding Swap Space
-1. Create a swap file:
-   ```bash
-   sudo fallocate -l 8G /swapfile
-   sudo chmod 600 /swapfile
-   sudo mkswap /swapfile
-   sudo swapon /swapfile
-   ```
-2. Make the swap file permanent by adding it to `/etc/fstab`:
-   ```bash
-   echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
-   ```
+2. **Channel Selection Feature**
+   - After uploading an EDF file, metadata and channels are extracted and presented for user selection.
+   - This ensures precise control over the data used for analysis.
 
-### Removing Swap Space
-1. Turn off and remove the swap file:
-   ```bash
-   sudo swapoff /swapfile
-   sudo rm /swapfile
-   sudo sed -i '/\/swapfile/d' /etc/fstab
-   ```
-
----
-
-## Maximum Upload Limit
-
-The application limits uploads to a maximum of **2 files** to ensure stability in environments with limited computational resources. If your server has more computing power, you can modify the file upload limit in `upload.html` by adjusting the JavaScript validation logic or the backend configuration.
-
-For example, in `upload.html`:
-```html
-<input type="file" name="files[]" accept=".edf" multiple required onchange="validateFiles(this)" />
-<script>
-function validateFiles(input) {
-    if (input.files.length > 2) {
-        alert("You can upload a maximum of 2 files.");
-        input.value = ''; // Clear the input
-    }
-}
-</script>
-```
-
----
-
-## Detailed Description of app.py
-
-The `app.py` file is the core of YASA Flaskified. It includes:
-
-1. **Flask Routes**:
-   - `/` : File upload page (requires login).
-   - `/results` : Processed results download.
-   - `/login` and `/logout` : User authentication.
-
-2. **File Upload**:
-   - EDF files are uploaded and saved in a specified directory.
-
-3. **Processing**:
-   - Files are processed using the YASA library.
-   - Sleep staging generates hypnograms and CSV outputs.
-
-4. **Asynchronous Task Queue**:
-   - RQ and Redis handle background processing.
-
-5. **Logging**:
-   - Logs detailed events for debugging.
-
-6. **Authentication**:
-   - Uses Flask-Login for secure user sessions.
-
----
-
-## Administrator Commands
-- Restart services:
-   ```bash
-   sudo systemctl restart redis-server rq-worker YASAFlaskified nginx
-   ```
-- View logs:
-   ```bash
-   tail -f logs/app.log
-   ```
-- Check RQ Worker status:
-   ```bash
-   sudo systemctl status rq-worker
-   ```
+3. **Best Deployment Practice**
+   - The showcase deployment on [sleepai.be](https://sleepai.be) and [sleepai.eu](https://sleepai.eu) demonstrates the platform’s capabilities. For production use, it is recommended to deploy on your own server for better performance and control.
 
 ---
 

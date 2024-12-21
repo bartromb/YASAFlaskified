@@ -1,16 +1,29 @@
 {% extends 'base.html' %}
 
+{% block title %}
+Results - YASA Sleep Analysis
+{% endblock %}
+
+{% block header %}
+<h1>Processing Results</h1>
+<p class="lead">Download the results of your processed files below.</p>
+{% endblock %}
+
 {% block content %}
 <div class="container">
-    <h1>Processing Results</h1>
-    <ul>
-        {% for file in files %}
-            <li>
-                <strong>{{ file.filename }}</strong><br>
-                <a href="{{ file.pdf_url }}" target="_blank">Download PDF</a> |
-                <a href="{{ file.csv_url }}" target="_blank">Download CSV</a>
-            </li>
-        {% endfor %}
-    </ul>
+    {% if files %}
+        <ul>
+            {% for file in files %}
+                <li>
+                    <strong>{{ file.filename }}</strong>: 
+                    <a href="{{ file.pdf_url }}" target="_blank" class="btn btn-primary">Download PDF</a>
+                    <a href="{{ file.csv_url }}" target="_blank" class="btn btn-secondary">Download CSV</a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No results available. Please process some files first.</p>
+    {% endif %}
+    <a href="{{ url_for('upload_file') }}" class="btn btn-primary">Upload More Files</a>
 </div>
 {% endblock %}
