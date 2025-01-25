@@ -106,13 +106,13 @@ progress::-webkit-progress-bar {
 
 progress::-webkit-progress-value {
     background-color: #007BFF;
-    transition: width 0.3s ease;
+    transition: width 0.5s ease;
     border-radius: 10px;
 }
 
 progress::-moz-progress-bar {
     background-color: #007BFF;
-    transition: width 0.3s ease;
+    transition: width 0.5s ease;
     border-radius: 10px;
 }
 

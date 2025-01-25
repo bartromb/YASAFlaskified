@@ -61,7 +61,7 @@
             formData.append('chunk_index', i);
             formData.append('total_chunks', totalChunks);
             formData.append('edf_file', chunk);
-            formData.append('original_filename', file.name);
+            formData.append('original_filename', file.name); // Preserve original filename
 
             try {
                 const response = await fetch('/upload_chunks', { method: 'POST', body: formData });
@@ -92,9 +92,15 @@
             const data = await response.json();
 
             if (response.ok && data.success) {
-                progressBar.value = 100;
+                // Gradually increase the progress bar from 50% to 100%
+                for (let progress = 50; progress <= 100; progress++) {
+                    progressBar.value = progress;
+                    await new Promise(resolve => setTimeout(resolve, 100)); // Simulate gradual progress
+                }
+
                 populateChannels(data); // Populate dropdowns for detected channels
                 document.getElementById('channelSelection').style.display = 'block';
+                alert('File analysis completed! Select channels below.');
             } else {
                 throw new Error(data.error || 'Error parsing file.');
             }
@@ -105,10 +111,8 @@
     }
 
     function populateChannels(data) {
-        console.log("Populating channels with response data:", data); // Debug log
-
         const container = document.getElementById('channelLists');
-        container.innerHTML = ''; // Clear any existing content
+        container.innerHTML = '';
 
         const categories = ['eeg', 'eog', 'emg', 'others'];
         categories.forEach(category => {
@@ -135,8 +139,6 @@
 
                 group.appendChild(select);
                 container.appendChild(group);
-            } else {
-                console.log(`No channels found for category: ${category}`); // Debug empty categories
             }
         });
 
@@ -153,7 +155,6 @@
         };
 
         document.getElementById('selectedChannels').value = JSON.stringify(selectedChannels);
-        console.log("Selected channels prepared for submission:", selectedChannels);
         return true; // Allow form submission
     }
 </script>

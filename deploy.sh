@@ -210,7 +210,6 @@ StandardError=append:$LOGS_DIR/rq-worker-%i-error.log
 WantedBy=multi-user.target
 EOL
 
-
 # Start 2 RQ Workers
 for i in {1..2}; do
     systemctl enable rq-worker@$i
