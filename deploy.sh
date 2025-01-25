@@ -217,6 +217,28 @@ for i in {1..2}; do
     systemctl start rq-worker@$i
 done
 
+if [ ! -f "$ENV_FILE" ]; then
+    echo "[ERROR] .env file not found in $CONFIG_DIR. Aborting deployment."
+    exit 1
+fi
+
+# Update system and install dependencies
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y python3-pip python3-venv redis nginx certbot python3-certbot-nginx
+
+# Set up the Python environment
+cd $APP_DIR
+python3 -m venv venv
+source venv/bin/activate
+pip install -U pip setuptools wheel
+pip install -r requirements.txt
+
+# Set up Gunicorn systemd service
+sudo cp $CONFIG_DIR/YASAFlaskified.service /etc/systemd/system/YASAFlaskified.service
+sudo systemctl daemon-reload
+sudo systemctl enable YASAFlaskified
+sudo systemctl restart YASAFlaskified
+
 # Create Nginx configuration
 cat > /etc/nginx/sites-available/$PROJECT_NAME <<EOL
 server {
@@ -230,6 +252,12 @@ server {
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+
+        # Timeout settings for long-running requests
+        proxy_connect_timeout 600s;
+        proxy_read_timeout 600s;
+        proxy_send_timeout 600s;
+        send_timeout 600s;
     }
 
     location /static {

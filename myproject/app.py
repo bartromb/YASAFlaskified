@@ -29,6 +29,7 @@ app.config['PROCESSED_FOLDER'] = config.get('PROCESSED_FOLDER', '/path/to/proces
 app.config['SECRET_KEY'] = config.get('SECRET_KEY', 'supersecretkey')
 app.config['SQLALCHEMY_DATABASE_URI'] = config.get('SQLALCHEMY_DATABASE_URI', 'sqlite:///users.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = config.get('SQLALCHEMY_TRACK_MODIFICATIONS', False)
+app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500 MB
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['PROCESSED_FOLDER'], exist_ok=True)
 
@@ -139,24 +140,54 @@ def change_password():
 
     return render_template('change_password.html')
 
-# Route: Upload and Parse File
+# Route: Upload and parse
 @app.route('/upload_and_parse', methods=['POST'])
 @login_required
 def upload_and_parse():
-    if 'edf_file' not in request.files:
-        return jsonify({'error': 'No file uploaded'}), 400
+    file_id = request.form.get('file_id')
+    chunk_index = int(request.form.get('chunk_index', 0))
+    total_chunks = int(request.form.get('total_chunks', 1))
+    original_filename = request.form.get('original_filename', 'uploaded.edf')
 
-    file = request.files['edf_file']
-    if file and allowed_file(file.filename):
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-        file.save(filepath)
+    # Preserve quotes if they exist, but avoid adding them unnecessarily
+    original_filename = original_filename.strip()  # Remove accidental whitespace around the filename
+    logging.info(f"Original filename: {original_filename}")
+
+    # Ensure the upload directory exists
+    upload_dir = app.config['UPLOAD_FOLDER']
+    os.makedirs(upload_dir, exist_ok=True)
+
+    # Save the current chunk
+    chunk = request.files.get('edf_file')
+    chunk_path = os.path.join(upload_dir, f"{file_id}_chunk_{chunk_index}")
+    chunk.save(chunk_path)
+
+    # Assemble the file if all chunks are uploaded
+    if chunk_index + 1 == total_chunks:
+        assembled_filepath = os.path.join(upload_dir, f"{file_id}_assembled.edf")  # Temporary name
+        final_filepath = os.path.join(upload_dir, original_filename)  # Use the original filename
 
         try:
+            with open(assembled_filepath, 'wb') as assembled_file:
+                for i in range(total_chunks):
+                    chunk_file_path = os.path.join(upload_dir, f"{file_id}_chunk_{i}")
+                    if not os.path.exists(chunk_file_path):
+                        raise FileNotFoundError(f"Chunk {i} not found at {chunk_file_path}")
+                    with open(chunk_file_path, 'rb') as chunk_file:
+                        assembled_file.write(chunk_file.read())
+                    os.remove(chunk_file_path)  # Clean up chunk files after assembly
+
+            logging.info(f"File assembled successfully: {assembled_filepath}")
+
+            # Rename the assembled file to the original filename
+            os.rename(assembled_filepath, final_filepath)
+            logging.info(f"File renamed to: {final_filepath}")
+
             # Parse the EDF file
-            edf = mne.io.read_raw_edf(filepath, preload=False)
+            edf = mne.io.read_raw_edf(final_filepath, preload=True)
             edf.load_data()  # Explicitly load data into memory
 
-            logging.debug(f"Loaded EDF file: {filepath}")
+            logging.debug(f"Loaded EDF file: {final_filepath}")
             channels = edf.info['ch_names']
 
             # Categorize channels
@@ -166,27 +197,175 @@ def upload_and_parse():
             other_channels = [ch for ch in channels if ch not in eeg_channels + eog_channels + emg_channels]
 
             logging.debug(f"Channels categorized: EEG={len(eeg_channels)}, EOG={len(eog_channels)}, EMG={len(emg_channels)}, Others={len(other_channels)}")
+
+            # Update Redis keys
+            redis_conn.set(f"{file_id}_progress", 100)
+            redis_conn.set(f"{file_id}_completed", 1)
+
+            return jsonify({
+                'success': True,
+                'eeg': eeg_channels,
+                'eog': eog_channels,
+                'emg': emg_channels,
+                'others': other_channels,
+                'filepath': final_filepath,
+                'message': 'File processed successfully. Please select channels.'
+            })
+
+        except Exception as e:
+            logging.error(f"Error parsing EDF file: {e}")
+            redis_conn.set(f"{file_id}_progress", 0)
+            redis_conn.set(f"{file_id}_completed", 0)
+            return jsonify({'success': False, 'error': 'Error processing EDF file'}), 500
+
+    # Update progress for chunk upload
+    progress = int(((chunk_index + 1) / total_chunks) * 50)
+    redis_conn.set(f"{file_id}_progress", progress)
+    logging.info(f"Chunk {chunk_index + 1}/{total_chunks} uploaded. Progress: {progress}%")
+    return jsonify({'success': True, 'progress': progress, 'message': f'Chunk {chunk_index + 1} uploaded successfully.'})
+
+# Route: Upload chunks
+@app.route('/upload_chunks', methods=['POST'])
+@login_required
+def upload_chunks():
+    file_id = request.form.get('file_id')
+    chunk_index = int(request.form.get('chunk_index', 0))
+    total_chunks = int(request.form.get('total_chunks', 1))
+    original_filename = request.form.get('original_filename', 'uploaded.edf')
+
+    # Ensure the upload directory exists
+    upload_dir = app.config['UPLOAD_FOLDER']
+    os.makedirs(upload_dir, exist_ok=True)
+
+    # Save the current chunk
+    chunk = request.files.get('edf_file')
+    chunk_path = os.path.join(upload_dir, f"{file_id}_chunk_{chunk_index}")
+    chunk.save(chunk_path)
+
+    # Assemble the file if all chunks are uploaded
+    if chunk_index + 1 == total_chunks:
+        assembled_filepath = os.path.join(upload_dir, f"{file_id}_assembled.edf")
+        final_filepath = os.path.join(upload_dir, original_filename)
+
+        try:
+            with open(assembled_filepath, 'wb') as assembled_file:
+                for i in range(total_chunks):
+                    chunk_file_path = os.path.join(upload_dir, f"{file_id}_chunk_{i}")
+                    if not os.path.exists(chunk_file_path):
+                        raise FileNotFoundError(f"Chunk {i} not found at {chunk_file_path}")
+                    with open(chunk_file_path, 'rb') as chunk_file:
+                        assembled_file.write(chunk_file.read())
+                    os.remove(chunk_file_path)  # Clean up chunk files after assembly
+
+            logging.info(f"File assembled successfully: {assembled_filepath}")
+
+            # Rename the assembled file to the original filename
+            os.rename(assembled_filepath, final_filepath)
+            logging.info(f"File renamed to: {final_filepath}")
+
+            # Store the file path for later parsing
+            redis_conn.set(f"{file_id}_filepath", final_filepath)
+
+            return jsonify({
+                'success': True,
+                'filepath': final_filepath,
+                'message': 'File assembled successfully. Ready for parsing.'
+            })
+
+        except Exception as e:
+            logging.error(f"Error assembling file: {e}")
+            return jsonify({'success': False, 'error': 'Error assembling file'}), 500
+
+    # Update progress for chunk upload
+    progress = int(((chunk_index + 1) / total_chunks) * 50)
+    redis_conn.set(f"{file_id}_progress", progress)
+    logging.info(f"Chunk {chunk_index + 1}/{total_chunks} uploaded. Progress: {progress}%")
+    return jsonify({'success': True, 'progress': progress, 'message': f'Chunk {chunk_index + 1} uploaded successfully.'})
+
+# Route: Parse file
+@app.route('/parse_file', methods=['POST'])
+@login_required
+def parse_file():
+    file_id = request.form.get('file_id')
+
+    # Retrieve the file path from Redis
+    filepath = redis_conn.get(f"{file_id}_filepath")
+    if not filepath:
+        return jsonify({'success': False, 'error': 'Filepath not found. Ensure the file is assembled.'}), 400
+
+    filepath = filepath.decode('utf-8')  # Redis stores bytes by default
+
+    try:
+        # Parse the EDF file
+        edf = mne.io.read_raw_edf(filepath, preload=True)
+        edf.load_data()  # Explicitly load data into memory
+
+        logging.debug(f"Loaded EDF file: {filepath}")
+        channels = edf.info['ch_names']
+
+        # Categorize channels
+        eeg_channels = [ch for ch in channels if ch.startswith(('Fp', 'F', 'C', 'P', 'O', 'T'))]
+        eog_channels = [ch for ch in channels if 'EOG' in ch.upper()]
+        emg_channels = [ch for ch in channels if 'EMG' in ch.upper()]
+        other_channels = [ch for ch in channels if ch not in eeg_channels + eog_channels + emg_channels]
+
+        logging.debug(f"Channels categorized: EEG={len(eeg_channels)}, EOG={len(eog_channels)}, EMG={len(emg_channels)}, Others={len(other_channels)}")
+
+        return jsonify({
+            'success': True,
+            'eeg': eeg_channels,
+            'eog': eog_channels,
+            'emg': emg_channels,
+            'others': other_channels,
+            'filepath': filepath,
+            'message': 'File parsed successfully.'
+        })
+
+    except Exception as e:
+        logging.error(f"Error parsing EDF file: {e}")
+        return jsonify({'success': False, 'error': 'Error parsing EDF file'}), 500
+
+
+
+# Route: Upload and parse complete
+@app.route('/upload_and_parse_complete', methods=['GET'])
+@login_required
+def upload_and_parse_complete():
+    file_id = request.args.get('file_id')
+    assembled_filepath = os.path.join(app.config['UPLOAD_FOLDER'], f"{file_id}.edf")
+
+    # Check if the assembled file exists
+    if os.path.exists(assembled_filepath):
+        try:
+            # Analyze the EDF file
+            edf = mne.io.read_raw_edf(assembled_filepath, preload=False)
+            edf.load_data()
+            channels = edf.info['ch_names']
+
+            # Categorize channels
+            eeg_channels = [ch for ch in channels if ch.startswith(('Fp', 'F', 'C', 'P', 'O', 'T'))]
+            eog_channels = [ch for ch in channels if 'EOG' in ch.upper()]
+            emg_channels = [ch for ch in channels if 'EMG' in ch.upper()]
+            other_channels = [ch for ch in channels if ch not in eeg_channels + eog_channels + emg_channels]
+
             return jsonify({
                 'eeg': eeg_channels,
                 'eog': eog_channels,
                 'emg': emg_channels,
                 'others': other_channels,
-                'filepath': filepath
+                'filepath': assembled_filepath
             })
         except Exception as e:
-            logging.error(f"Error parsing EDF file: {e}")
-            flash('Error analyzing file. Processing aborted.', 'danger')
-            return redirect(url_for('upload_file'))
+            logging.error(f"Error analyzing EDF file: {e}")
+            return jsonify({'error': 'Error analyzing EDF file'}), 500
 
-
-    return jsonify({'error': 'Invalid file type'}), 400
+    return jsonify({'error': 'File not yet assembled or analyzed'}), 202
 
 # Route: Upload Files
 @app.route('/', methods=['GET', 'POST'])
 @login_required
 def upload_file():
     if request.method == 'POST':
-        # Handle file upload
         if 'files[]' not in request.files:
             flash('No file part in the request.', 'danger')
             return redirect(request.url)
@@ -196,16 +375,19 @@ def upload_file():
 
         for file in files:
             if file and allowed_file(file.filename):
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-                file.save(filepath)
-                job = queue.enqueue(process_file_with_channels, filepath, {}, job_timeout=6000)
-                processed_files.append({'filename': file.filename, 'job_id': job.id})
+                file_id = os.path.splitext(file.filename)[0]
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], f"{file_id}.edf")
+                if os.path.exists(filepath):
+                    # Enqueue job for already assembled file
+                    job = queue.enqueue(process_file_with_channels, filepath, {}, job_timeout=6000)
+                    processed_files.append({'filename': file.filename, 'job_id': job.id})
 
         session['processed_files'] = processed_files
         flash('Files uploaded and processing started.', 'success')
         return redirect(url_for('processing'))
 
     return render_template('upload.html')
+
 
 # Route: Process File
 @app.route('/process_file', methods=['POST'])
@@ -355,6 +537,55 @@ def results():
         })
 
     return render_template('results.html', files=file_links)
+
+# Route: Endpoint to Fetch progress
+@app.route('/upload_progress/<file_id>')
+@login_required
+def upload_progress(file_id):
+    progress = redis_conn.get(f"{file_id}_progress")
+    return jsonify({"progress": float(progress) if progress else 0})
+
+# Route: Add a progress tracking endpoint
+@app.route('/progress_status', methods=['GET'])
+@login_required
+def progress_status():
+    file_id = request.args.get('file_id')
+    progress = redis_conn.get(f"{file_id}_progress")
+    completed = redis_conn.get(f"{file_id}_completed")
+
+    if progress is None or completed is None:
+        return jsonify({'progress': 0, 'completed': False}), 200
+
+    return jsonify({
+        'progress': int(progress),
+        'completed': bool(int(completed)),
+    }), 200
+
+# Route: Update the processing logic to report progress
+def process_file_with_progress(file_id, filepath):
+    try:
+        redis_conn.set(f"{file_id}_progress", 0)  # Initialize progress
+
+        # Read EDF file incrementally
+        edf = mne.io.read_raw_edf(filepath, preload=False)
+        total_samples = edf.n_times
+        redis_conn.set(f"{file_id}_progress", 10)  # Initial progress
+
+        # Process data incrementally
+        for start, stop in edf.iter_blocks(1000):  # Iterate in chunks
+            data, times = edf[:, start:stop]
+            # Process data here (e.g., filter, analyze, etc.)
+            progress = int((stop / total_samples) * 90) + 10  # Update progress
+            redis_conn.set(f"{file_id}_progress", progress)
+
+        redis_conn.set(f"{file_id}_progress", 100)  # Finalize progress
+        redis_conn.set(f"{file_id}_completed", 1)  # Mark as completed
+    except Exception as e:
+        redis_conn.set(f"{file_id}_progress", 0)
+        redis_conn.set(f"{file_id}_completed", 0)
+        raise e
+
+
 
 # Route: File Download
 @app.route('/download/<path:filename>')

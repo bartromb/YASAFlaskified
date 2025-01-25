@@ -27,17 +27,22 @@ Use of this software is at your own risk. YASA Flaskified is provided "as is," w
    - Users can select specific channels to use for processing.
    - Processing is currently limited to **one file at a time** to ensure stability.
 
-2. **Enhanced Hypnogram Output**
+2. **Two-Step File Upload and Parsing**
+   - File uploads are now chunked and assembled on the server side via the `/upload_chunks` route.
+   - Once the file is assembled, it can be parsed separately through the `/parse_file` route, ensuring modularity and robustness.
+   - Redis is used to track file paths and upload progress.
+
+3. **Enhanced Hypnogram Output**
    - The generated hypnogram PDF now includes:
      - The selected channels.
      - Additional metadata such as the date of the PSG (Polysomnography), patient identification, and more.
    - The output is formatted for A4 landscape printing.
 
-3. **Improved User Experience**
+4. **Improved User Experience**
    - Detailed error handling for file uploads and processing.
    - Clear instructions and feedback at every step.
 
-4. **Showcase Deployment**
+5. **Showcase Deployment**
    - The platform is deployed at [sleepai.be](https://sleepai.be) and [sleepai.eu](https://sleepai.eu) for demonstration purposes.
    - For the best results, it is recommended to deploy the application on your own server.
 
@@ -97,7 +102,7 @@ The **`deploy.sh`** script automates the installation and configuration process,
    - Sets up the virtual environment and installs project dependencies.
    - Initializes the database and creates an `admin` user with the default password `admin`.
    - Configures Gunicorn to serve the Flask app.
-   - Sets up Nginx as a reverse proxy.
+   - Configures Nginx to support the new `/upload_chunks` and `/parse_file` routes.
    - Starts and enables Redis, RQ Worker, Gunicorn, and Nginx as system services.
 
 6. **Access the Application**

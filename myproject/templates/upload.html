@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Upload EDF Files{% endblock %}
+{% block title %}Upload and Analyze EDF Files{% endblock %}
 
 {% block header %}
 <h1>Upload and Analyze EDF Files</h1>
@@ -15,6 +15,7 @@
             <label for="fileInput">Select EDF File:</label>
             <input type="file" id="fileInput" name="edf_file" class="form-control" accept=".edf" required>
         </div>
+        <progress id="uploadProgress" value="0" max="100" style="width: 100%; display: none;"></progress>
         <button type="button" id="uploadFileButton" class="btn btn-primary mt-3">Analyze File</button>
     </form>
 
@@ -32,7 +33,6 @@
 
 <!-- JavaScript Section -->
 <script>
-    // File upload and analysis
     document.getElementById('uploadFileButton').addEventListener('click', async () => {
         const fileInput = document.getElementById('fileInput');
         if (!fileInput.files[0]) {
@@ -40,33 +40,75 @@
             return;
         }
 
-        const formData = new FormData();
-        formData.append('edf_file', fileInput.files[0]);
-
-        try {
-            const response = await fetch('/upload_and_parse', { method: 'POST', body: formData });
-            const text = await response.text(); // Raw response for debugging
-            console.log("Raw server response:", text);
-
-            if (response.ok) {
-                const data = JSON.parse(text); // Parse raw text to JSON
-                console.log("Parsed server response:", data);
-                populateChannels(data);
-                document.getElementById('channelSelection').style.display = 'block';
-            } else {
-                const errorData = JSON.parse(text);
-                alert(`Error analyzing file: ${errorData.error}`);
-            }
-        } catch (error) {
-            console.error("Unexpected error during file upload and analysis:", error);
-            alert('An unexpected error occurred. Please try again.');
-        }
+        const file = fileInput.files[0];
+        await handleFileUpload(file);
     });
 
-    // Populate channel selection dropdowns
+    async function handleFileUpload(file) {
+        const chunkSize = 1 * 1024 * 1024; // 1 MB chunks
+        const totalChunks = Math.ceil(file.size / chunkSize);
+        const fileId = Date.now().toString();
+        const progressBar = document.getElementById('uploadProgress');
+        progressBar.style.display = 'block';
+
+        for (let i = 0; i < totalChunks; i++) {
+            const start = i * chunkSize;
+            const end = Math.min(start + chunkSize, file.size);
+            const chunk = file.slice(start, end);
+
+            const formData = new FormData();
+            formData.append('file_id', fileId);
+            formData.append('chunk_index', i);
+            formData.append('total_chunks', totalChunks);
+            formData.append('edf_file', chunk);
+            formData.append('original_filename', file.name);
+
+            try {
+                const response = await fetch('/upload_chunks', { method: 'POST', body: formData });
+                const responseData = await response.json();
+                if (!response.ok || !responseData.success) {
+                    throw new Error(responseData.error || `Failed to upload chunk ${i + 1}/${totalChunks}`);
+                }
+
+                progressBar.value = ((i + 1) / totalChunks) * 50; // Upload progress (0-50%)
+            } catch (error) {
+                console.error("Error uploading chunk:", error);
+                alert('An error occurred during the upload. Please try again.');
+                progressBar.style.display = 'none';
+                return;
+            }
+        }
+
+        alert('File uploaded successfully. Initiating parsing...');
+        await parseFile(fileId, progressBar);
+    }
+
+    async function parseFile(fileId, progressBar) {
+        const formData = new FormData();
+        formData.append('file_id', fileId);
+
+        try {
+            const response = await fetch('/parse_file', { method: 'POST', body: formData });
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                progressBar.value = 100;
+                populateChannels(data); // Populate dropdowns for detected channels
+                document.getElementById('channelSelection').style.display = 'block';
+            } else {
+                throw new Error(data.error || 'Error parsing file.');
+            }
+        } catch (error) {
+            console.error('Error parsing file:', error);
+            alert('An error occurred during file parsing. Please try again.');
+        }
+    }
+
     function populateChannels(data) {
+        console.log("Populating channels with response data:", data); // Debug log
+
         const container = document.getElementById('channelLists');
-        container.innerHTML = '';
+        container.innerHTML = ''; // Clear any existing content
 
         const categories = ['eeg', 'eog', 'emg', 'others'];
         categories.forEach(category => {
@@ -79,7 +121,7 @@
                 group.appendChild(label);
 
                 const select = document.createElement('select');
-                select.id = `${category}Channels`; // Add unique ID for JavaScript
+                select.id = `${category}Channels`;
                 select.name = `${category}[]`;
                 select.classList.add('form-control');
                 select.multiple = true;
@@ -93,13 +135,16 @@
 
                 group.appendChild(select);
                 container.appendChild(group);
+            } else {
+                console.log(`No channels found for category: ${category}`); // Debug empty categories
             }
         });
 
-        document.getElementById('filepath').value = data.filepath;
+        if (data.filepath) {
+            document.getElementById('filepath').value = data.filepath; // Set filepath for form submission
+        }
     }
 
-    // Prepare selected channels for form submission
     function prepareFormSubmission() {
         const selectedChannels = {
             eeg: Array.from(document.querySelector('#eegChannels')?.selectedOptions || []).map(option => option.value),
