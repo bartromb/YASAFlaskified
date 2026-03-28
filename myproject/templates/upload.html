@@ -1,161 +1,665 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+{% block title %}{{ t('upload') }} EDF — YASAFlaskified{% endblock %}
 
-{% block title %}Upload and Analyze EDF Files{% endblock %}
+{% block extra_css %}
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
 
-{% block header %}
-<h1>Upload and Analyze EDF Files</h1>
-<p class="lead">Upload an EDF file to analyze its metadata and select channels for processing.</p>
+:root {
+  --ink:      #0d1b2a;
+  --ink-mid:  #1a3a5c;
+  --ink-soft: #2d5f8a;
+  --sky:      #4a9eca;
+  --ice:      #e8f4fd;
+  --pulse:    #00d4aa;
+  --warn:     #f59e0b;
+  --danger:   #ef4444;
+  --mono:     'IBM Plex Mono', monospace;
+  --sans:     'DM Sans', sans-serif;
+}
+
+body { font-family: var(--sans); background: #f0f4f8; }
+
+/* ── PAGE LAYOUT ── */
+.upload-page {
+  min-height: calc(100vh - 120px);
+  display: grid;
+  place-items: center;
+  padding: 2rem 1rem;
+}
+
+.upload-card {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 8px 48px rgba(13,27,42,.12), 0 2px 8px rgba(13,27,42,.06);
+  width: 100%;
+  max-width: 680px;
+  overflow: hidden;
+}
+
+/* ── CARD HEADER ── */
+.upload-header {
+  background: var(--ink);
+  padding: 2rem 2.4rem 1.6rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.upload-header::before {
+  content: '';
+  position: absolute;
+  top: -40px; right: -60px;
+  width: 200px; height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(74,158,202,.25) 0%, transparent 70%);
+}
+
+.upload-header::after {
+  content: '';
+  position: absolute;
+  bottom: -20px; left: 40px;
+  width: 120px; height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,212,170,.15) 0%, transparent 70%);
+}
+
+.header-label {
+  font-family: var(--mono);
+  font-size: .7rem;
+  color: var(--sky);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  margin-bottom: .4rem;
+}
+
+.header-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: white;
+  margin: 0 0 .25rem;
+}
+
+.header-sub {
+  font-size: .82rem;
+  color: rgba(255,255,255,.5);
+  font-weight: 300;
+}
+
+/* ── CARD BODY ── */
+.upload-body {
+  padding: 2rem 2.4rem 2.4rem;
+}
+
+/* ── DROP ZONE ── */
+.drop-zone {
+  border: 2px dashed #c8d8e8;
+  border-radius: 14px;
+  padding: 3rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all .25s ease;
+  background: #fafcfe;
+  position: relative;
+}
+
+.drop-zone:hover,
+.drop-zone.dragover {
+  border-color: var(--sky);
+  background: var(--ice);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(74,158,202,.15);
+}
+
+.drop-zone.has-file {
+  border-color: var(--pulse);
+  background: #f0fdf9;
+}
+
+.drop-zone.has-file:hover {
+  border-color: var(--pulse);
+  background: #e6faf5;
+}
+
+.drop-icon {
+  font-size: 3rem;
+  margin-bottom: .75rem;
+  display: block;
+  transition: transform .3s ease;
+}
+.drop-zone:hover .drop-icon { transform: scale(1.1); }
+.drop-zone.has-file .drop-icon { animation: none; }
+
+.drop-main {
+  font-size: .95rem;
+  font-weight: 500;
+  color: var(--ink);
+  margin-bottom: .3rem;
+}
+
+.drop-sub {
+  font-size: .8rem;
+  color: #8099b0;
+}
+
+.file-badge {
+  display: none;
+  align-items: center;
+  gap: .6rem;
+  background: white;
+  border: 1px solid #c8e8d8;
+  border-radius: 8px;
+  padding: .5rem .9rem;
+  margin-top: 1rem;
+  font-family: var(--mono);
+  font-size: .78rem;
+  color: #2d7a5a;
+}
+.file-badge.visible { display: inline-flex; }
+.file-badge-icon { color: var(--pulse); font-size: 1rem; }
+
+/* ── PROGRESS AREA ── */
+.progress-area {
+  display: none;
+  margin-top: 1.5rem;
+}
+.progress-area.visible { display: block; }
+
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: .78rem;
+  color: #6080a0;
+  margin-bottom: .5rem;
+  font-family: var(--mono);
+}
+
+.progress-track {
+  height: 6px;
+  background: #e4edf5;
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--sky), var(--pulse));
+  transition: width .3s ease;
+  width: 0%;
+}
+
+/* ── STATUS LOG ── */
+.status-log {
+  margin-top: 1.25rem;
+  background: var(--ink);
+  border-radius: 10px;
+  padding: 1rem 1.2rem;
+  display: none;
+  max-height: 160px;
+  overflow-y: auto;
+}
+.status-log.visible { display: block; }
+
+.log-line {
+  font-family: var(--mono);
+  font-size: .72rem;
+  color: #7ab0d4;
+  margin-bottom: .25rem;
+  display: flex;
+  gap: .5rem;
+}
+.log-line:last-child { margin: 0; }
+.log-ts {
+  color: #3a6080;
+  flex-shrink: 0;
+}
+.log-ok  { color: var(--pulse); }
+.log-err { color: var(--danger); }
+.log-warn { color: var(--warn); }
+
+/* ── UPLOAD BUTTON ── */
+.btn-upload {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .6rem;
+  width: 100%;
+  padding: .85rem;
+  background: var(--ink);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-family: var(--sans);
+  font-size: .95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s ease;
+  margin-top: 1.5rem;
+  letter-spacing: .01em;
+}
+.btn-upload:hover:not(:disabled) {
+  background: var(--ink-mid);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(13,27,42,.25);
+}
+.btn-upload:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+  transform: none;
+}
+.btn-upload .spinner {
+  width: 16px; height: 16px;
+  border: 2px solid rgba(255,255,255,.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  display: none;
+}
+.btn-upload.loading .btn-icon { display: none; }
+.btn-upload.loading .spinner  { display: block; }
+
+/* ── INFO ROW ── */
+.info-row {
+  display: flex;
+  gap: .5rem;
+  margin-top: 1.2rem;
+  flex-wrap: wrap;
+}
+.info-chip {
+  display: flex;
+  align-items: center;
+  gap: .3rem;
+  background: var(--ice);
+  color: var(--ink-soft);
+  border-radius: 99px;
+  padding: .25rem .75rem;
+  font-size: .75rem;
+  font-weight: 500;
+}
+.info-chip svg {
+  width: 13px; height: 13px;
+  flex-shrink: 0;
+}
+
+/* ── ALERTS ── */
+.upload-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: .6rem;
+  border-radius: 10px;
+  padding: .75rem 1rem;
+  font-size: .83rem;
+  margin-bottom: 1.2rem;
+}
+.upload-alert.danger {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+.upload-alert.success {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+/* ── ANIMATIONS ── */
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.upload-card { animation: fadeUp .4s ease both; }
+
+/* ── EDF INFO PILLS ── */
+.edf-meta {
+  display: none;
+  gap: .6rem;
+  flex-wrap: wrap;
+  margin-top: .75rem;
+}
+.edf-meta.visible { display: flex; }
+.edf-pill {
+  background: white;
+  border: 1px solid #c8d8e8;
+  border-radius: 8px;
+  padding: .3rem .75rem;
+  font-family: var(--mono);
+  font-size: .72rem;
+  color: var(--ink-mid);
+}
+.edf-pill span { color: var(--sky); font-weight: 500; }
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    <!-- File Upload Form -->
-    <form id="fileUploadForm" enctype="multipart/form-data">
-        <div class="form-group">
-            <label for="fileInput">Select EDF File:</label>
-            <input type="file" id="fileInput" name="edf_file" class="form-control" accept=".edf" required>
-        </div>
-        <progress id="uploadProgress" value="0" max="100" style="width: 100%; display: none;"></progress>
-        <button type="button" id="uploadFileButton" class="btn btn-primary mt-3">Analyze File</button>
-    </form>
+<div class="upload-page">
+  <div class="upload-card">
 
-    <!-- Channel Selection Form -->
-    <div id="channelSelection" style="display: none; margin-top: 20px;">
-        <h3>Detected Channels</h3>
-        <form id="channelSelectForm" method="POST" action="/process_file" onsubmit="return prepareFormSubmission();">
-            <input type="hidden" name="filepath" id="filepath">
-            <div id="channelLists"></div>
-            <input type="hidden" name="selected_channels" id="selectedChannels">
-            <button type="submit" class="btn btn-success mt-3">Start Processing</button>
-        </form>
+    {# ── HEADER ── #}
+    <div class="upload-header">
+      <div class="header-label">{{ t('upload_step1') }}</div>
+      <h1 class="header-title">{{ t('upload_title') }}</h1>
+      <p class="header-sub">{{ t('upload_subtitle') }}</p>
     </div>
+
+    {# ── BODY ── #}
+    <div class="upload-body">
+
+      {# Flash berichten #}
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+          <div class="upload-alert {{ category }}">
+            <span>{% if category == 'danger' %}⚠️{% else %}✓{% endif %}</span>
+            <span>{{ message }}</span>
+          </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      {# Drop zone #}
+      <div class="drop-zone" id="dropZone" onclick="document.getElementById('edfInput').click()">
+        <span class="drop-icon" id="dropIcon">🧠</span>
+        <div class="drop-main" id="dropMain">
+          Klik om te bladeren of sleep een .edf bestand hierheen
+        </div>
+        <div class="drop-sub" id="dropSub">
+          Polysomnografie-opname van elk PSG-apparaat
+        </div>
+        <div class="file-badge" id="fileBadge">
+          <span class="file-badge-icon">✓</span>
+          <span id="fileBadgeName"></span>
+          <span id="fileBadgeSize" style="color:#8099b0"></span>
+        </div>
+      </div>
+
+      <input type="file" id="edfInput" accept=".edf" class="d-none">
+
+      {# EDF metadata na assembly #}
+      <div class="edf-meta" id="edfMeta">
+        <div class="edf-pill">{{ t('upload_channels') }}: <span id="metaChannels">—</span></div>
+        <div class="edf-pill">{{ t('upload_duration') }}: <span id="metaDuration">—</span></div>
+        <div class="edf-pill">EEG: <span id="metaEEG">—</span></div>
+        <div class="edf-pill">EOG: <span id="metaEOG">—</span></div>
+      </div>
+
+      {# Voortgang #}
+      <div class="progress-area" id="progressArea">
+        <div class="progress-label">
+          <span id="progressLabel">{{ t('upload_uploading') }}</span>
+          <span id="progressPct">0%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </div>
+
+      {# Status log #}
+      <div class="status-log" id="statusLog"></div>
+
+      {# Upload knop #}
+      <button class="btn-upload" id="uploadBtn" disabled onclick="startUpload()">
+        <span class="btn-icon">🚀</span>
+        <span class="spinner"></span>
+        <span id="btnText">{{ t('upload_btn') }}</span>
+      </button>
+
+      {# Info chips #}
+      <div class="info-row">
+        <div class="info-chip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          CSRF beveiligd
+        </div>
+        <div class="info-chip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+            <polyline points="17 6 23 6 23 12"/>
+          </svg>
+          Chunked upload
+        </div>
+        <div class="info-chip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          Async verwerking
+        </div>
+        <div class="info-chip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          Enkel voor zorgverleners
+        </div>
+      </div>
+
+    </div>{# /upload-body #}
+  </div>{# /upload-card #}
 </div>
 
-<!-- JavaScript Section -->
 <script>
-    document.getElementById('uploadFileButton').addEventListener('click', async () => {
-        const fileInput = document.getElementById('fileInput');
-        if (!fileInput.files[0]) {
-            alert('Please select an EDF file to upload.');
-            return;
-        }
+// ═══════════════════════════════════════════════════════
+// CONFIGURATIE
+// ═══════════════════════════════════════════════════════
+const CHUNK_SIZE  = 2 * 1024 * 1024;   // 2 MB per chunk
+const MAX_SIZE_MB = 500;
+let   selectedFile = null;
+let   isUploading  = false;
 
-        const file = fileInput.files[0];
-        await handleFileUpload(file);
-    });
+// ═══════════════════════════════════════════════════════
+// DOM REFERENTIES
+// ═══════════════════════════════════════════════════════
+const dropZone    = document.getElementById('dropZone');
+const dropIcon    = document.getElementById('dropIcon');
+const dropMain    = document.getElementById('dropMain');
+const dropSub     = document.getElementById('dropSub');
+const fileBadge   = document.getElementById('fileBadge');
+const fileBadgeName = document.getElementById('fileBadgeName');
+const fileBadgeSize = document.getElementById('fileBadgeSize');
+const edfInput    = document.getElementById('edfInput');
+const uploadBtn   = document.getElementById('uploadBtn');
+const btnText     = document.getElementById('btnText');
+const progressArea = document.getElementById('progressArea');
+const progressFill = document.getElementById('progressFill');
+const progressLabel = document.getElementById('progressLabel');
+const progressPct  = document.getElementById('progressPct');
+const statusLog   = document.getElementById('statusLog');
+const edfMeta     = document.getElementById('edfMeta');
 
-    async function handleFileUpload(file) {
-        const chunkSize = 1 * 1024 * 1024; // 1 MB chunks
-        const totalChunks = Math.ceil(file.size / chunkSize);
-        const fileId = Date.now().toString();
-        const progressBar = document.getElementById('uploadProgress');
-        progressBar.style.display = 'block';
+// ═══════════════════════════════════════════════════════
+// LOG HELPER
+// ═══════════════════════════════════════════════════════
+function log(msg, type = '') {
+  statusLog.classList.add('visible');
+  const ts = new Date().toLocaleTimeString('nl-BE', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  const line = document.createElement('div');
+  line.className = `log-line ${type}`;
+  line.innerHTML = `<span class="log-ts">${ts}</span><span>${msg}</span>`;
+  statusLog.appendChild(line);
+  statusLog.scrollTop = statusLog.scrollHeight;
+}
 
-        for (let i = 0; i < totalChunks; i++) {
-            const start = i * chunkSize;
-            const end = Math.min(start + chunkSize, file.size);
-            const chunk = file.slice(start, end);
+// ═══════════════════════════════════════════════════════
+// BESTAND SELECTEREN
+// ═══════════════════════════════════════════════════════
+function setFile(file) {
+  if (!file) return;
 
-            const formData = new FormData();
-            formData.append('file_id', fileId);
-            formData.append('chunk_index', i);
-            formData.append('total_chunks', totalChunks);
-            formData.append('edf_file', chunk);
-            formData.append('original_filename', file.name); // Preserve original filename
+  if (!file.name.toLowerCase().endsWith('.edf')) {
+    log('⚠️ Alleen .edf bestanden zijn toegestaan.', 'log-warn');
+    return;
+  }
 
-            try {
-                const response = await fetch('/upload_chunks', { method: 'POST', body: formData });
-                const responseData = await response.json();
-                if (!response.ok || !responseData.success) {
-                    throw new Error(responseData.error || `Failed to upload chunk ${i + 1}/${totalChunks}`);
-                }
+  const mb = file.size / 1024 / 1024;
+  if (mb > MAX_SIZE_MB) {
+    log(`⚠️ Bestand te groot: ${mb.toFixed(0)} MB (max ${MAX_SIZE_MB} MB).`, 'log-warn');
+    return;
+  }
 
-                progressBar.value = ((i + 1) / totalChunks) * 50; // Upload progress (0-50%)
-            } catch (error) {
-                console.error("Error uploading chunk:", error);
-                alert('An error occurred during the upload. Please try again.');
-                progressBar.style.display = 'none';
-                return;
-            }
-        }
+  selectedFile = file;
+  const mbStr  = mb >= 100 ? mb.toFixed(0) : mb.toFixed(1);
 
-        alert('File uploaded successfully. Initiating parsing...');
-        await parseFile(fileId, progressBar);
+  // UI updaten
+  dropZone.classList.add('has-file');
+  dropIcon.textContent    = '✅';
+  dropMain.textContent    = file.name;
+  dropSub.textContent     = `${mbStr} MB — {{ t('upload_ready') }}`;
+  fileBadgeName.textContent = file.name;
+  fileBadgeSize.textContent = `${mbStr} MB`;
+  fileBadge.classList.add('visible');
+
+  uploadBtn.disabled = false;
+  log(`Bestand geselecteerd: ${file.name} (${mbStr} MB)`, 'log-ok');
+}
+
+edfInput.addEventListener('change', () => {
+  if (edfInput.files[0]) setFile(edfInput.files[0]);
+});
+
+// Drag & drop
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    edfInput.files = dt.files;
+    setFile(file);
+  }
+});
+
+// ═══════════════════════════════════════════════════════
+// VOORTGANG UI
+// ═══════════════════════════════════════════════════════
+function setProgress(pct, label) {
+  progressArea.classList.add('visible');
+  progressFill.style.width = `${pct}%`;
+  progressPct.textContent  = `${Math.round(pct)}%`;
+  if (label) progressLabel.textContent = label;
+}
+
+// ═══════════════════════════════════════════════════════
+// CSRF TOKEN
+// ═══════════════════════════════════════════════════════
+function getCsrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  if (meta) return meta.getAttribute('content');
+  // Flask-WTF injecteert ook via cookie
+  const match = document.cookie.match(/csrf_token=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : '';
+}
+
+// ═══════════════════════════════════════════════════════
+// HOOFD UPLOAD FLOW
+// ═══════════════════════════════════════════════════════
+async function startUpload() {
+  if (!selectedFile || isUploading) return;
+  isUploading = true;
+
+  // Knop loading state
+  uploadBtn.disabled = true;
+  uploadBtn.classList.add('loading');
+  btnText.textContent = '{{ t("upload_btn_uploading") }}';
+
+  const file         = selectedFile;
+  const fileId       = crypto.randomUUID ? crypto.randomUUID()
+                       : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const totalChunks  = Math.ceil(file.size / CHUNK_SIZE);
+
+  log(`Upload gestart — ${totalChunks} chunk${totalChunks > 1 ? 's' : ''}`);
+  setProgress(0, 'Chunks uploaden...');
+
+  // ── STAP 1: Chunks uploaden ──────────────────────────
+  for (let i = 0; i < totalChunks; i++) {
+    const start  = i * CHUNK_SIZE;
+    const end    = Math.min(start + CHUNK_SIZE, file.size);
+    const chunk  = file.slice(start, end);
+
+    const fd = new FormData();
+    fd.append('file_id',           fileId);
+    fd.append('chunk_index',       i);
+    fd.append('total_chunks',      totalChunks);
+    fd.append('original_filename', file.name);
+    fd.append('edf_file',          chunk, file.name);
+
+    let resp, data;
+    try {
+      resp = await fetch('/upload_chunks', { method: 'POST', body: fd, credentials: 'include' });
+      data = await resp.json();
+    } catch (err) {
+      log(`❌ {{ t('upload_net_error') }} ${i}: ${err}`, 'log-err');
+      resetUpload(); return;
     }
 
-    async function parseFile(fileId, progressBar) {
-        const formData = new FormData();
-        formData.append('file_id', fileId);
-
-        try {
-            const response = await fetch('/parse_file', { method: 'POST', body: formData });
-            const data = await response.json();
-
-            if (response.ok && data.success) {
-                // Gradually increase the progress bar from 50% to 100%
-                for (let progress = 50; progress <= 100; progress++) {
-                    progressBar.value = progress;
-                    await new Promise(resolve => setTimeout(resolve, 100)); // Simulate gradual progress
-                }
-
-                populateChannels(data); // Populate dropdowns for detected channels
-                document.getElementById('channelSelection').style.display = 'block';
-                alert('File analysis completed! Select channels below.');
-            } else {
-                throw new Error(data.error || 'Error parsing file.');
-            }
-        } catch (error) {
-            console.error('Error parsing file:', error);
-            alert('An error occurred during file parsing. Please try again.');
-        }
+    if (!data.success) {
+      log(`❌ {{ t('upload_srv_error') }} ${i}: ${data.error}`, 'log-err');
+      resetUpload(); return;
     }
 
-    function populateChannels(data) {
-        const container = document.getElementById('channelLists');
-        container.innerHTML = '';
+    const pct = ((i + 1) / totalChunks) * 60;  // 0–60% voor upload
+    setProgress(pct, `Chunk ${i + 1} / ${totalChunks} geüpload`);
+    log(`Chunk ${i + 1}/${totalChunks} ✓`);
+  }
 
-        const categories = ['eeg', 'eog', 'emg', 'others'];
-        categories.forEach(category => {
-            if (data[category] && data[category].length > 0) {
-                const group = document.createElement('div');
-                group.classList.add('form-group', 'mt-3');
+  // ── STAP 2: EDF Parsen ──────────────────────────────
+  log('{{ t("upload_parse") }}', 'log-ok');
+  setProgress(65, 'EDF parsen...');
+  btnText.textContent = '{{ t("upload_btn_analyzing") }}';
 
-                const label = document.createElement('label');
-                label.textContent = `${category.toUpperCase()} Channels:`;
-                group.appendChild(label);
+  const parseFd = new FormData();
+  parseFd.append('file_id', fileId);
 
-                const select = document.createElement('select');
-                select.id = `${category}Channels`;
-                select.name = `${category}[]`;
-                select.classList.add('form-control');
-                select.multiple = true;
+  let parseResp, parseData;
+  try {
+    parseResp = await fetch('/parse_file', { method: 'POST', body: parseFd });
+    parseData = await parseResp.json();
+  } catch (err) {
+    log(`❌ {{ t('upload_parse_error') }}: ${err}`, 'log-err');
+    resetUpload(); return;
+  }
 
-                data[category].forEach(channel => {
-                    const option = document.createElement('option');
-                    option.value = channel;
-                    option.textContent = channel;
-                    select.appendChild(option);
-                });
+  if (!parseData.success) {
+    log(`❌ {{ t('upload_parse_fail') }}: ${parseData.error}`, 'log-err');
+    resetUpload(); return;
+  }
 
-                group.appendChild(select);
-                container.appendChild(group);
-            }
-        });
+  setProgress(85, 'Kanalen gedetecteerd...');
+  log(`✓ ${parseData.all.length} {{ t('upload_channels_found') }}: `
+    + `EEG=${parseData.eeg.length}, EOG=${parseData.eog.length}, EMG=${parseData.emg.length}`, 'log-ok');
 
-        if (data.filepath) {
-            document.getElementById('filepath').value = data.filepath; // Set filepath for form submission
-        }
-    }
+  // EDF meta tonen
+  document.getElementById('metaChannels').textContent = parseData.all.length;
+  document.getElementById('metaEEG').textContent      = parseData.eeg.length;
+  document.getElementById('metaEOG').textContent      = parseData.eog.length;
+  document.getElementById('metaDuration').textContent = '—';
+  edfMeta.classList.add('visible');
 
-    function prepareFormSubmission() {
-        const selectedChannels = {
-            eeg: Array.from(document.querySelector('#eegChannels')?.selectedOptions || []).map(option => option.value),
-            eog: Array.from(document.querySelector('#eogChannels')?.selectedOptions || []).map(option => option.value),
-            emg: Array.from(document.querySelector('#emgChannels')?.selectedOptions || []).map(option => option.value)
-        };
+  // ── STAP 3: Redirect naar kanaalkeuze ───────────────
+  setProgress(100, 'Doorgaan naar kanaalkeuze...');
+  btnText.textContent = 'Kanaalkeuze laden...';
+  log(`✓ Doorsturen naar kanaalkeuze (job: ${parseData.job_id.slice(0,8)}...)`, 'log-ok');
 
-        document.getElementById('selectedChannels').value = JSON.stringify(selectedChannels);
-        return true; // Allow form submission
-    }
+  await new Promise(r => setTimeout(r, 500));   // korte pauze voor visuele feedback
+  window.location.href = `/channel-select/${parseData.job_id}`;
+}
+
+// ═══════════════════════════════════════════════════════
+// RESET BIJ FOUT
+// ═══════════════════════════════════════════════════════
+function resetUpload() {
+  isUploading = false;
+  uploadBtn.disabled = false;
+  uploadBtn.classList.remove('loading');
+  btnText.textContent = 'Opnieuw proberen';
+  setProgress(0, 'Fout opgetreden');
+  progressFill.style.background = 'var(--danger)';
+}
 </script>
+
+{# CSRF meta tag voor JS fetch #}
+<meta name="csrf-token" content="{{ csrf_token() }}">
 {% endblock %}

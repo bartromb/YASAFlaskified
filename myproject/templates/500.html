@@ -1,0 +1,11 @@
+{# templates/errors/500.html #}
+{% extends "base.html" %}
+{% block title %}Serverfout{% endblock %}
+{% block content %}
+<div class="container py-5 text-center" style="max-width:500px">
+  <div class="fs-1 mb-3">⚠️</div>
+  <h2>Interne serverfout</h2>
+  <p class="text-muted">Er is een onverwachte fout opgetreden. Probeer opnieuw.</p>
+  <a href="/" class="btn btn-primary mt-3">← Terug naar home</a>
+</div>
+{% endblock %}

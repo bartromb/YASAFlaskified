@@ -1,0 +1,127 @@
+{# templates/job_status.html — Analysevoortgang met echte worker-polling #}
+{% extends "base.html" %}
+{% block title %}{{ t("analysis_in_progress") }}{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width:600px">
+  <div class="text-center">
+
+    <div id="state-running">
+      <div class="spinner-border text-primary mb-3" style="width:3.5rem;height:3.5rem" role="status"></div>
+      <h3>{{ t('analysis_running') }}</h3>
+      <p class="text-muted mb-4">
+        {{ t('analysis_description') }}<br>
+        {{ t('analysis_duration') }}
+      </p>
+
+      <div class="progress mb-3" style="height:8px">
+        <div class="progress-bar bg-primary"
+             id="progressBar" style="width:0%; transition: width 0.5s"></div>
+      </div>
+
+      <div id="stepLabel" class="text-muted small">
+        ⏳ {{ t('waiting_for_worker') }}
+      </div>
+
+      <div class="mt-4 small text-muted" style="text-align:left; max-width:480px; margin:0 auto">
+        <strong>{{ t('clinical_usability_title') }}:</strong><br>
+        {{ t('clinical_usability') }}
+      </div>
+    </div>
+
+    <div id="state-done" class="d-none">
+      <div class="mb-3 fs-1">✅</div>
+      <h3 class="text-success">{{ t('analysis_complete') }}</h3>
+      <p class="text-muted mb-4">{{ t('all_results_available') }}</p>
+      <div class="d-grid gap-2">
+        <a href="/results/{{ job_id }}" class="btn btn-primary btn-lg">
+          📊 &nbsp; {{ t('view_report') }}
+        </a>
+        <a href="/results/{{ job_id }}/pdf" class="btn btn-outline-danger" id="btnPdf">
+          📄 &nbsp; {{ t('download_pdf') }}
+        </a>
+        <a href="/results/{{ job_id }}/excel" class="btn btn-outline-success" id="btnExcel">
+          📊 &nbsp; {{ t('download_excel') }}
+        </a>
+        <a href="/results/{{ job_id }}/psg" class="btn btn-outline-info" id="btnPsg">
+          🏥 &nbsp; {{ t('download_psg') }}
+        </a>
+        <a href="/score_v12/{{ job_id }}" class="btn btn-warning" id="btnEdfBrowser">
+          📡 &nbsp; EDF Browser & Scorer
+        </a>
+        <a href="/results/{{ job_id }}/edfplus" class="btn btn-outline-secondary" id="btnEdf">
+          📁 &nbsp; {{ t('generate_edfplus') }} ({{ t('optional') }})
+        </a>
+      </div>
+    </div>
+
+    <div id="state-failed" class="d-none">
+      <div class="mb-3 fs-1">❌</div>
+      <h3 class="text-danger">{{ t('analysis_failed') }}</h3>
+      <p class="text-muted" id="errorMsg">{{ t('unknown_error') }}</p>
+      <a href="/" class="btn btn-outline-secondary mt-3">← Opnieuw proberen</a>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function() {
+  const jobId    = {{ job_id | tojson }};
+  let pollCount  = 0;
+  const maxPolls = 1800;  // 60 min bij 2s interval
+
+  function poll() {
+    fetch(`/api/status/${jobId}`)
+      .then(r => r.json())
+      .then(data => {
+        pollCount++;
+
+        // Echte voortgang uit worker (via Redis)
+        if (data.progress && data.progress.label) {
+          const step  = parseInt(data.progress.step)  || 0;
+          const total = parseInt(data.progress.total) || 10;
+          const pct   = Math.round((step / total) * 100);
+
+          document.getElementById("progressBar").style.width = pct + "%";
+          document.getElementById("stepLabel").textContent = "⚙️ " + data.progress.label;
+        }
+
+        if (data.done) {
+          document.getElementById("progressBar").style.width = "100%";
+          document.getElementById("state-running").classList.add("d-none");
+          document.getElementById("state-done").classList.remove("d-none");
+          if (!data.has_pdf)   document.getElementById("btnPdf").classList.add("d-none");
+          if (!data.has_excel) document.getElementById("btnExcel").classList.add("d-none");
+          if (!data.has_psg)   document.getElementById("btnPsg").classList.add("d-none");
+          // EDF+ knop altijd zichtbaar (on-demand generatie)
+          return;
+        }
+
+        if (data.failed) {
+          document.getElementById("state-running").classList.add("d-none");
+          document.getElementById("state-failed").classList.remove("d-none");
+          document.getElementById("errorMsg").textContent =
+            data.error || "{{ t('analysis_failed') }}. Controleer het EDF-bestand en de kanaalkeuze.";
+          return;
+        }
+
+        if (pollCount > maxPolls) {
+          document.getElementById("state-running").classList.add("d-none");
+          document.getElementById("state-failed").classList.remove("d-none");
+          document.getElementById("errorMsg").textContent = "Time-out na 60 minuten.";
+          return;
+        }
+
+        setTimeout(poll, 2000);
+      })
+      .catch(err => {
+        console.warn("Poll fout:", err);
+        if (pollCount < maxPolls) setTimeout(poll, 5000);
+      });
+  }
+
+  setTimeout(poll, 1500);
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,543 @@
+\documentclass[11pt,a4paper,twocolumn]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage[margin=2.2cm,columnsep=0.8cm]{geometry}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{authblk}
+
+\definecolor{navy}{HTML}{1A3A8F}
+\definecolor{dgray}{HTML}{6B7A99}
+
+\titleformat{\section}{\large\bfseries\color{navy}}{\thesection.}{0.5em}{}
+\titleformat{\subsection}{\normalsize\bfseries\color{navy}}{\thesubsection}{0.5em}{}
+\titleformat{\subsubsection}{\small\bfseries\itshape\color{dgray}}{\thesubsubsection}{0.5em}{}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{dgray}YASAFlaskified v0.8.1 \& psgscoring}
+\fancyhead[R]{\small\color{dgray}Rombaut et~al.}
+\fancyfoot[C]{\small\color{dgray}\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.2pt}
+
+\title{\textbf{\Large YASAFlaskified \& psgscoring}\\[6pt]
+\large An Open-Source Platform and Python Library for Automated\\
+Polysomnography Analysis Using AI-Based Sleep Staging\\
+and AASM 2.6--Compliant Respiratory Scoring}
+
+\author[1]{Bart Rombaut, MD}
+\author[2]{\textit{[Open position for contributors]}}
+\author[3]{Raphael Vallat, PhD}
+\affil[1]{Department of Pneumology, Slaapkliniek AZORG, Aalst, Belgium}
+\affil[2]{\textit{[Reserved for YASA developers / clinical collaborators]}}
+\affil[3]{Center for Human Sleep Science, University of California, Berkeley, CA, USA}
+
+\date{March 2026}
+
+\begin{document}
+\twocolumn[
+  \maketitle
+  \begin{@twocolumnfalse}
+  \noindent\textit{Corresponding author: Bart Rombaut MD, Department of Pneumology, AZORG, Merestraat 80, 9300 Aalst, Belgium. Web: \url{www.slaapkliniek.be}}
+  \vspace{0.5em}
+  \begin{abstract}
+  \noindent We present YASAFlaskified (v0.8.1) and \texttt{psgscoring}, a companion open-source Python library for AASM 2.6--compliant respiratory event scoring. The system extends YASA---developed by Vallat and Walker at UC Berkeley \cite{vallat2021}---into a complete clinical PSG analysis platform. \texttt{psgscoring} implements validated signal processing algorithms requiring no deep learning or GPU: square-root linearization of nasal pressure signals \cite{thurnheer2001,monserrat2001}, Mean Magnitude of Second Derivative (MMSD) apnea validation \cite{lee2008}, dual-sensor detection with exclusion masking, temporally constrained SpO\textsubscript{2} coupling \cite{uddin2021}, and a novel two-pass Rule~1B pipeline with breath-cycle validation. Version 0.8.1 introduces rolling 2-minute arousal baselines adapted to fragmented sleep, ratio-based sigma-band spindle exclusion, clipping-to-artifact feedback for uncontaminated TST calculation, FHIR~R4 treatment recommendations, multi-site access control with role-based data isolation, and an interactive EDF browser with channel-group filters. The platform is deployed as a Docker Compose application. \texttt{psgscoring} is distributed under the BSD-3 license (\texttt{pip install psgscoring}).
+
+  \smallskip
+  \noindent\textbf{Keywords:} polysomnography, sleep staging, YASA, AASM~2.6, obstructive sleep apnea, AHI, respiratory scoring, signal processing, nasal pressure linearization, Python library, psgscoring
+  \end{abstract}
+  \vspace{1em}
+  \end{@twocolumnfalse}
+]
+
+%═══════════════════════════════════════
+\section{Introduction}
+
+Polysomnography (PSG) remains the gold standard for diagnosing sleep-disordered breathing, periodic limb movement disorder, and other sleep pathologies \cite{berry2020}. Manual scoring requires 2--4 hours per study and is subject to 80--90\% inter-scorer agreement \cite{rosenberg2013}, creating bottlenecks in sleep medicine.
+
+YASA (Yet Another Spindle Algorithm), developed by Vallat and Walker at UC Berkeley \cite{vallat2021}, provides a validated LightGBM-based sleep staging classifier achieving $\sim$85\% epoch agreement. However, YASA focuses on EEG-based staging and does not address respiratory scoring, arousal detection, PLM analysis, or clinical reporting.
+
+For respiratory event detection, \textbf{no established Python library exists} implementing full AASM 2.6--compliant scoring. Published algorithms have been validated individually:
+
+\begin{itemize}[nosep,leftmargin=1.5em]
+  \item Monserrat/Thurnheer \cite{monserrat2001,thurnheer2001}: $\sqrt{\,}$-linearization of nasal pressure ($r^2$=0.88--0.96)
+  \item Lee et~al.\ \cite{lee2008}: MMSD method (92\% agreement, $\kappa$=0.78)
+  \item Nakano et~al.\ \cite{nakano2016}: Rule-based nasal pressure (86.4\% sensitivity)
+  \item Uddin et~al.\ \cite{uddin2021}: Airflow + SpO\textsubscript{2} coupling
+\end{itemize}
+
+YASAFlaskified integrates these validated approaches into a unified clinical platform, and \texttt{psgscoring} extracts the core algorithms into a standalone, pip-installable Python library (BSD-3 license) for the research community.
+
+
+%═══════════════════════════════════════
+\section{The YASA Library}
+
+\subsection{Origin and Development}
+
+YASA was created by Raphael Vallat at the Center for Human Sleep Science directed by Matthew Walker at UC Berkeley. First released in 2018, it evolved into a comprehensive sleep analysis library published in \emph{eLife} \cite{vallat2021}. Vallat is also the author of Pingouin \cite{pingouin}. YASA is built on NumPy, SciPy, MNE-Python \cite{gramfort2014}, and scikit-learn, distributed under the BSD-3 license with over 500 citations.
+
+\subsection{LightGBM Sleep Staging}
+
+The core classifier uses LightGBM \cite{lightgbm}, trained on SHHS and MESA data. Per 30-second epoch, features are extracted from three channels:
+
+\textbf{EEG:} Spectral power in six bands ($\delta$, $\theta$, $\alpha$, $\sigma$, $\beta$, $\gamma$) via Welch's method; spectral entropy; Hjorth parameters; zero-crossing rate; permutation entropy.
+
+\textbf{EOG:} Low-frequency power ($<$2~Hz) for slow eye movements; rapid eye movement quantification for REM identification.
+
+\textbf{EMG:} RMS amplitude of chin/submentalis. Optional but improves REM/Wake discrimination by 3--5\%.
+
+Temporal smoothing reduces physiologically implausible transitions. Per-epoch confidence scores enable targeted review of low-confidence epochs ($<$70\%), reducing review effort by 80--90\%.
+
+\subsection{Additional YASA Modules}
+
+Spindle detection (12--15~Hz $\sigma$ band), slow-wave detection (0.3--1.5~Hz, $>$75~$\mu$V), sleep cycle analysis (modified Feinberg \& Floyd \cite{feinberg1979}), and spectral band power computation per epoch and stage.
+
+
+%═══════════════════════════════════════
+\section{System Architecture}
+
+\subsection{Technology Stack}
+
+Flask/Gunicorn (Python~3.11), Redis~7~+~RQ for async jobs, MNE-Python \cite{gramfort2014} for EDF~I/O, SciPy/NumPy for signal processing, YASA~0.7 \cite{vallat2021} with LightGBM \cite{lightgbm}, ReportLab for PDF, edfio/pyedflib for EDF+ (three-tier fallback), Docker Compose with three containers (app, worker, Redis).
+
+\subsection{Processing Pipeline}
+
+\begin{table}[H]
+\centering\small
+\caption{Pipeline stages (8h PSG, 256~Hz, 39 channels)}
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{@{}llr@{}}
+\toprule
+\textbf{Step} & \textbf{Description} & \textbf{Duration} \\
+\midrule
+1. EDF loading & 3-pass selective channels & 13\,s \\
+2. Sleep staging & YASA LightGBM (EEG+EOG+EMG) & 7\,s \\
+3. EEG micro & Spindles, SW, REM, bandpower, cycles & 40\,s \\
+4. Respiratory & AASM 2.6 apnea/hypopnea (Rule~1A) & 70\,s \\
+5. Ancillary & SpO\textsubscript{2}, HR, position, snoring, PLM & 20\,s \\
+6. Arousal & Two-phase detection + Rule~1B & 50\,s \\
+7. Quality & Signal quality + clipping feedback & 5\,s \\
+8. CSR & Cheyne-Stokes via autocorrelation & 5\,s \\
+9. Reports & PDF, PSG, Excel, EDF+, FHIR~R4 & 30\,s \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\subsection{Three-Pass EDF Loading}
+
+\textbf{Pass~1:} EEG+EOG+EMG (3 channels) for staging. \textbf{Pass~2:} All EEG for spindle/SW/bandpower. \textbf{Pass~3:} Respiratory channels + primary EEG for arousals. This minimizes memory ($>$2~GB avoided).
+
+\subsection{Automatic Unit Conversion}
+
+MNE's \texttt{raw.get\_data()} returns Volt. AASM thresholds are in $\mu$V. If $\max(|x|)<0.01$\,V, the system converts $\times 10^6$. Applied independently in arousal, PLM, and EMG processing.
+
+\subsection{Clipping-to-Artifact Feedback (v0.8.1)}
+
+Signal quality assessment detects clipping (amplifier saturation) per channel. In v0.8.1, epochs with $>$5\% clipped samples on the primary EEG channel are added to the artifact mask \emph{before} respiratory analysis, ensuring that saturated segments do not contaminate TST or inflate AHI.
+
+
+%═══════════════════════════════════════
+\section{The \texttt{psgscoring} Library}
+
+\subsection{Motivation}
+
+While YASAFlaskified provides a complete web platform, many researchers need only the respiratory algorithms. YASA itself acknowledges this gap: \emph{``future developments should prioritize automated scoring of clinical disorders, particularly apnea-hypopnea events''} \cite{vallat2021}. \texttt{psgscoring} fills this gap as a standalone library (BSD-3, \url{https://github.com/bartromb/psgscoring}).
+
+\subsection{Architecture}
+
+Requires only \texttt{numpy}~$\geq$1.22, \texttt{scipy}~$\geq$1.8, and \texttt{mne}~$\geq$1.0. Two core modules: \texttt{\_core.py} (2401~lines, 44~functions) and \texttt{\_arousal.py} (891~lines, 15~functions). The public API exposes 30+ functions:
+
+{\small\begin{verbatim}
+from psgscoring import run_full_analysis
+results = run_full_analysis(raw, hypno)
+ahi = results['respiratory']
+             ['summary']['ahi_total']
+\end{verbatim}}
+
+\subsection{Validation}
+
+21 unit tests covering linearization, MMSD, flow envelope, baseline, breath detection, flattening index, and utilities. GitHub Actions CI across Python~3.9--3.12.
+
+\subsection{Current Limitations (v0.1.0)}
+
+\begin{enumerate}[nosep,leftmargin=1.5em]
+  \item \textbf{Monolithic modules.} Two large files rather than domain-specific modules.
+  \item \textbf{Type annotations.} Python~3.10 union syntax limits 3.9 compatibility.
+  \item \textbf{Logging.} Flask-style loggers; should be caller-configured.
+  \item \textbf{MNE coupling.} Full pipeline requires MNE \texttt{Raw} object; individual functions accept plain arrays.
+  \item \textbf{No benchmark validation.} Thresholds empirically tuned at AZORG, not validated on SHHS/PhysioNet.
+  \item \textbf{Limited documentation.} Docstrings present but no signal flow diagrams.
+  \item \textbf{No streaming.} All functions operate on complete in-memory arrays.
+\end{enumerate}
+
+\subsection{Roadmap}
+
+\textbf{Phase~1 (v0.1--0.3):} Modular split, Python~3.9 compat, logging fix, $>$80\% test coverage.
+
+\textbf{Phase~2 (v0.4--0.9):} Validation on SHHS/MESA/PhysioNet with published Bland-Altman and $\kappa$ statistics. MNE decoupling. Sphinx documentation.
+
+\textbf{Phase~3 (v1.0):} Stable API, property-based testing, Zenodo DOI, PyPI release. YASAFlaskified~v1.0 would then import \texttt{psgscoring} as a dependency rather than bundling the algorithms.
+
+
+%═══════════════════════════════════════
+\section{Respiratory Event Detection}
+
+\subsection{Nasal Pressure Square-Root Linearization}
+
+Nasal pressure $\propto$ flow$^2$ (Bernoulli). A 50\% flow reduction $\to$ 75\% amplitude reduction $\to$ systematic hypopnea overestimation. Following AASM Rule~3 \cite{berry2012}:
+
+\begin{equation}
+x_{\mathrm{lin}}(t) = \mathrm{sign}\big(x(t)\big) \cdot \sqrt{|x(t)|}
+\label{eq:sqrt}
+\end{equation}
+
+Applied exclusively to the nasal pressure (hypopnea) channel, not the thermistor (apnea). Thurnheer et~al.\ \cite{thurnheer2001} confirmed $r^2=0.88$--$0.96$ vs.\ pneumotachography.
+
+\subsection{Flow Envelope Computation}
+
+Band-pass filter (0.05--3~Hz, 3\textsuperscript{rd}-order Butterworth), Hilbert transform for instantaneous amplitude, 1-second moving average smoothing. The 3~Hz upper cutoff implicitly removes snoring vibrations (50--200~Hz), ensuring reliable flattening index computation downstream \cite{hosselet1998}.
+
+\subsection{Dynamic and Stage-Specific Baseline}
+
+Per-sample dynamic baseline via 5-minute sliding window (95\textsuperscript{th} percentile), sampled every 10\,s with linear interpolation ($\sim$2500$\times$ speedup). Combined with stage-specific baselines (NREM/REM, 5\,s ramp transitions) and position-reset after body movement.
+
+\subsection{MMSD Apnea Validation}
+
+The Mean Magnitude of Second Derivative \cite{lee2008} provides a drift-independent measure:
+
+\begin{equation}
+\mathrm{MMSD}(t) = \frac{1}{N}\sum_{i=t-N/2}^{t+N/2} |x''(i)|
+\label{eq:mmsd}
+\end{equation}
+
+where $N$ is a 1-second window. Normalized MMSD $>$ 40\% of baseline during a candidate apnea $\to$ false positive rejected. Lee et~al.\ reported 92\% agreement ($\kappa$=0.78) on 24~PSG recordings.
+
+\subsection{Dual-Sensor Detection (AASM 2.6)}
+
+\begin{table}[H]
+\centering\small
+\caption{AASM 2.6 dual-sensor paradigm}
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Sensor} & \textbf{Signal} & \textbf{Role} & \textbf{Threshold} \\
+\midrule
+Thermistor & Thermal airflow & Apnea & $<$10\%, $\geq$10\,s \\
+Nasal pressure & $\sqrt{\,}$-linearized & Hypopnea & 10--70\%, $\geq$10\,s \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\noindent\textbf{Exclusion mask:} $\pm$5\,s margin around each apnea prevents flank double-counting.
+
+\subsection{Apnea Type Classification}
+
+Four-step effort analysis on thoracic/abdominal RIP: (1)~amplitude ratio vs.\ baseline ($>$40\% obstructive, $<$20\% central); (2)~coefficient of variation; (3)~cross-correlation thorax--abdomen; (4)~first/second half comparison for mixed events. Composite confidence score (0--1) per event.
+
+\subsection{Breath-by-Breath Analysis}
+
+Zero-crossing segmentation (1--15\,s per breath). Peak-to-trough amplitude, local baseline from median of 10 preceding breaths, and \textbf{flattening index}: fraction of inspiratory segment $>$80\% of peak. Values $>$0.3 indicate flow limitation (RERA). The input signal is already bandpass-filtered at 0.05--3~Hz, removing snoring artifact before flattening computation \cite{hosselet1998}.
+
+\subsection{SpO\textsubscript{2} Coupling and Rule~1B}
+
+\subsubsection{Rule~1A (Desaturation)}
+Baseline: 90\textsuperscript{th} percentile of 120\,s pre-event. Nadir window: onset $\to$ 30\,s post-event \cite{uddin2021}. Nadir $\geq$3\,s after onset (circulatory delay). Early nadirs with $<$5\% desaturation rejected.
+
+\subsubsection{Rule~1B --- Two-Pass with Breath Validation}
+\textbf{Pass~1:} Events without $\geq$3\% desaturation stored as \emph{rejected candidates}. \textbf{Pass~2:} After arousal detection, candidates re-evaluated. An arousal within 15\,s of event termination triggers reinstatement as Rule~1B hypopnea.
+
+\textbf{v0.8.1 improvement:} If $>$1 complete breath cycle occurs between event termination and arousal onset, the coupling is considered coincidental and the candidate is not reinstated. This prevents false associations where an arousal happens to fall within 15\,s of a flow reduction that had already resolved with normal breathing.
+
+\subsection{Respiratory Indices}
+
+\begin{table}[H]
+\centering\small
+\caption{Indices (artifact-corrected TST)}
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Index} & \textbf{Definition} & \textbf{Thresholds} \\
+\midrule
+AHI & (Apneas+hypopneas)/TST\,h & $<$5 / 5--15 / 15--30 / $>$30 \\
+OAHI & (Obstr.\ apneas+hyp.)/TST\,h & Excl.\ central/mixed \\
+RDI & AHI + RERA index & Incl.\ sub-threshold + arousal \\
+ODI & Desaturations ($\geq$3\%)/TST\,h & $<$5 normal \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+
+%═══════════════════════════════════════
+\section{Arousal Detection}
+
+\subsection{Rolling Baseline (v0.8.1)}
+
+Previous versions used a single global baseline per sleep stage (median of the quietest 50\% of all NREM or REM power). In patients with severely fragmented sleep (arousal index~$>$40), the global baseline is elevated by the arousals themselves, making the $2.0\times$ threshold harder to reach and causing under-detection.
+
+Version 0.8.1 replaces the global baseline with a \textbf{rolling 2-minute window} over stable sleep:
+
+\begin{enumerate}[nosep,leftmargin=1.5em]
+  \item Every 10\,s, collect arousal power from the preceding 120\,s of sleep-scored samples
+  \item Take the median of the quietest 50\% (excluding arousal-contaminated segments)
+  \item Linearly interpolate between anchor points for a per-sample baseline
+  \item Fall back to global baseline if $<$10\,s of stable sleep is available locally
+\end{enumerate}
+
+This ensures that the detection threshold adapts to local sleep depth rather than being dominated by the night average.
+
+\subsection{Two-Phase Detection}
+
+\textbf{Phase~1:} Regions where $\alpha_{\mathrm{narrow}}$(8--11~Hz) + $\theta$(4--8~Hz) + $\beta$(16--30~Hz) exceeds $2.0\times$ the rolling per-stage baseline. Label contiguous segments $\geq$3\,s.
+
+\textbf{Phase~2:} Event-level validation:
+
+\begin{table}[H]
+\centering\small
+\caption{Event-level arousal validation}
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{@{}lp{5.5cm}@{}}
+\toprule
+\textbf{Check} & \textbf{Criterion} \\
+\midrule
+A. Pre-sleep & $\geq$60\% of 10\,s pre-window is sleep \\
+B. Abruptness & First 1\,s power / 3\,s pre-power $> 1.5\times$ \\
+C. Spindle & Reject only if $\sigma > 2\times$ baseline \textbf{and} $\alpha$+$\beta$ $<$ 50\% of $\sigma$ (v0.8.1) \\
+D. REM EMG & EMG rise $> 2\times$ baseline for $\geq$1\,s \cite{berry2020} \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\subsection{Spindle Exclusion (v0.8.1)}
+
+During N2 sleep, arousal bursts often coincide with terminating spindles---particularly at the moment of awakening from N2. Previous versions rejected events where arousal power was less than sigma power (absolute comparison). This caused false negatives at N2$\to$Wake transitions where both sigma and alpha/beta are simultaneously elevated.
+
+The v0.8.1 criterion rejects an event \emph{only} if sigma exceeds $2\times$ the rolling baseline \textbf{and} the combined $\alpha$+$\beta$ power is less than 50\% of sigma. This preserves arousals where alpha/beta dominate despite coincidental spindle activity.
+
+\subsection{Frequency Bands}
+
+\begin{table}[H]
+\centering\small
+\caption{Arousal detection bands}
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Band} & \textbf{Range} & \textbf{Role} \\
+\midrule
+$\alpha$ narrow & 8--11~Hz & Core arousal (excl.\ spindle overlap) \\
+$\theta$ & 4--8~Hz & Theta-burst arousals (elderly) \\
+$\beta$ & 16--30~Hz & Fast activity (AASM ``$>$16~Hz'') \\
+$\sigma$ & 12--15~Hz & Spindles --- \emph{exclusion} \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\subsection{RERA Detection}
+
+Flow limitation ($\geq$10\,s, flatness ratio $< 0.80$) without meeting apnea/hypopnea thresholds, terminated by arousal. RERAs contribute to RDI.
+
+
+%═══════════════════════════════════════
+\section{Periodic Limb Movement Analysis}
+
+AASM 2.6 criteria \cite{berry2020,zucconi2006}: EMG $\geq$8\,$\mu$V above resting (auto V$\to\mu$V), 0.5--10\,s, bilateral $\pm$0.5\,s, wake excluded, respiratory-associated excluded, series $\geq$4 with 5--90\,s intervals.
+
+
+%═══════════════════════════════════════
+\section{SpO\textsubscript{2} and Cheyne-Stokes}
+
+\subsection{SpO\textsubscript{2} Analysis}
+Desaturation $\geq$3\% from 60\,s rolling maximum (sleep-only). Nadir $\geq$3\,s after event onset. ODI, time below 90/85/80\%. Separate NREM/REM statistics.
+
+\subsection{Cheyne-Stokes Respiration}
+Autocorrelation of very-low-frequency flow envelope (0.005--0.05~Hz). Peak $> 0.3$ in 40--120\,s lag $\to$ crescendo-decrescendo pattern. Clinical: NYHA III--IV association.
+
+
+%═══════════════════════════════════════
+\section{Signal Quality Assessment}
+
+Per-channel quality (amplitude range, SNR, flatline, clipping) with labels (good/moderate/poor/unusable). Confidence-based epoch flagging ($<$70\% max probability) identifies the 10--20\% of epochs most likely misclassified.
+
+\textbf{v0.8.1:} Epochs where $>$5\% of samples are clipped (amplifier saturation) on the primary EEG channel are injected into the artifact mask before respiratory and arousal analysis. This prevents saturated segments from contaminating TST and producing false-positive respiratory events.
+
+
+%═══════════════════════════════════════
+\section{Clinical Report and Diagnostic Engine}
+
+\subsection{Automated Conclusions}
+
+\begin{table}[H]
+\centering\small
+\caption{Diagnostic conclusions with treatment suggestions}
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{@{}lp{5cm}@{}}
+\toprule
+\textbf{Condition} & \textbf{Treatment} \\
+\midrule
+Normal (AHI\,$<$\,5) & None \\
+Mild OSAS (5--15) & Position therapy, MAD, hygiene \\
+Moderate (15--30) & CPAP first-line; MAD if intolerant \\
+Severe ($>$30) & CPAP urgent, ENT, O\textsubscript{2} \\
+PLMI\,$\geq$\,15 & Ferritin, iron, dopamine agonist \\
+SE\,$<$\,85\% / TST\,$<$\,360\,min & CBT-I first-line \\
+CSR detected & Cardiology, echo, ASV \\
+BMI\,$>$\,28 + OSAS & Weight reduction addendum \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+Conclusions editable in Dutch, French, and English. Verification workflow for technician/physician sign-off.
+
+\subsection{FHIR~R4 with Treatment Recommendations (v0.8.1)}
+
+The FHIR~R4 DiagnosticReport now includes treatment recommendations in the \texttt{conclusion} field, derived from the diagnostic table above. This ensures that downstream EHR systems (e.g., Epic, ChipSoft) receive actionable clinical guidance alongside the quantitative indices.
+
+\subsection{Output Formats}
+
+PDF (portrait A4, 12-section AASM format), PSG report (landscape, institutional header), Excel, EDF+ annotations, FHIR~R4.
+
+
+%═══════════════════════════════════════
+\section{Interactive EDF Browser}
+
+Multi-epoch zoom (30/60/150/300\,s), event overlays (OA/CA/MA/H/AR/RERA), click-to-toggle editing with real-time AHI recalculation. Channel-group filters: Neuro (EEG+EOG+EMG), Pneumo (Resp+SpO\textsubscript{2}), Cardio (ECG), Overig (snore+position). Event list sidebar with filtering and direct epoch navigation.
+
+
+%═══════════════════════════════════════
+\section{Multi-Site Access Control}
+
+\begin{table}[H]
+\centering\small
+\caption{Role-based data isolation}
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Role} & \textbf{Data access} & \textbf{User mgmt} & \textbf{Sites} \\
+\midrule
+admin & All sites & All users/roles & Create/edit/delete \\
+site & Own site only & Users (own site) & View own \\
+user & Own site only & --- & --- \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\texttt{site\_id} and \texttt{owner\_username} stored per analysis. 22 data routes enforce access via \texttt{\_require\_job\_access()}. Admin user management shows site-filtered user lists for site managers.
+
+
+%═══════════════════════════════════════
+\section{Validation Framework}
+
+Staging metrics (per-stage sensitivity/specificity/PPV/NPV, Cohen's $\kappa$, confusion matrix). AHI agreement (Bland-Altman, Pearson correlation, severity concordance). Planned protocol: Phase~1 (n=50, AI vs 1 RPSGT), Phase~2 (n=200, AI vs 2 RPSGTs), Phase~3 (multi-center).
+
+
+%═══════════════════════════════════════
+\section{Limitations}
+
+\begin{itemize}[nosep,leftmargin=1.5em]
+  \item Sleep staging $\sim$85\%; N1 sensitivity 30--50\% \cite{rosenberg2013}
+  \item Arousal thresholds (2.0$\times$, 1.5$\times$) empirically tuned
+  \item $\sqrt{\,}$-linearization assumes quadratic P--F relationship \cite{thurnheer2001}
+  \item MMSD 40\% threshold empirically determined
+  \item RERA without esophageal pressure
+  \item Effort classification dependent on RIP quality
+  \item No formal clinical validation yet (framework ready, Section~13)
+\end{itemize}
+
+\noindent YASAFlaskified is a \textbf{screening tool}. Not FDA-cleared or CE-marked. MDR Class~IIa pathway identified.
+
+
+%═══════════════════════════════════════
+\section{Conclusion}
+
+YASAFlaskified and \texttt{psgscoring} demonstrate that combining Vallat's validated YASA sleep staging with peer-reviewed signal processing produces clinically useful PSG analysis. Version~15.01 addresses specific weaknesses identified through external review: rolling arousal baselines for fragmented sleep, ratio-based spindle exclusion preserving N2$\to$Wake arousals, breath-cycle validation for Rule~1B coupling, and clipping-to-artifact feedback for uncontaminated indices.
+
+Key contributions: (1)~$\sqrt{\,}$-linearization \cite{monserrat2001,thurnheer2001}; (2)~MMSD validation \cite{lee2008}; (3)~dual-sensor detection with exclusion masking; (4)~temporally constrained SpO\textsubscript{2} coupling \cite{uddin2021}; (5)~two-pass Rule~1B with breath validation; (6)~rolling-baseline arousal detection with ratio-based spindle exclusion; (7)~breath-by-breath flattening index \cite{hosselet1998}; (8)~Cheyne-Stokes autocorrelation; (9)~clipping-to-artifact feedback; (10)~FHIR~R4 treatment recommendations; (11)~multi-site data isolation; and (12)~validation metrics framework.
+
+We invite the sleep medicine and biomedical engineering communities to contribute to validation and development.
+
+
+%═══════════════════════════════════════
+\section*{Acknowledgments}
+
+The authors thank Raphael Vallat for creating and maintaining YASA. The staging classifier was trained on SHHS and MESA data funded by the NHLBI. We thank the sleep technicians at Slaapkliniek AZORG for clinical feedback.
+
+\section*{Conflict of Interest}
+
+BR developed YASAFlaskified and practices as pneumologist at AZORG. RV developed YASA and has no financial interest in YASAFlaskified. No other conflicts.
+
+\section*{Data Availability}
+
+YASAFlaskified: \url{www.slaapkliniek.be}. YASA: \url{https://github.com/raphaelvallat/yasa}. psgscoring: \url{https://github.com/bartromb/psgscoring}. Validation data upon trial completion, subject to ethics approval.
+
+
+%═══════════════════════════════════════
+\begin{thebibliography}{18}
+
+\bibitem{berry2020}
+Berry RB, et~al. The AASM Manual for the Scoring of Sleep and Associated Events. Version 2.6. AASM; 2020.
+
+\bibitem{vallat2021}
+Vallat R, Walker MP. An open-source, high-performance tool for automated sleep staging. \emph{eLife}. 2021;10:e70092. \href{https://doi.org/10.7554/eLife.70092}{doi:10.7554/eLife.70092}. (\url{https://github.com/raphaelvallat/yasa})
+
+\bibitem{iber2007}
+Iber C, et~al. The AASM Manual for the Scoring of Sleep and Associated Events. AASM; 2007.
+
+\bibitem{feinberg1979}
+Feinberg I, Floyd TC. Systematic trends across the night in human sleep cycles. \emph{Psychophysiology}. 1979;16(3):283--291.
+
+\bibitem{rosenberg2013}
+Rosenberg RS, Van Hout S. The AASM inter-scorer reliability program. \emph{J Clin Sleep Med}. 2013;9(1):81--87. \href{https://doi.org/10.5664/jcsm.2350}{doi:10.5664/jcsm.2350}
+
+\bibitem{guilleminault1996}
+Guilleminault C, et~al. Upper airway resistance syndrome. \emph{Chest}. 1996;109(4):901--908.
+
+\bibitem{zucconi2006}
+Zucconi M, et~al. WASM standards for recording and scoring PLM. \emph{Sleep Med}. 2006;7(2):175--183. \href{https://doi.org/10.1016/j.sleep.2006.01.001}{doi:10.1016/j.sleep.2006.01.001}
+
+\bibitem{gramfort2014}
+Gramfort A, et~al. MNE software for processing MEG and EEG data. \emph{NeuroImage}. 2014;86:446--460. \href{https://doi.org/10.1016/j.neuroimage.2013.10.027}{doi:10.1016/j.neuroimage.2013.10.027}
+
+\bibitem{lightgbm}
+Ke G, et~al. LightGBM: A highly efficient gradient boosting decision tree. \emph{Advances in NeurIPS}. 2017;30.
+
+\bibitem{pingouin}
+Vallat R. Pingouin: statistics in Python. \emph{J Open Source Software}. 2018;3(31):1026.
+
+\bibitem{peppard2013}
+Peppard PE, et~al. Increased prevalence of sleep-disordered breathing in adults. \emph{Am J Epidemiol}. 2013;177(9):1006--1014.
+
+\bibitem{thurnheer2001}
+Thurnheer R, Xie X, Bloch KE. Accuracy of nasal cannula pressure recordings. \emph{Am J Respir Crit Care Med}. 2001;164(10):1914--1919. \href{https://doi.org/10.1164/ajrccm.164.10.2102104}{doi:10.1164/ajrccm.164.10.2102104}
+
+\bibitem{monserrat2001}
+Montserrat JM, et~al. Effectiveness of CPAP treatment in daytime function in sleep apnea. \emph{Am J Respir Crit Care Med}. 2001;164(4):608--613.
+
+\bibitem{lee2008}
+Lee H, et~al. Detection of apneic events from single channel nasal airflow using 2nd derivative method. \emph{Physiol Meas}. 2008;29:N37--N45. \href{https://doi.org/10.1088/0967-3334/29/5/N01}{doi:10.1088/0967-3334/29/5/N01}
+
+\bibitem{nakano2016}
+Nakano H, et~al. New rule-based algorithm for real-time detecting sleep apnea and hypopnea events. \emph{J Clin Sleep Med}. 2016;12(10):1389--1396. \href{https://doi.org/10.5664/jcsm.6200}{doi:10.5664/jcsm.6200}
+
+\bibitem{uddin2021}
+Uddin MB, et~al. A novel algorithm for automatic diagnosis of sleep apnea from airflow and oximetry signals. \emph{Physiol Meas}. 2021;42:015001. \href{https://doi.org/10.1088/1361-6579/abd47a}{doi:10.1088/1361-6579/abd47a}
+
+\bibitem{berry2012}
+Berry RB, et~al. Rules for scoring respiratory events in sleep: update of the 2007 AASM Manual. \emph{J Clin Sleep Med}. 2012;8(5):597--619. \href{https://doi.org/10.5664/jcsm.2172}{doi:10.5664/jcsm.2172}
+
+\bibitem{hosselet1998}
+Hosselet J, et~al. Detection of flow limitation with a nasal cannula/pressure transducer system. \emph{Am J Respir Crit Care Med}. 1998;157(5):1461--1467.
+
+\end{thebibliography}
+
+\end{document}

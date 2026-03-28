@@ -1,54 +1,200 @@
+{# templates/base.html — Layout voor YASAFlaskified v0.8.10 #}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ current_lang or 'nl' }}">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>{% block title %}YASAFlaskified{% endblock %}</title>
+
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>">
+
+  {# Bootstrap 5 + Icons #}
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        crossorigin="anonymous">
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  <style>
+    :root {
+      --sleep-blue:  #1a3a5c;
+      --sleep-light: #2980b9;
+    }
+
+    body {
+      background: #f8f9fa;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    }
+
+    .navbar-brand { font-weight: 700; letter-spacing: -.3px; }
+
+    .navbar {
+      background: var(--sleep-blue) !important;
+      box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    }
+
+    .bg-purple { background-color: #8e44ad !important; }
+    .border-dashed { border-style: dashed !important; }
+
+    /* Scrollbare tabs op mobiel */
+    .nav-tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .nav-tabs .nav-link { white-space: nowrap; }
+
+    /* Flash berichten */
+    .flash-container .alert { margin-bottom: 0.5rem; }
+
+    footer {
+      background: var(--sleep-blue);
+      color: rgba(255,255,255,.6);
+      font-size: .8rem;
+      padding: .9rem 0;
+      margin-top: 4rem;
+    }
+    footer a { color: rgba(255,255,255,.75); }
+    footer a:hover { color: #fff; }
+
+    {% block extra_css %}{% endblock %}
+  </style>
 </head>
+
 <body>
+
+  {# ── NAVIGATIEBALK ── #}
+  <nav class="navbar navbar-dark navbar-expand-md">
     <div class="container">
-        <nav>
-            <ul>
-                <li><a href="/login">Login</a></li>
-                <li><a href="/register">Register</a></li>
-                <li><a href="/change_password">Change Password</a></li>
-                <li><a href="/results">Results</a></li>
-                {% if current_user.is_authenticated %}
-                    <li><a href="{{ url_for('logout') }}">Logout</a></li>
-                {% endif %}
+      <a class="navbar-brand" href="/">🧠 SleepAI</a>
+
+      <button class="navbar-toggler" type="button"
+              data-bs-toggle="collapse" data-bs-target="#navMenu">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navMenu">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item">
+            <a class="nav-link {% if request.endpoint == 'index' or request.endpoint == 'upload_file' %}active{% endif %}"
+               href="/"><i class="bi bi-upload me-1"></i>{{ t('upload') }}</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if request.endpoint == 'results' %}active{% endif %}"
+               href="/results"><i class="bi bi-clock-history me-1"></i>{{ t('history') }}</a>
+          </li>
+        </ul>
+        <ul class="navbar-nav ms-auto">
+          {# Taalkeuze #}
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+              🌐 {% set cl = current_lang %}{{ LANGS.get(cl, 'NL') }}
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+              {% for code, name in LANGS.items() %}
+              <li><a class="dropdown-item {% if current_lang == code %}active{% endif %}"
+                     href="/lang/{{ code }}">{{ name }}</a></li>
+              {% endfor %}
             </ul>
-        </nav>
-        <header>
-            <h1>{% block header %}{% endblock %}</h1>
-        </header>
-        {% block content %}{% endblock %}
-        <footer>
-            <section>
-                <h2>About YASA Library</h2>
-                <div>
-                    <h3>Nederlands:</h3>
-                    <p>De YASA (Yet Another Spindle Algorithm) Python-bibliotheek is ontworpen voor slaapanalyse met behulp van machine learning-technieken om de slaapstadia en slaapgebeurtenissen te automatiseren en te verbeteren. Machine learning helpt bij het identificeren van patronen en anomalieën in slaapgegevens, waardoor een nauwkeurigere en efficiëntere analyse mogelijk is dan traditionele methoden.</p>
-                    <p>Dank aan Raphaël Vallat, de oorspronkelijke auteur, voor zijn belangrijke bijdrage aan de slaapwetenschap door de ontwikkeling van YASA.</p>
-                    <p>Lees meer over YASA: <a href="https://raphaelvallat.com/yasa/build/html/index.html">YASA Library</a></p>
-                </div>
-                <div>
-                    <h3>Français:</h3>
-                    <p>La bibliothèque Python YASA (Yet Another Spindle Algorithm) est conçue pour l'analyse du sommeil, en utilisant des techniques d'apprentissage automatique pour automatiser et améliorer le classement des stades de sommeil et la détection des événements de sommeil. L'apprentissage automatique aide à identifier les modèles et les anomalies dans les données de sommeil, fournissant une analyse plus précise et efficace que les méthodes traditionnelles.</p>
-                    <p>Merci à Raphaël Vallat, l'auteur original, pour sa contribution significative à la science du sommeil grâce au développement de YASA.</p>
-                    <p>En savoir plus sur YASA: <a href="https://raphaelvallat.com/yasa/build/html/index.html">YASA Library</a></p>
-                </div>
-                <div>
-                    <h3>English:</h3>
-                    <p>The YASA (Yet Another Spindle Algorithm) Python library is designed for sleep analysis, using machine learning techniques to automate and improve sleep staging and sleep event detection. Machine learning helps identify patterns and anomalies in sleep data, providing more accurate and efficient analysis than traditional methods.</p>
-                    <p>Thanks to Raphaël Vallat, the original author, for his significant contribution to sleep science through the development of YASA.</p>
-                    <p>Learn more about YASA: <a href="https://raphaelvallat.com/yasa/build/html/index.html">YASA Library</a></p>
-                </div>
-                <p><a href="https://elifesciences.org/articles/70092">Read the article on eLife Sciences</a></p>
-                <p>This application is distributed under the BSD 3-Clause License. <a href="https://github.com/bartromb/YASAFlaskified">View on GitHub</a></p>
-            </section>
-        </footer>
+          </li>
+          {# Gebruikersmenu #}
+          {% if current_user.is_authenticated %}
+              {% if current_user.is_site_manager %}
+              <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">
+                  <i class="bi bi-grid-3x3-gap me-1"></i>{{ t('dashboard') }}
+                </a>
+              </li>
+              {% endif %}
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+              <i class="bi bi-person-circle me-1"></i>{{ current_user.username }}
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" href="/change_password"><i class="bi bi-key me-1"></i>{{ t('change_password') }}</a></li>
+              {% if current_user.username == 'admin' %}
+              <li><a class="dropdown-item" href="/admin/users"><i class="bi bi-people me-1"></i>{{ t('user_management') }}</a></li>
+              {% endif %}
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="/logout"><i class="bi bi-box-arrow-right me-1"></i>{{ t('logout') }}</a></li>
+            </ul>
+          </li>
+          {% endif %}
+          <li class="nav-item">
+            <a class="nav-link" href="/health" title="Server status">
+              <span class="badge bg-success">●</span>
+            </a>
+          </li>
+        </ul>
+      </div>
     </div>
+  </nav>
+
+  {# ── FLASH BERICHTEN ── #}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="container mt-2 flash-container">
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show py-2" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endwith %}
+
+  {# ── PAGINAINHOUD ── #}
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  {# ── FOOTER ── #}
+  <footer>
+    <div class="container text-center">
+      YASAFlaskified v0.8.10 &nbsp;·&nbsp;
+      <a href="https://www.slaapkliniek.be">www.slaapkliniek.be</a>
+      &nbsp;·&nbsp;
+      {{ t('only_authorized') }} &nbsp;·&nbsp;
+      Powered by <a href="https://raphaelvallat.com/yasa/" target="_blank">YASA</a>
+      (Vallat & Walker, 2021)
+      &nbsp;·&nbsp;
+      &copy; 2024–2026 Bart Rombaut
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+          crossorigin="anonymous"></script>
+
+  {# ── Auto-logout na inactiviteit (30 min) ── #}
+  {% if current_user.is_authenticated %}
+  <script>
+  (function(){
+    const TIMEOUT_MS = 30 * 60 * 1000; // 30 minuten
+    const WARN_MS    = 25 * 60 * 1000; // waarschuw na 25 min
+    let timer, warnTimer;
+    function resetTimer() {
+      clearTimeout(timer); clearTimeout(warnTimer);
+      const warn = document.getElementById('inactivity-warn');
+      if (warn) warn.style.display = 'none';
+      warnTimer = setTimeout(function() {
+        const w = document.getElementById('inactivity-warn');
+        if (w) w.style.display = 'block';
+      }, WARN_MS);
+      timer = setTimeout(function() { window.location.href = '/logout'; }, TIMEOUT_MS);
+    }
+    ['mousemove','keydown','click','scroll','touchstart'].forEach(function(e) {
+      document.addEventListener(e, resetTimer, {passive:true});
+    });
+    resetTimer();
+  })();
+  </script>
+  <div id="inactivity-warn" class="position-fixed bottom-0 start-50 translate-middle-x mb-3 alert alert-warning shadow px-4 py-2 small"
+       style="display:none;z-index:9999;border-radius:8px">
+    <i class="bi bi-clock-history me-1"></i>
+    {% if current_lang == 'fr' %}Session expire bientôt — bougez la souris pour rester connecté
+    {% elif current_lang == 'en' %}Session expiring soon — move mouse to stay logged in
+    {% else %}Sessie verloopt binnenkort — beweeg de muis om ingelogd te blijven{% endif %}
+  </div>
+  {% endif %}
+
+  {% block extra_js %}{% endblock %}
 </body>
 </html>

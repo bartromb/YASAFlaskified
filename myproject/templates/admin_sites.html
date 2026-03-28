@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}{{ t('site_management') }}{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:900px">
+  <h4 class="fw-bold text-primary mb-1">
+    <i class="bi bi-building me-2"></i>{{ t('site_management') }}
+  </h4>
+  <p class="text-muted mb-4">{{ t('site_management') }}</p>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert alert-{{ cat }} alert-dismissible fade show py-2" role="alert">
+        {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  {# ── Sitestabel ──────────────────────────────────────────── #}
+  <div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-0">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-dark">
+          <tr>
+            <th class="ps-3">#</th>
+            <th>Naam</th>
+            <th>Taal</th>
+            <th>E-mail</th>
+            <th>{{ t('users') }}</th>
+            <th class="text-center">Acties</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for site in sites %}
+          <tr>
+            <td class="ps-3 text-muted small">{{ site.id }}</td>
+            <td>
+              <span class="fw-semibold">{{ site.name }}</span>
+              {% if site.address %}<div class="text-muted" style="font-size:.75rem">{{ site.address }}</div>{% endif %}
+            </td>
+            <td>
+              <span class="badge bg-secondary">
+                {{ {'nl':'🇧🇪 NL','fr':'🇫🇷 FR','en':'🇬🇧 EN'}.get(site.language, site.language) }}
+              </span>
+            </td>
+            <td class="small">{{ site.email or '—' }}</td>
+            <td class="text-center">
+              <span class="badge bg-primary rounded-pill">{{ site.users|length }}</span>
+            </td>
+            <td class="text-center">
+              {# {{ t("edit") }} #}
+              <button class="btn btn-outline-secondary btn-sm py-0 px-2"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#edit-site-{{ site.id }}">
+                <i class="bi bi-pencil"></i>
+              </button>
+              {# {{ t("delete") }} #}
+              <form method="POST" action="{{ url_for('admin_delete_site', site_id=site.id) }}"
+                    class="d-inline"
+                    onsubmit="return confirm('Site {{ site.name }} verwijderen?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-outline-danger btn-sm py-0 px-2">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {# Edit collapse row #}
+          <tr class="collapse" id="edit-site-{{ site.id }}">
+            <td colspan="6" class="bg-light px-4 py-3">
+              <form method="POST" action="{{ url_for('admin_edit_site', site_id=site.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="row g-2">
+                  <div class="col-md-4">
+                    <input type="text" name="name" class="form-control form-control-sm"
+                           value="{{ site.name }}" placeholder="Naam" required>
+                  </div>
+                  <div class="col-md-4">
+                    <input type="text" name="address" class="form-control form-control-sm"
+                           value="{{ site.address }}" placeholder="{{ t('address') }}">
+                  </div>
+                  <div class="col-md-2">
+                    <input type="text" name="phone" class="form-control form-control-sm"
+                           value="{{ site.phone }}" placeholder="{{ t('phone') }}">
+                  </div>
+                  <div class="col-md-2">
+                    <select name="language" class="form-select form-select-sm">
+                      <option value="nl" {{ 'selected' if site.language=='nl' }}>🇧🇪 NL</option>
+                      <option value="fr" {{ 'selected' if site.language=='fr' }}>🇫🇷 FR</option>
+                      <option value="en" {{ 'selected' if site.language=='en' }}>🇬🇧 EN</option>
+                    </select>
+                  </div>
+                  <div class="col-md-4">
+                    <input type="email" name="email" class="form-control form-control-sm"
+                           value="{{ site.email }}" placeholder="E-mail">
+                  </div>
+                  <div class="col-md-4">
+                    <input type="text" name="logo_path" class="form-control form-control-sm"
+                           value="{{ site.logo_path }}" placeholder="Logo-pad (optioneel)">
+                  </div>
+                  <div class="col-md-3">
+                    <input type="url" name="url" class="form-control form-control-sm"
+                           value="{{ site.url }}" placeholder="{{ t('url') }}">
+                  </div>
+                  <div class="col-md-1">
+                    <button class="btn btn-success btn-sm w-100">
+                      <i class="bi bi-check-lg"></i>
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-4">Nog geen sites aangemaakt.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# ── {{ t("new_site") }} ─────────────────────────────────────────── #}
+  <div class="card shadow-sm border-0">
+    <div class="card-header bg-primary text-white py-2">
+      <i class="bi bi-plus-circle me-2"></i>{{ t("new_site") }} toevoegen
+    </div>
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('admin_add_site') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="row g-2">
+          <div class="col-md-4">
+            <input type="text" name="name" class="form-control form-control-sm"
+                   placeholder="{{ t('site_name') }} *" required>
+          </div>
+          <div class="col-md-4">
+            <input type="text" name="address" class="form-control form-control-sm"
+                   placeholder="{{ t('address') }}">
+          </div>
+          <div class="col-md-2">
+            <input type="text" name="phone" class="form-control form-control-sm"
+                   placeholder="Tel.">
+          </div>
+          <div class="col-md-2">
+            <select name="language" class="form-select form-select-sm">
+              <option value="nl">🇧🇪 NL</option>
+              <option value="fr">🇫🇷 FR</option>
+              <option value="en">🇬🇧 EN</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <input type="email" name="email" class="form-control form-control-sm"
+                   placeholder="E-mail">
+          </div>
+          <div class="col-md-4">
+            <input type="text" name="logo_path" class="form-control form-control-sm"
+                   placeholder="Logo-pad (optioneel)">
+          </div>
+          <div class="col-md-3">
+            <input type="url" name="url" class="form-control form-control-sm"
+                   placeholder="https://…">
+          </div>
+          <div class="col-md-1">
+            <button class="btn btn-primary btn-sm w-100">
+              <i class="bi bi-plus-lg"></i>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

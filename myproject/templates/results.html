@@ -12,12 +12,15 @@ Results - YASA Sleep Analysis
 {% block content %}
 <div class="container">
     {% if files %}
-        <ul>
+        <ul class="results-list">
             {% for file in files %}
-                <li>
-                    <strong>{{ file.filename }}</strong>: 
-                    <a href="{{ file.pdf_url }}" target="_blank" class="btn btn-primary">Download PDF</a>
-                    <a href="{{ file.csv_url }}" target="_blank" class="btn btn-secondary">Download CSV</a>
+                <li class="results-item">
+                    <strong>{{ file.filename }}</strong>
+                    <div class="results-actions">
+                        <a href="{{ file.pdf_url }}" class="btn btn-primary" target="_blank" rel="noopener">Download PDF</a>
+                        <a href="{{ file.csv_url }}" class="btn btn-secondary" target="_blank" rel="noopener">Download CSV</a>
+                        <a href="{{ file.stats_url }}" class="btn btn-secondary" target="_blank" rel="noopener">Download stats</a>
+                    </div>
                 </li>
             {% endfor %}
         </ul>

@@ -1,0 +1,27 @@
+flask>=3.0
+flask-sqlalchemy>=3.1
+flask-login>=0.6
+flask-wtf>=1.2
+flask-limiter>=3.5
+werkzeug>=3.0
+gunicorn>=21.0
+sqlalchemy>=2.0
+redis>=5.0
+rq>=1.16
+mne>=1.6
+yasa>=0.7
+antropy>=0.1
+numpy>=1.26
+scipy>=1.11
+pandas>=2.1
+matplotlib>=3.8
+reportlab>=4.0
+openpyxl>=3.1
+scikit-learn>=1.3,<1.4
+lightgbm>=4.0
+joblib>=1.3
+edfio>=0.4
+
+pyedflib>=0.1.24
+# psgscoring (v0.2.0) is bundled in myproject/psgscoring/
+# For standalone use: pip install psgscoring

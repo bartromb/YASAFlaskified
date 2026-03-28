@@ -1,0 +1,135 @@
+# docker-compose.yml — YASAFlaskified v0.8.11 (slaapkliniek.be)
+# Paden: /data/slaapkliniek (host) = /data/slaapkliniek (container)
+# Exposed op 127.0.0.1:8071, gerouteerd door host Nginx
+#
+# CONCURRENCY — server heeft 128 GB RAM
+# Elke PSG-analyse: ~2 GB RAM + 1 CPU-kern gedurende ~4 minuten
+# RAM-capaciteit: 128 GB / 2 GB = max ~60 parallelle analyses
+# Aanbeveling: workers = aantal CPU-kernen (check: nproc)
+#   8 kernen  →  8 workers  (16 GB RAM gebruikt)
+#   16 kernen → 16 workers  (32 GB RAM gebruikt)
+#   32 kernen → 32 workers  (64 GB RAM gebruikt)
+#
+# Ryzen 9 5950X: 16 cores / 32 threads
+# 8 workers = helft van de kernen; laat ruimte voor OS + andere processen
+# RAM gebruik: 8 × 2 GB = ~16 GB van 128 GB beschikbaar
+
+x-worker-base: &worker-base
+  image: yasaflaskified:0.8.11
+  restart: unless-stopped
+  command: rq worker --url redis://redis:6379 default
+  env_file: .env
+  environment:
+    - PYTHONUNBUFFERED=1
+    - PYTHONPATH=/data/slaapkliniek/myproject
+    - YASAFLASKIFIED_REDIS_HOST=redis
+  volumes:
+    - /data/slaapkliniek/uploads:/data/slaapkliniek/uploads
+    - /data/slaapkliniek/processed:/data/slaapkliniek/processed
+    - /data/slaapkliniek/logs:/data/slaapkliniek/logs
+    - /data/slaapkliniek/instance:/data/slaapkliniek/instance
+  depends_on:
+    redis:
+      condition: service_healthy
+    app:
+      condition: service_healthy
+  networks:
+    - kliniek_net
+
+services:
+
+  redis:
+    image: redis:7-alpine
+    container_name: kliniek_redis
+    restart: unless-stopped
+    volumes:
+      - kliniek_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - kliniek_net
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: yasaflaskified:0.8.11
+    container_name: kliniek_app
+    restart: unless-stopped
+    ports:
+      - "8071:5000"
+    command: >
+      gunicorn
+        --bind 0.0.0.0:5000
+        --workers 4
+        --timeout 120
+        --keep-alive 5
+        --log-level info
+        --access-logfile /data/slaapkliniek/logs/access.log
+        --error-logfile  /data/slaapkliniek/logs/error.log
+        app:app
+    env_file: .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/data/slaapkliniek/myproject
+      - YASAFLASKIFIED_REDIS_HOST=redis
+    volumes:
+      - /data/slaapkliniek/uploads:/data/slaapkliniek/uploads
+      - /data/slaapkliniek/processed:/data/slaapkliniek/processed
+      - /data/slaapkliniek/logs:/data/slaapkliniek/logs
+      - /data/slaapkliniek/instance:/data/slaapkliniek/instance
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - kliniek_net
+    healthcheck:
+      test: ["CMD", "python3", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:5000/login')"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 60s
+
+  worker1:
+    <<: *worker-base
+    container_name: kliniek_worker1
+
+  worker2:
+    <<: *worker-base
+    container_name: kliniek_worker2
+
+  worker3:
+    <<: *worker-base
+    container_name: kliniek_worker3
+
+  worker4:
+    <<: *worker-base
+    container_name: kliniek_worker4
+
+  worker5:
+    <<: *worker-base
+    container_name: kliniek_worker5
+
+  worker6:
+    <<: *worker-base
+    container_name: kliniek_worker6
+
+  worker7:
+    <<: *worker-base
+    container_name: kliniek_worker7
+
+  worker8:
+    <<: *worker-base
+    container_name: kliniek_worker8
+
+volumes:
+  kliniek_redis:
+
+networks:
+  kliniek_net:
+    driver: bridge

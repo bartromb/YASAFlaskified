@@ -1,0 +1,325 @@
+{# templates/channel_select.html
+   Stap 2 na EDF-upload: gebruiker kiest kanalen voor de analyse.
+   POST → /analyze met job_id + kanaalkeuze #}
+{% extends "base.html" %}
+{% block title %}{{ t("channel_select") }} — {{ filename }}{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width:720px">
+
+  <div class="text-center mb-4">
+    <span class="fs-1">🧠</span>
+    <h2 class="mt-2">{{ t('channel_select') }}</h2>
+    <p class="text-muted">
+      {{ t("file") }}: <strong>{{ filename }}</strong> &nbsp;·&nbsp;
+      {{ channels | length }} {{ t("channels_found") }} &nbsp;·&nbsp;
+      {{ duration_min }} min &nbsp;·&nbsp; {{ sfreq }} Hz
+    </p>
+  </div>
+
+  <form method="POST" action="/analyze" id="channelForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="job_id" value="{{ job_id }}">
+
+    {# ── EEG primair kanaal ── #}
+    <div class="card shadow-sm mb-3">
+      <div class="card-header bg-primary text-white fw-bold">
+        🧠 {{ t('eeg_primary') }} <span class="text-warning">*</span>
+        <small class="fw-normal ms-2">{{ t('eeg_primary_desc') }}</small>
+      </div>
+      <div class="card-body">
+        <div class="row row-cols-2 row-cols-md-3 g-2">
+          {% for ch in channels %}
+          <div class="col">
+            <input class="btn-check" type="radio" name="eeg_ch"
+                   id="eeg_{{ loop.index }}" value="{{ ch }}"
+                   {% if ch == best_eeg %}checked{% endif %} required>
+            <label class="btn btn-outline-primary w-100 text-start channel-btn"
+                   for="eeg_{{ loop.index }}">
+              <span class="ch-type-badge me-1">{{ ch | channel_type_badge | safe }}</span>
+              {{ ch }}
+              {% if ch == best_eeg %}<i class="bi bi-star-fill text-warning ms-1" title="{{ t('recommended_staging') }}"></i>{% endif %}
+            </label>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {# ── EOG kanaal ── #}
+    <div class="card shadow-sm mb-3">
+      <div class="card-header bg-warning text-dark fw-bold">
+        👁️ {{ t('eog_channel') }}
+        <small class="fw-normal ms-2">{{ t('eog_desc') }} ({{ t('optional') }})</small>
+      </div>
+      <div class="card-body">
+        <div class="mb-2">
+          <input class="btn-check" type="radio" name="eog_ch"
+                 id="eog_none" value="">
+          <label class="btn btn-outline-secondary" for="eog_none">
+            {{ t("not_available") }}
+          </label>
+        </div>
+        <div class="row row-cols-2 row-cols-md-3 g-2">
+          {% for ch in channels %}
+          <div class="col">
+            <input class="btn-check" type="radio" name="eog_ch"
+                   id="eog_{{ loop.index }}" value="{{ ch }}"
+                   {% if 'EOG' in ch.upper() or 'LOC' in ch.upper() or 'ROC' in ch.upper() %}checked{% endif %}>
+            <label class="btn btn-outline-warning w-100 text-start"
+                   for="eog_{{ loop.index }}">{{ ch }}</label>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {# ── EMG kanaal ── #}
+    <div class="card shadow-sm mb-3">
+      <div class="card-header bg-danger text-white fw-bold">
+        💪 {{ t('emg_channel') }}
+        <small class="fw-normal ms-2">{{ t('emg_desc') }} ({{ t('optional') }})</small>
+      </div>
+      <div class="card-body">
+        <div class="mb-2">
+          <input class="btn-check" type="radio" name="emg_ch"
+                 id="emg_none" value="" checked>
+          <label class="btn btn-outline-secondary" for="emg_none">
+            {{ t("not_available") }}
+          </label>
+        </div>
+        <div class="row row-cols-2 row-cols-md-3 g-2">
+          {% for ch in channels %}
+          <div class="col">
+            <input class="btn-check" type="radio" name="emg_ch"
+                   id="emg_{{ loop.index }}" value="{{ ch }}"
+                   {% if 'EMG' in ch.upper() or 'CHIN' in ch.upper() %}checked{% endif %}>
+            <label class="btn btn-outline-danger w-100 text-start"
+                   for="emg_{{ loop.index }}">{{ ch }}</label>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {# ── Extra EEG-kanalen voor spindle/SW/bandpower ── #}
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-success text-white fw-bold">
+        📡 {{ t("extra_eeg_channels") }}
+        <small class="fw-normal ms-2">{{ t('extra_eeg_desc') }}</small>
+      </div>
+      <div class="card-body">
+        <div class="d-flex gap-2 mb-3">
+          <button type="button" class="btn btn-sm btn-outline-success" onclick="selectAllEeg()">{{ t('select_all') }}</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearAllEeg()">{{ t('clear_selection') }}</button>
+          <button type="button" class="btn btn-sm btn-outline-primary" onclick="autoSelectEeg()">{{ t('auto_select_eeg') }}</button>
+        </div>
+        <div class="row row-cols-2 row-cols-md-3 g-2">
+          {% for ch in channels %}
+          <div class="col">
+            <input class="btn-check eeg-extra-check" type="checkbox"
+                   name="extra_eeg_ch" id="extra_{{ loop.index }}" value="{{ ch }}"
+                   {% if 'EEG' in ch.upper() or ch in ['C3','C4','F3','F4','O1','O2','C3-M2','C4-M1'] %}checked{% endif %}>
+            <label class="btn btn-outline-success w-100 text-start"
+                   for="extra_{{ loop.index }}">{{ ch }}</label>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {# ── Respiratoire & PLM kanalen (v0.8.10) ── #}
+    <div class="card shadow-sm mb-3">
+      <div class="card-header bg-dark text-white fw-bold">
+        🫁 {{ t('pneumo_channels') }}
+        <small class="fw-normal ms-2">{{ t('pneumo_channels_desc') }}</small>
+      </div>
+      <div class="card-body py-2">
+        <div class="row g-2">
+          {% set pneumo_types = [
+            ("flow",     "🌬️ Flow (nasaal)",    "Nasale druk / thermistor"),
+            ("thorax",   "📊 Thorax",            "Thoracale effort"),
+            ("abdomen",  "📊 Abdomen",           "Abdominale effort"),
+            ("spo2",     "💉 SpO2",              "Pulse oximetrie"),
+            ("leg_l",    "🦵 Been links",        "Tibialis anterior links"),
+            ("leg_r",    "🦵 Been rechts",       "Tibialis anterior rechts"),
+            ("position", "🔄 Positie",           "Lichaamshouding"),
+            ("snore",    "🔊 Snurk",             "Snurkmicrofoon"),
+            ("pulse",    "❤️ Hartritme",         "Pulse / HR"),
+            ("ecg",      "💓 ECG",               "Electrocardiogram"),
+          ] %}
+          {% for ch_type, label, desc in pneumo_types %}
+          <div class="col-md-6 col-lg-4">
+            <label class="form-label small mb-0">{{ label }}</label>
+            <select name="pneumo_{{ ch_type }}" class="form-select form-select-sm">
+              <option value="">— {{ t('auto_detect') }} —</option>
+              {% for ch in channels %}
+              <option value="{{ ch }}"
+                {% if pneumo_auto.get(ch_type) == ch %}selected{% endif %}>
+                {{ ch }}{% if pneumo_auto.get(ch_type) == ch %} ★{% endif %}
+              </option>
+              {% endfor %}
+            </select>
+            <div class="form-text" style="font-size:.65rem">{{ desc }}
+              {% if pneumo_auto.get(ch_type) %}
+                — auto: <strong>{{ pneumo_auto[ch_type] }}</strong>
+              {% else %}
+                — <span class="text-warning">niet gedetecteerd</span>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {# ── Opnametijdstip (optioneel) ── #}
+    <div class="card shadow-sm mb-3">
+      <div class="card-header bg-secondary text-white fw-bold">
+        🕐 {{ t('recording_time_label') }} <small class="fw-normal">({{ t('optional') }} — {{ t('recording_time') }})</small>
+      </div>
+      <div class="card-body">
+        <input type="datetime-local" name="recording_start" class="form-control"
+               style="max-width:260px" value="{{ recording_start or '' }}"
+               placeholder="bv. 2024-01-15T22:30">
+        <div class="form-text">{{ t('default_time_note') }}</div>
+      </div>
+    </div>
+
+    {# ── Patiëntgegevens (optioneel) ── #}
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-info text-white fw-bold">
+        👤 {{ t('patient_data') }} <small class="fw-normal">({{ t('optional') }} — {{ t('appears_on_reports') }})</small>
+      </div>
+      <div class="card-body">
+        <div class="row g-2 mb-2">
+          <div class="col-md-6">
+            <label class="form-label small mb-0">{{ t('name') }}</label>
+            <input type="text" name="patient_name" class="form-control form-control-sm"
+                   value="{{ patient_prefill.patient_name or '' }}" placeholder="{{ t('name') }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small mb-0">{{ t('firstname') }}</label>
+            <input type="text" name="patient_firstname" class="form-control form-control-sm"
+                   value="{{ patient_prefill.patient_firstname or '' }}" placeholder="{{ t('firstname') }}">
+          </div>
+        </div>
+        <div class="row g-2 mb-2">
+          <div class="col-md-4">
+            <label class="form-label small mb-0">{{ t('date_of_birth') }}</label>
+            <input type="date" name="dob" class="form-control form-control-sm"
+                   value="{{ patient_prefill.dob or '' }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small mb-0">{{ t('patient_number') }}</label>
+            <input type="text" name="patient_id" class="form-control form-control-sm"
+                   value="{{ patient_prefill.patient_id or '' }}" placeholder="{{ t('patient_number') }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small mb-0">{{ t('sex') }}</label>
+            <select name="sex" class="form-select form-select-sm">
+              <option value="">— {{ t('from_edf') }} —</option>
+              <option value="M">{{ t('male') }}</option>
+              <option value="V">{{ t('female') }}</option>
+            </select>
+          </div>
+        </div>
+        <div class="row g-2 mb-2">
+          <div class="col-12">
+            <label class="form-label small mb-0">{{ t('address') }}</label>
+            <input type="text" name="address" class="form-control form-control-sm"
+                   placeholder="{{ t('address_placeholder') }}">
+          </div>
+        </div>
+        <div class="row g-2 mb-2">
+          <div class="col-md-4">
+            <label class="form-label small mb-0">BMI</label>
+            <input type="number" step="0.1" name="bmi" class="form-control form-control-sm"
+                   placeholder="kg/m²">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small mb-0">{{ t('weight_kg') }}</label>
+            <input type="number" step="0.1" name="weight_kg" class="form-control form-control-sm">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small mb-0">{{ t('height_cm') }}</label>
+            <input type="number" name="height_cm" class="form-control form-control-sm">
+          </div>
+        </div>
+        <div class="row g-2">
+          <div class="col-md-4">
+            <label class="form-label small mb-0">{{ t('institution') }}</label>
+            <input type="text" name="institution" class="form-control form-control-sm"
+                   placeholder="{{ t('institution') }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small mb-0">{{ t('scorer') }}</label>
+            <input type="text" name="scorer" class="form-control form-control-sm"
+                   placeholder="{{ t('scorer') }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small mb-0">{{ t('diagnosis') }}</label>
+            <input type="text" name="diagnosis" class="form-control form-control-sm"
+                   placeholder="({{ t('optional') }})">
+          </div>
+        </div>
+        <div class="form-text mt-2">{{ t('fields_prefilled') }}</div>
+      </div>
+    </div>
+
+    {# ── Indienknop ── #}
+    <div class="d-grid gap-2">
+      <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+        🚀 &nbsp; {{ t('start_analysis') }}
+      </button>
+      <a href="/" class="btn btn-outline-secondary">← {{ t('other_file') }}</a>
+    </div>
+
+  </form>
+</div>
+
+<style>
+.channel-btn { font-size: 0.85rem; padding: 0.4rem 0.6rem; }
+.ch-type-badge { font-size: 0.7rem; }
+</style>
+
+<script>
+// Zorg dat primair EEG-kanaal altijd in de extra-lijst zit
+document.querySelectorAll('input[name="eeg_ch"]').forEach(r => {
+  r.addEventListener("change", function() {
+    // Verwijder vorige sync
+    document.querySelectorAll('.eeg-extra-check').forEach(c => {
+      c._syncedPrimary = false;
+    });
+    // Check het bijbehorende extra checkbox
+    document.querySelectorAll('.eeg-extra-check').forEach(c => {
+      if (c.value === this.value) { c.checked = true; c._syncedPrimary = true; }
+    });
+  });
+});
+
+function selectAllEeg() {
+  document.querySelectorAll('.eeg-extra-check').forEach(c => c.checked = true);
+}
+function clearAllEeg() {
+  // Houd primaire EEG altijd geselecteerd
+  const primary = document.querySelector('input[name="eeg_ch"]:checked')?.value;
+  document.querySelectorAll('.eeg-extra-check').forEach(c => {
+    c.checked = (c.value === primary);
+  });
+}
+function autoSelectEeg() {
+  document.querySelectorAll('.eeg-extra-check').forEach(c => {
+    const v = c.value.toUpperCase();
+    c.checked = v.includes('EEG') || ['C3','C4','F3','F4','O1','O2'].some(s => v.startsWith(s));
+  });
+}
+
+// Submit-knop feedback
+document.getElementById('channelForm').addEventListener('submit', function() {
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>{{ t('analysis_starting') }}';
+});
+</script>
+{% endblock %}

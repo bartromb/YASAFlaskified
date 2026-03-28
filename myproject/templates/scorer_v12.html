@@ -1,0 +1,340 @@
+{% extends "base.html" %}
+{% block title %}PSG Scorer v12 — {{ job_id[:8] }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  body { background:#f0f4f8; }
+  #hypno-editor canvas, #edf-viewer canvas { cursor:crosshair; }
+  .panel-card { background:#fff; border:1px solid #d8e3ef;
+                border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,.06); }
+  .stat-mini { background:#f8fbff; border:1px solid #d8e3ef; border-radius:6px;
+               text-align:center; padding:.3rem .5rem; min-width:62px; }
+  .stat-mini .val { font-size:1.15rem; font-weight:700; line-height:1.1; }
+  .stat-mini .lbl { font-size:.65rem; color:#6b7a99; }
+  .ev-legend { display:flex; flex-wrap:wrap; gap:.4rem; align-items:center; }
+  .ev-dot { display:inline-block; width:10px; height:10px;
+            border-radius:2px; margin-right:3px; vertical-align:middle; }
+  .sync-pill { background:#1a3a8f; color:#fff; font-size:.75rem;
+               padding:.2rem .75rem; border-radius:999px; }
+  .section-hdr { font-weight:600; color:#1a3a8f; font-size:.85rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 py-2">
+
+  {# ── Paginaheader ───────────────────────────────────────── #}
+  <div class="d-flex align-items-center justify-content-between mb-2">
+    <div>
+      <h5 class="fw-bold text-primary mb-0">
+        <i class="bi bi-activity me-1"></i> YASAFlaskified v12 — PSG Editor
+      </h5>
+      <small class="text-muted">
+        {{ job_id[:8] }}…
+        {% if patient_name %} · <b>{{ patient_name }}</b>{% endif %}
+        · {{ n_epochs }} epochs ({{ duration_h }}u)
+        · <span id="sync-badge" class="sync-pill">Epoch 1</span>
+      </small>
+    </div>
+    <a href="{{ url_for('show_results', job_id=job_id) }}"
+       class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>
+      {% if current_lang=='fr' %}Retour{% elif current_lang=='en' %}Back{% else %}Terug{% endif %}
+    </a>
+  </div>
+
+  {# ── Statistieken ────────────────────────────────────────── #}
+  <div class="d-flex gap-2 mb-2 flex-wrap">
+    {# Slaapstadia #}
+    {% for s,col in [('W','#e74c3c'),('N1','#f39c12'),('N2','#2980b9'),('N3','#1a3a8f'),('R','#8e44ad')] %}
+    <div class="stat-mini">
+      <div class="val" style="color:{{col}}" id="pct-{{s}}">—</div>
+      <div class="lbl">{{s}}</div>
+    </div>
+    {% endfor %}
+    <div class="stat-mini" style="min-width:5px;border:none;background:transparent;padding:0">
+      <div style="border-left:2px solid #d8e3ef;height:100%"></div>
+    </div>
+    {# Respiratoire stats #}
+    <div class="stat-mini">
+      <div class="val text-danger" id="ev-ahi">{{ "%.1f"|format(ahi) if ahi else '—' }}</div>
+      <div class="lbl">AHI /u</div>
+    </div>
+    <div class="stat-mini">
+      <div class="val" style="color:#3498db" id="ev-oahi">{{ "%.1f"|format(oahi) if oahi else '—' }}</div>
+      <div class="lbl">OAHI /u</div>
+    </div>
+    {% for evtype,col in [('OA','#e74c3c'),('CA','#3498db'),('MA','#9b59b6'),('H','#f39c12'),('AR','#2ecc71'),('RERA','#1abc9c')] %}
+    <div class="stat-mini">
+      <div class="val" style="color:{{col}}" id="ev-n-{{evtype}}">{{ event_counts.get(evtype,0) }}</div>
+      <div class="lbl">{{evtype}}</div>
+    </div>
+    {% endfor %}
+    <div class="stat-mini">
+      <div class="val text-secondary" id="n-stage-corr">0</div>
+      <div class="lbl">
+        {% if current_lang=='fr' %}corr. IA{% elif current_lang=='en' %}AI corr.{% else %}stagingwijz.{% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ── BLOK 1: Hypnogram scorer ─────────────────────────────── #}
+  <div class="panel-card p-2 mb-2">
+    <div class="d-flex align-items-center mb-1">
+      <span class="section-hdr"><i class="bi bi-pencil-square me-1"></i>
+        {% if current_lang=='fr' %}Hypnogramme{% elif current_lang=='en' %}Hypnogram{% else %}Hypnogram{% endif %}
+      </span>
+      <span class="text-muted small ms-3">
+        W · 1·2·3 · R &nbsp;|&nbsp; ← → &nbsp;|&nbsp; Ctrl+Z
+      </span>
+    </div>
+    <div id="hypno-editor"></div>
+    <div class="ev-legend mt-1">
+      {% for s,c in [('W','#e74c3c'),('N1','#f39c12'),('N2','#2980b9'),('N3','#1a3a8f'),('R','#8e44ad')] %}
+        <span><span class="ev-dot" style="background:{{c}}"></span>{{s}}</span>
+      {% endfor %}
+      <span class="text-muted" style="font-size:.72rem">
+        &nbsp;— stippel = AI origineel
+      </span>
+    </div>
+  </div>
+
+  {# ── BLOK 2: EDF-viewer + event-overlay ──────────────────── #}
+  <div class="panel-card p-2 mb-2">
+    <div class="d-flex align-items-center mb-1">
+      <span class="section-hdr"><i class="bi bi-waveform me-1"></i>
+        {% if current_lang=='fr' %}Signaux EEG/PSG + événements
+        {% elif current_lang=='en' %}EEG/PSG signals + events
+        {% else %}EEG/PSG signalen + events{% endif %}
+      </span>
+      <span class="text-muted small ms-3">
+        {% if current_lang=='fr' %}Alt+O/C/M/H/A/E = changer d'outil  |  cliquer = toggle event  |  Ctrl+1234 = zoom
+        {% elif current_lang=='en' %}Alt+O/C/M/H/A/E = switch tool  |  click = toggle event  |  Ctrl+1234 = zoom
+        {% else %}Alt+O/C/M/H/A/E = tool wisselen  |  klikken = event aan/uit  |  Ctrl+1234 = zoom{% endif %}
+      </span>
+    </div>
+    <div class="row">
+      <div class="col-md-9">
+        <div id="edf-viewer"></div>
+      </div>
+      <div class="col-md-3">
+        {# Eventlijst sidebar #}
+        <div class="border rounded bg-white p-2" style="max-height:480px;overflow-y:auto;font-size:.75rem" id="event-list-panel">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="fw-bold text-primary">
+              <i class="bi bi-list-ol me-1"></i>
+              {% if current_lang=='fr' %}Événements{% elif current_lang=='en' %}Events{% else %}Eventlijst{% endif %}
+            </span>
+            <span class="badge bg-secondary" id="event-count">—</span>
+          </div>
+          {# Filter buttons #}
+          <div class="d-flex gap-1 flex-wrap mb-2" id="ev-filter-btns">
+            <button class="btn btn-sm py-0 px-1 active" data-filter="all"
+                    style="font-size:.65rem;border:1px solid #666;background:#f0f0f0">Alle</button>
+            {% for evtype, col in [('OA','#e74c3c'),('CA','#3498db'),('MA','#9b59b6'),('H','#f39c12'),('AR','#2ecc71'),('RERA','#1abc9c')] %}
+            <button class="btn btn-sm py-0 px-1" data-filter="{{ evtype }}"
+                    style="font-size:.65rem;border:1px solid {{ col }};color:{{ col }}">{{ evtype }}</button>
+            {% endfor %}
+          </div>
+          <div id="event-list-body">
+            <div class="text-muted text-center py-3">
+              <div class="spinner-border spinner-border-sm"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {# Event-legenda #}
+    <div class="ev-legend mt-1">
+      {% for evtype,col,lbl in [
+        ('OA','#e74c3c','Obstructief'),('CA','#3498db','Centraal'),
+        ('MA','#9b59b6','Gemengd'),('H','#f39c12','Hypopnea'),
+        ('AR','#2ecc71','Arousal'),('RERA','#1abc9c','RERA')] %}
+        <span><span class="ev-dot" style="background:{{col}}66;border:1.5px solid {{col}}"></span>
+          <span style="color:{{col}};font-weight:600">{{evtype}}</span>
+          <span class="text-muted" style="font-size:.7rem"> {{lbl}}</span>
+        </span>
+      {% endfor %}
+      <span class="text-muted" style="font-size:.7rem">
+        &nbsp;✏ = manueel &nbsp; klik = toggle
+      </span>
+    </div>
+  </div>
+
+  {# ── Keyboard shortcut help (? toets) ─────────────────────── #}
+  <div id="kb-help" class="position-fixed top-50 start-50 translate-middle d-none"
+       style="z-index:9999;width:480px;max-width:90vw">
+    <div class="card shadow-lg border-0">
+      <div class="card-header bg-primary text-white d-flex justify-content-between">
+        <span><i class="bi bi-keyboard me-1"></i> Keyboard Shortcuts</span>
+        <button class="btn-close btn-close-white" onclick="document.getElementById('kb-help').classList.add('d-none')"></button>
+      </div>
+      <div class="card-body p-3" style="font-size:.85rem">
+        <table class="table table-sm mb-0">
+          <tbody>
+            <tr><td><kbd>W</kbd> <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>R</kbd></td><td>Stage toekennen (Wake/N1/N2/N3/REM)</td></tr>
+            <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Vorige / volgende epoch (hypnogram)</td></tr>
+            <tr><td><kbd>PgUp</kbd> <kbd>PgDn</kbd></td><td>Vorige / volgende epoch (EDF viewer)</td></tr>
+            <tr><td><kbd>Home</kbd> <kbd>End</kbd></td><td>Begin / einde opname</td></tr>
+            <tr><td><kbd>Ctrl+Z</kbd></td><td>Ongedaan maken (staging)</td></tr>
+            <tr><td><kbd>Ctrl+1</kbd>…<kbd>4</kbd></td><td>Zoom: 30s / 60s / 150s / 300s</td></tr>
+            <tr><td><kbd>Alt+O</kbd></td><td>Tool: Obstructief apnea</td></tr>
+            <tr><td><kbd>Alt+C</kbd></td><td>Tool: Centraal apnea</td></tr>
+            <tr><td><kbd>Alt+M</kbd></td><td>Tool: Gemengd apnea</td></tr>
+            <tr><td><kbd>Alt+H</kbd></td><td>Tool: Hypopnea</td></tr>
+            <tr><td><kbd>Alt+A</kbd></td><td>Tool: Arousal</td></tr>
+            <tr><td><kbd>Alt+E</kbd></td><td>Tool: RERA</td></tr>
+            <tr><td><kbd>?</kbd></td><td>Deze help tonen/verbergen</td></tr>
+            <tr><td><kbd>Scroll</kbd> op kanaalnaam</td><td>Per-kanaal amplitude aanpassen</td></tr>
+            <tr><td><kbd>Scroll</kbd> op signaal</td><td>Globale amplitude aanpassen</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{# ── Scripts ─────────────────────────────────────────────────── #}
+<script src="/static/scorer_v12.js"></script>
+<script src="/static/edf_viewer_v12.js"></script>
+<script>
+  const AI_STAGES   = {{ ai_stages   | tojson }};
+  const ACTIVE_STGS = {{ active_stages | tojson }};
+  const JOB_ID      = {{ job_id      | tojson }};
+  const LANG        = {{ current_lang | tojson }};
+
+  // ── Scorer ────────────────────────────────────────────────
+  const scorer = new HypnoScorer("hypno-editor", AI_STAGES, JOB_ID, LANG);
+  if (JSON.stringify(ACTIVE_STGS) !== JSON.stringify(AI_STAGES)) {
+    for (let i=0;i<ACTIVE_STGS.length;i++) {
+      if (ACTIVE_STGS[i]!==AI_STAGES[i]) scorer.stages[i]=ACTIVE_STGS[i];
+    }
+    scorer._draw(); scorer._updateChanges();
+  }
+
+  // ── Viewer + events ───────────────────────────────────────
+  const viewer = new EdfViewer("edf-viewer", JOB_ID, {
+    scorer:       scorer,
+    lang:         LANG,
+    eventsEnabled: true,
+    activeEventType: "OA",
+    onEpochChange: (idx) => {
+      const t=(idx*30/3600).toFixed(2);
+      document.getElementById("sync-badge").textContent=`Epoch ${idx+1}  (${t}h)`;
+    },
+    onStatsUpdate: (stats) => {
+      // Update AHI/event-tellers live
+      const set = (id,val) => { const el=document.getElementById(id); if(el&&val!==undefined) el.textContent=val; };
+      set("ev-ahi",  typeof stats.ahi_total==="number"  ? stats.ahi_total.toFixed(1)  : "—");
+      set("ev-oahi", typeof stats.oahi==="number"       ? stats.oahi.toFixed(1)       : "—");
+      set("ev-n-OA",   stats.n_oa   ?? "—");
+      set("ev-n-CA",   stats.n_ca   ?? "—");
+      set("ev-n-MA",   stats.n_ma   ?? "—");
+      set("ev-n-H",    stats.n_hypopnea ?? "—");
+      set("ev-n-AR",   stats.n_arousal  ?? "—");
+      set("ev-n-RERA", stats.n_rera     ?? "—");
+    },
+  });
+  viewer.bindKeyboard();
+
+  // ── Live slaapstadium-stats ───────────────────────────────
+  function updateStageStats() {
+    const stages=scorer.getStages(); const n=stages.length;
+    const c={W:0,N1:0,N2:0,N3:0,R:0};
+    for(const s of stages) if(s in c) c[s]++;
+    for(const[s,v] of Object.entries(c)){
+      const el=document.getElementById("pct-"+s);
+      if(el) el.textContent=n?(v/n*100).toFixed(1)+"%":"—";
+    }
+    let nc=0; for(let i=0;i<stages.length;i++) if(stages[i]!==AI_STAGES[i]) nc++;
+    const el=document.getElementById("n-stage-corr"); if(el) el.textContent=nc;
+  }
+  const origDraw=scorer._draw.bind(scorer);
+  scorer._draw=function(){origDraw();updateStageStats();};
+  updateStageStats();
+
+  // ── Scorer → viewer sync ──────────────────────────────────
+  scorer._onEpochSelect=(idx)=>{
+    viewer.goTo(idx);
+    const t=(idx*30/3600).toFixed(2);
+    document.getElementById("sync-badge").textContent=`Epoch ${idx+1}  (${t}h)`;
+  };
+
+  // ── v13: Event list sidebar ─────────────────────────────────
+  let _allEvents = [];
+  let _evFilter = "all";
+
+  function loadEventList() {
+    fetch(`/api/edf/${JOB_ID}/events/all`)
+      .then(r => r.json())
+      .then(data => {
+        _allEvents = (data.events || []).sort((a,b) => a.t_start - b.t_start);
+        document.getElementById("event-count").textContent = _allEvents.length;
+        renderEventList();
+      })
+      .catch(e => {
+        document.getElementById("event-list-body").innerHTML =
+          '<div class="text-danger small">Laden mislukt</div>';
+      });
+  }
+
+  function renderEventList() {
+    const body = document.getElementById("event-list-body");
+    const filtered = _evFilter === "all" ? _allEvents : _allEvents.filter(e => e.type === _evFilter);
+    document.getElementById("event-count").textContent = filtered.length;
+
+    if (!filtered.length) {
+      body.innerHTML = '<div class="text-muted text-center py-2">Geen events</div>';
+      return;
+    }
+
+    const colors = {OA:"#e74c3c",CA:"#3498db",MA:"#9b59b6",H:"#f39c12",AR:"#2ecc71",RERA:"#1abc9c"};
+    let html = '<table class="table table-sm table-hover mb-0" style="font-size:.72rem"><tbody>';
+    for (const ev of filtered) {
+      const mm = Math.floor(ev.t_start/60);
+      const ss = Math.round(ev.t_start%60);
+      const col = colors[ev.type] || "#666";
+      const src = ev.source === "manual" ? " ✏" : "";
+      html += `<tr style="cursor:pointer" onclick="jumpToEvent(${ev.t_start})">`;
+      html += `<td><span style="color:${col};font-weight:700">${ev.type}</span>${src}</td>`;
+      html += `<td>${mm}:${String(ss).padStart(2,"0")}</td>`;
+      html += `<td>${ev.duration.toFixed(0)}s</td>`;
+      html += `<td class="text-muted">${ev.stage||""}</td>`;
+      html += '</tr>';
+    }
+    html += '</tbody></table>';
+    body.innerHTML = html;
+  }
+
+  function jumpToEvent(tStart) {
+    viewer.goToTime(tStart);
+  }
+
+  // Filter buttons
+  document.querySelectorAll('#ev-filter-btns button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _evFilter = btn.dataset.filter;
+      document.querySelectorAll('#ev-filter-btns button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderEventList();
+    });
+  });
+
+  // Load event list on page load
+  loadEventList();
+
+  // ── Keyboard help overlay (? toets) ──────────────────────
+  document.addEventListener('keydown', function(e) {
+    if ((e.key === '?' || e.key === '/') && !e.ctrlKey && !e.altKey) {
+      const el = document.activeElement;
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) return;
+      e.preventDefault();
+      document.getElementById('kb-help').classList.toggle('d-none');
+    }
+    if (e.key === 'Escape') {
+      document.getElementById('kb-help').classList.add('d-none');
+    }
+  });
+</script>
+{% endblock %}

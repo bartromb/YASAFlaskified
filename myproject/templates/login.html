@@ -1,25 +1,49 @@
 {% extends "base.html" %}
+{% block title %}{{ t('login') }}{% endblock %}
+
+{% block extra_css %}
+.login-card {
+  max-width: 400px;
+  margin: 5rem auto;
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,.08);
+}
+.login-header {
+  background: var(--sleep-blue);
+  color: #fff;
+  border-radius: 12px 12px 0 0;
+  padding: 1.5rem;
+  text-align: center;
+}
+.login-header h4 { margin: 0; font-weight: 600; }
+.login-body { padding: 2rem; }
+{% endblock %}
 
 {% block content %}
-    <h2>Login</h2>
+<div class="login-card card">
+  <div class="login-header">
+    <div style="font-size:2.5rem">🧠</div>
+    <h4>YASAFlaskified</h4>
+    <small class="opacity-75">{{ t('only_authorized') }}</small>
+  </div>
+  <div class="login-body">
     <form method="POST">
-        <div class="form-group">
-            <label for="username">Username:</label>
-            <input type="text" id="username" name="username" class="form-control" required>
-        </div>
-        <div class="form-group">
-            <label for="password">Password:</label>
-            <input type="password" id="password" name="password" class="form-control" required>
-        </div>
-        <button type="submit" class="btn btn-primary">Login</button>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="mb-3">
+        <label for="username" class="form-label"><i class="bi bi-person me-1"></i>{{ t('username') }}</label>
+        <input type="text" id="username" name="username" class="form-control form-control-lg"
+               required autocomplete="username" autofocus>
+      </div>
+      <div class="mb-4">
+        <label for="password" class="form-label"><i class="bi bi-lock me-1"></i>{{ t('password') }}</label>
+        <input type="password" id="password" name="password" class="form-control form-control-lg"
+               required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn btn-primary btn-lg w-100">
+        <i class="bi bi-box-arrow-in-right me-1"></i>{{ t('sign_in') }}
+      </button>
     </form>
-    <p>
-        Don't have an account? <a href="{{ url_for('register') }}">Register here</a><br>
-        <small><i>Note: For the moment, only administrators can add new users.</i></small>
-    </p>
-
-    <!-- New Message for Experimental Server -->
-    <p class="alert alert-warning mt-3">
-        <strong>Warning:</strong> This is an experimental server. Use with caution.
-    </p>
+  </div>
+</div>
 {% endblock %}

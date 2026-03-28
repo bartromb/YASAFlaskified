@@ -1,0 +1,146 @@
+{# templates/index.html — YASAFlaskified startpagina met uploadformulier #}
+{% extends "base.html" %}
+{% block title %}YASAFlaskified — Automatische Slaapanalyse{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width:680px">
+
+  {# Hero #}
+  <div class="text-center mb-5">
+    <div class="fs-1 mb-2">🧠</div>
+    <h1 class="fw-bold" style="color:#1a3a5c">YASAFlaskified</h1>
+    <p class="lead text-muted">
+      Automatische slaapanalyse via YASA &nbsp;·&nbsp;
+      <a href="https://sleepai.be" target="_blank">sleepai.be</a> /
+      <a href="https://sleepai.eu" target="_blank">sleepai.eu</a>
+    </p>
+  </div>
+
+  {# Flash berichten #}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+      <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  {# Uploadkaart #}
+  <div class="card shadow-sm border-0">
+    <div class="card-body p-4 p-md-5">
+      <h4 class="mb-1">📂 EDF-bestand uploaden</h4>
+      <p class="text-muted small mb-4">
+        Polysomnografie-opname in European Data Format (.edf) — max 500 MB
+      </p>
+
+      <form method="POST" action="/upload" enctype="multipart/form-data" id="uploadForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        {# Drag-and-drop zone #}
+        <div id="dropZone"
+             class="border border-2 border-dashed rounded-3 p-5 text-center mb-4"
+             style="border-color:#adb5bd!important;cursor:pointer;transition:all .2s"
+             onclick="document.getElementById('edfInput').click()">
+          <div class="fs-2 mb-2" id="dropIcon">📁</div>
+          <div id="dropText">
+            <strong>Klik om te bladeren</strong> of sleep een .edf bestand hiernaartoe
+          </div>
+          <div class="text-muted small mt-2" id="fileInfo"></div>
+        </div>
+
+        <input type="file" name="edf_file" id="edfInput"
+               accept=".edf" class="d-none" required>
+
+        <div class="d-grid">
+          <button type="submit" class="btn btn-primary btn-lg" id="uploadBtn" disabled>
+            🚀 &nbsp; Uploaden &amp; analyseren
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {# Wat doet het #}
+  <div class="row g-3 mt-4">
+    {% set features = [
+      ("🌙", "Slaapstaging", "Automatisch hypnogram via YASA machine learning"),
+      ("🌀", "Spindle detectie", "Slaapspoelen per kanaal met frequentie & amplitude"),
+      ("〰️", "Trage golven", "Slow oscillations in N3 met duurstatistieken"),
+      ("👁️", "REM analyse", "REM-perioden, cycli en NREM→REM transities"),
+      ("📡", "Bandvermogen", "Delta/theta/alpha/sigma/beta per slaapfase"),
+      ("📄", "PDF & Excel", "Professioneel rapport direct downloadbaar"),
+    ] %}
+    {% for icon, title, desc in features %}
+    <div class="col-6 col-md-4">
+      <div class="card border-0 bg-light h-100 p-3">
+        <div class="fs-4 mb-1">{{ icon }}</div>
+        <div class="fw-bold small">{{ title }}</div>
+        <div class="text-muted" style="font-size:.8rem">{{ desc }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# Disclaimer #}
+  <p class="text-muted text-center mt-4" style="font-size:.78rem">
+    Enkel voor gebruik door bevoegde zorgverleners. Vervangt geen medische diagnose.
+  </p>
+
+</div>
+
+<style>
+#dropZone:hover, #dropZone.dragover {
+  background: #e8f4fd !important;
+  border-color: #2980b9 !important;
+}
+</style>
+
+<script>
+const input   = document.getElementById("edfInput");
+const dropZ   = document.getElementById("dropZone");
+const fileInf = document.getElementById("fileInfo");
+const dropTxt = document.getElementById("dropText");
+const dropIco = document.getElementById("dropIcon");
+const btn     = document.getElementById("uploadBtn");
+const form    = document.getElementById("uploadForm");
+
+function setFile(file) {
+  if (!file || !file.name.toLowerCase().endsWith(".edf")) {
+    alert("Selecteer een geldig .edf bestand.");
+    return;
+  }
+  const mb = (file.size / 1024 / 1024).toFixed(1);
+  dropIco.textContent = "✅";
+  dropTxt.innerHTML = `<strong>${file.name}</strong>`;
+  fileInf.textContent = `${mb} MB`;
+  btn.disabled = false;
+}
+
+input.addEventListener("change", () => { if (input.files[0]) setFile(input.files[0]); });
+
+// Drag-and-drop
+dropZ.addEventListener("dragover",  e => { e.preventDefault(); dropZ.classList.add("dragover"); });
+dropZ.addEventListener("dragleave", ()  => dropZ.classList.remove("dragover"));
+dropZ.addEventListener("drop", e => {
+  e.preventDefault();
+  dropZ.classList.remove("dragover");
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    // Geef het bestand door aan de hidden input
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    input.files = dt.files;
+    setFile(file);
+  }
+});
+
+// Uploadknop feedback
+form.addEventListener("submit", function() {
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Uploaden...';
+});
+</script>
+{% endblock %}

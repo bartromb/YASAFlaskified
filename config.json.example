@@ -1,10 +1,31 @@
-
 {
-    "UPLOAD_FOLDER": "/path/to/uploads",
-    "PROCESSED_FOLDER": "/path/to/processed",
-    "SECRET_KEY": "your_secret_key_here",
-    "SQLALCHEMY_DATABASE_URI": "sqlite:///your_database.db",
-    "LOG_FILE": "/path/to/logs/app.log",
-    "ADMIN_PASSWORD": "your_admin_password_here",
-    "JOB_TIMEOUT": 6000
+  "SECRET_KEY": "VERANDER_DIT_NAAR_EEN_LANGE_WILLEKEURIGE_STRING",
+  "ADMIN_PASSWORD": "VERANDER_DIT_WACHTWOORD",
+
+  "UPLOAD_FOLDER":            "/data/slaapkliniek/uploads",
+  "PROCESSED_FOLDER":         "/data/slaapkliniek/processed",
+  "SQLALCHEMY_DATABASE_URI":  "sqlite:////data/slaapkliniek/instance/users.db",
+  "LOG_FILE":                 "/data/slaapkliniek/logs/app.log",
+  "LOG_LEVEL":                "INFO",
+
+  "REDIS_HOST": "redis",
+  "REDIS_PORT": 6379,
+
+  "MAX_CONTENT_LENGTH":        524288000,
+  "SESSION_LIFETIME_HOURS":    24,
+  "SESSION_COOKIE_SECURE":     true,
+  "REQUIRE_STRONG_PASSWORDS":  true,
+  "ENABLE_RATE_LIMITING":      true,
+  "JOB_TIMEOUT_SECONDS":       900,
+
+  "DEBUG": false,
+
+  "site": {
+    "name":      "Slaapkliniek AZORG",
+    "address":   "",
+    "phone":     "",
+    "email":     "",
+    "logo_path": "AZORG_rood.png",
+    "url":       "https://www.slaapkliniek.be"
+  }
 }

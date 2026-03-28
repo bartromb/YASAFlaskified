@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ title or "Error" }}{% endblock %}
+{% block content %}
+<div class="container py-5 text-center" style="max-width:500px">
+  <div class="fs-1 mb-3">🚧</div>
+  <h2>{{ title or "Error" }}</h2>
+  <p class="text-muted">{{ message or "" }}</p>
+  <a href="/login" class="btn btn-primary mt-3">← {{ t('login') if t else 'Login' }}</a>
+</div>
+{% endblock %}

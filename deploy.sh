@@ -1,257 +1,307 @@
 #!/bin/bash
+# ═══════════════════════════════════════════════════════════════
+# deploy.sh — YASAFlaskified v0.8.4 automated deployment
+# ═══════════════════════════════════════════════════════════════
+#
+# Installs YASAFlaskified on a vanilla Ubuntu 22.04/24.04 server.
+# Run as root or with sudo:
+#
+#   curl -sSL https://raw.githubusercontent.com/bartromb/yasaflaskified/main/deploy.sh | sudo bash
+#
+# Or locally:
+#   sudo bash deploy.sh
+#
+# What this script does:
+#   1. Creates application user (auto-detected or specified via YASA_USER)
+#   2. Installs Docker + Docker Compose
+#   3. Installs Nginx + Certbot
+#   4. Creates /data/slaapkliniek directory structure
+#   5. Clones or copies YASAFlaskified
+#   6. Generates .env with random SECRET_KEY
+#   7. Configures Nginx reverse proxy
+#   8. Configures UFW firewall
+#   9. Builds and starts Docker containers
+#  10. (Optional) Obtains Let's Encrypt SSL certificate
+#
+# ═══════════════════════════════════════════════════════════════
 
-# Ensure the script is run as root
-if [[ $EUID -ne 0 ]]; then
-    echo "This script must be run as root."
-    exit 1
+set -euo pipefail
+
+# ── Configuration ─────────────────────────────────────────────
+# User detection priority:
+#   1. YASA_USER environment variable (explicit)
+#   2. SUDO_USER (the user who ran sudo)
+#   3. logname (login session user)
+#   4. Error — require explicit YASA_USER
+
+if [ -n "${YASA_USER:-}" ]; then
+    APP_USER="${YASA_USER}"
+elif [ -n "${SUDO_USER:-}" ] && [ "${SUDO_USER}" != "root" ]; then
+    APP_USER="${SUDO_USER}"
+elif logname &>/dev/null && [ "$(logname)" != "root" ]; then
+    APP_USER="$(logname)"
+elif [ -t 0 ]; then
+    # Interactive terminal — ask
+    read -rp "Linux username for YASAFlaskified: " APP_USER
+    [ -z "${APP_USER}" ] && err "No username provided."
+else
+    # Piped (curl | sudo bash) — no tty, no SUDO_USER
+    err "Cannot detect username in pipe mode. Use: curl ... | sudo YASA_USER=yourname bash"
 fi
 
-# Add or remove swap space
-if [[ $1 == "remove-swap" ]]; then
-    echo "Removing swap space..."
-    swapoff /swapfile
-    rm -f /swapfile
-    sed -i '/\/swapfile/d' /etc/fstab  # Remove existing swap entry from /etc/fstab
-    echo "Swap space removed."
-    exit 0
+# Safety: never run as root
+if [ "${APP_USER}" = "root" ]; then
+    err "Refusing to install as root. Set YASA_USER=yourname."
+fi
+APP_DIR="/data/slaapkliniek"
+APP_PORT="${YASA_PORT:-8071}"
+DOMAIN="${YASA_DOMAIN:-}"          # Set to enable SSL (e.g. slaapkliniek.be)
+ADMIN_PASSWORD="${YASA_ADMIN_PASSWORD:-}"
+BRANCH="${YASA_BRANCH:-main}"
+REPO="https://github.com/bartromb/yasaflaskified.git"
+
+# ── Colors ────────────────────────────────────────────────────
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
+BLUE='\033[0;34m'; NC='\033[0m'
+
+log()  { echo -e "${GREEN}[✓]${NC} $1"; }
+warn() { echo -e "${YELLOW}[!]${NC} $1"; }
+err()  { echo -e "${RED}[✗]${NC} $1"; exit 1; }
+step() { echo -e "\n${BLUE}══════════════════════════════════════════${NC}"; echo -e "${BLUE}  $1${NC}"; echo -e "${BLUE}══════════════════════════════════════════${NC}"; }
+
+# ── Pre-flight checks ────────────────────────────────────────
+if [ "$(id -u)" -ne 0 ]; then
+    err "This script must be run as root (use: sudo bash deploy.sh)"
 fi
 
-# Add 8GB of swap space
-echo "Configuring swap space..."
-SWAPFILE="/swapfile"
+if ! grep -qiE "ubuntu|debian" /etc/os-release 2>/dev/null; then
+    warn "This script is designed for Ubuntu/Debian. Proceeding anyway..."
+fi
 
-if [[ ! -f "$SWAPFILE" ]]; then
-    fallocate -l 8G "$SWAPFILE"
-    chmod 600 "$SWAPFILE"
-    mkswap "$SWAPFILE"
-    swapon "$SWAPFILE"
-    # Check and add entry to /etc/fstab only if it doesn't already exist
-    if ! grep -q "^$SWAPFILE " /etc/fstab; then
-        echo "$SWAPFILE none swap sw 0 0" | tee -a /etc/fstab
-    else
-        echo "Swap entry already exists in /etc/fstab."
+# ══════════════════════════════════════════════════════════════
+step "1/10  Creating user '${APP_USER}'"
+# ══════════════════════════════════════════════════════════════
+
+if id "${APP_USER}" &>/dev/null; then
+    log "User '${APP_USER}' already exists"
+else
+    adduser --disabled-password --gecos "YASAFlaskified" "${APP_USER}"
+    log "User '${APP_USER}' created"
+fi
+
+# ══════════════════════════════════════════════════════════════
+step "2/10  Installing Docker"
+# ══════════════════════════════════════════════════════════════
+
+if command -v docker &>/dev/null; then
+    log "Docker already installed: $(docker --version)"
+else
+    apt-get update -qq
+    apt-get install -y -qq ca-certificates curl gnupg
+
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+        | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    chmod a+r /etc/apt/keyrings/docker.gpg
+
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+        https://download.docker.com/linux/ubuntu \
+        $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+        > /etc/apt/sources.list.d/docker.list
+
+    apt-get update -qq
+    apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plugin
+    log "Docker installed: $(docker --version)"
+fi
+
+usermod -aG docker "${APP_USER}" 2>/dev/null || true
+log "User '${APP_USER}' added to docker group"
+
+# ══════════════════════════════════════════════════════════════
+step "3/10  Installing Nginx + Certbot"
+# ══════════════════════════════════════════════════════════════
+
+apt-get install -y -qq nginx certbot python3-certbot-nginx
+systemctl enable nginx
+log "Nginx installed and enabled"
+
+# ══════════════════════════════════════════════════════════════
+step "4/10  Creating directory structure"
+# ══════════════════════════════════════════════════════════════
+
+mkdir -p "${APP_DIR}"
+chown "${APP_USER}:${APP_USER}" "${APP_DIR}"
+log "Created ${APP_DIR}"
+
+# ══════════════════════════════════════════════════════════════
+step "5/10  Deploying YASAFlaskified"
+# ══════════════════════════════════════════════════════════════
+
+if [ -f "${APP_DIR}/docker-compose.yml" ]; then
+    warn "Existing installation found at ${APP_DIR}"
+    warn "Pulling latest changes..."
+    cd "${APP_DIR}"
+    if [ -d .git ]; then
+        sudo -u "${APP_USER}" git pull origin "${BRANCH}" || true
     fi
-    echo "Swap space added and enabled."
 else
-    echo "Swap space already exists."
+    # Check if we're running from inside the repo
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    if [ -f "${SCRIPT_DIR}/docker-compose.yml" ] && [ -f "${SCRIPT_DIR}/Dockerfile" ]; then
+        log "Copying from local source: ${SCRIPT_DIR}"
+        cp -r "${SCRIPT_DIR}/"* "${APP_DIR}/"
+        cp -r "${SCRIPT_DIR}/".[!.]* "${APP_DIR}/" 2>/dev/null || true
+    else
+        log "Cloning from ${REPO} (branch: ${BRANCH})"
+        apt-get install -y -qq git
+        sudo -u "${APP_USER}" git clone --branch "${BRANCH}" "${REPO}" "${APP_DIR}"
+    fi
 fi
 
-# Deployment script continues...
+chown -R "${APP_USER}:${APP_USER}" "${APP_DIR}"
+log "YASAFlaskified deployed to ${APP_DIR}"
 
-PROJECT_NAME="YASAFlaskified"
-PROJECT_DIR="/var/www/$PROJECT_NAME"
-VENV_DIR="$PROJECT_DIR/venv"
-RUN_DIR="$PROJECT_DIR/run"
-LOGS_DIR="$PROJECT_DIR/logs"
-UPLOAD_FOLDER="$PROJECT_DIR/uploads"
-PROCESSED_FOLDER="$PROJECT_DIR/processed"
-INSTANCE_FOLDER="$PROJECT_DIR/instance"
-MPLCONFIGDIR="$PROJECT_DIR/.config/matplotlib"
-CONFIG_FILE="$PROJECT_DIR/config.json"
-REPO_URL="https://github.com/bartromb/YASAFlaskified.git"
+# ══════════════════════════════════════════════════════════════
+step "6/10  Generating .env configuration"
+# ══════════════════════════════════════════════════════════════
 
-# Deployment type prompt
-read -p "Deploy locally (localhost) or on a domain? Enter 'local' or 'domain': " DEPLOY_OPTION
-if [[ $DEPLOY_OPTION == "local" ]]; then
-    DOMAIN="0.0.0.0"
-    echo "Deploying locally. Accessible via the server's IP address on port 80."
-elif [[ $DEPLOY_OPTION == "domain" ]]; then
-    read -p "Enter the domain name for your website (e.g., example.com): " DOMAIN
-    echo "Deploying on the domain: $DOMAIN"
+ENV_FILE="${APP_DIR}/.env"
+
+if [ -f "${ENV_FILE}" ]; then
+    warn ".env already exists — not overwriting"
+    warn "To regenerate: rm ${ENV_FILE} && re-run this script"
 else
-    echo "Invalid option. Re-run the script and choose 'local' or 'domain'."
-    exit 1
+    SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))" 2>/dev/null \
+        || openssl rand -hex 32)
+
+    if [ -z "${ADMIN_PASSWORD}" ]; then
+        ADMIN_PASSWORD=$(python3 -c "import secrets; print(secrets.token_urlsafe(16))" 2>/dev/null \
+            || openssl rand -base64 16)
+        warn "Generated admin password: ${ADMIN_PASSWORD}"
+        warn "SAVE THIS PASSWORD — it will not be shown again!"
+    fi
+
+    cp "${APP_DIR}/.env.example" "${ENV_FILE}"
+
+    sed -i "s|VERANDER_DIT_NAAR_EEN_LANGE_WILLEKEURIGE_STRING|${SECRET_KEY}|" "${ENV_FILE}"
+    sed -i "s|VERANDER_DIT_WACHTWOORD|${ADMIN_PASSWORD}|" "${ENV_FILE}"
+
+    chmod 600 "${ENV_FILE}"
+    chown "${APP_USER}:${APP_USER}" "${ENV_FILE}"
+    log ".env created with random SECRET_KEY"
 fi
 
-# Clean up previous installations
-echo "Cleaning up previous installations..."
+# ══════════════════════════════════════════════════════════════
+step "7/10  Configuring Nginx reverse proxy"
+# ══════════════════════════════════════════════════════════════
 
-systemctl stop $PROJECT_NAME.service nginx redis-server
-for i in {1..2}; do
-    systemctl stop rq-worker@$i
-done
+NGINX_CONF="/etc/nginx/sites-available/yasaflaskified"
 
-# Stop and disable services
-systemctl stop $PROJECT_NAME.service
-systemctl disable $PROJECT_NAME.service
-systemctl stop nginx.service
-systemctl stop redis-server.service
-
-# Remove systemd service files
-rm -f /etc/systemd/system/$PROJECT_NAME.service
-
-# Remove Nginx configuration
-rm -f /etc/nginx/sites-available/$PROJECT_NAME
-rm -f /etc/nginx/sites-enabled/$PROJECT_NAME
-rm -f /etc/nginx/sites-enabled/default
-
-# Remove project directory
-if [[ -d "$PROJECT_DIR" ]]; then
-    rm -rf "$PROJECT_DIR"
+if [ -n "${DOMAIN}" ]; then
+    SERVER_NAME="${DOMAIN} www.${DOMAIN}"
+else
+    SERVER_NAME="_"
+    warn "No DOMAIN set — Nginx will listen on all hostnames"
+    warn "Set YASA_DOMAIN=yourdomain.com to configure specific domain"
 fi
 
-echo "Previous installations cleaned."
-
-# Install system packages
-apt update && apt upgrade -y
-apt install -y python3 python3-venv python3-pip nginx redis-server git certbot python3-certbot-nginx sqlite3
-
-# Clone the repository
-git clone "$REPO_URL" "$PROJECT_DIR" || { echo "Cloning repository failed"; exit 1; }
-
-# Ensure correct project structure
-if [[ -d "$PROJECT_DIR/myproject" ]]; then
-    mv "$PROJECT_DIR/myproject"/* "$PROJECT_DIR/" || { echo "Reorganizing project files failed"; exit 1; }
-    rm -rf "$PROJECT_DIR/myproject"
-fi
-
-# Check for app.py
-if [[ ! -f "$PROJECT_DIR/app.py" ]]; then
-    echo "app.py not found in $PROJECT_DIR. Check your repository structure."
-    exit 1
-fi
-
-# Set up virtual environment and install requirements
-python3 -m venv "$VENV_DIR" || { echo "Creating virtual environment failed"; exit 1; }
-source "$VENV_DIR/bin/activate"
-pip install --upgrade pip
-pip install -r "$PROJECT_DIR/requirements.txt" || { echo "Installing requirements failed"; exit 1; }
-deactivate
-
-# Configure directories
-mkdir -p "$RUN_DIR" "$LOGS_DIR" "$UPLOAD_FOLDER" "$PROCESSED_FOLDER" "$INSTANCE_FOLDER" "$MPLCONFIGDIR"
-chown -R www-data:www-data "$PROJECT_DIR"
-chmod -R 755 "$PROJECT_DIR"
-chmod -R 777 "$MPLCONFIGDIR"
-
-# Create application configuration
-cat > "$CONFIG_FILE" <<EOL
-{
-    "UPLOAD_FOLDER": "$UPLOAD_FOLDER",
-    "PROCESSED_FOLDER": "$PROCESSED_FOLDER",
-    "SQLALCHEMY_DATABASE_URI": "sqlite:///$INSTANCE_FOLDER/users.db",
-    "SQLALCHEMY_TRACK_MODIFICATIONS": false,
-    "LOG_FILE": "$LOGS_DIR/app.log",
-    "JOB_TIMEOUT": 12000
-}
-EOL
-
-# Initialize database and create admin user
-source "$VENV_DIR/bin/activate"
-cd "$PROJECT_DIR"
-python3 -c "
-import os, json
-from app import app, db, User
-from werkzeug.security import generate_password_hash
-
-with open('config.json') as f:
-    config = json.load(f)
-app.config.from_mapping(config)
-with app.app_context():
-    db.create_all()
-    if not User.query.filter_by(username='admin').first():
-        admin_password = generate_password_hash('admin', method='pbkdf2:sha256', salt_length=8)
-        admin = User(username='admin', password=admin_password)
-        db.session.add(admin)
-        db.session.commit()
-        print('Admin user created with password: admin')
-" || { echo "Database initialization failed"; exit 1; }
-deactivate
-
-# Ensure users.db is writable
-chown www-data:www-data "$INSTANCE_FOLDER/users.db"
-chmod 664 "$INSTANCE_FOLDER/users.db"
-
-# Create systemd service for Gunicorn
-cat > /etc/systemd/system/$PROJECT_NAME.service <<EOL
-[Unit]
-Description=Gunicorn instance to serve $PROJECT_NAME
-After=network.target
-
-[Service]
-User=www-data
-Group=www-data
-WorkingDirectory=$PROJECT_DIR
-Environment="PATH=$VENV_DIR/bin"
-Environment="MPLCONFIGDIR=$MPLCONFIGDIR"
-ExecStart=$VENV_DIR/bin/gunicorn --worker-class gevent -w 2 --timeout 18000 --bind unix:$RUN_DIR/gunicorn.sock app:app
-
-[Install]
-WantedBy=multi-user.target
-EOL
-
-# Ensure Redis is configured correctly
-echo "maxmemory 4096mb" >> /etc/redis/redis.conf
-echo "maxmemory-policy allkeys-lru" >> /etc/redis/redis.conf
-echo "appendonly yes" >> /etc/redis/redis.conf
-echo "maxclients 1000" >> /etc/redis/redis.conf
-systemctl restart redis-server
-
-mkdir -p "$LOGS_DIR/rq-workers"
-chown www-data:www-data "$LOGS_DIR/rq-workers"
-
-# Create systemd template for RQ Workers
-cat > /etc/systemd/system/rq-worker@.service <<EOL
-[Unit]
-Description=RQ Worker instance %i for $PROJECT_NAME
-After=network.target
-
-[Service]
-User=www-data
-Group=www-data
-WorkingDirectory=$PROJECT_DIR
-Environment="PATH=$VENV_DIR/bin"
-ExecStart=$VENV_DIR/bin/rq worker --verbose
-Restart=always
-StandardOutput=append:$LOGS_DIR/rq-worker-%i.log
-StandardError=append:$LOGS_DIR/rq-worker-%i-error.log
-
-[Install]
-WantedBy=multi-user.target
-EOL
-
-# Start 2 RQ Workers
-for i in {1..2}; do
-    systemctl enable rq-worker@$i
-    systemctl start rq-worker@$i
-done
-
-# Create Nginx configuration
-cat > /etc/nginx/sites-available/$PROJECT_NAME <<EOL
+cat > "${NGINX_CONF}" << NGINXEOF
 server {
     listen 80;
-    server_name $DOMAIN;
+    server_name ${SERVER_NAME};
 
-    client_max_body_size 2000M;
+    client_max_body_size 520M;
 
     location / {
-        proxy_pass http://unix:$RUN_DIR/gunicorn.sock;
+        proxy_pass http://127.0.0.1:${APP_PORT};
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-    }
-
-    location /static {
-        alias $PROJECT_DIR/static;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
     }
 }
-EOL
+NGINXEOF
 
-ln -sf /etc/nginx/sites-available/$PROJECT_NAME /etc/nginx/sites-enabled/
+ln -sf "${NGINX_CONF}" /etc/nginx/sites-enabled/
+rm -f /etc/nginx/sites-enabled/default
 
-# Enable and start services
-systemctl daemon-reload
-systemctl enable $PROJECT_NAME.service
-systemctl start $PROJECT_NAME.service
-systemctl enable nginx.service
-systemctl restart nginx.service
-systemctl enable redis-server.service
-systemctl start redis-server.service
+nginx -t && systemctl reload nginx
+log "Nginx configured → http://$(hostname -I | awk '{print $1}'):80"
 
-# Set up Let's Encrypt for domain-based deployments
-if [[ $DEPLOY_OPTION == "domain" ]]; then
-    certbot --nginx -d $DOMAIN --non-interactive --agree-tos --email admin@$DOMAIN || { echo "Let's Encrypt setup failed"; exit 1; }
+# ══════════════════════════════════════════════════════════════
+step "8/10  Configuring firewall (UFW)"
+# ══════════════════════════════════════════════════════════════
+
+if command -v ufw &>/dev/null; then
+    ufw allow 22/tcp   comment "SSH"      >/dev/null 2>&1 || true
+    ufw allow 80/tcp   comment "HTTP"     >/dev/null 2>&1 || true
+    ufw allow 443/tcp  comment "HTTPS"    >/dev/null 2>&1 || true
+    echo "y" | ufw enable >/dev/null 2>&1 || true
+    log "UFW firewall enabled (SSH + HTTP + HTTPS)"
+else
+    warn "UFW not found — firewall not configured"
 fi
 
-# Final message
-echo "Deployment completed successfully. Access your application at http://$DOMAIN."
+# ══════════════════════════════════════════════════════════════
+step "9/10  Building and starting Docker containers"
+# ══════════════════════════════════════════════════════════════
+
+cd "${APP_DIR}"
+
+sudo -u "${APP_USER}" docker compose build 2>&1 | tail -5
+sudo -u "${APP_USER}" docker compose up -d
+
+log "Waiting for containers to start..."
+sleep 10
+
+if sudo -u "${APP_USER}" docker compose ps | grep -q "running"; then
+    log "Containers are running!"
+    echo ""
+    sudo -u "${APP_USER}" docker compose ps
+else
+    warn "Some containers may not be running. Check with:"
+    warn "  cd ${APP_DIR} && docker compose logs"
+fi
+
+# ══════════════════════════════════════════════════════════════
+step "10/10  SSL Certificate (Let's Encrypt)"
+# ══════════════════════════════════════════════════════════════
+
+if [ -n "${DOMAIN}" ]; then
+    log "Requesting SSL certificate for ${DOMAIN}..."
+    certbot --nginx -d "${DOMAIN}" -d "www.${DOMAIN}" \
+        --non-interactive --agree-tos --email "admin@${DOMAIN}" \
+        --redirect \
+        || warn "Certbot failed — you can retry manually: certbot --nginx -d ${DOMAIN}"
+else
+    warn "No DOMAIN set — skipping SSL"
+    warn "To add SSL later:"
+    warn "  certbot --nginx -d yourdomain.com -d www.yourdomain.com"
+fi
+
+# ══════════════════════════════════════════════════════════════
+echo ""
+echo -e "${GREEN}══════════════════════════════════════════${NC}"
+echo -e "${GREEN}  YASAFlaskified deployment complete!${NC}"
+echo -e "${GREEN}══════════════════════════════════════════${NC}"
+echo ""
+echo "  Application:  http://$(hostname -I | awk '{print $1}')"
+[ -n "${DOMAIN}" ] && echo "  Domain:       https://${DOMAIN}"
+echo "  Login:        admin / <password from step 6>"
+echo "  App directory: ${APP_DIR}"
+echo ""
+echo "  Useful commands:"
+echo "    cd ${APP_DIR}"
+echo "    docker compose logs -f app       # Flask logs"
+echo "    docker compose logs -f worker    # Analysis worker"
+echo "    docker compose restart           # Restart all"
+echo "    docker compose down              # Stop all"
+echo ""
+echo "  Update to latest version:"
+echo "    cd ${APP_DIR}"
+echo "    git pull"
+echo "    docker compose build --no-cache"
+echo "    docker compose up -d"
+echo ""

@@ -3,13 +3,23 @@
 {% block title %}Register{% endblock %}
 
 {% block header %}
-<h1>Register</h1>
+<h1>Register user</h1>
 {% endblock %}
 
 {% block content %}
-<form method="POST">
-    <input type="text" name="username" placeholder="Username">
-    <input type="password" name="password" placeholder="Password">
-    <button type="submit">Register</button>
+<form method="POST" class="card">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" class="form-control" required autocomplete="username">
+    </div>
+    <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" class="form-control" required autocomplete="new-password">
+        <small class="muted">
+            Minimum 8 characters, with at least 1 uppercase, 1 lowercase, and 1 number.
+        </small>
+    </div>
+    <button type="submit" class="btn btn-primary">Create user</button>
 </form>
 {% endblock %}

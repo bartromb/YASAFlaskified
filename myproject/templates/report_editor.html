@@ -1,0 +1,410 @@
+{% extends "base.html" %}
+{% block title %}{{ t("edit_report") }} — {{ job_id }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3" style="max-width:960px">
+
+  {# ── Header ── #}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-pencil-square"></i> {{ t("edit_report") }}</h4>
+    <div>
+      <a href="/results/{{ job_id }}" class="btn btn-outline-secondary btn-sm">← {{ t("back_to_results") }}</a>
+      <a href="/results/{{ job_id }}/pdf" class="btn btn-outline-danger btn-sm" target="_blank">📄 PDF</a>
+    </div>
+  </div>
+
+  {# ── Metrics badges ── #}
+  <div class="d-flex flex-wrap gap-2 mb-3" id="metricsBadges"></div>
+
+  {# ── Alerts ── #}
+  <div id="saveAlert" class="alert d-none" role="alert"></div>
+
+  {# ── Patient info ── #}
+  <div class="card shadow-sm mb-3">
+    <div class="card-header py-2"><i class="bi bi-person"></i> {{ t("patient_info") }}</div>
+    <div class="card-body py-2">
+      <div class="row g-2">
+        <div class="col-md-4">
+          <label class="form-label small mb-0">{{ t("name_label") }}</label>
+          <input type="text" class="form-control form-control-sm" id="pat_name">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small mb-0">{{ t("firstname") }}</label>
+          <input type="text" class="form-control form-control-sm" id="pat_firstname">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small mb-0">{{ t("patient_number") }}</label>
+          <input type="text" class="form-control form-control-sm" id="pat_id">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small mb-0">{{ t("dob_label") }}</label>
+          <input type="date" class="form-control form-control-sm" id="pat_dob">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small mb-0">{{ t("sex_label") }}</label>
+          <select class="form-select form-select-sm" id="pat_sex">
+            <option value="">—</option>
+            <option value="M">M</option>
+            <option value="V">V</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small mb-0">BMI</label>
+          <input type="number" step="0.1" class="form-control form-control-sm" id="pat_bmi">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small mb-0">{{ t("weight") }} (kg)</label>
+          <input type="number" step="0.1" class="form-control form-control-sm" id="pat_weight">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small mb-0">{{ t("height") }} (cm)</label>
+          <input type="number" class="form-control form-control-sm" id="pat_height">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small mb-0">{{ t("inst_label") }}</label>
+          <input type="text" class="form-control form-control-sm" id="pat_institution">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small mb-0">{{ t("scorer_label") }}</label>
+          <input type="text" class="form-control form-control-sm" id="pat_scorer">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Diagnosis dropdown + editor ── #}
+  <div class="card shadow-sm mb-3">
+    <div class="card-header py-2"><i class="bi bi-clipboard2-pulse"></i> {{ t("diagnosis") }}</div>
+    <div class="card-body py-2">
+
+      {# Dropdown: standaarddiagnoses #}
+      <label class="form-label small mb-1">{{ t("standard_diagnosis") }}</label>
+      <select class="form-select form-select-sm mb-2" id="diagDropdown">
+        <option value="">— {{ t("select_diagnosis") }} —</option>
+      </select>
+
+      {# Quick-add knoppen #}
+      <div class="d-flex flex-wrap gap-1 mb-2" id="diagQuickBtns"></div>
+
+      {# Diagnose tekstveld #}
+      <label class="form-label small mb-1">{{ t("diagnosis_text") }}</label>
+      <textarea class="form-control" id="diagText" rows="5" 
+                placeholder="{{ t('diagnosis_placeholder') }}"></textarea>
+      <div class="form-text">{{ t("diagnosis_help") }}</div>
+    </div>
+  </div>
+
+  {# ── Opmerkingen ── #}
+  <div class="card shadow-sm mb-3">
+    <div class="card-header py-2"><i class="bi bi-chat-text"></i> {{ t("comments") }}</div>
+    <div class="card-body py-2">
+      <textarea class="form-control" id="commentsText" rows="3"
+                placeholder="{{ t('comments_placeholder') }}"></textarea>
+    </div>
+  </div>
+
+  {# ── Verificatie (v0.8.10) ── #}
+  <div class="card shadow-sm mb-3 border-primary">
+    <div class="card-header py-2 bg-primary text-white">
+      <i class="bi bi-shield-check"></i> Verificatie rapport
+    </div>
+    <div class="card-body py-2">
+      <p class="text-muted small mb-2">
+        Geef aan of dit rapport geverifieerd werd door een slaaptechnicus of arts.
+        Dit wordt vermeld in de disclaimer onderaan het PDF-rapport.
+      </p>
+      <div class="row g-2">
+        <div class="col-md-4">
+          <label class="form-label small mb-0">{{ t("verified_by") }}</label>
+          <select class="form-select form-select-sm" id="verified_role">
+            <option value="">— niet geverifieerd —</option>
+            <option value="technicus">Slaaptechnicus</option>
+            <option value="arts">Arts</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small mb-0">Naam verificateur</label>
+          <input type="text" class="form-control form-control-sm" id="verified_by"
+                 placeholder="Naam technicus of arts">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small mb-0">Datum verificatie</label>
+          <input type="date" class="form-control form-control-sm" id="verified_date">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Rapport header & logo (v0.8.10) ── #}
+  <div class="card shadow-sm mb-3">
+    <div class="card-header py-2"><i class="bi bi-building"></i> {{ t("report_header") }}</div>
+    <div class="card-body py-2">
+      <p class="text-muted small mb-2">
+        Pas de naam en het logo in de header van het PDF-rapport aan (bijv. ziekenhuis, kliniek).
+      </p>
+      <div class="row g-2 align-items-end">
+        <div class="col-md-5">
+          <label class="form-label small mb-0">Naam instelling (header)</label>
+          <input type="text" class="form-control form-control-sm" id="header_name"
+                 placeholder="Slaapkliniek AZORG">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small mb-0">{{ t("address") }}</label>
+          <input type="text" class="form-control form-control-sm" id="header_address"
+                 placeholder="Merestraat 80, 9300 Aalst">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small mb-0">{{ t("phone") }}</label>
+          <input type="text" class="form-control form-control-sm" id="header_phone"
+                 placeholder="053 76 41 11">
+        </div>
+        <div class="col-md-5">
+          <label class="form-label small mb-0">Logo uploaden (PNG/JPG, max 500KB)</label>
+          <input type="file" class="form-control form-control-sm" id="logoFile"
+                 accept="image/png,image/jpeg">
+        </div>
+        <div class="col-md-4" id="logoPreviewWrap" style="display:none">
+          <label class="form-label small mb-0">Huidig logo <span class="text-muted">(standaard: AZORG)</span></label>
+          <div>
+            <img id="logoPreview" style="max-height:40px;border:1px solid #ccc;border-radius:4px" alt="logo">
+            <button class="btn btn-outline-danger btn-sm ms-2 py-0" onclick="removeLogo()" title="Gebruik ander logo">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Actieknoppen ── #}
+  <div class="d-flex gap-2 mb-4">
+    <button class="btn btn-primary" id="btnSave" onclick="saveReport()">
+      <i class="bi bi-floppy"></i> {{ t("save_and_regenerate") }}
+    </button>
+    <button class="btn btn-outline-secondary" onclick="resetDiag()">
+      <i class="bi bi-arrow-counterclockwise"></i> {{ t("reset_to_auto") }}
+    </button>
+    <a href="/results/{{ job_id }}/pdf" class="btn btn-outline-danger" target="_blank" id="btnPdf">
+      📄 {{ t("view_pdf") }}
+    </a>
+  </div>
+
+</div>
+
+<script>
+const JOB_ID = "{{ job_id }}";
+let autoConclusion = "";
+let allStandards = {};
+let metrics = {};
+
+// ── Laden ──
+document.addEventListener("DOMContentLoaded", loadReport);
+
+async function loadReport() {
+  try {
+    // Conclusie + metrics
+    const cResp = await fetch(`/api/results/${JOB_ID}/conclusion`);
+    const cData = await cResp.json();
+
+    autoConclusion = cData.auto_conclusion || "";
+    allStandards = cData.all_standards || {};
+    metrics = cData.metrics || {};
+
+    // Vul diagnose dropdown
+    const dd = document.getElementById("diagDropdown");
+    for (const [key, text] of Object.entries(allStandards)) {
+      const opt = document.createElement("option");
+      opt.value = key;
+      opt.textContent = text.substring(0, 100) + (text.length > 100 ? "…" : "");
+      if (cData.applicable && cData.applicable.includes(key)) {
+        opt.textContent = "★ " + opt.textContent;
+      }
+      dd.appendChild(opt);
+    }
+
+    // Quick-add knoppen voor aanbevolen diagnoses
+    const qb = document.getElementById("diagQuickBtns");
+    const labels = {
+      normal: "Normaal", mild_osas: "Licht OSAS", moderate_osas: "Matig OSAS",
+      severe_osas: "Ernstig OSAS", plms: "PLMS", insomnia: "Insomnie",
+      weight_loss: "Gewichtsreductie", csa: "Centraal SA", csr: "Cheyne-Stokes"
+    };
+    for (const key of (cData.applicable || [])) {
+      const btn = document.createElement("button");
+      btn.className = "btn btn-outline-primary btn-sm";
+      btn.style.fontSize = ".75rem";
+      btn.textContent = "＋ " + (labels[key] || key);
+      btn.onclick = () => appendDiag(allStandards[key] || key);
+      qb.appendChild(btn);
+    }
+
+    // Metrics badges
+    const mb = document.getElementById("metricsBadges");
+    if (metrics.ahi != null) mb.innerHTML +=
+      `<span class="badge bg-${metrics.ahi >= 30?'danger':metrics.ahi >= 15?'warning':metrics.ahi >= 5?'info':'success'}">AHI: ${metrics.ahi}/u</span>`;
+    if (metrics.oahi != null) mb.innerHTML +=
+      `<span class="badge bg-secondary">OAHI: ${metrics.oahi}/u</span>`;
+    if (metrics.plmi != null) mb.innerHTML +=
+      `<span class="badge bg-${metrics.plmi >= 15?'warning':'secondary'}">PLMI: ${metrics.plmi}/u</span>`;
+    if (metrics.se != null) mb.innerHTML +=
+      `<span class="badge bg-${metrics.se < 85?'warning':'dark'}">SE: ${metrics.se}%</span>`;
+    if (metrics.tst != null) mb.innerHTML +=
+      `<span class="badge bg-dark">TST: ${metrics.tst} min</span>`;
+
+    // Diagnose tekst: manueel of auto
+    document.getElementById("diagText").value =
+      cData.manual_conclusion || autoConclusion;
+
+    // Patient info laden
+    const rResp = await fetch(`/api/results/${JOB_ID}/report`);
+    const rData = await rResp.json();
+    const p = rData.patient_info || {};
+
+    document.getElementById("pat_name").value = p.patient_name || "";
+    document.getElementById("pat_firstname").value = p.patient_firstname || "";
+    document.getElementById("pat_id").value = p.patient_id || "";
+    document.getElementById("pat_dob").value = p.dob || "";
+    document.getElementById("pat_sex").value = p.sex || "";
+    document.getElementById("pat_bmi").value = p.bmi || "";
+    document.getElementById("pat_weight").value = p.weight_kg || "";
+    document.getElementById("pat_height").value = p.height_cm || "";
+    document.getElementById("pat_institution").value = p.institution || "";
+    document.getElementById("pat_scorer").value = p.scorer || "";
+    document.getElementById("commentsText").value = p.comments || "";
+
+    // v0.8.10: Verificatie velden
+    document.getElementById("verified_role").value = p.verified_role || "";
+    document.getElementById("verified_by").value = p.verified_by || "";
+    document.getElementById("verified_date").value = p.verified_date || "";
+
+    // v0.8.10: Header/logo velden
+    const site = rData.site_config || {};
+    document.getElementById("header_name").value = p.report_header_name || site.name || "";
+    document.getElementById("header_address").value = p.report_header_address || site.address || "";
+    document.getElementById("header_phone").value = p.report_header_phone || site.phone || "";
+    if (p.report_logo_path) {
+      document.getElementById("logoPreview").src = `/uploads/logos/${p.report_logo_path}`;
+      document.getElementById("logoPreviewWrap").style.display = "";
+    } else {
+      // v0.8.10: toon default AZORG logo
+      document.getElementById("logoPreview").src = "/static/AZORG_rood.png";
+      document.getElementById("logoPreviewWrap").style.display = "";
+    }
+
+  } catch (e) {
+    console.error("Laden mislukt:", e);
+    showAlert("danger", "Laden mislukt: " + e.message);
+  }
+}
+
+// ── Dropdown → voeg toe aan tekst ──
+document.getElementById("diagDropdown").addEventListener("change", function() {
+  if (this.value && allStandards[this.value]) {
+    appendDiag(allStandards[this.value]);
+    this.value = "";
+  }
+});
+
+function appendDiag(text) {
+  const ta = document.getElementById("diagText");
+  if (ta.value.trim()) ta.value += "\n\n";
+  ta.value += text;
+}
+
+function resetDiag() {
+  document.getElementById("diagText").value = autoConclusion;
+}
+
+// ── Opslaan ──
+async function saveReport() {
+  const btn = document.getElementById("btnSave");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Opslaan…';
+
+  try {
+    const payload = {
+      patient_info: {
+        patient_name:      document.getElementById("pat_name").value.trim(),
+        patient_firstname: document.getElementById("pat_firstname").value.trim(),
+        patient_id:        document.getElementById("pat_id").value.trim(),
+        dob:               document.getElementById("pat_dob").value.trim(),
+        sex:               document.getElementById("pat_sex").value.trim(),
+        bmi:               document.getElementById("pat_bmi").value.trim(),
+        weight_kg:         document.getElementById("pat_weight").value.trim(),
+        height_cm:         document.getElementById("pat_height").value.trim(),
+        institution:       document.getElementById("pat_institution").value.trim(),
+        scorer:            document.getElementById("pat_scorer").value.trim(),
+        diagnosis:         document.getElementById("diagText").value.trim(),
+        comments:          document.getElementById("commentsText").value.trim(),
+        // v0.8.10: verificatie
+        verified_role:     document.getElementById("verified_role").value.trim(),
+        verified_by:       document.getElementById("verified_by").value.trim(),
+        verified_date:     document.getElementById("verified_date").value.trim(),
+        // v0.8.10: rapport header
+        report_header_name:    document.getElementById("header_name").value.trim(),
+        report_header_address: document.getElementById("header_address").value.trim(),
+        report_header_phone:   document.getElementById("header_phone").value.trim(),
+      }
+    };
+
+    // v0.8.10: Logo upload (als bestand geselecteerd)
+    const logoInput = document.getElementById("logoFile");
+    if (logoInput.files && logoInput.files[0]) {
+      const file = logoInput.files[0];
+      if (file.size > 512000) {
+        showAlert("warning", "Logo te groot (max 500KB)");
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-floppy"></i> {{ t("save_and_regenerate") }}';
+        return;
+      }
+      const reader = new FileReader();
+      const logoBase64 = await new Promise((resolve) => {
+        reader.onload = () => resolve(reader.result);
+        reader.readAsDataURL(file);
+      });
+      payload.logo_base64 = logoBase64;
+      payload.logo_filename = file.name;
+    }
+
+    const resp = await fetch(`/api/results/${JOB_ID}/report`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(payload),
+    });
+
+    const result = await resp.json();
+    if (result.status === "ok") {
+      let msg = "{{ t('report_saved') }}";
+      if (result.pdf_regenerated) msg += " — PDF vernieuwd";
+      if (result.edfplus_regenerated) msg += " — EDF+ vernieuwd";
+      showAlert("success", msg);
+      // Update PDF link timestamp to force refresh
+      document.getElementById("btnPdf").href =
+        `/results/${JOB_ID}/pdf?t=${Date.now()}`;
+    } else {
+      showAlert("warning", "Opgeslagen maar: " + (result.error || "onbekende fout"));
+    }
+  } catch (e) {
+    showAlert("danger", "{{ t("error") }}: " + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-floppy"></i> {{ t("save_and_regenerate") }}';
+  }
+}
+
+function showAlert(type, msg) {
+  const el = document.getElementById("saveAlert");
+  el.className = `alert alert-${type}`;
+  el.textContent = msg;
+  el.classList.remove("d-none");
+  setTimeout(() => el.classList.add("d-none"), 8000);
+}
+
+// v0.8.10: Logo verwijderen
+function removeLogo() {
+  document.getElementById("logoPreviewWrap").style.display = "none";
+  document.getElementById("logoPreview").src = "";
+  document.getElementById("logoFile").value = "";
+  // Markeer voor verwijdering bij opslaan
+  window._removeLogo = true;
+}
+</script>
+{% endblock %}

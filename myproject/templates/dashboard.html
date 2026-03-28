@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — {{ t('patient_overview') }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+  {# ── Header ─────────────────────────────────────────── #}
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h4 class="mb-0 fw-bold text-primary">
+        <i class="bi bi-grid-3x3-gap-fill me-2"></i>{{ t('patient_overview') }}
+      </h4>
+      <small class="text-muted">{{ total }} {{ t('studies_found') }}</small>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('upload_file') }}" class="btn btn-primary btn-sm">
+        <i class="bi bi-upload me-1"></i>{{ t('new_analysis') }}
+      </a>
+      {% if current_user.is_site_manager %}
+      <a href="{{ url_for('results') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-list-ul me-1"></i>{{ t('list_view') }}
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── Zoek & Filter balk ──────────────────────────────── #}
+  <div class="card shadow-sm border-0 mb-3 bg-light">
+    <div class="card-body py-2 px-3">
+      <div class="row g-2 align-items-center">
+        <div class="col-md-4">
+          <input type="text" id="searchInput" class="form-control form-control-sm"
+                 placeholder="🔍  {{ t('search_placeholder') }}">
+        </div>
+        <div class="col-md-3">
+          <select id="sevFilter" class="form-select form-select-sm">
+            <option value="">{{ t('all_severity') }}</option>
+            <option value="Normaal">{{ t('severity_normal_label') }}</option>
+            <option value="Mild">{{ t('severity_mild_label') }}</option>
+            <option value="Matig">{{ t('severity_moderate_label') }}</option>
+            <option value="Ernstig">{{ t('severity_severe_label') }}</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <select id="statusFilter" class="form-select form-select-sm">
+            <option value="">{{ t('all_statuses') }}</option>
+            <option value="klaar">{{ t('status_done') }}</option>
+            <option value="bezig">{{ t('status_busy') }}</option>
+            <option value="mislukt">{{ t('status_failed') }}</option>
+          </select>
+        </div>
+        <div class="col-md-2 text-end">
+          <button class="btn btn-outline-secondary btn-sm" onclick="clearFilters()">
+            <i class="bi bi-x-circle me-1"></i>Wissen
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Statistieken balk ───────────────────────────────── #}
+  {% set n_klaar = studies | selectattr("status","equalto","klaar") | list | length %}
+  {% set n_osa   = studies | selectattr("sev_cls","in",["warning","orange","danger"]) | list | length %}
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="card text-center border-0 shadow-sm h-100">
+        <div class="card-body py-3">
+          <div class="fs-2 fw-bold text-primary">{{ total }}</div>
+          <div class="text-muted small">Totaal studies</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card text-center border-0 shadow-sm h-100">
+        <div class="card-body py-3">
+          <div class="fs-2 fw-bold text-success">{{ n_klaar }}</div>
+          <div class="text-muted small">{{ t("analysis") }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card text-center border-0 shadow-sm h-100">
+        <div class="card-body py-3">
+          <div class="fs-2 fw-bold text-warning">{{ n_osa }}</div>
+          <div class="text-muted small">OSA gedetecteerd</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card text-center border-0 shadow-sm h-100">
+        <div class="card-body py-3">
+          <div class="fs-2 fw-bold text-info">
+            {% if studies and studies|selectattr("se")|list %}
+              {% set se_vals = studies | selectattr("se") | map(attribute="se")
+                               | select("string") | list %}
+              —
+            {% else %}—{% endif %}
+          </div>
+          <div class="text-muted small">Gem. SE %</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Tabel ───────────────────────────────────────────── #}
+  <div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover table-sm align-middle mb-0" id="dashTable">
+          <thead class="table-dark">
+            <tr>
+              <th class="ps-3">{{ t('patient') }}</th>
+              <th>ID</th>
+              <th>{{ t('date_of_birth') }}</th>
+              <th class="text-center">AHI</th>
+              <th class="text-center">TST</th>
+              <th class="text-center">SE %</th>
+              <th class="text-center">{{ t('status') }}</th>
+              <th class="text-center">{{ t('date') }}</th>
+              <th class="text-center">{{ t('actions') }}</th>
+            </tr>
+          </thead>
+          <tbody id="dashBody">
+            {% for s in studies %}
+            <tr class="dash-row"
+                data-name="{{ (s.patient_name + ' ' + s.patient_firstname)|lower }}"
+                data-id="{{ s.patient_id|lower }}"
+                data-date="{{ s.date|lower }}"
+                data-sev="{{ s.ahi_sev|lower }}"
+                data-status="{{ s.status|lower }}">
+
+              {# Naam #}
+              <td class="ps-3">
+                <a href="{{ url_for('show_results', job_id=s.job_id) }}"
+                   class="text-decoration-none fw-semibold text-dark">
+                  {{ s.patient_name }}{% if s.patient_firstname %}, {{ s.patient_firstname }}{% endif %}
+                </a>
+                <div class="text-muted" style="font-size:.75rem">
+                  {{ t('scorer') }}: {{ s.scorer }}
+                </div>
+              </td>
+
+              {# ID #}
+              <td class="text-muted small">{{ s.patient_id }}</td>
+
+              {# Geboortedatum #}
+              <td class="small">{{ s.dob }}</td>
+
+              {# AHI #}
+              <td class="text-center">
+                <span class="badge bg-{{ s.sev_cls }} rounded-pill px-2">
+                  {{ s.ahi }}
+                </span>
+                <div class="text-muted" style="font-size:.7rem">{{ s.ahi_sev }}</div>
+              </td>
+
+              {# TST #}
+              <td class="text-center small">{{ s.tst|string + ' min' if s.tst != '—' else '—' }}</td>
+
+              {# SE #}
+              <td class="text-center">
+                {% set se_v = s.se | float(default=0) %}
+                {% if se_v > 0 %}
+                  <div class="progress" style="height:6px;width:60px;margin:auto">
+                    <div class="progress-bar bg-{{ 'success' if se_v >= 85 else 'warning' }}"
+                         style="width:{{ [se_v, 100]|min }}%"></div>
+                  </div>
+                  <small class="text-muted">{{ s.se }}%</small>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+
+              {# Status #}
+              <td class="text-center">
+                {% if s.status == 'klaar' %}
+                  <span class="badge bg-success">✓ {{ t('status_done') }}</span>
+                {% elif s.status == 'bezig' %}
+                  <span class="badge bg-warning text-dark">
+                    <span class="spinner-border spinner-border-sm me-1" style="width:.6rem;height:.6rem"></span>
+                    Bezig
+                  </span>
+                {% else %}
+                  <span class="badge bg-danger">✗ Mislukt</span>
+                {% endif %}
+              </td>
+
+              {# Datum #}
+              <td class="text-center small text-muted">{{ s.date }}</td>
+
+              {# Acties (v0.8.10: exact 9, geen dubbelen) #}
+              <td class="text-center">
+                <div class="d-flex gap-1 justify-content-center flex-wrap">
+                  {# 1. Bekijk rapport #}
+                  <a href="{{ url_for('show_results', job_id=s.job_id) }}"
+                     class="btn btn-outline-dark btn-sm py-0 px-1"
+                     title="{{ t('view_report') }}" style="font-size:.7rem">
+                    <i class="bi bi-eye"></i> {{ t("report") }}
+                  </a>
+                  {# 2. PSG PDF #}
+                  {% if s.has_pdf %}
+                  <a href="{{ url_for('download_pdf', job_id=s.job_id) }}"
+                     class="btn btn-outline-primary btn-sm py-0 px-1"
+                     title="PSG PDF rapport" style="font-size:.7rem">
+                    <i class="bi bi-file-earmark-pdf"></i> PDF
+                  </a>
+                  {% endif %}
+                  {# 3. XLS #}
+                  {% if s.has_excel %}
+                  <a href="{{ url_for('download_excel', job_id=s.job_id) }}"
+                     class="btn btn-outline-success btn-sm py-0 px-1"
+                     title="{{ t('download_excel') }}" style="font-size:.7rem">
+                    <i class="bi bi-file-earmark-spreadsheet"></i> XLS
+                  </a>
+                  {% endif %}
+                  {# 4. FHIR #}
+                  <a href="{{ url_for('download_fhir', job_id=s.job_id) }}"
+                     class="btn btn-outline-info btn-sm py-0 px-1"
+                     title="FHIR R4 export" style="font-size:.7rem">
+                    <i class="bi bi-filetype-json"></i> FHIR
+                  </a>
+                  {# 5. EDF browser #}
+                  <a href="{{ url_for('score_v12', job_id=s.job_id) }}"
+                     class="btn btn-outline-warning btn-sm py-0 px-1"
+                     title="EDF Browser + Scorer" style="font-size:.7rem">
+                    <i class="bi bi-activity"></i> EDF
+                  </a>
+                  {# 6. EDF+ genereren #}
+                  <a href="{{ url_for('download_edfplus', job_id=s.job_id) }}"
+                     class="btn btn-outline-secondary btn-sm py-0 px-1"
+                     title="EDF+ {% if s.has_edfplus %}downloaden{% else %}genereren{% endif %}" style="font-size:.7rem">
+                    <i class="bi bi-file-earmark-{{ 'check' if s.has_edfplus else 'arrow-down' }}"></i> EDF+
+                  </a>
+                  {# 7. Heranalyse #}
+                  <a href="{{ url_for('reanalyze_study', job_id=s.job_id) }}"
+                     class="btn btn-outline-primary btn-sm py-0 px-1"
+                     title="{{ t('reanalyze') }}" style="font-size:.7rem">
+                    <i class="bi bi-arrow-repeat"></i>
+                  </a>
+                  {# {{ t("edit_report") }} #}
+                  <a href="{{ url_for('edit_report', job_id=s.job_id) }}"
+                     class="btn btn-outline-dark btn-sm py-0 px-1"
+                     title="{{ t('edit_report') }}" style="font-size:.7rem">
+                    <i class="bi bi-pencil-square"></i>
+                  </a>
+                  {# 9. Delete #}
+                  <form method="POST" action="{{ url_for('delete_study', job_id=s.job_id) }}"
+                        class="d-inline"
+                        onsubmit="return confirm('{{ t('confirm_delete_study') }}')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-outline-danger btn-sm py-0 px-1"
+                            title="{{ t('delete_study') }}" style="font-size:.7rem">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="9" class="text-center text-muted py-5">
+                <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+                {{ t('no_analyses_yet') }}
+                <a href="{{ url_for('upload_file') }}" class="ms-1">{{ t('upload_to_start') }}</a>.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<style>
+  .badge.bg-orange { background-color: #e67e22 !important; }
+  .table-hover tbody tr:hover { background-color: #f0f7ff; cursor: pointer; }
+  #dashTable th { font-size: .8rem; white-space: nowrap; }
+</style>
+
+<script>
+  const rows   = document.querySelectorAll(".dash-row");
+  const search = document.getElementById("searchInput");
+  const sevF   = document.getElementById("sevFilter");
+  const statF  = document.getElementById("statusFilter");
+
+  function applyFilters() {
+    const q   = search.value.toLowerCase();
+    const sev = sevF.value.toLowerCase();
+    const st  = statF.value.toLowerCase();
+    rows.forEach(r => {
+      const nameMatch   = !q || r.dataset.name.includes(q) || r.dataset.id.includes(q) || r.dataset.date.includes(q);
+      const sevMatch    = !sev || r.dataset.sev.includes(sev);
+      const statMatch   = !st  || r.dataset.status === st;
+      r.style.display   = (nameMatch && sevMatch && statMatch) ? "" : "none";
+    });
+  }
+
+  function clearFilters() {
+    search.value = ""; sevF.value = ""; statF.value = "";
+    rows.forEach(r => r.style.display = "");
+  }
+
+  search.addEventListener("input", applyFilters);
+  sevF.addEventListener("change", applyFilters);
+  statF.addEventListener("change", applyFilters);
+
+  // Klik op rij → detail (maar NIET op knoppen, formulieren of links)
+  rows.forEach(r => {
+    r.addEventListener("click", function(e) {
+      if (e.target.closest("a, button, form, input, .btn")) return;
+      const link = this.querySelector("a[href*='/results/']");
+      if (link) window.location.href = link.href;
+    });
+  });
+</script>
+{% endblock %}

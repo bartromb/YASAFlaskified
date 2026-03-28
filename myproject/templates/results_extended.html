@@ -1,0 +1,957 @@
+{# templates/results_extended.html — Uitgebreide analyseresultaten YASAFlaskified #}
+{% extends "base.html" %}
+{% block title %}{{ t("analysis_results") }} — {{ job_id }}{% endblock %}
+
+{% block content %}
+<div class="container-xl py-4">
+
+  {# ── META ── #}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2 class="mb-0">🧠 {{ t('sleep_analysis_report') }}</h2>
+      <small class="text-muted">Job: {{ job_id }} &nbsp;·&nbsp;
+        Kanaal: <strong>{{ data.meta.eeg_channel }}</strong> &nbsp;·&nbsp;
+        Duur: <strong>{{ data.meta.duration_min }} min</strong> &nbsp;·&nbsp;
+        YASA v{{ data.meta.yasa_version }}
+      </small>
+    </div>
+    <div>
+    <a href="/results/{{ job_id }}/pdf" class="btn btn-outline-danger btn-sm">📄 PDF</a>
+    <a href="/results/{{ job_id }}/psg" class="btn btn-outline-info btn-sm">🏥 PSG</a>
+    <a href="/results/{{ job_id }}/excel" class="btn btn-outline-success btn-sm">📊 Excel</a>
+    <a href="/score_v12/{{ job_id }}" class="btn btn-warning btn-sm">📡 EDF Browser</a>
+    <span id="edfBtn">
+      <a href="/results/{{ job_id }}/edfplus" class="btn btn-outline-dark btn-sm" id="edfLink">
+        📁 <span id="edfLabel">EDF+</span>
+      </a>
+    </span>
+    <a href="/api/results/{{ job_id }}" class="btn btn-outline-secondary btn-sm" target="_blank">📥 JSON</a>
+    <a href="/results/{{ job_id }}/reanalyze" class="btn btn-outline-primary btn-sm"
+       title="{{ t('reanalyze') }}"><i class="bi bi-arrow-repeat"></i> {{ t('reanalyze') }}</a>
+    <a href="/results/{{ job_id }}/edit" class="btn btn-outline-dark btn-sm"
+       title="{{ t('edit_report') }}"><i class="bi bi-pencil-square"></i> {{ t('edit_report') }}</a>
+    </div>
+  </div>
+
+  {# ── PATIËNTGEGEVENS ── #}
+  {% set pat = data.get('patient_info', {}) %}
+  {% if pat and (pat.patient_name or pat.patient_id or pat.dob) %}
+  <div class="card shadow-sm mb-4">
+    <div class="card-body py-2">
+      <div class="row small">
+        {% if pat.patient_name or pat.patient_firstname %}
+        <div class="col-auto"><strong>{{ t('name_label') }}:</strong>
+          {{ pat.patient_name or '' }}{% if pat.patient_firstname %}, {{ pat.patient_firstname }}{% endif %}
+        </div>
+        {% endif %}
+        {% if pat.patient_id %}<div class="col-auto"><strong>ID:</strong> {{ pat.patient_id }}</div>{% endif %}
+        {% if pat.dob %}<div class="col-auto"><strong>{{ t('dob_label') }}:</strong> {{ pat.dob }}</div>{% endif %}
+        {% if pat.sex %}<div class="col-auto"><strong>{{ t('sex_label') }}:</strong> {{ pat.sex }}</div>{% endif %}
+        {% if pat.bmi %}<div class="col-auto"><strong>BMI:</strong> {{ pat.bmi }}</div>{% endif %}
+        {% if pat.address %}<div class="col-auto"><strong>{{ t('address') }}:</strong> {{ pat.address }}</div>{% endif %}
+        {% if pat.institution %}<div class="col-auto"><strong>{{ t('inst_label') }}:</strong> {{ pat.institution }}</div>{% endif %}
+        {% if pat.scorer %}<div class="col-auto"><strong>{{ t('scorer_label') }}:</strong> {{ pat.scorer }}</div>{% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── NAVIGATIETABS ── #}
+  <ul class="nav nav-tabs mb-4" id="resultTabs">
+    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-stats">📊 {{ t('tab_statistics') }}</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-hypno">🌙 {{ t('tab_hypnogram') }}</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-spindles">🌀 {{ t('tab_spindles') }}</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-sw">〰️ {{ t('tab_slow_waves') }}</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-rem">👁️ {{ t('tab_rem') }}</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-band">📡 {{ t('tab_bandpower') }}</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-cycles">🔄 {{ t('tab_cycles') }}</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-artifacts">⚠️ {{ t('tab_artifacts') }}</a></li>
+    {% if pneumo %}
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-resp">🫁 {{ t('tab_respiratory') }}</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-spo2">💉 {{ t('tab_spo2') }}</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-hr">❤️ {{ t('tab_heart') }}</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-plm">🦵 {{ t('tab_plm') }}</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-conclusion">📝 {{ t('conclusion') }}</a></li>
+    {% endif %}
+  </ul>
+
+  <div class="tab-content">
+
+    {# ──────────────────────────────────────────
+       TAB 1: SLAAPSTATISTIEKEN
+    ────────────────────────────────────────── #}
+    <div class="tab-pane fade show active" id="tab-stats">
+      <div class="row g-3 mb-4">
+        {% set s = data.sleep_statistics.stats %}
+
+        {% macro stat_card(icon, label, value, unit="") %}
+        <div class="col-6 col-md-3">
+          <div class="card h-100 text-center shadow-sm">
+            <div class="card-body">
+              <div class="fs-2">{{ icon }}</div>
+              <div class="fw-bold fs-5">{{ value if value is not none else '—' }} {{ unit }}</div>
+              <div class="text-muted small">{{ label }}</div>
+            </div>
+          </div>
+        </div>
+        {% endmacro %}
+
+        {{ stat_card("⏱️", t('total_sleep_time') ~ " (TST)", s.TST, "min") }}
+        {{ stat_card("🛏️", t('sleep_efficiency'), s.SE, "%") }}
+        {{ stat_card("😴", t('sleep_onset_latency'), s.SOL, "min") }}
+        {{ stat_card("🌀", "WASO", s.WASO, "min") }}
+        {{ stat_card("💤", "N1", s.get('N1', '—'), "%") }}
+        {{ stat_card("😴", "N2", s.get('N2', '—'), "%") }}
+        {{ stat_card("🌊", "N3 (" ~ t('deep_sleep') ~ ")", s.get('N3', '—'), "%") }}
+        {{ stat_card("👁️", "REM", s.get('REM', '—'), "%") }}
+      </div>
+
+      {# Volledige statistiekentabel #}
+      <div class="card shadow-sm">
+        <div class="card-header">{{ t('all_statistics') }} (AASM)</div>
+        <div class="card-body p-0">
+          <table class="table table-sm table-striped mb-0">
+            <thead><tr><th>{{ t('parameter') }}</th><th>{{ t('value') }}</th></tr></thead>
+            <tbody>
+              {% for key, val in data.sleep_statistics.stats.items() %}
+              <tr><td>{{ key }}</td><td>{{ val if val is not none else '—' }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    {# ──────────────────────────────────────────
+       TAB 2: HYPNOGRAM TIJDLIJN
+    ────────────────────────────────────────── #}
+    <div class="tab-pane fade" id="tab-hypno">
+      <div class="card shadow-sm">
+        <div class="card-header">{{ t('hypnogram_timeline') }}</div>
+        <div class="card-body">
+          <canvas id="hypnoCanvas" height="120"></canvas>
+        </div>
+      </div>
+      <div class="mt-3">
+        <span class="badge me-1" style="background:#e74c3c">W - Wake</span>
+        <span class="badge me-1" style="background:#f39c12">N1</span>
+        <span class="badge me-1" style="background:#3498db">N2</span>
+        <span class="badge me-1" style="background:#2c3e50">N3</span>
+        <span class="badge me-1" style="background:#9b59b6">REM</span>
+      </div>
+    </div>
+
+    {# ──────────────────────────────────────────
+       TAB 3: SPINDLE DETECTIE
+    ────────────────────────────────────────── #}
+    <div class="tab-pane fade" id="tab-spindles">
+      {% set sp = data.spindles %}
+      {% if sp.success %}
+      <div class="alert alert-info">
+        <strong>{{ sp.total_spindles }}</strong> {{ t('spindles_detected') }}
+      </div>
+
+      {% if sp.summary %}
+      <h6>{{ t('per_channel_summary') }}</h6>
+      <table class="table table-sm table-bordered">
+        <thead>
+          <tr>
+            {% for key in sp.summary[0].keys() %}
+            <th>{{ key }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in sp.summary %}
+          <tr>{% for val in row.values() %}<td>{{ val if val is not none else '—' }}</td>{% endfor %}</tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+
+      {% if sp.spindles and sp.spindles|length > 0 %}
+      <h6>{{ t('per_event_table') }} ({{ t('first_n') }} 100)</h6>
+      <div style="max-height:400px;overflow-y:auto">
+        <table class="table table-sm table-striped">
+          <thead>
+            <tr>{% for key in sp.spindles[0].keys() %}<th>{{ key }}</th>{% endfor %}</tr>
+          </thead>
+          <tbody>
+            {% for row in sp.spindles[:100] %}
+            <tr>{% for val in row.values() %}<td>{{ "%.2f"|format(val) if val is number else val }}</td>{% endfor %}</tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+      {% else %}
+      <div class="alert alert-warning">{{ t('tab_spindles') }} {{ t('detection_failed') }}: {{ sp.error }}</div>
+      {% endif %}
+    </div>
+
+    {# ──────────────────────────────────────────
+       TAB 4: SLOW-WAVE DETECTIE
+    ────────────────────────────────────────── #}
+    <div class="tab-pane fade" id="tab-sw">
+      {% set sw = data.slow_waves %}
+      {% if sw.success %}
+      <div class="alert alert-info">
+        <strong>{{ sw.total_slow_waves }}</strong> {{ t('slow_waves_detected') }} (N3)
+      </div>
+      {% if sw.summary %}
+      <h6>{{ t('per_channel_summary') }}</h6>
+      <table class="table table-sm table-bordered">
+        <thead><tr>{% for key in sw.summary[0].keys() %}<th>{{ key }}</th>{% endfor %}</tr></thead>
+        <tbody>
+          {% for row in sw.summary %}
+          <tr>{% for val in row.values() %}<td>{{ val if val is not none else '—' }}</td>{% endfor %}</tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      {% else %}
+      <div class="alert alert-warning">{{ t('tab_slow_waves') }} {{ t('detection_failed') }}: {{ sw.error }}</div>
+      {% endif %}
+    </div>
+
+    {# ──────────────────────────────────────────
+       TAB 5: REM DETECTIE
+    ────────────────────────────────────────── #}
+    <div class="tab-pane fade" id="tab-rem">
+      {% set rem = data.rem %}
+      {% if rem.success %}
+      <div class="row g-3 mb-3">
+        {% set rs = rem.summary %}
+        <div class="col-md-3"><div class="card text-center p-3 shadow-sm">
+          <div class="fs-3">👁️</div>
+          <div class="fw-bold">{{ rs.n_rem_periods }}</div>
+          <div class="text-muted small">{{ t('rem_periods') }}</div>
+        </div></div>
+        <div class="col-md-3"><div class="card text-center p-3 shadow-sm">
+          <div class="fs-3">⏱️</div>
+          <div class="fw-bold">{{ rs.rem_duration_min }} min</div>
+          <div class="text-muted small">{{ t('total_rem_duration') }}</div>
+        </div></div>
+        <div class="col-md-3"><div class="card text-center p-3 shadow-sm">
+          <div class="fs-3">📐</div>
+          <div class="fw-bold">{{ rs.mean_rem_period_min }} min</div>
+          <div class="text-muted small">{{ t('avg_rem_period') }}</div>
+        </div></div>
+        <div class="col-md-3"><div class="card text-center p-3 shadow-sm">
+          <div class="fs-3">🏆</div>
+          <div class="fw-bold">{{ rs.longest_rem_period_min }} min</div>
+          <div class="text-muted small">{{ t('longest_rem_period') }}</div>
+        </div></div>
+      </div>
+
+      {% if rem.transitions %}
+      <h6>{{ t('nrem_rem_transitions') }}</h6>
+      <table class="table table-sm table-striped">
+        <thead><tr><th>{{ t('cycle') }}</th><th>{{ t('epoch') }}</th><th>{{ t('from_stage') }}</th><th>{{ t('time_min') }}</th></tr></thead>
+        <tbody>
+          {% for t in rem.transitions %}
+          <tr><td>{{ loop.index }}</td><td>{{ t.epoch }}</td><td>{{ t.from_stage }}</td><td>{{ t.to_REM_min }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      {% else %}
+      <div class="alert alert-warning">{{ t('tab_rem') }} {{ t('detection_failed') }}: {{ rem.error }}</div>
+      {% endif %}
+    </div>
+
+    {# ──────────────────────────────────────────
+       TAB 6: BANDVERMOGEN
+    ────────────────────────────────────────── #}
+    <div class="tab-pane fade" id="tab-band">
+      {% set bp = data.bandpower %}
+      {% if bp.success %}
+      <div class="row mb-4">
+        <div class="col-md-8">
+          <canvas id="bandChart" height="250"></canvas>
+        </div>
+        <div class="col-md-4">
+          <h6>{{ t('band_ratios') }}</h6>
+          <table class="table table-sm">
+            {% for k, v in bp.band_ratios.items() %}
+            <tr><td>{{ k }}</td><td>{{ v if v is not none else '—' }}</td></tr>
+            {% endfor %}
+          </table>
+        </div>
+      </div>
+      <h6>{{ t('relative_power_per_stage') }}</h6>
+      <table class="table table-sm table-bordered">
+        <thead>
+          <tr><th>{{ t('stage') }}</th><th>Delta</th><th>Theta</th><th>Alpha</th><th>Sigma</th><th>Beta</th><th>Gamma</th></tr>
+        </thead>
+        <tbody>
+          {% for stage, bands in bp.per_stage.items() %}
+          <tr>
+            <td><strong>{{ stage }}</strong></td>
+            <td>{{ bands.delta }}</td><td>{{ bands.theta }}</td>
+            <td>{{ bands.alpha }}</td><td>{{ bands.sigma }}</td>
+            <td>{{ bands.beta }}</td><td>{{ bands.get('gamma', '—') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="alert alert-warning">{{ t('tab_bandpower') }} {{ t('detection_failed') }}: {{ bp.error }}</div>
+      {% endif %}
+    </div>
+
+    {# ──────────────────────────────────────────
+       TAB 7: SLAAPCYCLI
+    ────────────────────────────────────────── #}
+    <div class="tab-pane fade" id="tab-cycles">
+      {% set cyc = data.sleep_cycles %}
+      {% if cyc.success %}
+      <div class="alert alert-info"><strong>{{ cyc.n_cycles }}</strong> {{ t('sleep_cycles_detected') }}</div>
+      {% for c in cyc.cycles %}
+      <div class="card mb-2 shadow-sm">
+        <div class="card-body py-2">
+          <div class="d-flex justify-content-between">
+            <strong>{{ t("cycle") }} {{ c.cycle }}</strong>
+            <span class="text-muted">{{ c.duration_min }} min (epoch {{ c.start_epoch }}–{{ c.end_epoch }})</span>
+          </div>
+          <div class="mt-1">
+            {% for stage, pct in c.stage_distribution.items() %}
+            <span class="badge me-1 bg-secondary">{{ stage }}: {{ pct }}%</span>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div class="alert alert-warning">{{ t('tab_cycles') }} {{ t('detection_failed') }}: {{ cyc.error }}</div>
+      {% endif %}
+    </div>
+
+    {# ──────────────────────────────────────────
+       TAB 8: ARTEFACTEN
+    ────────────────────────────────────────── #}
+    <div class="tab-pane fade" id="tab-artifacts">
+      {% set art = data.artifacts %}
+      {% if art.success %}
+      <div class="alert {% if art.summary.artifact_percent > 20 %}alert-danger{% elif art.summary.artifact_percent > 10 %}alert-warning{% else %}alert-success{% endif %}">
+        <strong>{{ art.summary.n_artifact_epochs }}</strong> van {{ art.summary.n_total_epochs }} {{ t('artifacts_found') }} ({{ art.summary.artifact_percent }}%)
+      </div>
+      {% if art.artifact_epochs %}
+      <table class="table table-sm table-striped">
+        <thead><tr><th>{{ t('epoch') }}</th><th>Max amplitude (μV)</th><th>Vlak signaal</th><th>Hoge amplitude</th></tr></thead>
+        <tbody>
+          {% for ep in art.artifact_epochs %}
+          <tr>
+            <td>{{ ep.epoch }}</td>
+            <td>{{ ep.max_amplitude_uV }}</td>
+            <td>{{ '✓' if ep.flat_signal else '' }}</td>
+            <td>{{ '✓' if ep.high_amplitude else '' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      {% else %}
+      <div class="alert alert-warning">{{ t('tab_artifacts') }} {{ t('detection_failed') }}: {{ art.error }}</div>
+      {% endif %}
+    </div>
+
+    {# ──────────────────────────────────────────
+       TAB 9: RESPIRATOIRE ANALYSE
+    ────────────────────────────────────────── #}
+    {% if pneumo %}
+    <div class="tab-pane fade" id="tab-resp">
+      {% set resp = pneumo.get('respiratory', {}) %}
+      {% set rsum = resp.get('summary', {}) %}
+      {% if resp.get('success') and rsum %}
+
+      {# AHI / OAHI kaarten #}
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+          <div class="card text-center shadow-sm border-{% if (rsum.ahi_total or 0) >= 30 %}danger{% elif (rsum.ahi_total or 0) >= 15 %}warning{% elif (rsum.ahi_total or 0) >= 5 %}info{% else %}success{% endif %}">
+            <div class="card-body">
+              <div class="fs-2">🫁</div>
+              <div class="fw-bold fs-4">{{ "%.1f"|format(rsum.ahi_total or 0) }}</div>
+              <div class="text-muted small">AHI (/u) — {{ rsum.severity or '—' }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card text-center shadow-sm">
+            <div class="card-body">
+              <div class="fs-2">🔴</div>
+              <div class="fw-bold fs-4">{{ "%.1f"|format(rsum.oahi or 0) }}</div>
+              <div class="text-muted small">OAHI (/u)</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card text-center shadow-sm">
+            <div class="card-body">
+              <div class="fs-2">😤</div>
+              <div class="fw-bold fs-4">{{ rsum.n_obstructive or 0 }}</div>
+              <div class="text-muted small">{{ t('obstructive') }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card text-center shadow-sm">
+            <div class="card-body">
+              <div class="fs-2">💨</div>
+              <div class="fw-bold fs-4">{{ rsum.n_hypopnea or 0 }}</div>
+              <div class="text-muted small">{{ t('hypopnea') }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# Detail tabel #}
+      <div class="card shadow-sm mb-3">
+        <div class="card-header">{{ t('respiratory_summary') }}</div>
+        <div class="card-body p-0">
+          <table class="table table-sm table-striped mb-0">
+            <tbody>
+              <tr><td>{{ t('total_events') }}</td><td><strong>{{ rsum.n_ah_total or 0 }}</strong></td></tr>
+              <tr><td>{{ t('obstructive') }} apnea</td><td>{{ rsum.n_obstructive or 0 }} (index: {{ rsum.obstructive_index or '—' }})</td></tr>
+              <tr><td>{{ t('central') }} apnea</td><td>{{ rsum.n_central or 0 }} (index: {{ rsum.central_index or '—' }})</td></tr>
+              <tr><td>{{ t('mixed') }} apnea</td><td>{{ rsum.n_mixed or 0 }} (index: {{ rsum.mixed_index or '—' }})</td></tr>
+              <tr><td>{{ t('hypopnea') }}</td><td>{{ rsum.n_hypopnea or 0 }} (index: {{ rsum.hypopnea_index or '—' }})</td></tr>
+              <tr class="table-primary"><td><strong>AHI totaal</strong></td><td><strong>{{ "%.1f"|format(rsum.ahi_total or 0) }} /u — {{ rsum.severity or '—' }}</strong></td></tr>
+              <tr class="table-warning"><td><strong>OAHI</strong></td><td><strong>{{ "%.1f"|format(rsum.oahi or 0) }} /u — {{ rsum.oahi_severity or '—' }}</strong></td></tr>
+              <tr><td>AHI REM</td><td>{{ rsum.ahi_rem or '—' }}</td></tr>
+              <tr><td>AHI NREM</td><td>{{ rsum.ahi_nrem or '—' }}</td></tr>
+              <tr><td>{{ t('avg_duration') }}</td><td>{{ rsum.avg_apnea_dur_s or '—' }} s</td></tr>
+              <tr><td>Max apnea {{ t('dur_s') }}</td><td>{{ rsum.max_apnea_dur_s or '—' }} s</td></tr>
+              <tr><td>{{ t('avg_desaturation') }}</td><td>{{ rsum.avg_desaturation or '—' }}%</td></tr>
+              <tr><td>{{ t('confidence') }}</td><td>{{ rsum.avg_classification_confidence or '—' }}</td></tr>
+              {% set r1b = pneumo.get('respiratory', {}).get('rule1b_reinstated', 0) %}
+              {% if r1b %}
+              <tr class="table-info"><td>{{ t('rule1b_reinstated') }}</td><td>{{ r1b }} hypopnea's</td></tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {# Arousal / RERA sectie #}
+      {% set arous = pneumo.get('arousal', {}) %}
+      {% set asum = arous.get('summary', {}) %}
+      {% if arous.get('success') %}
+      <div class="card shadow-sm mb-3">
+        <div class="card-header">{{ t('arousal_rera') }}</div>
+        <div class="card-body p-0">
+          <table class="table table-sm table-striped mb-0">
+            <tbody>
+              <tr><td>{{ t('arousal_index') }}</td><td>{{ asum.arousal_index or '—' }} /u</td></tr>
+              <tr><td>{{ t('respiratory_arousals') }}</td><td>{{ asum.n_respiratory_arousals or '—' }}</td></tr>
+              <tr><td>{{ t('spontaneous_arousals') }}</td><td>{{ asum.n_spontaneous_arousals or '—' }}</td></tr>
+              <tr><td>RERA's</td><td>{{ asum.n_reras or 0 }}</td></tr>
+              <tr><td>RERA index</td><td>{{ asum.rera_index or 0 }} /u</td></tr>
+              <tr class="table-info"><td><strong>RDI (AHI + RERA)</strong></td><td><strong>{{ asum.rdi or '—' }} /u</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+
+      {# Event lijst (eerste 50) #}
+      {% set events = resp.get('events', []) %}
+      {% if events %}
+      <div class="card shadow-sm">
+        <div class="card-header">{{ t('events_first_50') }} {{ events|length }})</div>
+        <div class="card-body p-0" style="max-height:400px;overflow-y:auto">
+          <table class="table table-sm table-striped mb-0">
+            <thead><tr><th>#</th><th>Type</th><th>{{ t('start_s') }}</th><th>{{ t('dur_s') }}</th><th>{{ t('stage') }}</th><th>{{ t('desat_pct') }}</th><th>{{ t('confidence') }}</th></tr></thead>
+            <tbody>
+              {% for e in events[:50] %}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td><span class="badge bg-{% if 'obstructive' in e.type %}danger{% elif 'central' in e.type %}primary{% elif 'mixed' in e.type %}warning{% else %}info{% endif %}">{{ e.type }}</span></td>
+                <td>{{ e.onset_s }}</td>
+                <td>{{ e.duration_s }}</td>
+                <td>{{ e.stage }}</td>
+                <td>{{ e.desaturation_pct or '—' }}</td>
+                <td>{{ e.confidence or '—' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+
+      {% else %}
+      <div class="alert alert-warning">{{ t('tab_respiratory') }}: {{ resp.get('error') or t('no_data') }}</div>
+      {% endif %}
+    </div>
+
+    {# ──────────────────────────────────────────
+       TAB 10: SpO2
+    ────────────────────────────────────────── #}
+    <div class="tab-pane fade" id="tab-spo2">
+      {% set spo2 = pneumo.get('spo2', {}) %}
+      {% set ss = spo2.get('summary', {}) %}
+      {% if spo2.get('success') and ss %}
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+          <div class="card text-center shadow-sm">
+            <div class="card-body">
+              <div class="fs-2">💉</div>
+              <div class="fw-bold fs-4">{{ ss.mean_spo2 or '—' }}%</div>
+              <div class="text-muted small">{{ t('avg_spo2') }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card text-center shadow-sm border-{% if (ss.min_spo2 or 100) < 85 %}danger{% elif (ss.min_spo2 or 100) < 90 %}warning{% else %}success{% endif %}">
+            <div class="card-body">
+              <div class="fs-2">⬇️</div>
+              <div class="fw-bold fs-4">{{ ss.min_spo2 or '—' }}%</div>
+              <div class="text-muted small">{{ t('min_spo2') }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card text-center shadow-sm">
+            <div class="card-body">
+              <div class="fs-2">⏱️</div>
+              <div class="fw-bold fs-4">{{ ss.pct_below_90 or 0 }}%</div>
+              <div class="text-muted small">Tijd &lt; 90%</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card text-center shadow-sm">
+            <div class="card-body">
+              <div class="fs-2">📉</div>
+              <div class="fw-bold fs-4">{{ ss.desat_index or '—' }}</div>
+              <div class="text-muted small">{{ t('desat_index') }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card shadow-sm">
+        <div class="card-header">{{ t('spo2_details') }}</div>
+        <div class="card-body p-0">
+          <table class="table table-sm table-striped mb-0">
+            <tbody>
+              <tr><td>{{ t('baseline_spo2') }}</td><td>{{ ss.baseline_spo2 or '—' }}%</td></tr>
+              <tr><td>{{ t('avg_spo2') }}</td><td>{{ ss.avg_spo2 or '—' }}%</td></tr>
+              <tr><td>{{ t('minimum') }} SpO2</td><td>{{ ss.min_spo2 or '—' }}%</td></tr>
+              <tr><td>Tijd &lt; 90%</td><td>{{ ss.pct_below_90 or '—' }}%</td></tr>
+              <tr><td>Tijd &lt; 80%</td><td>{{ ss.pct_below_80 or '—' }}%</td></tr>
+              <tr><td>ODI (3%)</td><td>{{ ss.odi_3pct or '—' }}</td></tr>
+              <tr><td>N desaturaties</td><td>{{ ss.n_desaturations or '—' }}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% else %}
+      <div class="alert alert-warning">{{ t('tab_spo2') }}: {{ spo2.get('error') or t('no_data') }}</div>
+      {% endif %}
+    </div>
+
+    {# ──────────────────────────────────────────
+       TAB 11: HARTRITME
+    ────────────────────────────────────────── #}
+    <div class="tab-pane fade" id="tab-hr">
+      {% set hr = pneumo.get('heart_rate', {}) %}
+      {% set hs = hr.get('summary', {}) %}
+      {% if hr.get('success') and hs %}
+      <div class="row g-3 mb-4">
+        <div class="col-md-4">
+          <div class="card text-center shadow-sm">
+            <div class="card-body">
+              <div class="fs-2">❤️</div>
+              <div class="fw-bold fs-4">{{ hs.avg_hr or '—' }} bpm</div>
+              <div class="text-muted small">{{ t('average') }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card text-center shadow-sm">
+            <div class="card-body">
+              <div class="fs-2">⬇️</div>
+              <div class="fw-bold fs-4">{{ hs.min_hr or '—' }} bpm</div>
+              <div class="text-muted small">{{ t('minimum') }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card text-center shadow-sm">
+            <div class="card-body">
+              <div class="fs-2">⬆️</div>
+              <div class="fw-bold fs-4">{{ hs.max_hr or '—' }} bpm</div>
+              <div class="text-muted small">{{ t('maximum') }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="alert alert-warning">{{ t('tab_heart') }}: {{ hr.get('error') or t('no_data') }}</div>
+      {% endif %}
+    </div>
+
+    {# ──────────────────────────────────────────
+       TAB 12: PLM
+    ────────────────────────────────────────── #}
+    <div class="tab-pane fade" id="tab-plm">
+      {% set plm = pneumo.get('plm', {}) %}
+      {% set ps = plm.get('summary', {}) %}
+      {% if plm.get('success') and ps %}
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+          <div class="card text-center shadow-sm border-{% if (ps.plm_index or 0) >= 25 %}danger{% elif (ps.plm_index or 0) >= 15 %}warning{% elif (ps.plm_index or 0) >= 5 %}info{% else %}success{% endif %}">
+            <div class="card-body">
+              <div class="fs-2">🦵</div>
+              <div class="fw-bold fs-4">{{ ps.plm_index or 0 }}</div>
+              <div class="text-muted small">PLMI (/u) — {{ ps.plm_severity or '—' }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card text-center shadow-sm">
+            <div class="card-body">
+              <div class="fs-2">📊</div>
+              <div class="fw-bold fs-4">{{ ps.n_plm or 0 }}</div>
+              <div class="text-muted small">{{ t('plm_in_series') }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card text-center shadow-sm">
+            <div class="card-body">
+              <div class="fs-2">🔢</div>
+              <div class="fw-bold fs-4">{{ ps.n_lm_sleep or 0 }}</div>
+              <div class="text-muted small">{{ t('lms_sleep') }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card text-center shadow-sm">
+            <div class="card-body">
+              <div class="fs-2">🚫</div>
+              <div class="fw-bold fs-4">{{ ps.n_resp_associated or 0 }}</div>
+              <div class="text-muted small">{{ t('resp_associated') }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-3">
+        <div class="card-header">{{ t('plm_details') }}</div>
+        <div class="card-body p-0">
+          <table class="table table-sm table-striped mb-0">
+            <tbody>
+              <tr><td>{{ t('total_lms') }}</td><td>{{ ps.n_lm_total or 0 }}</td></tr>
+              <tr><td>{{ t('lms_sleep') }}</td><td>{{ ps.n_lm_sleep or 0 }}</td></tr>
+              <tr><td>{{ t('lms_wake') }}</td><td>{{ ps.n_lm_wake or 0 }}</td></tr>
+              <tr><td>{{ t('resp_associated') }}</td><td>{{ ps.n_resp_associated or 0 }}</td></tr>
+              <tr><td>PLM-eligible LMs</td><td>{{ ps.n_plm_eligible or 0 }}</td></tr>
+              <tr><td>{{ t('plm_in_series') }} (≥4)</td><td>{{ ps.n_plm or 0 }}</td></tr>
+              <tr><td>{{ t('tab_plm') }} series</td><td>{{ ps.n_plm_series or 0 }}</td></tr>
+              <tr><td>LM-index</td><td>{{ ps.lm_index or '—' }} /u</td></tr>
+              <tr class="table-primary"><td><strong>PLM-index (PLMI)</strong></td><td><strong>{{ ps.plm_index or 0 }} /u — {{ ps.plm_severity or '—' }}</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="small text-muted">
+        <strong>AASM criteria:</strong> {{ t("plm_criteria") }}
+      </div>
+      {% else %}
+      <div class="alert alert-warning">{{ t('tab_plm') }}: {{ plm.get('error') or t('no_data') }}</div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {# ──────────────────────────────────────────
+       TAB 13: BESLUIT / CONCLUSIE
+    ────────────────────────────────────────── #}
+    <div class="tab-pane fade" id="tab-conclusion">
+      <div class="row">
+        <div class="col-md-8">
+          <h6>📝 {{ t('conclusion') }}</h6>
+          <div id="conclusionLoading" class="text-center py-3">
+            <div class="spinner-border spinner-border-sm"></div>
+          </div>
+          <div id="conclusionContent" class="d-none">
+            {# Metrics #}
+            <div class="row g-2 mb-3" id="conclusionMetrics"></div>
+
+            {# Teksteditor #}
+            <label class="form-label fw-bold">{{ t('conclusion') }}:</label>
+            <textarea id="conclusionText" class="form-control" rows="10"
+                      style="font-size:0.9rem"></textarea>
+
+            <div class="mt-2 d-flex gap-2">
+              <button class="btn btn-primary" id="saveConclusionBtn" onclick="saveConclusion()">
+                💾 {{ t('save_conclusion') }}
+              </button>
+              <button class="btn btn-outline-secondary" onclick="loadAutoConclusion()">
+                🔄 {{ t('auto_conclusion') }}
+              </button>
+            </div>
+            <div id="conclusionStatus" class="mt-2"></div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <h6>📋 {{ t('standard_conclusions') }}</h6>
+          <div id="stdConclusions" class="list-group list-group-flush small"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>{# /tab-content #}
+</div>{# /container #}
+
+{# ── CHARTS (Chart.js) ── #}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+// ── Hypnogram canvas ──
+document.addEventListener('DOMContentLoaded', function() {
+  const timeline = {{ data.hypnogram_timeline.timeline | tojson }};
+  const canvas = document.getElementById('hypnoCanvas');
+  if (!canvas || !timeline || !timeline.length) return;
+
+  // Render when tab becomes visible (canvas needs visible dimensions)
+  function renderHypno() {
+    const ctx = canvas.getContext('2d');
+    const W = canvas.parentElement.offsetWidth - 20;
+    const H = 120;
+    canvas.width = W; canvas.height = H;
+    ctx.clearRect(0, 0, W, H);
+
+    const stageY = {W:15, N1:35, N2:55, N3:80, R:105};
+    const stageColor = {W:'#e74c3c', N1:'#f0932b', N2:'#3498db', N3:'#0f4c81', R:'#8e44ad'};
+    const barW = Math.max(0.5, W / timeline.length);
+
+    let prevY = null;
+    timeline.forEach(function(ep, i) {
+      const stage = ep.stage || 'W';
+      const y = stageY[stage] || 55;
+      ctx.fillStyle = stageColor[stage] || '#999';
+      ctx.fillRect(i * barW, y - 2, barW + 0.3, 4);
+
+      // Verbindingslijn
+      if (prevY !== null && prevY !== y) {
+        ctx.strokeStyle = '#a0aec0';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(i * barW, prevY);
+        ctx.lineTo(i * barW, y);
+        ctx.stroke();
+      }
+      prevY = y;
+    });
+
+    // Y-as labels
+    ctx.fillStyle = '#718096';
+    ctx.font = '10px sans-serif';
+    Object.keys(stageY).forEach(function(s) {
+      ctx.fillText(s, 2, stageY[s] + 3);
+    });
+  }
+
+  // Render meteen (voor als tab al zichtbaar is)
+  renderHypno();
+
+  // Render ook als hypnogram-tab geactiveerd wordt
+  document.querySelector('a[href="#tab-hypno"]').addEventListener('shown.bs.tab', renderHypno);
+});
+
+// ── Bandvermogen radar chart ──
+document.addEventListener('DOMContentLoaded', function() {
+  const bp = {{ data.bandpower.per_stage | tojson }};
+  const canvas = document.getElementById('bandChart');
+  if (!canvas || !bp) return;
+
+  function renderBand() {
+    const bands = ['delta','theta','alpha','sigma','beta'];
+    const colors = {'W':'#e74c3c','N1':'#f39c12','N2':'#3498db','N3':'#2c3e50','R':'#9b59b6'};
+    const datasets = Object.entries(bp).map(function(entry) {
+      var stage = entry[0], vals = entry[1];
+      return {
+        label: stage,
+        data: bands.map(function(b) { return vals[b] || 0; }),
+        borderColor: colors[stage] || '#888',
+        backgroundColor: (colors[stage] || '#888') + '33',
+        fill: true
+      };
+    });
+    new Chart(canvas, {
+      type: 'radar',
+      data: { labels: bands.map(function(b) { return b.charAt(0).toUpperCase() + b.slice(1); }), datasets: datasets },
+      options: { scales: { r: { min: 0, max: 1 } }, plugins: { legend: { position: 'right' } } }
+    });
+  }
+
+  // Render als tab zichtbaar wordt
+  document.querySelector('a[href="#tab-band"]').addEventListener('shown.bs.tab', renderBand);
+});
+
+// ── EDF+ knop status + polling met notificatie ──
+document.addEventListener('DOMContentLoaded', function() {
+  var btn = document.getElementById('edfLink');
+  var label = document.getElementById('edfLabel');
+  if (!btn) return;
+
+  var edfReady = false;
+  var pollTimer = null;
+
+  function checkEdfStatus() {
+    fetch('/api/edfplus/{{ job_id }}/status')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.ready) {
+          label.textContent = '⬇ Download EDF+';
+          btn.classList.remove('btn-outline-dark');
+          btn.classList.add('btn-success');
+          btn.title = 'EDF+ klaar — klik om te downloaden';
+
+          // Stop polling
+          if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+
+          // Toon notificatie als het niet al klaar was bij laden
+          if (!edfReady) {
+            edfReady = true;
+            showEdfNotification();
+          }
+        } else {
+          label.textContent = 'Genereer EDF+';
+          btn.title = 'Klik om EDF+ op de achtergrond te genereren (enkele minuten)';
+        }
+      })
+      .catch(function() {
+        label.textContent = 'EDF+';
+      });
+  }
+
+  function showEdfNotification() {
+    // Bootstrap toast notificatie
+    var toast = document.createElement('div');
+    toast.className = 'position-fixed bottom-0 end-0 p-3';
+    toast.style.zIndex = '9999';
+    toast.innerHTML =
+      '<div class="toast show align-items-center text-bg-success border-0 shadow-lg" role="alert">' +
+      '  <div class="d-flex">' +
+      '    <div class="toast-body">' +
+      '      <i class="bi bi-check-circle me-1"></i>' +
+      '      <strong>EDF+ klaar!</strong> Het gescoorde EDF+ bestand is beschikbaar voor download.' +
+      '      <div class="mt-2">' +
+      '        <a href="/results/{{ job_id }}/edfplus" class="btn btn-sm btn-light me-1">⬇ Download</a>' +
+      '        <button type="button" class="btn btn-sm btn-outline-light" onclick="this.closest(\'.position-fixed\').remove()">Sluiten</button>' +
+      '      </div>' +
+      '    </div>' +
+      '  </div>' +
+      '</div>';
+    document.body.appendChild(toast);
+
+    // Auto-verwijder na 15 seconden
+    setTimeout(function() { if (toast.parentNode) toast.remove(); }, 15000);
+  }
+
+  // Eerste check
+  checkEdfStatus();
+
+  // Start polling als knop bestaat (elke 15s)
+  // Stopt automatisch zodra EDF+ klaar is
+  pollTimer = setInterval(checkEdfStatus, 15000);
+
+  // Stop polling als gebruiker pagina verlaat
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden && pollTimer) {
+      clearInterval(pollTimer); pollTimer = null;
+    } else if (!document.hidden && !edfReady) {
+      checkEdfStatus();
+      pollTimer = setInterval(checkEdfStatus, 15000);
+    }
+  });
+});
+
+// ── Conclusie tab ──
+var _conclusionData = null;
+
+function loadConclusion() {
+  fetch('/api/results/{{ job_id }}/conclusion')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      _conclusionData = data;
+      document.getElementById('conclusionLoading').classList.add('d-none');
+      document.getElementById('conclusionContent').classList.remove('d-none');
+
+      // Metrics badges
+      var m = data.metrics;
+      var html = '';
+      html += '<div class="col-auto"><span class="badge bg-primary">AHI: ' + m.ahi + ' /u</span></div>';
+      html += '<div class="col-auto"><span class="badge bg-info">OAHI: ' + m.oahi + ' /u</span></div>';
+      html += '<div class="col-auto"><span class="badge bg-secondary">PLMI: ' + m.plmi + ' /u</span></div>';
+      html += '<div class="col-auto"><span class="badge bg-dark">SE: ' + m.se + '%</span></div>';
+      html += '<div class="col-auto"><span class="badge bg-dark">TST: ' + m.tst + ' min</span></div>';
+      if (m.bmi) html += '<div class="col-auto"><span class="badge bg-warning text-dark">BMI: ' + m.bmi + '</span></div>';
+      document.getElementById('conclusionMetrics').innerHTML = html;
+
+      // Tekst: manueel of auto
+      var ta = document.getElementById('conclusionText');
+      ta.value = data.manual_conclusion || data.auto_conclusion;
+
+      // Standaardbesluiten sidebar
+      var sc = document.getElementById('stdConclusions');
+      var scHtml = '';
+      for (var key in data.all_standards) {
+        var active = data.applicable.indexOf(key) >= 0;
+        scHtml += '<div class="list-group-item p-2' + (active ? ' list-group-item-warning' : '') + '">';
+        scHtml += '<div class="d-flex justify-content-between align-items-start">';
+        scHtml += '<small>' + data.all_standards[key].substring(0, 80) + '...</small>';
+        scHtml += '<button class="btn btn-outline-primary btn-sm ms-1 py-0 px-1" style="font-size:.65rem" onclick="insertConclusion(\'' + key + '\')">+</button>';
+        scHtml += '</div></div>';
+      }
+      sc.innerHTML = scHtml;
+    });
+}
+
+function loadAutoConclusion() {
+  if (_conclusionData) {
+    document.getElementById('conclusionText').value = _conclusionData.auto_conclusion;
+  }
+}
+
+function insertConclusion(key) {
+  if (_conclusionData && _conclusionData.all_standards[key]) {
+    var ta = document.getElementById('conclusionText');
+    var cur = ta.value.trim();
+    ta.value = cur ? cur + '\n\n' + _conclusionData.all_standards[key] : _conclusionData.all_standards[key];
+  }
+}
+
+function saveConclusion() {
+  var btn = document.getElementById('saveConclusionBtn');
+  var txt = document.getElementById('conclusionText').value.trim();
+  btn.disabled = true;
+  btn.textContent = '⏳...';
+
+  fetch('/api/results/{{ job_id }}/conclusion', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({conclusion: txt})
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    btn.disabled = false;
+    btn.textContent = '💾 {{ t("save_conclusion") }}';
+    var st = document.getElementById('conclusionStatus');
+    if (data.pdf_regenerated) {
+      st.innerHTML = '<div class="alert alert-success py-1 small">✅ {{ t("conclusion_saved") }}</div>';
+    } else {
+      st.innerHTML = '<div class="alert alert-warning py-1 small">⚠️ Opgeslagen, maar PDF fout: ' + (data.error || '') + '</div>';
+    }
+  });
+}
+
+// Load conclusion when tab is shown
+document.querySelector('a[href="#tab-conclusion"]').addEventListener('shown.bs.tab', function() {
+  if (!_conclusionData) loadConclusion();
+});
+</script>
+{% endblock %}

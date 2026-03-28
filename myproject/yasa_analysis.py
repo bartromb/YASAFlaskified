@@ -1,0 +1,629 @@
+"""
+yasa_analysis.py — Uitgebreide slaapanalyse module voor YASAFlaskified v0.8.11
+Compatibel met YASA 0.7.x (Hypnogram object) EN 0.6.x (numpy array).
+
+Fixes t.o.v. v7.1:
+  - hypno.tolist() → _hypno_to_list() helper voor YASA 0.7 Hypnogram object
+  - run_full_analysis() gaat door met fallback indien staging mislukt
+  - set_channel_types() voor EOG/EMG zodat YASA ze correct herkent
+  - predict_proba() deprecated in 0.7 → probeer hypno.proba
+"""
+
+import numpy as np
+import pandas as pd
+import yasa
+import mne
+import traceback
+import logging
+from datetime import datetime, timedelta
+from collections import Counter
+
+logger = logging.getLogger("yasaflaskified")
+
+# Mapping string → integer slaapstadia (YASA/AASM conventie)
+_STAGE_TO_INT = {"W": 0, "N1": 1, "N2": 2, "N3": 3, "R": 4}
+
+
+def _hypno_str_to_int(hypno_str: list) -> np.ndarray:
+    """
+    Converteer lijst van strings ['W','N1','N2','N3','R'] naar
+    integer array [0,1,2,3,4] voor YASA detectiefuncties.
+
+    YASA 0.7 functies (spindles_detect, sw_detect, bandpower)
+    verwachten integer-hypnogrammen bij include=(1,2) etc.
+    """
+    return np.array([_STAGE_TO_INT.get(s, 0) for s in hypno_str])
+
+
+# ─────────────────────────────────────────────
+# HELPERS
+# ─────────────────────────────────────────────
+
+def safe_round(val, decimals=2):
+    """Veilig afronden — ook als val None of NaN is."""
+    try:
+        if val is None or (isinstance(val, float) and np.isnan(val)):
+            return None
+        return round(float(val), decimals)
+    except Exception:
+        return None
+
+
+def series_to_dict(series):
+    """Converteer pandas Series naar JSON-serialiseerbaar dict."""
+    return {k: safe_round(v) for k, v in series.items()}
+
+
+def _hypno_to_list(hypno) -> list:
+    """
+    Converteer YASA hypnogram naar lijst van strings.
+    Werkt met YASA 0.6 (numpy array) en YASA 0.7+ (Hypnogram object).
+
+    YASA 0.7 .hypno.tolist() geeft lange namen: 'WAKE','N1','N2','N3','REM'.
+    We normaliseren naar korte namen: 'W','N1','N2','N3','R'.
+
+    LET OP: NIET itereren over het Hypnogram object zelf (for s in hypno)
+    — dit hangt in YASA 0.7!  Altijd via .hypno attribuut.
+    """
+    _LONG_TO_SHORT = {"WAKE": "W", "REM": "R", "ART": "W", "UNS": "W",
+                      "W": "W", "N1": "N1", "N2": "N2", "N3": "N3", "R": "R"}
+
+    if hypno is None:
+        return []
+
+    # YASA 0.7+: Hypnogram object — gebruik .hypno (pandas Series)
+    if hasattr(hypno, 'hypno'):
+        try:
+            raw_list = hypno.hypno.tolist()
+            return [_LONG_TO_SHORT.get(s, "W") for s in raw_list]
+        except Exception:
+            pass
+
+    # YASA 0.6: numpy array van strings
+    if hasattr(hypno, 'tolist'):
+        raw_list = hypno.tolist()
+        return [_LONG_TO_SHORT.get(s, s) for s in raw_list]
+
+    # Fallback: al een gewone lijst
+    if isinstance(hypno, list):
+        return [_LONG_TO_SHORT.get(s, s) for s in hypno]
+
+    return []
+
+
+def _get_confidence(sls_obj) -> dict:
+    """Haal confidence scores op — compatibel met YASA 0.6 en 0.7."""
+    try:
+        # YASA 0.7: hypno.proba (via predict() return value)
+        hypno_obj = sls_obj._last_hypno if hasattr(sls_obj, '_last_hypno') else None
+        if hypno_obj is not None and hasattr(hypno_obj, 'proba'):
+            proba = hypno_obj.proba
+            return {col: [safe_round(v) for v in proba[col].tolist()]
+                    for col in proba.columns}
+    except Exception:
+        pass
+
+    try:
+        # YASA 0.6: predict_proba() (deprecated in 0.7)
+        confidence = sls_obj.predict_proba()
+        return {col: [safe_round(v) for v in confidence[col].tolist()]
+                for col in confidence.columns}
+    except Exception:
+        pass
+
+    return {}
+
+
+# ─────────────────────────────────────────────
+# 1. SLEEP STAGING
+# ─────────────────────────────────────────────
+
+def run_sleep_staging(raw: mne.io.BaseRaw,
+                      eeg_ch: str,
+                      eog_ch: str = None,
+                      emg_ch: str = None) -> dict:
+    """
+    Automatische slaapfase-indeling via YASA SleepStaging.
+    Compatibel met YASA 0.6 en 0.7.
+    """
+    result = {"success": False, "hypnogram": [], "confidence": {}, "error": None}
+    try:
+        raw_stag = raw.copy()
+
+        # Zet kanaaltypes correct zodat YASA EOG/EMG herkent
+        ch_types = {}
+        if eog_ch and eog_ch in raw_stag.ch_names:
+            ch_types[eog_ch] = "eog"
+        if emg_ch and emg_ch in raw_stag.ch_names:
+            ch_types[emg_ch] = "emg"
+        if ch_types:
+            raw_stag.set_channel_types(ch_types)
+
+        logger.info("SleepStaging starten: EEG=%s EOG=%s EMG=%s", eeg_ch, eog_ch, emg_ch)
+        sls   = yasa.SleepStaging(raw_stag,
+                                   eeg_name=eeg_ch,
+                                   eog_name=eog_ch,
+                                   emg_name=emg_ch)
+        hypno = sls.predict()
+        logger.info("predict() geslaagd, type=%s", type(hypno).__name__)
+
+        # Converteer naar lijst van strings
+        hypno_list = _hypno_to_list(hypno)
+        logger.info("Hypnogram: %d epochs, stadia=%s",
+                    len(hypno_list), dict(Counter(hypno_list)))
+
+        # Confidence scores
+        result["confidence"] = _get_confidence(sls)
+
+        result["hypnogram"] = hypno_list
+        result["n_epochs"]  = len(hypno_list)
+        result["success"]   = True
+
+    except Exception as e:
+        logger.error("Staging fout: %s\n%s", e, traceback.format_exc())
+        result["error"]     = str(e)
+        result["traceback"] = traceback.format_exc()
+    return result
+
+
+# ─────────────────────────────────────────────
+# 2. SLEEP STATISTICS
+# ─────────────────────────────────────────────
+
+def run_sleep_statistics(hypno: list, sf_hypno: float = 1/30) -> dict:
+    """
+    Volledige slaapstatistieken conform AASM-normen.
+    """
+    result = {"success": False, "stats": {}, "error": None}
+    try:
+        hypno_int = _hypno_str_to_int(hypno)
+        logger.info("sleep_statistics: %d epochs, uniek=%s", len(hypno_int), np.unique(hypno_int).tolist())
+        # YASA 0.7: parameter heet 'sf_hyp', YASA 0.6: 'sf_hypno'
+        try:
+            stats = yasa.sleep_statistics(hypno_int, sf_hyp=sf_hypno)
+        except TypeError:
+            stats = yasa.sleep_statistics(hypno_int, sf_hypno=sf_hypno)
+        logger.info("sleep_statistics keys: %s", list(stats.keys()))
+        result["stats"] = {k: safe_round(v) for k, v in stats.items()}
+
+        n_epochs = len(hypno)
+        result["stats"]["TRT_min"]      = safe_round(n_epochs * 0.5)
+        result["stats"]["n_epochs_total"] = n_epochs
+
+        counts = Counter(hypno)
+        stage_map = {"W": "Wake", "N1": "N1", "N2": "N2", "N3": "N3", "R": "REM"}
+        result["stage_counts"] = {stage_map.get(k, k): int(v) for k, v in counts.items()}
+        result["success"] = True
+
+    except Exception as e:
+        logger.error("sleep_statistics FOUT: %s\n%s", e, traceback.format_exc())
+        result["error"]     = str(e)
+        result["traceback"] = traceback.format_exc()
+    return result
+
+
+# ─────────────────────────────────────────────
+# 3. SPINDLE DETECTIE
+# ─────────────────────────────────────────────
+
+def run_spindle_detection(raw: mne.io.BaseRaw, hypno: list,
+                           eeg_channels: list,
+                           freq_sp=(12, 15),
+                           duration=(0.5, 2.0),
+                           min_distance=500) -> dict:
+    """Detecteer slaapspoelen per EEG-kanaal."""
+    result = {"success": False, "spindles": [], "summary": [], "error": None}
+    try:
+        data     = raw.get_data(picks=eeg_channels, units="uV")
+        sf       = raw.info["sfreq"]
+        hypno_up = yasa.hypno_upsample_to_data(
+            _hypno_str_to_int(hypno), sf_hypno=1/30, data=data, sf_data=sf)
+
+        sp = yasa.spindles_detect(
+            data=data, sf=sf, ch_names=eeg_channels,
+            hypno=hypno_up, include=(1, 2),
+            freq_sp=freq_sp, duration=duration, min_distance=min_distance,
+        )
+
+        if sp is not None:
+            df = sp.summary(grp_chan=False, grp_stage=False)
+            result["spindles"]       = df.to_dict(orient="records") if len(df) else []
+            result["summary"]        = sp.summary(grp_chan=True, grp_stage=False).to_dict(orient="records")
+            result["total_spindles"] = len(df)
+        else:
+            result["spindles"] = []
+            result["summary"]  = []
+            result["total_spindles"] = 0
+
+        result["success"] = True
+    except Exception as e:
+        result["error"]     = str(e)
+        result["traceback"] = traceback.format_exc()
+    return result
+
+
+# ─────────────────────────────────────────────
+# 4. SLOW-WAVE DETECTIE
+# ─────────────────────────────────────────────
+
+def run_sw_detection(raw: mne.io.BaseRaw, hypno: list,
+                     eeg_channels: list,
+                     freq_sw=(0.3, 1.5),
+                     dur_neg=(0.3, 1.5),
+                     dur_pos=(0.1, 1.0)) -> dict:
+    """Detecteer trage golven in N3."""
+    result = {"success": False, "slow_waves": [], "summary": [], "error": None}
+    try:
+        data     = raw.get_data(picks=eeg_channels, units="uV")
+        sf       = raw.info["sfreq"]
+        hypno_up = yasa.hypno_upsample_to_data(
+            _hypno_str_to_int(hypno), sf_hypno=1/30, data=data, sf_data=sf)
+
+        sw = yasa.sw_detect(
+            data=data, sf=sf, ch_names=eeg_channels,
+            hypno=hypno_up, include=(3,),
+            freq_sw=freq_sw, dur_neg=dur_neg, dur_pos=dur_pos,
+        )
+
+        if sw is not None:
+            df = sw.summary(grp_chan=False, grp_stage=False)
+            result["slow_waves"]       = df.to_dict(orient="records") if len(df) else []
+            result["summary"]          = sw.summary(grp_chan=True, grp_stage=False).to_dict(orient="records")
+            result["total_slow_waves"] = len(df)
+        else:
+            result["slow_waves"]       = []
+            result["summary"]          = []
+            result["total_slow_waves"] = 0
+
+        result["success"] = True
+    except Exception as e:
+        result["error"]     = str(e)
+        result["traceback"] = traceback.format_exc()
+    return result
+
+
+# ─────────────────────────────────────────────
+# 5. REM DETECTIE
+# ─────────────────────────────────────────────
+
+def run_rem_detection(raw: mne.io.BaseRaw, hypno: list,
+                      eog_channel: str,
+                      eeg_channel: str = None) -> dict:
+    """Detecteer REM-episodes en oogrekkewegingen."""
+    result = {"success": False, "rem_events": [], "summary": {}, "transitions": [], "error": None}
+    try:
+        hypno_arr    = np.array(hypno)
+        rem_mask     = hypno_arr == "R"
+        n_rem_epochs = int(np.sum(rem_mask))
+
+        # REM-perioden
+        rem_durations = []
+        in_rem, count = False, 0
+        for stage in hypno_arr:
+            if stage == "R":
+                in_rem = True
+                count += 1
+            elif in_rem:
+                rem_durations.append(count * 0.5)
+                count, in_rem = 0, False
+        if in_rem:
+            rem_durations.append(count * 0.5)
+
+        # NREM→REM transities
+        transitions = []
+        for i in range(1, len(hypno_arr)):
+            if hypno_arr[i - 1] != "R" and hypno_arr[i] == "R":
+                transitions.append({
+                    "epoch": i,
+                    "from_stage": hypno_arr[i - 1],
+                    "to_REM_min": safe_round(i * 0.5),
+                })
+
+        result["summary"] = {
+            "n_rem_epochs":          n_rem_epochs,
+            "rem_duration_min":      safe_round(n_rem_epochs * 0.5),
+            "n_rem_periods":         len(rem_durations),
+            "mean_rem_period_min":   safe_round(np.mean(rem_durations)) if rem_durations else None,
+            "longest_rem_period_min": safe_round(max(rem_durations)) if rem_durations else None,
+        }
+        result["transitions"] = transitions
+        result["success"]     = True
+
+    except Exception as e:
+        result["error"]     = str(e)
+        result["traceback"] = traceback.format_exc()
+    return result
+
+
+# ─────────────────────────────────────────────
+# 6. BANDVERMOGEN ANALYSE
+# ─────────────────────────────────────────────
+
+BANDS = {
+    "delta": (0.5, 4),
+    "theta": (4, 8),
+    "alpha": (8, 13),
+    "sigma": (12, 16),
+    "beta":  (16, 30),
+    "gamma": (30, 50),
+}
+
+
+def run_bandpower(raw: mne.io.BaseRaw, hypno: list,
+                  eeg_channels: list) -> dict:
+    """Spectrale vermogensdichtheid per band, per fase."""
+    result = {"success": False, "per_epoch": [], "per_stage": {}, "band_ratios": {}, "error": None}
+    try:
+        data     = raw.get_data(picks=eeg_channels, units="uV")
+        sf       = raw.info["sfreq"]
+        hypno_int = _hypno_str_to_int(hypno)
+        hypno_up = yasa.hypno_upsample_to_data(
+            hypno_int, sf_hypno=1/30, data=data, sf_data=sf)
+
+        # YASA 0.7: bands als lijst van (lo, hi, label) tuples
+        bands_tuples = [(lo, hi, name) for name, (lo, hi) in BANDS.items()]
+
+        bp = yasa.bandpower(
+            data=data, sf=sf, ch_names=eeg_channels,
+            hypno=hypno_up, include=(0, 1, 2, 3, 4),
+            bands=bands_tuples,
+            relative=True,
+        )
+
+        # Map integer stages terug naar string labels voor output
+        _INT_TO_STAGE = {0: "W", 1: "N1", 2: "N2", 3: "N3", 4: "R"}
+        if "Stage" in bp.columns:
+            bp["Stage"] = bp["Stage"].map(lambda x: _INT_TO_STAGE.get(x, str(x)))
+
+        per_stage = bp.groupby("Stage")[list(BANDS.keys())].mean()
+        result["per_stage"] = {
+            stage: series_to_dict(row)
+            for stage, row in per_stage.iterrows()
+        }
+
+        avg = bp[list(BANDS.keys())].mean()
+        result["band_ratios"] = {
+            "delta_theta": safe_round(avg["delta"] / avg["theta"]) if avg["theta"] > 0 else None,
+            "theta_alpha": safe_round(avg["theta"] / avg["alpha"]) if avg["alpha"] > 0 else None,
+            "sigma_delta": safe_round(avg["sigma"] / avg["delta"]) if avg["delta"] > 0 else None,
+        }
+        result["per_epoch"] = bp.reset_index().to_dict(orient="records")[:500]
+        result["success"]   = True
+
+    except Exception as e:
+        result["error"]     = str(e)
+        result["traceback"] = traceback.format_exc()
+    return result
+
+
+# ─────────────────────────────────────────────
+# 7. SLAAPCYCLI DETECTIE
+# ─────────────────────────────────────────────
+
+def run_sleep_cycles(hypno: list) -> dict:
+    """Identificeer NREM/REM-cycli."""
+    result = {"success": False, "cycles": [], "n_cycles": 0, "error": None}
+    try:
+        hypno_arr     = np.array(hypno)
+        cycles        = []
+        current_cycle = []
+        cycle_num     = 1
+        in_sleep      = False
+
+        for i, stage in enumerate(hypno_arr):
+            if stage != "W":
+                in_sleep = True
+                current_cycle.append(stage)
+                if (stage == "R" and
+                        i + 1 < len(hypno_arr) and
+                        hypno_arr[i + 1] in ["N1", "N2", "N3", "W"]):
+                    counts       = Counter(current_cycle)
+                    duration_min = safe_round(len(current_cycle) * 0.5)
+                    cycles.append({
+                        "cycle":      cycle_num,
+                        "start_epoch": i - len(current_cycle) + 1,
+                        "end_epoch":   i,
+                        "duration_min": duration_min,
+                        "stage_distribution": {
+                            k: safe_round(v / len(current_cycle) * 100)
+                            for k, v in counts.items()
+                        },
+                    })
+                    cycle_num    += 1
+                    current_cycle = []
+
+        result["cycles"]   = cycles
+        result["n_cycles"] = len(cycles)
+        result["success"]  = True
+
+    except Exception as e:
+        result["error"]     = str(e)
+        result["traceback"] = traceback.format_exc()
+    return result
+
+
+# ─────────────────────────────────────────────
+# 8. ARTEFACTDETECTIE
+# ─────────────────────────────────────────────
+
+def run_artifact_detection(raw: mne.io.BaseRaw, eeg_channels: list) -> dict:
+    """Basisartefactdetectie: hoge amplitude, platte segmenten."""
+    result = {"success": False, "artifact_epochs": [], "summary": {}, "error": None}
+    try:
+        data      = raw.get_data(picks=eeg_channels, units="uV")
+        sf        = raw.info["sfreq"]
+        epoch_len = int(30 * sf)
+        n_epochs  = data.shape[1] // epoch_len
+
+        artifact_flags = []
+        for ep in range(n_epochs):
+            seg      = data[:, ep * epoch_len:(ep + 1) * epoch_len]
+            amp_max  = float(np.max(np.abs(seg)))
+            is_flat  = bool(np.max(np.abs(np.diff(seg, axis=1))) < 0.5)
+            is_high  = amp_max > 500
+            artifact_flags.append({
+                "epoch":            ep,
+                "max_amplitude_uV": safe_round(amp_max),
+                "flat_signal":      is_flat,
+                "high_amplitude":   is_high,
+                "artifact":         is_flat or is_high,
+            })
+
+        n_artifacts = sum(1 for f in artifact_flags if f["artifact"])
+        result["artifact_epochs"] = [f for f in artifact_flags if f["artifact"]]
+        result["summary"] = {
+            "n_total_epochs":   n_epochs,
+            "n_artifact_epochs": n_artifacts,
+            "artifact_percent": safe_round(n_artifacts / n_epochs * 100) if n_epochs > 0 else 0,
+        }
+        result["success"] = True
+
+    except Exception as e:
+        result["error"]     = str(e)
+        result["traceback"] = traceback.format_exc()
+    return result
+
+
+# ─────────────────────────────────────────────
+# 9. HYPNOGRAM TIJDLIJN
+# ─────────────────────────────────────────────
+
+def build_hypnogram_timeline(hypno: list, recording_start: str = None) -> dict:
+    """Tijdlijn met absolute tijden per epoch."""
+    result = {"success": False, "timeline": [], "error": None}
+    try:
+        try:
+            start_dt = (datetime.fromisoformat(recording_start)
+                        if recording_start else datetime(2000, 1, 1, 22, 0))
+        except Exception:
+            start_dt = datetime(2000, 1, 1, 22, 0)
+
+        stage_colors = {
+            "W": "#e74c3c", "N1": "#f39c12", "N2": "#3498db",
+            "N3": "#2c3e50", "R": "#9b59b6",
+        }
+        timeline = []
+        for i, stage in enumerate(hypno):
+            epoch_start = start_dt + timedelta(seconds=i * 30)
+            timeline.append({
+                "epoch":    i,
+                "stage":    stage,
+                "time":     epoch_start.strftime("%H:%M:%S"),
+                "time_min": safe_round(i * 0.5),
+                "color":    stage_colors.get(stage, "#95a5a6"),
+            })
+
+        result["timeline"] = timeline
+        result["success"]  = True
+
+    except Exception as e:
+        result["error"]     = str(e)
+        result["traceback"] = traceback.format_exc()
+    return result
+
+
+# ─────────────────────────────────────────────
+# MASTER FUNCTIE
+# ─────────────────────────────────────────────
+
+def run_full_analysis(raw: mne.io.BaseRaw,
+                      eeg_ch: str,
+                      eog_ch: str = None,
+                      emg_ch: str = None,
+                      all_eeg_channels: list = None,
+                      recording_start: str = None,
+                      prefetched_hypno: list = None) -> dict:
+    """
+    Voert alle beschikbare analyses uit op één EDF-opname.
+
+    Parameters
+    ----------
+    raw              : geladen MNE raw object (analyse-raw met alle EEG kanalen)
+    eeg_ch           : primair EEG-kanaal (bv. 'C3')
+    eog_ch           : EOG-kanaal (bv. 'EOG1')
+    emg_ch           : EMG-kanaal (optioneel)
+    all_eeg_channels : alle EEG-kanalen voor spindle/SW/bandpower
+    recording_start  : ISO-tijdstip opnamestart
+    prefetched_hypno : reeds berekend hypnogram (overslaat staging in deze raw)
+                       Gebruik dit wanneer staging al apart uitgevoerd werd
+                       op een kleinere staging-raw (enkel EEG+EOG+EMG).
+    """
+    if all_eeg_channels is None:
+        all_eeg_channels = [eeg_ch]
+
+    # Filter kanalen die effectief aanwezig zijn
+    available        = set(raw.ch_names)
+    all_eeg_channels = [ch for ch in all_eeg_channels if ch in available]
+    if not all_eeg_channels:
+        all_eeg_channels = [eeg_ch]
+
+    output = {
+        "meta": {
+            "eeg_channel":      eeg_ch,
+            "eog_channel":      eog_ch,
+            "emg_channel":      emg_ch,
+            "all_eeg_channels": all_eeg_channels,
+            "sfreq":            raw.info["sfreq"],
+            "duration_min":     safe_round(raw.times[-1] / 60),
+            "recording_start":  recording_start,
+            "analysis_timestamp": datetime.utcnow().isoformat(),
+            "yasa_version":     yasa.__version__,
+        }
+    }
+
+    # ── 1. Slaapstaging ──────────────────────────────────────
+    if prefetched_hypno is not None:
+        # Staging al uitgevoerd op staging-raw — overslaan hier
+        logger.info("[1/8] Slaapstaging... (overgeslagen — prefetched hypnogram gebruikt)")
+        staging = {
+            "success":   True,
+            "hypnogram": prefetched_hypno,
+            "n_epochs":  len(prefetched_hypno),
+            "prefetched": True,
+        }
+        hypno = prefetched_hypno
+    else:
+        logger.info("[1/8] Slaapstaging...")
+        staging = run_sleep_staging(raw, eeg_ch, eog_ch, emg_ch)
+        hypno   = staging.get("hypnogram", [])
+        if not hypno or not any(s != "W" for s in hypno):
+            logger.warning("Staging mislukt — fallback N2")
+            n_epochs = int(raw.times[-1] / 30)
+            hypno    = ["N2"] * n_epochs
+            staging["hypnogram"] = hypno
+            staging["fallback"]  = True
+
+    output["staging"] = staging
+
+    # ── 2. Slaapstatistieken ─────────────────────────────────
+    logger.info("[2/8] Slaapstatistieken...")
+    output["sleep_statistics"] = run_sleep_statistics(hypno)
+
+    # ── 3. Spindle detectie ──────────────────────────────────
+    logger.info("[3/8] Spindle detectie...")
+    output["spindles"] = run_spindle_detection(raw, hypno, all_eeg_channels)
+
+    # ── 4. Slow-wave detectie ────────────────────────────────
+    logger.info("[4/8] Slow-wave detectie...")
+    output["slow_waves"] = run_sw_detection(raw, hypno, all_eeg_channels)
+
+    # ── 5. REM detectie ──────────────────────────────────────
+    logger.info("[5/8] REM detectie...")
+    eog_for_rem = eog_ch if eog_ch and eog_ch in available else all_eeg_channels[0]
+    output["rem"] = run_rem_detection(raw, hypno, eog_for_rem, eeg_ch)
+
+    # ── 6. Bandvermogen ──────────────────────────────────────
+    logger.info("[6/8] Bandvermogen...")
+    output["bandpower"] = run_bandpower(raw, hypno, all_eeg_channels)
+
+    # ── 7. Slaapcycli ────────────────────────────────────────
+    logger.info("[7/8] Slaapcycli...")
+    output["sleep_cycles"] = run_sleep_cycles(hypno)
+
+    # ── 8. Artefacten + tijdlijn ─────────────────────────────
+    logger.info("[8/8] Artefacten & tijdlijn...")
+    output["artifacts"]          = run_artifact_detection(raw, all_eeg_channels)
+    output["hypnogram_timeline"] = build_hypnogram_timeline(hypno, recording_start)
+
+    logger.info("✅ Alle analyses voltooid.")
+    return output

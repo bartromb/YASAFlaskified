@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YASAFlaskified – Automated Sleep Analysis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #060b18;
+    --bg2:       #0b1328;
+    --panel:     #0f1c3a;
+    --border:    rgba(56,189,248,0.12);
+    --accent:    #38bdf8;
+    --accent2:   #818cf8;
+    --accent3:   #34d399;
+    --text:      #e2e8f0;
+    --muted:     #64748b;
+    --glow:      rgba(56,189,248,0.18);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Lato', sans-serif;
+    font-weight: 300;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* ─── NAV ─── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.2rem 4rem;
+    background: rgba(6,11,24,0.7);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-brand {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.3rem;
+    color: var(--accent);
+    letter-spacing: 0.02em;
+    text-decoration: none;
+  }
+  .nav-brand span { color: var(--text); }
+  .nav-links { display: flex; gap: 2.5rem; align-items: center; }
+  .nav-links a {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 400;
+    color: var(--muted);
+    text-decoration: none;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: color .25s;
+  }
+  .nav-links a:hover { color: var(--accent); }
+  .btn-login {
+    padding: .55rem 1.5rem;
+    border: 1px solid var(--accent);
+    border-radius: 3px;
+    color: var(--accent) !important;
+    transition: background .25s, color .25s !important;
+  }
+  .btn-login:hover {
+    background: var(--accent) !important;
+    color: var(--bg) !important;
+  }
+
+  /* ─── HERO ─── */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 7rem 2rem 4rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* starfield */
+  .stars {
+    position: absolute; inset: 0; z-index: 0;
+    background:
+      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.35) 0%, transparent 100%),
+      radial-gradient(1px 1px at 55% 15%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 75% 75%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 90% 40%, rgba(255,255,255,0.45) 0%, transparent 100%),
+      radial-gradient(1px 1px at 20% 85%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 65% 50%, rgba(255,255,255,0.25) 0%, transparent 100%),
+      radial-gradient(1px 1px at 42% 92%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 82% 10%, rgba(255,255,255,0.35) 0%, transparent 100%);
+  }
+
+  /* glow orbs */
+  .hero::before {
+    content: '';
+    position: absolute;
+    width: 700px; height: 700px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(56,189,248,0.07) 0%, transparent 70%);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -55%);
+    pointer-events: none;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    width: 400px; height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(129,140,248,0.07) 0%, transparent 70%);
+    bottom: 10%; right: 15%;
+    pointer-events: none;
+  }
+
+  /* EEG canvas strip */
+  .eeg-strip {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 110px;
+    opacity: 0.45;
+    z-index: 1;
+  }
+
+  .hero-content { position: relative; z-index: 2; max-width: 820px; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: .5rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid rgba(56,189,248,0.3);
+    border-radius: 20px;
+    padding: .35rem 1rem;
+    margin-bottom: 2rem;
+    animation: fadeUp .8s ease both;
+  }
+  .badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50% { opacity: .4; transform: scale(1.5); }
+  }
+
+  .hero h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(2.8rem, 6vw, 5rem);
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    color: #f0f6ff;
+    animation: fadeUp .9s .1s ease both;
+  }
+  .hero h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .hero-sub {
+    margin-top: 1.5rem;
+    font-size: 1.1rem;
+    color: #94a3b8;
+    max-width: 580px;
+    margin-left: auto; margin-right: auto;
+    animation: fadeUp 1s .2s ease both;
+  }
+
+  .hero-cta {
+    margin-top: 2.8rem;
+    display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;
+    animation: fadeUp 1s .35s ease both;
+  }
+
+  .btn-primary {
+    padding: .85rem 2.5rem;
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform .2s, box-shadow .2s;
+    box-shadow: 0 0 28px rgba(56,189,248,0.25);
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 42px rgba(56,189,248,0.4);
+  }
+
+  .btn-ghost {
+    padding: .85rem 2.5rem;
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-decoration: none;
+    transition: border-color .2s, color .2s;
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+  .hero-stats {
+    margin-top: 3.5rem;
+    display: flex; gap: 3rem; justify-content: center;
+    animation: fadeUp 1s .5s ease both;
+  }
+  .stat { text-align: center; }
+  .stat-num {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2rem;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .stat-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: .3rem;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(22px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ─── SECTION SHARED ─── */
+  section { padding: 6rem 4rem; }
+  .section-inner { max-width: 1100px; margin: 0 auto; }
+  .section-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1rem;
+  }
+  .section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(2rem, 3.5vw, 2.8rem);
+    color: #f0f6ff;
+    line-height: 1.15;
+    margin-bottom: 1.2rem;
+  }
+  .section-lead {
+    font-size: 1.05rem;
+    color: #94a3b8;
+    max-width: 640px;
+    line-height: 1.75;
+  }
+
+  /* ─── ABOUT YASA ─── */
+  #yasa { background: var(--bg2); }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5rem;
+    align-items: center;
+    margin-top: 3.5rem;
+  }
+
+  .info-visual {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 2rem;
+    overflow: hidden;
+  }
+  .info-visual::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+
+  .hypnogram {
+    width: 100%;
+    height: 160px;
+  }
+
+  .code-block {
+    margin-top: 1.5rem;
+    background: rgba(0,0,0,0.4);
+    border-radius: 6px;
+    padding: 1.2rem 1.4rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    line-height: 1.9;
+    color: #94a3b8;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .code-block .kw { color: var(--accent2); }
+  .code-block .fn { color: var(--accent); }
+  .code-block .str { color: var(--accent3); }
+  .code-block .cm { color: #475569; }
+
+  .feature-list { list-style: none; margin-top: 1.8rem; }
+  .feature-list li {
+    display: flex; align-items: flex-start; gap: 1rem;
+    padding: .8rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.95rem;
+    color: #cbd5e1;
+  }
+  .feature-list li:last-child { border-bottom: none; }
+  .feature-list .icon {
+    flex-shrink: 0;
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    background: rgba(56,189,248,0.1);
+    border: 1px solid rgba(56,189,248,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem;
+    margin-top: 2px;
+  }
+
+  /* ─── ABOUT YASAFLASKIFIED ─── */
+  #app { background: var(--bg); }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-top: 3.5rem;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+    transition: transform .25s, box-shadow .25s;
+  }
+  .card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(56,189,248,0.1);
+  }
+  .card::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(56,189,248,0.03) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .card-icon {
+    font-size: 1.8rem;
+    margin-bottom: 1.2rem;
+    display: block;
+  }
+  .card h3 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.25rem;
+    color: #e2e8f0;
+    margin-bottom: .7rem;
+  }
+  .card p {
+    font-size: 0.9rem;
+    color: #64748b;
+    line-height: 1.7;
+  }
+
+  .card-accent { border-color: rgba(56,189,248,0.3); }
+  .card-accent::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--accent);
+  }
+
+  /* ─── WORKFLOW ─── */
+  #workflow {
+    background: var(--bg2);
+  }
+
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    margin-top: 4rem;
+    position: relative;
+  }
+  .steps::before {
+    content: '';
+    position: absolute;
+    top: 36px; left: 12.5%; right: 12.5%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), var(--accent2), transparent);
+    opacity: 0.4;
+    z-index: 0;
+  }
+
+  .step {
+    text-align: center;
+    padding: 0 1.5rem;
+    position: relative;
+    z-index: 1;
+  }
+  .step-num {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    background: var(--panel);
+    border: 2px solid var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1.5rem;
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.5rem;
+    color: var(--accent);
+    box-shadow: 0 0 24px rgba(56,189,248,0.15);
+    transition: box-shadow .3s;
+  }
+  .step:hover .step-num {
+    box-shadow: 0 0 40px rgba(56,189,248,0.35);
+  }
+  .step h4 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.05rem;
+    color: #e2e8f0;
+    margin-bottom: .5rem;
+  }
+  .step p {
+    font-size: 0.85rem;
+    color: var(--muted);
+    line-height: 1.65;
+  }
+
+  /* ─── STACK ─── */
+  #stack { background: var(--bg); }
+
+  .tech-grid {
+    display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 3rem;
+  }
+
+  .tech-tag {
+    display: flex; align-items: center; gap: .6rem;
+    padding: .6rem 1.2rem;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: #94a3b8;
+    transition: border-color .2s, color .2s;
+  }
+  .tech-tag:hover { border-color: var(--accent); color: var(--accent); }
+  .tech-tag .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+  }
+
+  /* ─── CTA SECTION ─── */
+  #cta {
+    background: var(--bg2);
+    text-align: center;
+    padding: 7rem 4rem;
+  }
+
+  #cta .section-title { margin-bottom: 1rem; }
+  #cta .section-lead { margin: 0 auto 2.5rem; }
+
+  .cta-box {
+    max-width: 620px;
+    margin: 3rem auto 0;
+    background: var(--panel);
+    border: 1px solid rgba(56,189,248,0.2);
+    border-radius: 14px;
+    padding: 3rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .cta-box::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3));
+  }
+
+  .cta-box h3 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.7rem;
+    color: #f0f6ff;
+    margin-bottom: .8rem;
+  }
+  .cta-box p {
+    font-size: 0.95rem;
+    color: #64748b;
+    margin-bottom: 2rem;
+  }
+
+  .btn-big {
+    display: inline-flex;
+    align-items: center; gap: .7rem;
+    padding: 1rem 3rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform .2s, box-shadow .2s;
+    box-shadow: 0 0 36px rgba(56,189,248,0.3);
+  }
+  .btn-big:hover { transform: translateY(-2px); box-shadow: 0 0 54px rgba(56,189,248,0.45); }
+  .btn-big svg { width: 18px; height: 18px; }
+
+  /* ─── FOOTER ─── */
+  footer {
+    padding: 2.5rem 4rem;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 1rem;
+  }
+  .footer-brand {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.1rem;
+    color: var(--accent);
+  }
+  .footer-brand span { color: var(--muted); }
+  .footer-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+
+  /* ─── CREDITS ─── */
+  #credits { background: var(--bg); }
+
+  .credits-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-top: 3.5rem;
+  }
+
+  .credit-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    display: flex;
+    gap: 1.5rem;
+    position: relative;
+    overflow: hidden;
+    transition: transform .25s, box-shadow .25s;
+  }
+  .credit-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(56,189,248,0.08);
+  }
+  .credit-card.primary {
+    grid-column: 1 / -1;
+    border-color: rgba(56,189,248,0.25);
+  }
+  .credit-card.primary::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+  .credit-card.paper { border-color: rgba(52,211,153,0.2); }
+  .credit-card.paper::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent3), var(--accent2));
+  }
+
+  .credit-avatar {
+    flex-shrink: 0;
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(56,189,248,0.15), rgba(129,140,248,0.15));
+    border: 2px solid rgba(56,189,248,0.3);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.1rem;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+  }
+  .credit-avatar.mw {
+    background: linear-gradient(135deg, rgba(129,140,248,0.15), rgba(56,189,248,0.15));
+    border-color: rgba(129,140,248,0.3);
+    color: var(--accent2);
+  }
+  .credit-avatar.paper-icon {
+    font-size: 1.8rem;
+    background: linear-gradient(135deg, rgba(52,211,153,0.1), rgba(129,140,248,0.1));
+    border-color: rgba(52,211,153,0.25);
+  }
+
+  .credit-body { flex: 1; }
+  .credit-role {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: .4rem;
+  }
+  .credit-card.paper .credit-role { color: var(--accent3); }
+
+  .credit-name {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.4rem;
+    color: #f0f6ff;
+    margin-bottom: .8rem;
+    line-height: 1.2;
+  }
+  .credit-bio {
+    font-size: 0.9rem;
+    color: #64748b;
+    line-height: 1.75;
+    margin-bottom: 1.2rem;
+  }
+  .credit-bio strong { color: #94a3b8; }
+  .credit-bio em { color: var(--accent); font-style: normal; }
+
+  .credit-quote {
+    font-family: 'DM Serif Display', serif;
+    font-style: italic;
+    font-size: 1rem;
+    color: #94a3b8;
+    border-left: 2px solid var(--accent3);
+    padding-left: 1rem;
+    margin-bottom: 1.2rem;
+    line-height: 1.5;
+  }
+  .quote-source {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-style: normal;
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: .4rem;
+    letter-spacing: 0.06em;
+  }
+
+  .credit-links { display: flex; flex-wrap: wrap; gap: .7rem; }
+  .credit-link {
+    display: inline-flex; align-items: center; gap: .45rem;
+    padding: .4rem .9rem;
+    background: rgba(56,189,248,0.06);
+    border: 1px solid rgba(56,189,248,0.18);
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--accent);
+    text-decoration: none;
+    letter-spacing: 0.05em;
+    transition: background .2s, border-color .2s;
+  }
+  .credit-link svg { width: 12px; height: 12px; }
+  .credit-link:hover { background: rgba(56,189,248,0.12); border-color: rgba(56,189,248,0.4); }
+  .credit-link.accent3 {
+    color: var(--accent3);
+    background: rgba(52,211,153,0.06);
+    border-color: rgba(52,211,153,0.2);
+  }
+  .credit-link.accent3:hover { background: rgba(52,211,153,0.12); }
+
+  .thankyou-box {
+    margin-top: 2.5rem;
+    display: flex; align-items: flex-start; gap: 1.2rem;
+    background: linear-gradient(135deg, rgba(56,189,248,0.05), rgba(129,140,248,0.05));
+    border: 1px solid rgba(56,189,248,0.15);
+    border-radius: 10px;
+    padding: 1.8rem 2rem;
+    font-size: 0.95rem;
+    color: #94a3b8;
+    line-height: 1.7;
+  }
+  .ty-icon { font-size: 1.6rem; flex-shrink: 0; }
+  .thankyou-box strong { color: #e2e8f0; }
+
+  /* ─── SCROLL REVEAL ─── */
+  .reveal { opacity: 0; transform: translateY(30px); transition: opacity .7s ease, transform .7s ease; }
+  .revealed { opacity: 1; transform: none; }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 900px) {
+    nav { padding: 1rem 2rem; }
+    section { padding: 4rem 2rem; }
+    .two-col { grid-template-columns: 1fr; gap: 2.5rem; }
+    .cards { grid-template-columns: 1fr; }
+    .credits-grid { grid-template-columns: 1fr; }
+    .credit-card.primary { grid-column: auto; }
+    .credit-card { flex-direction: column; }
+    .steps { grid-template-columns: repeat(2, 1fr); gap: 2rem; }
+    .steps::before { display: none; }
+    footer { padding: 2rem; flex-direction: column; gap: .5rem; text-align: center; }
+  }
+  @media (max-width: 600px) {
+    .nav-links { display: none; }
+    .hero-stats { gap: 1.5rem; }
+    .steps { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-brand" href="#">YASA<span>Flaskified</span></a>
+  <div class="nav-links">
+    <a href="#yasa">About YASA</a>
+    <a href="#app">Application</a>
+    <a href="#workflow">Workflow</a>
+    <a href="#stack">Stack</a>
+    <a href="#credits">Credits</a>
+    <a href="{{ url_for('login') }}" class="btn-login">Login →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="stars"></div>
+
+  <div class="hero-content">
+    <div class="badge">v6 · Automated Sleep Staging</div>
+
+    <h1>Sleep Analysis,<br><em>Reimagined</em></h1>
+
+    <p class="hero-sub">
+      YASAFlaskified brings the power of the YASA sleep-staging engine into a 
+      clinical-grade web platform — upload your EDF, get instant hypnograms, 
+      spindle &amp; slow-wave reports, and full statistical summaries.
+    </p>
+
+    <div class="hero-cta">
+      <a href="{{ url_for('login') }}" class="btn-primary">▶ &nbsp;Launch App</a>
+      <a href="#yasa" class="btn-ghost">Learn more</a>
+    </div>
+
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-num">5</div>
+        <div class="stat-label">Sleep stages</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">EDF</div>
+        <div class="stat-label">Input format</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">AASM</div>
+        <div class="stat-label">Standard</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">Live</div>
+        <div class="stat-label">Job queue</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Animated EEG wave -->
+  <canvas class="eeg-strip" id="eegCanvas"></canvas>
+</section>
+
+<!-- ABOUT YASA -->
+<section id="yasa">
+  <div class="section-inner">
+    <div class="section-tag">// About the engine</div>
+    <h2 class="section-title reveal">What is YASA?</h2>
+    <p class="section-lead reveal">
+      YASA (Yet Another Spindle Algorithm) is an open-source Python library for 
+      automated analysis of polysomnographic recordings, developed by Raphael Vallat. 
+      It delivers state-of-the-art, machine-learning–powered sleep staging directly from raw EEG signals.
+    </p>
+
+    <div class="two-col">
+      <div>
+        <ul class="feature-list reveal">
+          <li>
+            <span class="icon">🧠</span>
+            <div><strong>Automated sleep staging</strong> — classifies 30-second epochs into Wake, N1, N2, N3, and REM using a gradient-boosting classifier trained on thousands of PSG recordings.</div>
+          </li>
+          <li>
+            <span class="icon">〰️</span>
+            <div><strong>Spindle &amp; slow-wave detection</strong> — detects sleep spindles and slow oscillations with configurable thresholds, returning per-event statistics.</div>
+          </li>
+          <li>
+            <span class="icon">👁️</span>
+            <div><strong>REM detection</strong> — identifies REM epochs and computes REM-related metrics including NREM/REM transitions.</div>
+          </li>
+          <li>
+            <span class="icon">📊</span>
+            <div><strong>Sleep statistics</strong> — computes total sleep time, sleep efficiency, latencies, WASO, and full stage percentages per AASM standards.</div>
+          </li>
+          <li>
+            <span class="icon">📡</span>
+            <div><strong>Bandpower analysis</strong> — spectral power in delta, theta, alpha, sigma, and beta bands per epoch and per channel.</div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="info-visual reveal">
+        <!-- Hypnogram SVG -->
+        <svg class="hypnogram" viewBox="0 0 500 160" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="hGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.3"/>
+              <stop offset="100%" stop-color="#818cf8" stop-opacity="0.3"/>
+            </linearGradient>
+          </defs>
+          <!-- Stage labels -->
+          <text x="8" y="22" fill="#38bdf8" font-family="JetBrains Mono,monospace" font-size="9" opacity="0.7">W</text>
+          <text x="8" y="52" fill="#38bdf8" font-family="JetBrains Mono,monospace" font-size="9" opacity="0.7">REM</text>
+          <text x="8" y="82" fill="#38bdf8" font-family="JetBrains Mono,monospace" font-size="9" opacity="0.7">N1</text>
+          <text x="8" y="112" fill="#38bdf8" font-family="JetBrains Mono,monospace" font-size="9" opacity="0.7">N2</text>
+          <text x="8" y="142" fill="#38bdf8" font-family="JetBrains Mono,monospace" font-size="9" opacity="0.7">N3</text>
+          <!-- Grid lines -->
+          <line x1="30" y1="15" x2="490" y2="15" stroke="#1e3a5f" stroke-width="0.5"/>
+          <line x1="30" y1="45" x2="490" y2="45" stroke="#1e3a5f" stroke-width="0.5"/>
+          <line x1="30" y1="75" x2="490" y2="75" stroke="#1e3a5f" stroke-width="0.5"/>
+          <line x1="30" y1="105" x2="490" y2="105" stroke="#1e3a5f" stroke-width="0.5"/>
+          <line x1="30" y1="135" x2="490" y2="135" stroke="#1e3a5f" stroke-width="0.5"/>
+          <!-- Hypnogram path -->
+          <polyline
+            fill="none"
+            stroke="url(#hGrad)"
+            stroke-width="2"
+            stroke-linejoin="round"
+            points="
+              30,15 60,15 60,112 100,112 100,142 130,142 130,112 160,112
+              160,142 190,142 190,45  220,45  220,112 250,112
+              250,142 280,142 280,112 300,112 300,45  330,45
+              330,112 360,112 360,45  390,45  390,112 420,112
+              420,15  450,15  450,45  470,45  470,15  490,15
+            "
+          />
+          <!-- Fill under line -->
+          <polyline
+            fill="url(#hGrad)"
+            stroke="none"
+            points="
+              30,160 30,15 60,15 60,112 100,112 100,142 130,142 130,112 160,112
+              160,142 190,142 190,45  220,45  220,112 250,112
+              250,142 280,142 280,112 300,112 300,45  330,45
+              330,112 360,112 360,45  390,45  390,112 420,112
+              420,15  450,15  450,45  470,45  470,15  490,15
+              490,160
+            "
+            opacity="0.25"
+          />
+        </svg>
+
+        <div class="code-block">
+<span class="cm"># Core YASA pipeline</span>
+<span class="kw">import</span> yasa, mne
+raw = mne.<span class="fn">io.read_raw_edf</span>(<span class="str">"recording.edf"</span>)
+sls = yasa.<span class="fn">SleepStaging</span>(raw, eeg_name=<span class="str">"C4-M1"</span>)
+hypno = sls.<span class="fn">predict</span>()
+stats = yasa.<span class="fn">sleep_statistics</span>(hypno, sf_hyp=<span class="str">1/30</span>)
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT YASAFLASKIFIED -->
+<section id="app">
+  <div class="section-inner">
+    <div class="section-tag">// The web application</div>
+    <h2 class="section-title reveal">What is YASAFlaskified?</h2>
+    <p class="section-lead reveal">
+      YASAFlaskified wraps the YASA engine in a production-grade Flask application, 
+      letting clinicians and researchers run full sleep analyses through a browser —
+      no Python knowledge required. Jobs run asynchronously, results are stored, 
+      and reports are delivered in seconds.
+    </p>
+
+    <div class="cards">
+      <div class="card card-accent reveal">
+        <span class="card-icon">📁</span>
+        <h3>EDF Upload</h3>
+        <p>Drag-and-drop or select any EDF file from your PSG system. The app validates the recording, extracts available channels, and queues the job immediately.</p>
+      </div>
+      <div class="card reveal">
+        <span class="card-icon">⚡</span>
+        <h3>Async Processing</h3>
+        <p>Powered by Redis Queue (RQ) and background workers, heavy analyses run without blocking the UI. Real-time job status keeps you informed throughout.</p>
+      </div>
+      <div class="card reveal">
+        <span class="card-icon">📈</span>
+        <h3>Rich Reports</h3>
+        <p>Hypnograms, sleep statistics tables, spindle maps, slow-wave detections, and bandpower charts — all rendered server-side with Matplotlib and downloadable as PNG/CSV.</p>
+      </div>
+      <div class="card reveal">
+        <span class="card-icon">🔒</span>
+        <h3>Secure & Hardened</h3>
+        <p>CSRF protection, rate limiting, strong session management, UFW firewall, and Fail2ban — built for clinical environments where data security is non-negotiable.</p>
+      </div>
+      <div class="card reveal">
+        <span class="card-icon">🐳</span>
+        <h3>Docker Deployment</h3>
+        <p>Fully containerised with Gunicorn + Nginx reverse proxy. One-command deploy on any Linux server, with Nginx Proxy Manager for multi-domain SSL setups.</p>
+      </div>
+      <div class="card reveal">
+        <span class="card-icon">🧪</span>
+        <h3>Research-Grade</h3>
+        <p>Supports AASM-compliant staging, configurable epoch length, multi-channel selection, and raw µV signal preprocessing — trusted by sleep researchers.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WORKFLOW -->
+<section id="workflow">
+  <div class="section-inner">
+    <div class="section-tag">// How it works</div>
+    <h2 class="section-title reveal">From EDF to insights in four steps</h2>
+
+    <div class="steps">
+      <div class="step reveal">
+        <div class="step-num">01</div>
+        <h4>Upload EDF</h4>
+        <p>Select your polysomnography recording. The app accepts standard European Data Format files from any PSG device.</p>
+      </div>
+      <div class="step reveal">
+        <div class="step-num">02</div>
+        <h4>Configure</h4>
+        <p>Choose your EEG, EOG, and EMG channels by name. Set epoch length and select the analyses you need.</p>
+      </div>
+      <div class="step reveal">
+        <div class="step-num">03</div>
+        <h4>Analyse</h4>
+        <p>YASA's gradient-boosting model stages every epoch. Spindle, slow-wave, and bandpower detectors run in the background.</p>
+      </div>
+      <div class="step reveal">
+        <div class="step-num">04</div>
+        <h4>Download Report</h4>
+        <p>Receive your hypnogram, statistics table, and event maps. Export to PNG and CSV for further analysis or clinical records.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STACK -->
+<section id="stack">
+  <div class="section-inner">
+    <div class="section-tag">// Technology stack</div>
+    <h2 class="section-title reveal">Built on proven open-source</h2>
+
+    <div class="tech-grid reveal">
+      <div class="tech-tag"><span class="dot" style="background:#38bdf8"></span>Python 3</div>
+      <div class="tech-tag"><span class="dot" style="background:#818cf8"></span>Flask</div>
+      <div class="tech-tag"><span class="dot" style="background:#38bdf8"></span>YASA</div>
+      <div class="tech-tag"><span class="dot" style="background:#34d399"></span>MNE-Python</div>
+      <div class="tech-tag"><span class="dot" style="background:#f59e0b"></span>Redis / RQ</div>
+      <div class="tech-tag"><span class="dot" style="background:#818cf8"></span>Gunicorn</div>
+      <div class="tech-tag"><span class="dot" style="background:#38bdf8"></span>Nginx</div>
+      <div class="tech-tag"><span class="dot" style="background:#34d399"></span>Docker</div>
+      <div class="tech-tag"><span class="dot" style="background:#f59e0b"></span>Flask-WTF (CSRF)</div>
+      <div class="tech-tag"><span class="dot" style="background:#818cf8"></span>Flask-Limiter</div>
+      <div class="tech-tag"><span class="dot" style="background:#38bdf8"></span>Matplotlib</div>
+      <div class="tech-tag"><span class="dot" style="background:#34d399"></span>Let's Encrypt</div>
+      <div class="tech-tag"><span class="dot" style="background:#f59e0b"></span>Fail2ban</div>
+      <div class="tech-tag"><span class="dot" style="background:#818cf8"></span>Hetzner Cloud</div>
+    </div>
+  </div>
+</section>
+
+<!-- CREDITS -->
+<section id="credits">
+  <div class="section-inner">
+    <div class="section-tag">// Credits & acknowledgements</div>
+    <h2 class="section-title reveal">The people behind YASA</h2>
+    <p class="section-lead reveal">
+      YASAFlaskified builds on the open-source work of sleep researchers who made their 
+      tools freely available. Full credit goes to them.
+    </p>
+
+    <div class="credits-grid">
+
+      <!-- Raphael Vallat -->
+      <div class="credit-card primary reveal">
+        <div class="credit-avatar">RV</div>
+        <div class="credit-body">
+          <div class="credit-role">Creator &amp; Maintainer · YASA</div>
+          <h3 class="credit-name">Raphael Vallat, PhD</h3>
+          <p class="credit-bio">
+            Postdoctoral researcher at the <strong>Center for Human Sleep Science</strong>, 
+            University of California, Berkeley. Raphael created and maintains YASA as an 
+            open-source project, making automated sleep analysis freely accessible to 
+            researchers and clinicians. He also develops <em>Pingouin</em> (statistics) 
+            and <em>AntroPy</em> (time-series complexity).
+          </p>
+          <div class="credit-links">
+            <a href="https://raphaelvallat.com" target="_blank" class="credit-link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>
+              raphaelvallat.com
+            </a>
+            <a href="https://github.com/raphaelvallat/yasa" target="_blank" class="credit-link">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/></svg>
+              GitHub / YASA
+            </a>
+            <a href="https://yasa-sleep.org" target="_blank" class="credit-link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Documentation
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Matthew Walker -->
+      <div class="credit-card reveal">
+        <div class="credit-avatar mw">MW</div>
+        <div class="credit-body">
+          <div class="credit-role">Co-author · eLife Paper</div>
+          <h3 class="credit-name">Matthew P. Walker, PhD</h3>
+          <p class="credit-bio">
+            Professor of Neuroscience and Psychology and Director of the 
+            <strong>Center for Human Sleep Science</strong> at UC Berkeley. 
+            Author of <em>Why We Sleep</em> and co-author of the peer-reviewed validation 
+            paper that established YASA's clinical credibility as an automated sleep-staging tool.
+          </p>
+          <div class="credit-links">
+            <a href="https://www.sleepdiplomat.com" target="_blank" class="credit-link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>
+              sleepdiplomat.com
+            </a>
+            <a href="https://sleepcentre.berkeley.edu" target="_blank" class="credit-link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              UC Berkeley Sleep Lab
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- eLife paper -->
+      <div class="credit-card paper reveal">
+        <div class="credit-avatar paper-icon">📄</div>
+        <div class="credit-body">
+          <div class="credit-role">Peer-reviewed publication · eLife 2021</div>
+          <h3 class="credit-name">The validation paper</h3>
+          <p class="credit-bio">
+            Trained and validated on over <strong>30,000 hours</strong> of 
+            polysomnographic recordings across heterogeneous populations. 
+            Median staging accuracy was <strong>87.5%</strong> across 585 testing nights, 
+            in line with human interscorer agreement. Published in <em>eLife</em>, October 2021.
+          </p>
+          <div class="credit-quote">
+            "An open-source, high-performance tool for automated sleep staging."
+            <span class="quote-source">— Vallat &amp; Walker, eLife 10 (2021)</span>
+          </div>
+          <div class="credit-links">
+            <a href="https://doi.org/10.7554/eLife.70092" target="_blank" class="credit-link accent3">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              doi: 10.7554/eLife.70092
+            </a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Thank-you note -->
+    <div class="thankyou-box reveal">
+      <div class="ty-icon">🙏</div>
+      <div>
+        <strong>Thanks to Raphael Vallat</strong> for building and maintaining YASA as an open-source project. 
+        YASAFlaskified is essentially a web wrapper around his work — the hard part was already done.
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- CTA -->
+<section id="cta">
+  <div class="section-inner">
+    <div class="section-tag">// Get started</div>
+    <h2 class="section-title reveal">Ready to analyse?</h2>
+    <p class="section-lead reveal">
+      Log in to YASAFlaskified and upload your first EDF recording. 
+      Results in under a minute.
+    </p>
+
+    <div class="cta-box reveal">
+      <h3>Sign in to your account</h3>
+      <p>Access your sleep analysis dashboard, review past jobs, and start new analyses.</p>
+      <a href="{{ url_for('login') }}" class="btn-big">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+          <polyline points="10 17 15 12 10 7"/>
+          <line x1="15" y1="12" x2="3" y2="12"/>
+        </svg>
+        Login to YASAFlaskified
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-brand">YASA<span>Flaskified</span></div>
+  <div class="footer-meta">Powered by YASA · Flask · Docker &nbsp;·&nbsp; sleepai.eu</div>
+</footer>
+
+<script>
+// ─── EEG Canvas Animation ───
+const canvas = document.getElementById('eegCanvas');
+const ctx = canvas.getContext('2d');
+let W, H, t = 0;
+
+function resize() {
+  W = canvas.width  = canvas.offsetWidth;
+  H = canvas.height = canvas.offsetHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+function eeg(x, t) {
+  // Composite of several sine waves to mimic EEG
+  return Math.sin(x * 0.04 + t) * 18
+       + Math.sin(x * 0.15 + t * 1.3) * 8
+       + Math.sin(x * 0.5  + t * 2.1) * 4
+       + Math.sin(x * 1.2  + t * 3.7) * 2
+       + (Math.random() - 0.5) * 2;
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  const channels = [
+    { y: H * 0.28, col: '#38bdf8', alpha: 0.8, label: 'C4-M1' },
+    { y: H * 0.58, col: '#818cf8', alpha: 0.6, label: 'F3-M2' },
+    { y: H * 0.82, col: '#34d399', alpha: 0.5, label: 'EOG-L' },
+  ];
+
+  channels.forEach(ch => {
+    // channel label
+    ctx.font = '10px JetBrains Mono, monospace';
+    ctx.fillStyle = ch.col;
+    ctx.globalAlpha = ch.alpha * 0.7;
+    ctx.fillText(ch.label, 8, ch.y - 6);
+
+    ctx.beginPath();
+    ctx.strokeStyle = ch.col;
+    ctx.lineWidth = 1.2;
+    ctx.globalAlpha = ch.alpha;
+    for (let x = 0; x < W; x++) {
+      const y = ch.y + eeg(x, t + ch.y * 0.01);
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  });
+
+  ctx.globalAlpha = 1;
+  t += 0.022;
+  requestAnimationFrame(draw);
+}
+draw();
+
+// ─── Scroll reveal ───
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('revealed'); });
+}, { threshold: 0.12 });
+document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>

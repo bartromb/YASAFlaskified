@@ -1,0 +1,137 @@
+{# templates/results_history.html — Overzicht van alle geanalyseerde studies #}
+{% extends "base.html" %}
+{% block title %}{{ t('analysis_history') }}{% endblock %}
+
+{% block content %}
+<div class="container-xl py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="mb-1">📋 {{ t('analysis_history') }}</h2>
+      <p class="text-muted mb-0">{{ studies|length }} {{ t('studies_found') }}</p>
+    </div>
+    <a href="/upload" class="btn btn-primary">
+      ➕ {{ t('new_analysis') }}
+    </a>
+  </div>
+
+  {% if studies %}
+  <div class="card shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover table-sm mb-0">
+        <thead class="table-dark">
+          <tr>
+            <th>{{ t('date') }}</th>
+            <th>{{ t('patient') }}</th>
+            <th>ID</th>
+            <th>{{ t('duration') }}</th>
+            <th>TST</th>
+            <th>SE</th>
+            <th>AHI</th>
+            <th>OAHI</th>
+            <th>{{ t('severity') }}</th>
+            <th>{{ t('actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in studies %}
+          <tr>
+            <td class="text-nowrap">
+              <small>{{ s.date }}</small>
+            </td>
+            <td>
+              <strong>{{ s.patient_name }}</strong>{% if s.patient_firstname %}, {{ s.patient_firstname }}{% endif %}
+            </td>
+            <td><small class="text-muted">{{ s.patient_id }}</small></td>
+            <td>{{ s.duration_min }} min</td>
+            <td>{{ s.tst if s.tst != '—' else '—' }}</td>
+            <td>{{ s.se if s.se != '—' else '—' }}</td>
+            <td>
+              {% if s.ahi != '—' and s.ahi is not none %}
+                <span class="badge bg-{% if s.ahi >= 30 %}danger{% elif s.ahi >= 15 %}warning{% elif s.ahi >= 5 %}info{% else %}success{% endif %}">
+                  {{ "%.1f"|format(s.ahi) }}
+                </span>
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>
+              {% if s.oahi != '—' and s.oahi is not none %}
+                {{ "%.1f"|format(s.oahi) }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>
+              {% if s.severity and s.severity != '—' %}
+                <span class="badge bg-{% if s.severity == 'severe' %}danger{% elif s.severity == 'moderate' %}warning{% elif s.severity == 'mild' %}info{% else %}success{% endif %}">
+                  {{ s.severity }}
+                </span>
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td class="text-nowrap">
+              <div class="btn-group btn-group-sm">
+                {# 1. Bekijk rapport #}
+                <a href="/results/{{ s.job_id }}" class="btn btn-outline-dark" title="Bekijk rapport">
+                  📊
+                </a>
+                {# 2. PSG PDF #}
+                {% if s.has_pdf %}
+                <a href="/results/{{ s.job_id }}/pdf" class="btn btn-outline-primary" title="PSG PDF">
+                  📄
+                </a>
+                {% endif %}
+                {# 3. XLS #}
+                {% if s.has_excel %}
+                <a href="/results/{{ s.job_id }}/excel" class="btn btn-outline-success" title="Download Excel">
+                  📗
+                </a>
+                {% endif %}
+                {# 4. FHIR #}
+                <a href="/results/{{ s.job_id }}/fhir" class="btn btn-outline-info" title="FHIR R4 export">
+                  🔗
+                </a>
+                {# 5. EDF browser #}
+                <a href="/score_v12/{{ s.job_id }}" class="btn btn-outline-warning" title="EDF Browser & Scorer">
+                  📡
+                </a>
+                {# 6. EDF+ genereren #}
+                <a href="/results/{{ s.job_id }}/edfplus" class="btn btn-outline-secondary"
+                   title="EDF+ {% if s.has_edfplus %}downloaden{% else %}genereren{% endif %}">
+                  {% if s.has_edfplus %}📁{% else %}⬇️{% endif %}
+                </a>
+                {# 7. Heranalyse #}
+                <a href="/results/{{ s.job_id }}/reanalyze" class="btn btn-outline-primary"
+                   title="{{ t('reanalyze') }}">🔄</a>
+                {# 8. Rapport bewerken #}
+                <a href="/results/{{ s.job_id }}/edit" class="btn btn-outline-dark"
+                   title="{{ t('edit_report') }}">✏️</a>
+                {# 9. Delete #}
+                <form method="POST" action="/results/{{ s.job_id }}/delete"
+                      class="d-inline"
+                      onsubmit="return confirm('{{ t('confirm_delete_study') }}')">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-outline-danger" title="{{ t('delete_study') }}">🗑️</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% else %}
+  <div class="text-center py-5">
+    <div class="fs-1 mb-3">📭</div>
+    <h4 class="text-muted">{{ t('no_analyses_yet') }}</h4>
+    <p class="text-muted">{{ t('upload_to_start') }}</p>
+    <a href="/upload" class="btn btn-primary mt-2">
+      ➕ {{ t('start_first_analysis') }}
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
