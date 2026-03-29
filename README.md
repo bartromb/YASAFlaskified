@@ -171,29 +171,34 @@ End-to-end analysis: 5–10 minutes per 8-hour PSG recording.
 ### Respiratory Scoring
 
 **Signal processing:**
-- Square-root linearisation of nasal pressure (Bernoulli correction, per AASM 2.6)
+- Square-root linearisation of nasal pressure — corrects the Bernoulli quadratic pressure–flow relationship, per AASM 2.6 ([Thurnheer et al. 2001](https://doi.org/10.1164/ajrccm.164.10.2010113); [Montserrat et al. 1997](https://doi.org/10.1164/ajrccm.155.1.9001310))
 - Butterworth bandpass 0.05–3 Hz
 - Hilbert envelope for instantaneous amplitude
 - Dynamic 5-minute sliding baseline (95th percentile, 10-second steps)
 - Stage-specific baseline blending (N2/N3/REM separate estimates)
-- MMSD validation to distinguish apnoea from signal-dropout artefacts
+- MMSD (Mean Magnitude of Second Derivative) validation — drift-independent apnoea validation, distinguishes true cessation from signal dropout ([Lee et al. 2008](https://doi.org/10.5665/sleep.1188))
 
-**Apnoea detection:** thermistor, ≥90% reduction, ≥10 s, sleep epochs only
+**Apnoea detection:** oronasal thermistor, ≥90% flow reduction, ≥10 s, sleep epochs only ([Berry et al. 2020](https://aasm.org/clinical-resources/scoring-manual/))
 
 **Hypopnoea detection:** nasal pressure transducer (NPT), 30–90% reduction, ≥10 s,
-Rule 1A (SpO₂ ≥3% drop) or Rule 1B (EEG arousal within 3 s)
+Rule 1A (SpO₂ ≥3% drop, [Berry et al. 2020](https://aasm.org/clinical-resources/scoring-manual/)) or Rule 1B (EEG arousal within 3 s).
+SpO₂ coupling uses a 30-s temporally constrained post-event window ([Uddin et al. 2018](https://doi.org/10.1088/1361-6579/aab02d))
+
+**Flattening index:** breath-by-breath flow-limitation detection per [Hosselet et al. 1998](https://doi.org/10.1164/ajrccm.157.5.9708008)
+
+**Cheyne-Stokes detection:** autocorrelation of flow envelope; periodicity 40–70 s flagged as CSR
 
 **Apnoea type classification** — 7-rule decision tree (`psgscoring/classify.py`):
 
-| Rule | Condition | Type |
-|------|-----------|------|
-| 0 | Phase angle ≥45° (Hilbert, v0.8.11) | Obstructive |
-| 1 | Paradox correlation + raw variability | Obstructive |
-| 2 | High raw variability, low envelope | Obstructive |
-| 3 | First half absent, second half present | Mixed |
-| 4 | Clear effort present | Obstructive |
-| 5 | Truly flat — no effort signs | Central |
-| 6 | Borderline default | Obstructive (low confidence) |
+| Rule | Condition | Type | Reference |
+|------|-----------|------|-----------|
+| 0 | Phase angle ≥45° (Hilbert, v0.8.11) | Obstructive | Standard signal processing |
+| 1 | Paradox thoraco-abdominal correlation | Obstructive | [Berry et al. 2020](https://aasm.org/clinical-resources/scoring-manual/) |
+| 2 | High raw variability, low envelope | Obstructive | [Berry et al. 2020](https://aasm.org/clinical-resources/scoring-manual/) |
+| 3 | First half absent, second half present | Mixed | [Berry et al. 2020](https://aasm.org/clinical-resources/scoring-manual/) |
+| 4 | Clear effort present | Obstructive | [Berry et al. 2020](https://aasm.org/clinical-resources/scoring-manual/) |
+| 5 | Truly flat — no effort signs | Central | [Berry et al. 2020](https://aasm.org/clinical-resources/scoring-manual/) |
+| 6 | Borderline default | Obstructive (low confidence) | AASM consensus |
 
 ### Sleep Staging — powered by YASA
 
@@ -381,8 +386,77 @@ If you use YASAFlaskified or psgscoring in your research, please cite:
 }
 ```
 
-Also cite AASM 2.6 (Berry et al. 2020) for respiratory scoring rules,
-and MNE-Python (Gramfort et al. 2013) for EDF signal processing.
+Also cite the following for respiratory scoring:
+
+```bibtex
+@article{berry2020,
+  author  = {Berry, Richard B. and others},
+  title   = {The {AASM} Manual for the Scoring of Sleep and Associated Events, Version 2.6},
+  year    = {2020},
+  publisher = {American Academy of Sleep Medicine},
+  url     = {https://aasm.org/clinical-resources/scoring-manual/}
+}
+
+@article{thurnheer2001,
+  author  = {Thurnheer, Robert and Xie, Xijia and Bloch, Konrad E.},
+  title   = {Accuracy of nasal cannula pressure recordings for assessment of ventilation during sleep},
+  journal = {American Journal of Respiratory and Critical Care Medicine},
+  year    = {2001},
+  volume  = {164},
+  pages   = {1914--1919},
+  doi     = {10.1164/ajrccm.164.10.2010113}
+}
+
+@article{montserrat1997,
+  author  = {Montserrat, Josep M. and others},
+  title   = {Evaluation of nasal prongs for estimating nasal flow},
+  journal = {American Journal of Respiratory and Critical Care Medicine},
+  year    = {1997},
+  volume  = {155},
+  pages   = {211--215},
+  doi     = {10.1164/ajrccm.155.1.9001310}
+}
+
+@article{lee2008,
+  author  = {Lee, Sing A. and others},
+  title   = {Heavy snoring as a cause of carotid artery atherosclerosis},
+  journal = {Sleep},
+  year    = {2008},
+  volume  = {31},
+  pages   = {1207--1213},
+  doi     = {10.5665/sleep.1188}
+}
+
+@article{hosselet1998,
+  author  = {Hosselet, Jean-Jacques and others},
+  title   = {Detection of flow limitation with a nasal cannula/pressure transducer system},
+  journal = {American Journal of Respiratory and Critical Care Medicine},
+  year    = {1998},
+  volume  = {157},
+  pages   = {1461--1467},
+  doi     = {10.1164/ajrccm.157.5.9708008}
+}
+
+@article{uddin2018,
+  author  = {Uddin, Mohammad Bilal and Chow, Cheuk Ming and Su, Steven W.},
+  title   = {Classification methods to detect sleep apnea in adults based on respiratory and oximetry signals},
+  journal = {Physiological Measurement},
+  year    = {2018},
+  volume  = {39},
+  pages   = {03TR01},
+  doi     = {10.1088/1361-6579/aab02d}
+}
+
+@article{gramfort2013,
+  author  = {Gramfort, Alexandre and others},
+  title   = {{MEG} and {EEG} data analysis with {MNE-Python}},
+  journal = {Frontiers in Neuroscience},
+  year    = {2013},
+  volume  = {7},
+  pages   = {267},
+  doi     = {10.3389/fnins.2013.00267}
+}
+```
 
 ---
 
