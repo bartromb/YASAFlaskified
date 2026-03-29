@@ -11,7 +11,7 @@ YASAFlaskified builds on [YASA](https://github.com/raphaelvallat/yasa) (**Y**et 
 
 YASAFlaskified extends YASA into a complete clinical platform: AASM 2.6-compliant respiratory event scoring, arousal detection, PLM analysis, and automated multilingual reporting — all in a Docker-deployed web application accessible from any browser.
 
-**Live instance:** [www.slaapkliniek.be](https://www.slaapkliniek.be) — researchers may request a free account and upload anonymized EDF recordings.
+**Live instance:** [slaapkliniek.be](https://slaapkliniek.be) or [sleepai.be](https://sleepai.be) — researchers may request a free account and upload anonymized EDF recordings.
 
 > **Companion library:** Core respiratory scoring algorithms are available as a standalone Python library: [psgscoring](https://github.com/bartromb/psgscoring)
 
