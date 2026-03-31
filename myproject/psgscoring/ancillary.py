@@ -79,6 +79,7 @@ def analyze_position(
 
 
 def _modal_position(pos_data: np.ndarray, ep: int, spe: int) -> int:
+    """Bepaal de meest voorkomende slaappositie (modus) voor een epoch."""
     s   = ep * spe
     e   = min(s + spe, len(pos_data))
     seg = pos_data[s:e]
@@ -178,6 +179,8 @@ def analyze_snore(
                 safe_r((snore_s / 60) / total_sleep_h) if total_sleep_h > 0 else 0
             ),
         }
+        # v0.8.12: expose RMS timeseries for PDF overview plot
+        result["rms_1s"] = rms.tolist()
         result["success"] = True
     except Exception as e:
         result["error"] = str(e)

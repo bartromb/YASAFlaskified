@@ -87,6 +87,7 @@ def run_pneumo_analysis(
     }
 
     def get(ch_type):
+        """Haal een kanaal op uit de MNE raw data op basis van de kanaalmap."""
         name = ch.get(ch_type)
         if name and name in raw.ch_names:
             return raw.get_data(picks=[name])[0], raw.info["sfreq"]
@@ -303,12 +304,19 @@ def _resolve_flow_channels(
 ):
     """Assign apnea (thermistor) and hypopnea (pressure) channels per AASM 2.6."""
     if flow_pressure_data is not None or flow_therm_data is not None:
-        apnea_flow = flow_therm_data   or flow_pressure_data or flow_data
-        hypop_flow = flow_pressure_data or flow_therm_data   or flow_data
+        # v0.8.4 FIX: Python 'or' crashes on numpy arrays ("truth value ambiguous").
+        # Use explicit None-checks instead.
+        apnea_flow = (flow_therm_data if flow_therm_data is not None
+                       else flow_pressure_data if flow_pressure_data is not None
+                       else flow_data)
+        hypop_flow = (flow_pressure_data if flow_pressure_data is not None
+                       else flow_therm_data if flow_therm_data is not None
+                       else flow_data)
         sf_apnea   = sf_ft if flow_therm_data  is not None else (sf_fp or sf_flow)
         sf_hypop   = sf_fp if flow_pressure_data is not None else (sf_ft or sf_flow)
         if flow_data is None:
-            flow_data = flow_pressure_data or flow_therm_data
+            flow_data = (flow_pressure_data if flow_pressure_data is not None
+                         else flow_therm_data)
         output["meta"]["flow_channels"] = {
             "apnea_sensor":    ch.get("flow_thermistor")  or ch.get("flow_pressure") or ch.get("flow"),
             "hypopnea_sensor": ch.get("flow_pressure") or ch.get("flow_thermistor") or ch.get("flow"),
@@ -328,6 +336,7 @@ def _resolve_flow_channels(
 
 
 def _pick_eeg(raw, ch) -> tuple:
+    """Selecteer het beste EEG-kanaal uit de beschikbare kanalen."""
     name = ch.get("eeg")
     if not name:
         for c in raw.ch_names:
@@ -340,6 +349,7 @@ def _pick_eeg(raw, ch) -> tuple:
 
 
 def _pick_emg(raw, ch) -> np.ndarray | None:
+    """Selecteer het beste EMG-kanaal (kin-EMG) uit de beschikbare kanalen."""
     name = ch.get("emg")
     if not name:
         for c in raw.ch_names:
@@ -352,6 +362,7 @@ def _pick_emg(raw, ch) -> np.ndarray | None:
 
 
 def _compute_flow_norm(flow_data, sf_flow) -> np.ndarray | None:
+    """Normaliseer het flowsignaal voor amplitude-onafhankelijke analyse."""
     if flow_data is None:
         return None
     try:
@@ -363,6 +374,7 @@ def _compute_flow_norm(flow_data, sf_flow) -> np.ndarray | None:
 
 
 def _empty_arousal(reason: str) -> dict:
+    """Geeft een leeg arousal-resultaat terug met foutmelding."""
     return {
         "success": False,
         "error":   reason,

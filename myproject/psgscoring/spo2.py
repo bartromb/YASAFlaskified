@@ -112,6 +112,7 @@ def analyze_spo2(
         baseline_spo2 = float(np.percentile(spo2_sleep, 90))
 
         def pct_below(thresh: float):
+            """Bereken het percentage van de tijd dat SpO2 onder een drempel valt."""
             n_below = np.sum(spo2_sleep < thresh)
             t_s     = float(n_below) / sf
             pct     = t_s / total_sleep_s * 100 if total_sleep_s > 0 else 0.0
@@ -137,6 +138,7 @@ def analyze_spo2(
                 nrem_mask[s:e] = True
 
         def stage_spo2_stats(mask: np.ndarray):
+            """Bereken SpO2-statistieken per slaapstadium (gemiddelde, nadir, ODI)."""
             seg = spo2_clean[mask]
             seg = seg[~np.isnan(seg)]
             if len(seg) == 0:

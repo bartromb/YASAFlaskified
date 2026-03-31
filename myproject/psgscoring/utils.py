@@ -47,14 +47,17 @@ def hypno_to_numeric(hypno: list) -> np.ndarray:
 
 
 def is_nrem(stage) -> bool:
+    """Controleer of een slaapstadium NREM is (N1, N2 of N3)."""
     return stage in (1, 2, 3, "N1", "N2", "N3")
 
 
 def is_rem(stage) -> bool:
+    """Controleer of een slaapstadium REM is."""
     return stage in (4, "R")
 
 
 def is_sleep(stage) -> bool:
+    """Controleer of een slaapstadium slaap is (niet Wake)."""
     return stage not in (0, -1, "W")
 
 

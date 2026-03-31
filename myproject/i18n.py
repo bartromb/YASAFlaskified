@@ -1,5 +1,5 @@
 """
-i18n.py — YASAFlaskified v0.8.11
+i18n.py — YASAFlaskified v0.8.12
 Volledig drietalig: NL / FR / EN  (gelijkwaardig, gebruiker kiest bij login)
 
 Gebruik:
@@ -193,7 +193,7 @@ TRANSLATIONS = {
     "tab_cycles":           {"nl":"Cycli",            "fr":"Cycles",            "en":"Cycles"},
     "tab_artifacts":        {"nl":"Artefacten",       "fr":"Artéfacts",         "en":"Artifacts"},
     "tab_respiratory":      {"nl":"Respiratoir",      "fr":"Respiratoire",      "en":"Respiratory"},
-    "tab_spo2":             {"nl":"SpO₂",             "fr":"SpO₂",              "en":"SpO₂"},
+    "tab_spo2":             {"nl":"SpO2",             "fr":"SpO2",              "en":"SpO2"},
     "tab_plm":              {"nl":"PLM",              "fr":"MPJ",               "en":"PLM"},
 
     # ── SLAAPSTATISTIEKEN ───────────────────────────────────────────────────
@@ -218,8 +218,8 @@ TRANSLATIONS = {
     "mild_osa":             {"nl":"Mild OSA",         "fr":"SAOS léger",        "en":"Mild OSA"},
     "moderate_osa":         {"nl":"Matig OSA",        "fr":"SAOS modéré",       "en":"Moderate OSA"},
     "severe_osa":           {"nl":"Ernstig OSA",      "fr":"SAOS sévère",       "en":"Severe OSA"},
-    "spo2_mean":            {"nl":"Gem. SpO₂",        "fr":"SpO₂ moyen",        "en":"Mean SpO₂"},
-    "spo2_min":             {"nl":"Min. SpO₂",        "fr":"SpO₂ min.",         "en":"Min. SpO₂"},
+    "spo2_mean":            {"nl":"Gem. SpO2",        "fr":"SpO2 moyen",        "en":"Mean SpO2"},
+    "spo2_min":             {"nl":"Min. SpO2",        "fr":"SpO2 min.",         "en":"Min. SpO2"},
     "time_below_90":        {"nl":"Tijd < 90%",       "fr":"Temps < 90%",       "en":"Time < 90%"},
 
     # ── DASHBOARD ───────────────────────────────────────────────────────────
@@ -641,21 +641,26 @@ TRANSLATIONS = {
     "open_scorer":          {"nl": "Scorer openen",      "fr": "Ouvrir le scorer", "en": "Open scorer"},
 
     # PDF report section headers (v0.8.11)
+    "rpt_sec0a":            {"nl": "Registratie — Kanalen", "fr": "Enregistrement — Canaux", "en": "Recording — Channels"},
+    "rpt_sec0b":            {"nl": "Visueel overzicht", "fr": "Aperçu visuel", "en": "Visual Overview"},
+    "pdf_ch_col":           {"nl": "Kanaal", "fr": "Canal", "en": "Channel"},
+    "pdf_ch_total":         {"nl": "kanalen in EDF-bestand", "fr": "canaux dans le fichier EDF", "en": "channels in EDF file"},
     "rpt_sec1":             {"nl": "1  Slaaparchitectuur  (AASM 2.6)", "fr": "1  Architecture du sommeil  (AASM 2.6)", "en": "1  Sleep Architecture  (AASM 2.6)"},
-    "rpt_sec2":             {"nl": "2  Hypnogram",       "fr": "2  Hypnogramme",   "en": "2  Hypnogram"},
-    "rpt_sec3":             {"nl": "3  NREM-REM Cycli",  "fr": "3  Cycles NREM-REM", "en": "3  NREM-REM Cycles"},
-    "rpt_sec4":             {"nl": "4  Slaapspoelen",    "fr": "4  Fuseaux du sommeil", "en": "4  Sleep Spindles"},
-    "rpt_sec5":             {"nl": "5  Trage Golven",    "fr": "5  Ondes lentes",  "en": "5  Slow Waves"},
-    "rpt_sec6":             {"nl": "6  REM Detectie",    "fr": "6  Détection REM", "en": "6  REM Detection"},
-    "rpt_sec7":             {"nl": "7  Spectrale Bandpower", "fr": "7  Puissance spectrale", "en": "7  Spectral Band Power"},
-    "rpt_sec8":             {"nl": "8  Artefacten",      "fr": "8  Artefacts",     "en": "8  Artifacts"},
-    "rpt_sec8b":            {"nl": "8b  Signaalkwaliteit & Confidence Review", "fr": "8b  Qualité du signal & Revue de confiance", "en": "8b  Signal Quality & Confidence Review"},
-    "rpt_sec9":             {"nl": "9  Respiratoire Analyse  (AASM Rule 1A + 1B)", "fr": "9  Analyse respiratoire  (AASM Rule 1A + 1B)", "en": "9  Respiratory Analysis  (AASM Rule 1A + 1B)"},
-    "rpt_sec9b":            {"nl": "9b  Arousals & RERA  (AASM 3.9)", "fr": "9b  Arousals & RERA  (AASM 3.9)", "en": "9b  Arousals & RERA  (AASM 3.9)"},
-    "rpt_sec9c":            {"nl": "9c  Ademhalingsanalyse", "fr": "9c  Analyse respiratoire détaillée", "en": "9c  Breath-by-Breath Analysis"},
-    "rpt_sec10":            {"nl": "10  SpO₂ Analyse",   "fr": "10  Analyse SpO₂", "en": "10  SpO₂ Analysis"},
-    "rpt_sec11":            {"nl": "11  Periodieke Beenbewegingen (PLM)", "fr": "11  Mouvements périodiques des jambes (PLM)", "en": "11  Periodic Limb Movements (PLM)"},
-    "rpt_sec12":            {"nl": "12  Besluit & Behandelingsvoorstel", "fr": "12  Conclusion & Proposition de traitement", "en": "12  Conclusion & Treatment Proposal"},
+    "rpt_sec2":             {"nl": "2  Slaapcycli (NREM-REM)", "fr": "2  Cycles NREM-REM", "en": "2  Sleep Cycles (NREM-REM)"},
+    "rpt_sec3":              {"nl": "3  Slaapspoelen", "fr": "3  Fuseaux du sommeil", "en": "3  Sleep Spindles"},
+    "rpt_sec4":              {"nl": "4  Trage Golven", "fr": "4  Ondes lentes", "en": "4  Slow Waves"},
+    "rpt_sec5":              {"nl": "5  REM Detectie", "fr": "5  Détection REM", "en": "5  REM Detection"},
+    "rpt_sec6":              {"nl": "6  Spectrale Bandpower", "fr": "6  Puissance spectrale", "en": "6  Spectral Band Power"},
+    "rpt_sec7":              {"nl": "7  Artefacten", "fr": "7  Artéfacts", "en": "7  Artifacts"},
+    "rpt_sec7b":             {"nl": "7b  Signaalkwaliteit & Confidence Review", "fr": "7b  Qualité du signal & Revue de confiance", "en": "7b  Signal Quality & Confidence Review"},
+    "rpt_sec8":             {"nl": "8  Respiratoire Analyse  (AASM Rule 1A + 1B)", "fr": "8  Analyse respiratoire  (AASM Rule 1A + 1B)", "en": "8  Respiratory Analysis  (AASM Rule 1A + 1B)"},
+    "rpt_sec8b":            {"nl": "8b  Arousals & RERA  (AASM 3.9)", "fr": "8b  Arousals & RERA  (AASM 3.9)", "en": "8b  Arousals & RERA  (AASM 3.9)"},
+    "rpt_sec8c":             {"nl": "8c  Ademhalingsanalyse", "fr": "8c  Analyse respiratoire détaillée", "en": "8c  Breath-by-Breath Analysis"},
+    "rpt_sec9":              {"nl": "9  SpO2 Analyse", "fr": "9  Analyse SpO2", "en": "9  SpO2 Analysis"},
+    "rpt_sec10":            {"nl": "10  Periodieke Beenbewegingen (PLM)", "fr": "10  Mouvements périodiques des jambes (PLM)", "en": "10  Periodic Limb Movements (PLM)"},
+    "rpt_sec10b":            {"nl": "10b  Ronchopathie (snurk-analyse)", "fr": "10b  Ronchopathie (analyse du ronflement)", "en": "10b  Ronchopathy (Snoring Analysis)"},
+    "rpt_sec8d":            {"nl": "8d  Flow-reductie zonder criteria (FRI)", "fr": "8d  Réduction de flux sans critères (IFR)", "en": "8d  Flow Reduction Without Criteria (FRI)"},
+    "rpt_sec11":            {"nl": "11  Besluit", "fr": "11  Conclusion", "en": "11  Conclusion"},
 
     # Common words used across templates
     "name":                 {"nl": "Naam",               "fr": "Nom",             "en": "Name"},
@@ -761,10 +766,27 @@ TRANSLATIONS = {
     "pdf_plms_series":      {"nl": "PLMs (in series)", "fr": "MPS (en série)", "en": "PLMs (in series)"},
     "pdf_plm_series":       {"nl": "PLM-series", "fr": "Séries PLM", "en": "PLM Series"},
 
+    # ── PDF RAPPORT: ronchopathie (snurk) ──────────────────────────────────
+    "pdf_snore_min":        {"nl": "Snurkduur", "fr": "Durée de ronflement", "en": "Snoring Duration"},
+    "pdf_snore_pct":        {"nl": "Snurk % van TST", "fr": "Ronflement % du TST", "en": "Snoring % of TST"},
+    "pdf_snore_index":      {"nl": "Snurk-index", "fr": "Index de ronflement", "en": "Snoring Index"},
+    "pdf_snore_no_data":    {"nl": "Geen snurk-kanaal gedetecteerd in de opname.", "fr": "Aucun canal de ronflement détecté dans l'enregistrement.", "en": "No snoring channel detected in the recording."},
+
+    # ── PDF RAPPORT: flow-reductie index (FRI) ────────────────────────────
+    "pdf_fri_count":        {"nl": "Flow-reducties zonder criteria", "fr": "Réductions de flux sans critères", "en": "Flow Reductions Without Criteria"},
+    "pdf_fri_index":        {"nl": "FRI (flow-reductie-index)", "fr": "IFR (indice de réduction de flux)", "en": "FRI (Flow Reduction Index)"},
+    "pdf_fri_r1b":          {"nl": "Waarvan hersteld via Rule 1B (arousal)", "fr": "Dont restaurés via Rule 1B (arousal)", "en": "Of which reinstated via Rule 1B (arousal)"},
+    "pdf_fri_note":         {"nl": "Flow-reducties (≥30%, ≥10s) die niet voldoen aan hypopnea-criteria: geen ≥3% desaturatie en geen arousal. Geen onderdeel van AHI. Klinische relevantie bij UARS/RDI-evaluatie.",
+                             "fr": "Réductions de flux (≥30%, ≥10s) ne répondant pas aux critères d'hypopnée : pas de désaturation ≥3% ni d'arousal. Non incluses dans l'IAH. Pertinence clinique pour l'évaluation SARVAS/IDR.",
+                             "en": "Flow reductions (≥30%, ≥10s) not meeting hypopnea criteria: no ≥3% desaturation and no arousal. Not included in AHI. Clinically relevant for UARS/RDI evaluation."},
+
+    # ── PDF RAPPORT: leeg besluit ──────────────────────────────────────────
+    "concl_empty":          {"nl": "Besluit in te vullen door behandelend arts.", "fr": "Conclusion à compléter par le médecin traitant.", "en": "Conclusion to be completed by the treating physician."},
+
     # ── PDF RAPPORT: disclaimer/footer ─────────────────────────────────────
-    "pdf_disc_auto":        {"nl": "Automatisch gegenereerd door YASAFlaskified v0.8.11. AI-slaapstaging (LGBM, ~85% epoch-overeenkomst). Signaalverwerking conform AASM Scoring Manual 2.6 (Rule 1A + 1B).",
-                             "fr": "Généré automatiquement par YASAFlaskified v0.8.11. Staging du sommeil par IA (LGBM, ~85% concordance par époque). Traitement du signal conforme au Manuel de Scoring AASM 2.6 (Rule 1A + 1B).",
-                             "en": "Automatically generated by YASAFlaskified v0.8.11. AI sleep staging (LGBM, ~85% epoch agreement). Signal processing per AASM Scoring Manual 2.6 (Rule 1A + 1B)."},
+    "pdf_disc_auto":        {"nl": "Automatisch gegenereerd door YASAFlaskified v0.8.12. AI-slaapstaging (LGBM, ~85% epoch-overeenkomst). Signaalverwerking conform AASM Scoring Manual 2.6 (Rule 1A + 1B).",
+                             "fr": "Généré automatiquement par YASAFlaskified v0.8.12. Staging du sommeil par IA (LGBM, ~85% concordance par époque). Traitement du signal conforme au Manuel de Scoring AASM 2.6 (Rule 1A + 1B).",
+                             "en": "Automatically generated by YASAFlaskified v0.8.12. AI sleep staging (LGBM, ~85% epoch agreement). Signal processing per AASM Scoring Manual 2.6 (Rule 1A + 1B)."},
     "pdf_disc_verified":    {"nl": "Resultaten geverifieerd door {role} {name}. Klinische interpretatie onder verantwoordelijkheid van de behandelend arts.",
                              "fr": "Résultats vérifiés par {role} {name}. L'interprétation clinique relève de la responsabilité du médecin traitant.",
                              "en": "Results verified by {role} {name}. Clinical interpretation under responsibility of the treating physician."},

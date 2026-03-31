@@ -500,6 +500,7 @@ def _compute_mmsd_norm(
     sf_flow: float,
     result: dict,
 ) -> np.ndarray | None:
+    """Bereken genormaliseerde MMSD (Mean Magnitude Second Derivative) van flowsignaal."""
     try:
         filt       = bandpass_flow(flow_data, sf_flow)
         mmsd       = compute_mmsd(filt, sf_flow, window_s=1.0)
@@ -516,6 +517,7 @@ def _compute_mmsd_norm(
 def _apply_stage_baseline(
     flow_env, sf_flow, hypno, artifact_epochs, baseline, result
 ):
+    """Pas stadium-specifieke basislijn toe (REM vs NREM ademhalingspatroon)."""
     try:
         stage_bl = compute_stage_baseline(
             flow_env, sf_flow, hypno, artifact_epochs,
@@ -532,6 +534,7 @@ def _apply_stage_baseline(
 def _apply_position_reset(
     baseline, flow_env, sf_flow, pos_data, sf_pos, result
 ):
+    """Herbereken basislijn na positieverandering (eerste 60s van nieuw segment)."""
     try:
         pos_changes = detect_position_changes(pos_data, sf_pos)
         if pos_changes:
@@ -603,6 +606,7 @@ def _setup_hypop_channel(
 
 
 def _run_breath_analysis(hypop_raw, hypop_sf, hypno, result):
+    """Voer breath-by-breath analyse uit: detecteer ademhalingen en bereken amplitudes."""
     try:
         filt   = bandpass_flow(hypop_raw, hypop_sf)
         breaths = detect_breaths(filt, hypop_sf)
@@ -639,6 +643,7 @@ def _run_breath_analysis(hypop_raw, hypop_sf, hypno, result):
 
 
 def _compute_effort_baseline(thorax_env, abdomen_env, flow_norm, sf):
+    """Bereken effort-basislijn op stabiele ademhalingsperiodes (niet tijdens events)."""
     stable_mask = (flow_norm > 0.60) & (flow_norm < 1.30)
     bl: list[float] = []
     for env in (thorax_env, abdomen_env):
@@ -650,6 +655,7 @@ def _compute_effort_baseline(thorax_env, abdomen_env, flow_norm, sf):
 
 
 def _global_spo2_baseline(spo2_data, sf_spo2, hypno, artifact_epochs):
+    """Bereken globale SpO2-basislijn: 95e percentiel over stabiele slaapperiodes."""
     if spo2_data is None:
         return None
     spo2_mask  = build_sleep_mask(hypno, sf_spo2, len(spo2_data), artifact_epochs)
@@ -663,6 +669,7 @@ def _detect_apneas(
     thorax_env, abdomen_env, thorax_raw, abdomen_raw, effort_bl,
     spo2_data, global_spo2_bl, mmsd_norm,
 ) -> list[dict]:
+    """Detecteer apnea-events: ≥90% flow-reductie gedurende ≥10s (AASM 2.6)."""
     events: list[dict] = []
     labeled, n_ap = label(apnea_raw & sleep_mask_ap)
     slices_ap = find_objects(labeled)
@@ -860,9 +867,11 @@ def _compute_summary(
     mixed     = [e for e in events if e["type"] == "mixed"]
 
     def idx(n, h):
+        """Bereken index (events/uur) met veilige deling."""
         return safe_r(n / h) if h > 0 else 0
 
     def split_rn(lst):
+        """Splits events in REM- en NREM-subgroepen."""
         return (
             [e for e in lst if is_rem(e["stage"])],
             [e for e in lst if is_nrem(e["stage"])],
@@ -891,6 +900,7 @@ def _compute_summary(
 
     # Confidence-verdeling per categorie (apneas only; hypopneas fixed at 0.70)
     def _conf_band(events_list):
+        """Tel events per confidence-band (hoog/matig/grens/laag)."""
         bands = {"high": 0, "moderate": 0, "borderline": 0, "low": 0}
         for e in events_list:
             c = e.get("confidence") or 0
@@ -904,6 +914,7 @@ def _compute_summary(
 
     # OAHI per drempel (voor drempelgevoeligheidstabel in rapport)
     def _oahi_at(threshold):
+        """Bereken OAHI bij een gegeven confidence-drempel."""
         ob = [e for e in obstr     if (e.get("confidence") or 0) >  threshold]
         hy = [e for e in hypopneas if (e.get("confidence") or 0) >= threshold]
         return idx(len(ob) + len(hy), total_sleep_h)
@@ -1001,6 +1012,7 @@ def _compute_summary(
 
 
 def _classify_ahi(ahi: float | None) -> str:
+    """Classificeer AHI-ernst: normaal (<5), licht (5-15), matig (15-30), ernstig (>30)."""
     if ahi is None:
         return "unknown"
     if ahi < 5:   return "normal"
@@ -1012,6 +1024,7 @@ def _classify_ahi(ahi: float | None) -> str:
 def _generate_warnings(
     n_central, n_obstr, n_mixed, ahi, avg_conf, sleep_h
 ) -> list[dict]:
+    """Genereer klinische waarschuwingen op basis van event-patronen en AHI-ernst."""
     warnings: list[dict] = []
     total_ap = n_central + n_obstr + n_mixed
 

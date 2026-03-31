@@ -252,6 +252,7 @@ def _detect_series(
 
 
 def _series_dict(seq: list[dict]) -> dict:
+    """Bouw een PLM-serie dictionary met start, einde en aantal bewegingen."""
     return {
         "start_s": seq[0]["onset_s"],
         "end_s":   seq[-1]["onset_s"] + seq[-1]["duration_s"],
@@ -260,6 +261,7 @@ def _series_dict(seq: list[dict]) -> dict:
 
 
 def _classify_plmi(plmi: float | None) -> str:
+    """Classificeer PLM-index ernst: normaal (<5), licht (5-25), matig (25-50), ernstig (>50)."""
     if plmi is None or plmi == 0:
         return "normal"
     if plmi < 5:

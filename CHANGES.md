@@ -4,6 +4,52 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 
 ---
 
+## [0.8.12]
+
+### Added — PSG overview page and clinical report improvements
+
+**Visual overview page (PDF report):**
+- Section 0a: EDF channel inventory table (all channels in recording)
+- Section 0b: Stacked synced timeline plots — HYPNO, EVENT, POS, PHONO, SpO₂
+- New plot functions: `_pos_img()` (body position), `_snore_img()` (snoring RMS),
+  `_events_img()` (respiratory events timeline)
+- Snore analysis now exposes `rms_1s` timeseries for plotting
+
+**Ronchopathy section (10b):**
+- Snoring duration (min), snoring % of TST, snoring index (/h)
+- Always visible — shows "no snoring channel" if not available
+
+**Flow Reduction Index — FRI (section 8d):**
+- Counts rejected hypopneas (≥30% flow reduction, ≥10s) that meet neither
+  ≥3% desaturation nor arousal criteria
+- FRI = flow reductions per hour of sleep
+- Clinically relevant for UARS / RDI evaluation
+- Part of respiratory section (8d)
+
+**Conclusion section (11) — manual only:**
+- Auto-generated conclusions removed (`generate_conclusions()` no longer called)
+- Empty conclusion shows: "To be completed by the treating physician"
+- Manual diagnosis via report editor still works as before
+
+**DISCLAIMER.md:**
+- Full medical/clinical disclaimer (9 sections)
+- Not a medical device, no CE/FDA, known limitations, data privacy,
+  user responsibility, third-party components
+
+### Changed
+- Hypnogram moved into visual overview (0b) — separate section 2 removed
+- All sections renumbered: 1–11 (was 1–12)
+- Version number updated to 0.8.12 in app.py, PDF footer, i18n, DISCLAIMER
+- NL docstrings added to all 80 functions in embedded `psgscoring/`
+
+### Fixed
+- **Numpy-unsafe `or` in `_resolve_flow_channels()`** — `flow_therm_data or
+  flow_pressure_data` crashes with `ValueError: The truth value of an array
+  with more than one element is ambiguous`. Replaced with explicit
+  `is not None` ternary checks (3 lines in `psgscoring/pipeline.py`).
+
+---
+
 ## [0.8.11]
 
 ### Added — Signal processing and scoring improvements

@@ -180,6 +180,7 @@ def classify_apnea_type(
 
     # Helper to optionally replace rule-based confidence with LightGBM
     def _conf(rule_conf: float, rule_idx: int) -> float:
+        """Bereken betrouwbaarheidsscore voor apnea-classificatie (0–1)."""
         features = _extract_lgbm_features(
             effort_ratio, raw_var_ratio, paradox_corr,
             first_ratio, second_ratio, quarter_efforts,
@@ -308,6 +309,7 @@ def _compute_raw_variability(
     end_idx: int,
     sf: float,
 ) -> float:
+    """Bereken ruwe signaalvariabiliteit (standaarddeviatie) van effort-kanaal."""
     if thorax_raw is None and abdomen_raw is None:
         return 0.0
     event_stds = []
@@ -333,6 +335,7 @@ def _compute_paradox_correlation(
     onset_idx: int,
     end_idx: int,
 ) -> float | None:
+    """Bereken paradoxale ademhalingscorrelatie tussen thorax en abdomen."""
     if thorax_raw is None or abdomen_raw is None:
         return None
     t_seg = thorax_raw[onset_idx:end_idx]
@@ -352,6 +355,7 @@ def _mean_effort_ratio(
     end: int,
     effort_baseline: float,
 ) -> float:
+    """Gemiddelde effort-ratio: event-amplitude / basislijn-amplitude."""
     if effort_baseline < 1e-9:
         return 0.0
     vals = [float(np.mean(seg[start:end])) for seg in effort_segs.values()]
