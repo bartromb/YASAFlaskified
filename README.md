@@ -3,9 +3,11 @@
 **An open-source web platform for automated polysomnography (PSG) analysis.**
 
 [![License: BSD-3](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.8.11-green.svg)](CHANGES.md)
+[![Version](https://img.shields.io/badge/version-0.8.12-green.svg)](CHANGES.md)
 [![Python](https://img.shields.io/badge/python-3.11-blue.svg)](requirements.txt)
 [![Docker](https://img.shields.io/badge/docker-compose-blue.svg)](docker-compose.yml)
+[![AASM](https://img.shields.io/badge/AASM-2.6-orange.svg)](https://aasm.org)
+[![i18n](https://img.shields.io/badge/i18n-NL%20%7C%20FR%20%7C%20EN-purple.svg)](myproject/i18n.py)
 
 YASAFlaskified builds on [YASA](https://github.com/raphaelvallat/yasa) (**Y**et **A**nother **S**pindle **A**lgorithm), the outstanding open-source sleep analysis library created by [Raphaël Vallat](https://raphaelvallat.com) (UC Berkeley) together with Matthew P. Walker. YASA's LightGBM sleep staging model — trained on thousands of polysomnographic recordings and validated in *eLife* (2021) — provides the automated hypnogram that underpins every analysis in this platform.
 
