@@ -1,5 +1,5 @@
 """
-i18n.py — YASAFlaskified v0.8.12
+i18n.py — YASAFlaskified v0.8.17
 Volledig drietalig: NL / FR / EN  (gelijkwaardig, gebruiker kiest bij login)
 
 Gebruik:
@@ -174,7 +174,6 @@ TRANSLATIONS = {
                              "fr":"Rapport d'Analyse du Sommeil",
                              "en":"Sleep Analysis Report"},
     "view_report":          {"nl":"Bekijk rapport",   "fr":"Voir le rapport",   "en":"View report"},
-    "download_pdf":         {"nl":"Download PDF",     "fr":"Télécharger PDF",   "en":"Download PDF"},
     "download_excel":       {"nl":"Download Excel",   "fr":"Télécharger Excel", "en":"Download Excel"},
     "download_psg":         {"nl":"Download PSG",     "fr":"Télécharger PSG",   "en":"Download PSG"},
     "download_fhir":        {"nl":"Download FHIR",    "fr":"Télécharger FHIR",  "en":"Download FHIR"},
@@ -376,6 +375,12 @@ TRANSLATIONS = {
     "obstructive": {'nl': 'Obstructief', 'fr': 'Obstructif', 'en': 'Obstructive'},
     "optional": {'nl': 'optioneel', 'fr': 'facultatif', 'en': 'optional'},
     "other_file": {'nl': 'Ander bestand uploaden', 'fr': 'Télécharger un autre fichier', 'en': 'Upload another file'},
+    # Scoring profile
+    "scoring_profile_title": {'nl': 'Scoring profiel', 'fr': 'Profil de scoring', 'en': 'Scoring Profile'},
+    "profile_strict":   {'nl': 'Strikt (machine) — AASM exact, geen smoothing', 'fr': 'Strict (machine) — AASM exact, sans lissage', 'en': 'Strict (machine) — AASM exact, no smoothing'},
+    "profile_standard": {'nl': 'Standaard (AASM 2.6) — aanbevolen', 'fr': 'Standard (AASM 2.6) — recommandé', 'en': 'Standard (AASM 2.6) — recommended'},
+    "profile_sensitive": {'nl': 'Sensitief (RPSGT) — dichter bij menselijke scoring', 'fr': 'Sensible (RPSGT) — plus proche du scoring humain', 'en': 'Sensitive (RPSGT) — closer to human scoring'},
+    "scoring_profile_hint": {'nl': 'Bepaalt drempels voor hypopnea-detectie, SpO2-koppeling en signaal-smoothing.', 'fr': 'Détermine les seuils de détection des hypopnées, le couplage SpO2 et le lissage du signal.', 'en': 'Controls thresholds for hypopnea detection, SpO2 coupling, and signal smoothing.'},
     "parameter": {'nl': 'Parameter', 'fr': 'Paramètre', 'en': 'Parameter'},
     "password_requirements": {'nl': 'Min. 8 tekens, 1 hoofdletter, 1 kleine letter, 1 cijfer.', 'fr': 'Min. 8 caractères, 1 majuscule, 1 minuscule, 1 chiffre.', 'en': 'Min. 8 chars, 1 uppercase, 1 lowercase, 1 digit.'},
     "patient": {'nl': 'Patiënt', 'fr': 'Patient', 'en': 'Patient'},
@@ -730,6 +735,20 @@ TRANSLATIONS = {
     # ── PDF RAPPORT: sleep architecture table ──────────────────────────────
     "pdf_param":            {"nl": "Parameter", "fr": "Paramètre", "en": "Parameter"},
     "pdf_value":            {"nl": "Waarde", "fr": "Valeur", "en": "Value"},
+    "rpt_patient_info":     {"nl": "Patiëntgegevens (uit EDF)", "fr": "Données patient (depuis EDF)", "en": "Patient info (from EDF)"},
+    "pdf_name":             {"nl": "Naam", "fr": "Nom", "en": "Name"},
+    "pdf_sex":              {"nl": "Geslacht", "fr": "Sexe", "en": "Sex"},
+    "pdf_male":             {"nl": "Man", "fr": "Homme", "en": "Male"},
+    "pdf_female":           {"nl": "Vrouw", "fr": "Femme", "en": "Female"},
+    "pdf_birthdate":        {"nl": "Geboortedatum", "fr": "Date de naissance", "en": "Date of birth"},
+    "pdf_patientcode":      {"nl": "Patiëntcode", "fr": "Code patient", "en": "Patient code"},
+    "pdf_recording_date":   {"nl": "Opnamedatum", "fr": "Date d'enregistrement", "en": "Recording date"},
+    "pdf_technician":       {"nl": "Technicus", "fr": "Technicien", "en": "Technician"},
+    "pdf_equipment":        {"nl": "Apparatuur", "fr": "Équipement", "en": "Equipment"},
+    "pdf_signal_quality":   {"nl": "Signaalkwaliteit", "fr": "Qualité du signal", "en": "Signal quality"},
+    "pdf_channel":          {"nl": "Kanaal", "fr": "Canal", "en": "Channel"},
+    "pdf_quality":          {"nl": "Kwaliteit", "fr": "Qualité", "en": "Quality"},
+    "pdf_montage_warnings": {"nl": "Montage-waarschuwingen", "fr": "Avertissements montage", "en": "Montage warnings"},
     "pdf_ref":              {"nl": "Ref", "fr": "Réf", "en": "Ref"},
     "pdf_normal":           {"nl": "Normaal", "fr": "Normal", "en": "Normal"},
     "pdf_se":               {"nl": "Slaapefficiëntie (SE)", "fr": "Efficacité du sommeil (SE)", "en": "Sleep Efficiency (SE)"},
@@ -784,9 +803,9 @@ TRANSLATIONS = {
     "concl_empty":          {"nl": "Besluit in te vullen door behandelend arts.", "fr": "Conclusion à compléter par le médecin traitant.", "en": "Conclusion to be completed by the treating physician."},
 
     # ── PDF RAPPORT: disclaimer/footer ─────────────────────────────────────
-    "pdf_disc_auto":        {"nl": "Automatisch gegenereerd door YASAFlaskified v0.8.12. AI-slaapstaging (LGBM, ~85% epoch-overeenkomst). Signaalverwerking conform AASM Scoring Manual 2.6 (Rule 1A + 1B).",
-                             "fr": "Généré automatiquement par YASAFlaskified v0.8.12. Staging du sommeil par IA (LGBM, ~85% concordance par époque). Traitement du signal conforme au Manuel de Scoring AASM 2.6 (Rule 1A + 1B).",
-                             "en": "Automatically generated by YASAFlaskified v0.8.12. AI sleep staging (LGBM, ~85% epoch agreement). Signal processing per AASM Scoring Manual 2.6 (Rule 1A + 1B)."},
+    "pdf_disc_auto":        {"nl": "Automatisch gegenereerd door YASAFlaskified v0.8.17. AI-slaapstaging (LGBM, ~85% epoch-overeenkomst). Signaalverwerking conform AASM Scoring Manual 2.6 (Rule 1A + 1B).",
+                             "fr": "Généré automatiquement par YASAFlaskified v0.8.17. Staging du sommeil par IA (LGBM, ~85% concordance par époque). Traitement du signal conforme au Manuel de Scoring AASM 2.6 (Rule 1A + 1B).",
+                             "en": "Automatically generated by YASAFlaskified v0.8.17. AI sleep staging (LGBM, ~85% epoch agreement). Signal processing per AASM Scoring Manual 2.6 (Rule 1A + 1B)."},
     "pdf_disc_verified":    {"nl": "Resultaten geverifieerd door {role} {name}. Klinische interpretatie onder verantwoordelijkheid van de behandelend arts.",
                              "fr": "Résultats vérifiés par {role} {name}. L'interprétation clinique relève de la responsabilité du médecin traitant.",
                              "en": "Results verified by {role} {name}. Clinical interpretation under responsibility of the treating physician."},

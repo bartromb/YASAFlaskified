@@ -1,5 +1,5 @@
 """
-app.py — YASAFlaskified v0.8.12
+app.py — YASAFlaskified v0.8.17
 Automatische slaap- én pneumologische scoring via YASA + Flask
 
 Originele code volledig bewaard (auth, chunked upload, EDFProcessor).
@@ -1632,6 +1632,8 @@ def start_analysis():
         "site_id":          current_user.site_id,
         "owner_username":   current_user.username,
         "language":         session.get("lang", "nl"),
+        # v0.8.17: scoring profiel
+        "scoring_profile":  request.form.get("scoring_profile", "standard"),
     }
     cfg_path = os.path.join(app.config["UPLOAD_FOLDER"], f"{job_id}_config.json")
     with open(cfg_path, "w") as f:
@@ -2705,7 +2707,7 @@ def health():
         "status":    "ok" if redis_ok else "degraded",
         "redis":     redis_ok,
         "timestamp": datetime.utcnow().isoformat(),
-        "version":   "0.8.12",
+        "version":   "0.8.17",
     }), 200 if redis_ok else 503
 
 
@@ -2861,5 +2863,5 @@ if __name__ == "__main__":
     initialize_database()
     port  = int(os.environ.get("PORT", 5000))
     debug = _cfg("DEBUG", "0") == "1"
-    app.logger.info("YASAFlaskified v0.8.12 starten op poort %d (debug=%s)", port, debug)
+    app.logger.info("YASAFlaskified v0.8.17 starten op poort %d (debug=%s)", port, debug)
     app.run(host="0.0.0.0", port=port, debug=debug, use_reloader=debug)

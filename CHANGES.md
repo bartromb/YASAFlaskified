@@ -4,6 +4,178 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 
 ---
 
+## [0.8.17]
+
+### Added — Signal quality, flattening RERA, montage checks
+
+**Signal quality assessment (v0.8.17):**
+- New module `psgscoring/signal_quality.py`
+- Per-channel: flat-line %, clipping %, line-noise %, disconnect count
+- Channel grade: good / acceptable / poor; overall recording grade
+- PDF Section 7b: table per channel with quality metrics
+
+**Montage plausibility checks (v0.8.17):**
+- Cross-correlation EEG↔EOG (r>0.95 = shared reference warning)
+- Cross-correlation thorax↔abdomen (r>0.98 = duplication warning)
+- Cross-correlation flow↔effort (r>0.95 = duplication warning)
+- Warnings displayed prominently in PDF report
+
+**Flattening-based RERA detection (v0.8.17):**
+- Dual-source RERA: FRI-RERA (amplitude) + Flattening-RERA (shape)
+- Hosselet et al. (AJRCCM 1998) flattening index >0.30 = flow limitation
+- ≥3 consecutive flat breaths, ≥10s, + arousal = flattening-RERA
+- RDI = AHI + (FRI-RERA + Flattening-RERA) / TST
+- PDF shows both RERA sources separately
+
+### Changed
+- Pipeline: 11 steps (added 1b: signal quality)
+- RERA table in PDF: two rows (FRI vs flattening source)
+
+---
+
+## [0.8.16]
+
+### Added — RERA/RDI, REM/NREM AHI, clinical indices
+
+**RERA index and RDI (v0.8.16):**
+- RERA = flow-reduction events (≥30%, ≥10s) + arousal, without ≥3% desaturation
+- Computed from remaining FRI events after Rule 1B reinstatement
+- RDI = AHI + RERA index — clinically relevant for UARS diagnosis
+- Displayed in PDF respiratory section with interpretation note
+
+**REM vs NREM AHI (v0.8.16):**
+- Stage-specific AHI (REM-AHI, NREM-AHI) in respiratory summary and PDF
+- Clinically relevant for REM-dominant OSAS phenotype
+
+**Positional AHI in PDF (v0.8.16):**
+- AHI per body position (Supine, Left, Right, Prone, Upright) displayed
+  in PDF alongside REM/NREM AHI
+- Already computed in ancillary.py, now visible in report
+
+**SpO2 samplerate check (v0.8.16):**
+- Warning when SpO2 channel samplerate < 0.33 Hz (>3s averaging)
+- AASM requires maximum 3-second signal averaging for pulse oximetry
+- Flag `spo2_low_samplerate` stored in output; PDF shows warning banner
+
+**Hypopnea subtype counts (v0.8.16):**
+- `n_hypopnea_obstr`, `n_hypopnea_central`, `n_hypopnea_mixed` in summary
+- Most commercial software does not differentiate hypopnea subtypes
+
+**Cosmetisch (v0.8.16):**
+- Logo: Concept C (EEG-trace + "YASAFlaskified" + slaapkliniek.be)
+- Dubbele "Download PSG" knop verwijderd (was redirect naar PDF)
+- Footer: referenties YASA, psgscoring, AASM 2.6
+- EDF patient info (naam, geslacht, geboortedatum) in PDF
+
+### Changed
+- Pipeline step numbering: 9 → 10 steps (added Step 8b: RERA/RDI)
+
+---
+
+## [0.8.15]
+
+### Added — Configurable scoring profiles
+
+**Scoring profile system (strict / standard / sensitive):**
+- Three predefined profiles controlling hypopnea threshold, SpO2 nadir
+  window, flow smoothing, cross-contamination window, and peak detection
+- `strict`: AASM exact (0.70 threshold, 30s window, no smoothing, envelope only)
+- `standard`: recommended (0.70, 45s, 3s smoothing, peak+envelope) — default
+- `sensitive`: RPSGT-like (0.75/25% reduction, 45s, 5s smoothing, no cross-contam)
+- UI dropdown on channel-select page (NL/FR/EN translations)
+- Profile label shown in PDF report subtitle
+- Profile thresholds logged and stored in `result["scoring_thresholds"]`
+- Pipeline parameter: `run_pneumo_analysis(..., scoring_profile="standard")`
+
+### Changed
+- `get_desaturation()` accepts `post_win_s` parameter (was hardcoded)
+- `_detect_hypopneas()` accepts `desat_pct`, `contam_win_s`, `post_event_win_s`
+- `constants.py`: `SCORING_PROFILES` dict, `POST_EVENT_WINDOW_S`, `CROSS_CONTAM_WINDOW_S`
+- Version number updated to 0.8.15
+
+---
+
+## [0.8.14]
+
+### Added — AASM-conforme peak-based hypopnea detection
+
+**Peak signal excursion detection (AASM 2.6 conformiteit):**
+- AASM 2.6 definieert hypopnea als "peak signal excursions drop by ≥30%"
+  — dit verwijst naar **piek-amplitude per ademhaling**, niet naar de
+  continue Hilbert-envelope
+- Nieuwe detectielogica: per ademhaling (via `detect_breaths()` +
+  `compute_breath_amplitudes()`) wordt de piek-dal-amplitude vergeleken
+  met de lokale basislijn (mediaan voorgaande 10 ademhalingen)
+- Ademhalingen met amplitude <70% baseline worden gemarkeerd als "reduced"
+- Sample-level peak-mask wordt gecombineerd met envelope-mask via OR:
+  events gevonden door **peak-methode óf envelope-methode** worden gescoord
+- Verwacht effect: hogere sensitiviteit (minder onderschatting vs technicus),
+  betere concordantie met menselijke RPSGT-scoring
+- Toegepast op beide detectiepasses (initieel + post-recovery gecorrigeerd)
+- Configureerbaar: `HYPOPNEA_THRESHOLD = 0.70` in `constants.py`
+
+### Fixed — Hypopnea undercounting root causes
+
+**SpO2 cross-contamination fix was too aggressive (CRITICAL):**
+- Previous behavior: if next event starts within 30s of previous event end,
+  SpO2 desaturation was set to `None` → Rule 1A always fails → event rejected
+- At moderate OSAS (events 20–40s apart), this rejected **nearly all hypopneas**
+- Fix: desaturation is ALWAYS computed; contamination flag is informational only
+- Cross-contamination window reduced from 30s to 15s
+- Expected impact: **major increase in OAHI** for patients with cluster events
+
+**SpO2 nadir search window too short:**
+- Increased POST_WIN_S from 30s to 45s in `get_desaturation()`
+- Finger oximetry has 20–40s circulatory delay; nadirs at 30–45s were missed
+- AASM inter-scorer reliability study recommends scoring desaturation
+  within 30s of event end — but this is measured from the *oximeter reading*,
+  not accounting for probe-to-finger delay
+
+### Fixed — PDF visueel overzicht
+
+**X-as uitlijning:**
+- `bbox_inches="tight"` verwijderd uit `_ov_finish()` — dit verschoof marges
+  per grafiek afhankelijk van y-label breedte
+- Alle plots gebruiken nu vaste `subplots_adjust(left=0.09, right=0.98)`
+- X-tick labels alleen op laatste plot (SpO2) — tussenliggende plots
+  tonen alleen gridlijnen (compacter, beter uitgelijnd)
+
+**Legende onderaan visueel overzicht:**
+- Kleurcodering EVENT (OA/CA/MA/HYP/FR), SpO2 drempels, PHONO drempel
+
+### Changed
+- Version number updated to 0.8.14
+
+---
+
+## [0.8.13]
+
+### Added — Signal improvements and PDF fixes
+
+**SpO2 timeseries in visual overview:**
+- `analyze_spo2()` now saves 1 Hz downsampled timeseries in `result["timeseries"]`
+- SpO2 curve renders in PDF section 0b alongside HYPNO, EVENT, POS, PHONO
+
+**Position signal auto-mapping (`_map_position_signal()`):**
+- Auto-detects whether position channel contains pre-coded 0–4 values
+  or raw ADC/voltage data (e.g., 0–255 from SomnoMedics, Embla)
+- Raw values → percentile-based quantization to 5 positions
+- Fixes flat-line position plots on non-standard EDF recordings
+
+**Hypopnea sensitivity improvement:**
+- 3-second rolling mean (`uniform_filter1d`) applied to normalized flow
+  before thresholding (`HYPOPNEA_SMOOTH_S = 3.0` in `constants.py`)
+- Mimics human visual averaging: small oscillations above threshold
+  no longer break events into fragments
+- Reduces false negatives vs. technician scoring without lowering
+  the AASM ≥30% amplitude criterion
+- Applied to both initial detection and post-recovery corrected pass
+
+### Changed
+- Version number updated to 0.8.13
+
+---
+
 ## [0.8.12]
 
 ### Added — PSG overview page and clinical report improvements

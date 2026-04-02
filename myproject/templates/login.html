@@ -23,9 +23,13 @@
 {% block content %}
 <div class="login-card card">
   <div class="login-header">
-    <div style="font-size:2.5rem">🧠</div>
+    <svg viewBox="0 0 80 24" width="80" height="26" style="margin-bottom:8px">
+      <path d="M2,12 L18,12 L24,3 L30,21 L36,12 L52,12" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
     <h4>YASAFlaskified</h4>
-    <small class="opacity-75">{{ t('only_authorized') }}</small>
+    <small class="opacity-75">slaapkliniek.be</small>
+    <br>
+    <small class="opacity-50" style="font-size:.7rem">{{ t('only_authorized') }}</small>
   </div>
   <div class="login-body">
     <form method="POST">

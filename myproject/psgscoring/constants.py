@@ -12,6 +12,8 @@ to import from any layer of the package.
 # ---------------------------------------------------------------------------
 APNEA_THRESHOLD        = 0.10   # flow < 10% of baseline -> apnea
 HYPOPNEA_THRESHOLD     = 0.70   # flow < 70% of baseline -> hypopnea candidate
+HYPOPNEA_SMOOTH_S      = 3.0    # v0.8.12: smooth flow before thresholding (seconds)
+                                 # Mimics human visual averaging; reduces false negatives
 APNEA_MIN_DUR_S        = 10.0   # seconds
 HYPOPNEA_MIN_DUR_S     = 10.0   # seconds
 DESATURATION_DROP_PCT  = 3.0    # >= 3% SpO2 drop required for Rule 1A
@@ -24,6 +26,45 @@ BASELINE_WINDOW_S      = 300    # 5-minute dynamic baseline window
 
 # Rule 1B coupling window
 RULE1B_AROUSAL_WINDOW_S = 15.0  # arousal must follow event end within 15 s
+
+# SpO2 nadir search window (seconds after event end)
+POST_EVENT_WINDOW_S    = 45     # v0.8.14: was 30; finger oximetry delay 20-40s
+
+# Cross-contamination window (seconds between events)
+CROSS_CONTAM_WINDOW_S  = 15.0   # v0.8.14: was 30; flag only, not blocker
+
+# ---------------------------------------------------------------------------
+# Scoring profiles: strict → standard → sensitive
+# ---------------------------------------------------------------------------
+SCORING_PROFILES: dict[str, dict] = {
+    "strict": {
+        "label":                "Strict (machine)",
+        "HYPOPNEA_THRESHOLD":   0.70,   # ≥30% reduction (AASM exact)
+        "DESATURATION_DROP_PCT": 3.0,
+        "POST_EVENT_WINDOW_S":  30,     # conservative window
+        "HYPOPNEA_SMOOTH_S":    0.0,    # no smoothing
+        "CROSS_CONTAM_WINDOW_S": 15.0,
+        "USE_PEAK_DETECTION":   False,  # envelope only
+    },
+    "standard": {
+        "label":                "Standard (AASM 2.6)",
+        "HYPOPNEA_THRESHOLD":   0.70,
+        "DESATURATION_DROP_PCT": 3.0,
+        "POST_EVENT_WINDOW_S":  45,
+        "HYPOPNEA_SMOOTH_S":    3.0,
+        "CROSS_CONTAM_WINDOW_S": 15.0,
+        "USE_PEAK_DETECTION":   True,   # peak + envelope
+    },
+    "sensitive": {
+        "label":                "Sensitive (RPSGT-like)",
+        "HYPOPNEA_THRESHOLD":   0.75,   # ≥25% reduction
+        "DESATURATION_DROP_PCT": 3.0,
+        "POST_EVENT_WINDOW_S":  45,
+        "HYPOPNEA_SMOOTH_S":    5.0,    # more smoothing
+        "CROSS_CONTAM_WINDOW_S": 0.0,   # no cross-contam check
+        "USE_PEAK_DETECTION":   True,
+    },
+}
 
 # MMSD apnea-validation threshold (fraction of baseline)
 MMSD_APNEA_THRESH      = 0.40   # MMSD > 40% of baseline -> residual breathing

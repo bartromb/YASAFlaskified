@@ -40,7 +40,9 @@ def analyze_position(
     try:
         spe           = int(sf * EPOCH_LEN_S)
         n_epochs      = len(hypno)
-        pos_per_epoch = [_modal_position(pos_data, ep, spe) for ep in range(n_epochs)]
+        # v0.8.12: auto-map raw ADC/voltage to 0-4 codes
+        pos_mapped    = _map_position_signal(pos_data)
+        pos_per_epoch = [_modal_position(pos_mapped, ep, spe) for ep in range(n_epochs)]
 
         pos_names = {0: "Prone", 1: "Left", 2: "Supine", 3: "Right", 4: "Upright"}
         sleep_time: dict[str, float | None] = {}
@@ -76,6 +78,30 @@ def analyze_position(
     except Exception as e:
         result["error"] = str(e)
     return result
+
+
+def _map_position_signal(pos_data: np.ndarray) -> np.ndarray:
+    """Map raw position signal to 0-4 codes (Prone/Left/Supine/Right/Upright).
+
+    Handles both pre-coded (0-4) and raw ADC/voltage signals.
+    """
+    rounded = np.round(pos_data).astype(int)
+    unique_vals = np.unique(rounded)
+
+    # Already coded 0-4 → use as-is
+    if len(unique_vals) <= 6 and np.all((unique_vals >= 0) & (unique_vals <= 5)):
+        return np.clip(rounded, 0, 4)
+
+    # Raw ADC/voltage signal → map clusters to 0-4 by rank order
+    # Use percentile-based quantization
+    valid = pos_data[~np.isnan(pos_data)]
+    if len(valid) == 0:
+        return np.zeros(len(pos_data), dtype=int)
+
+    # Assign 5 bins based on signal range
+    edges = np.percentile(valid, [0, 20, 40, 60, 80, 100])
+    mapped = np.digitize(pos_data, edges[1:-1])  # 0-4
+    return np.clip(mapped, 0, 4)
 
 
 def _modal_position(pos_data: np.ndarray, ep: int, spe: int) -> int:

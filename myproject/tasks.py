@@ -276,6 +276,7 @@ def run_analysis_job(job_id: str) -> dict:
         hypno            = hypno,
         channel_map      = pneumo_channels,
         artifact_epochs  = art_epochs,
+        scoring_profile  = cfg.get("scoring_profile", "standard"),
     )
 
     # ── Stap 7: Confidence review + signaal kwaliteit ────────

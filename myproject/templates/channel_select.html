@@ -267,6 +267,19 @@
       </div>
     </div>
 
+    {# ── Scoring profiel ── #}
+    <div class="card shadow-sm mb-4">
+      <div class="card-body">
+        <h6 class="card-title mb-3">⚙️ &nbsp; {{ t('scoring_profile_title') }}</h6>
+        <select name="scoring_profile" class="form-select" id="scoringProfile">
+          <option value="strict">{{ t('profile_strict') }}</option>
+          <option value="standard" selected>{{ t('profile_standard') }}</option>
+          <option value="sensitive">{{ t('profile_sensitive') }}</option>
+        </select>
+        <div class="form-text mt-2">{{ t('scoring_profile_hint') }}</div>
+      </div>
+    </div>
+
     {# ── Indienknop ── #}
     <div class="d-grid gap-2">
       <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">

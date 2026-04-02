@@ -1,5 +1,5 @@
 """
-generate_pdf_report.py — YASAFlaskified v0.8.12
+generate_pdf_report.py — YASAFlaskified v0.8.17
 Site-config: via config.json["site"] of site_config parameter.
 """
 import json, os, io
@@ -216,23 +216,28 @@ def _spo2_img(ts,wc=16.2,hc=2.2):
     buf=io.BytesIO(); fig.savefig(buf,format="png",dpi=150,bbox_inches="tight"); plt.close(fig); buf.seek(0)
     return Image(buf,width=wc*cm,height=hc*cm)
 
-# ── v0.8.12: Overview plots — gedeelde x-as (uren) ────────────
+# ── v0.8.17: Overview plots — gedeelde x-as (uren) ────────────
 
 # Shared plot setup for all overview panels
 _OV_WC = 16.2   # cm width
 _OV_DPI = 150
-_OV_YLABEL_W = 0.55  # inch — vaste y-label breedte voor uitlijning
+_OV_LEFT = 0.09   # fraction — vaste linkermarge voor y-labels
+_OV_RIGHT = 0.98
 
-def _ov_setup(hc, dur_h):
+def _ov_setup(hc, dur_h, show_xticklabels=True):
     """Maak figuur + ax met identieke marges voor alle overview-panelen."""
     fig, ax = plt.subplots(figsize=(_OV_WC/2.54, hc/2.54), dpi=_OV_DPI)
     fig.patch.set_facecolor("white"); ax.set_facecolor("white")
-    fig.subplots_adjust(left=_OV_YLABEL_W / (_OV_WC/2.54), right=0.98, top=0.95, bottom=0.15)
+    bot = 0.22 if show_xticklabels else 0.08
+    fig.subplots_adjust(left=_OV_LEFT, right=_OV_RIGHT, top=0.95, bottom=bot)
     ax.set_xlim(0, dur_h)
     step = max(1, round(dur_h / 8))
     xt = np.arange(0, dur_h + 0.01, step)
     ax.set_xticks(xt)
-    ax.set_xticklabels([f"{t:.0f}h" for t in xt], fontsize=5, color="#6b7a99")
+    if show_xticklabels:
+        ax.set_xticklabels([f"{t:.0f}h" for t in xt], fontsize=5, color="#6b7a99")
+    else:
+        ax.set_xticklabels([])
     ax.grid(axis="x", color="#e0e6ed", linewidth=0.3)
     ax.spines[["top","right"]].set_visible(False)
     ax.spines["left"].set_linewidth(0.4); ax.spines["bottom"].set_linewidth(0.4)
@@ -240,9 +245,9 @@ def _ov_setup(hc, dur_h):
     return fig, ax
 
 def _ov_finish(fig, hc):
-    """Sla op als Image met vaste breedte."""
+    """Sla op als Image met vaste breedte — GEEN bbox_inches=tight."""
     buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=_OV_DPI, bbox_inches="tight")
+    fig.savefig(buf, format="png", dpi=_OV_DPI)  # vaste marges, geen tight
     plt.close(fig); buf.seek(0)
     return Image(buf, width=_OV_WC*cm, height=hc*cm)
 
@@ -259,7 +264,7 @@ def _hypno_ov(timeline, dur_h, hc=2.2, lang="nl"):
     x_h = np.arange(n) * epoch_h
     y = [order.get(s,0) for s in stages]
 
-    fig, ax = _ov_setup(hc, dur_h)
+    fig, ax = _ov_setup(hc, dur_h, show_xticklabels=False)
     ax.step(x_h, y, where="post", color="#1a3a5c", linewidth=0.7, alpha=0.9)
     for i,(s,yv) in enumerate(zip(stages,y)):
         ax.fill_between([x_h[i], x_h[i]+epoch_h], [yv-.4,yv-.4], [yv+.4,yv+.4],
@@ -272,7 +277,7 @@ def _hypno_ov(timeline, dur_h, hc=2.2, lang="nl"):
 
 def _events_ov(events, dur_h, rejected_hyps=None, hc=2.0):
     """Events tijdlijn: OA/CA/MA/HYP/FR — altijd alle rijen zichtbaar."""
-    fig, ax = _ov_setup(hc, dur_h)
+    fig, ax = _ov_setup(hc, dur_h, show_xticklabels=False)
     type_map = {"obstructive":0, "central":1, "mixed":2}
     labels = ["OA","CA","MA","HYP","FR"]
     clr_map = {"obstructive":"#e74c3c","central":"#3498db","mixed":"#9b59b6"}
@@ -303,13 +308,14 @@ def _events_ov(events, dur_h, rejected_hyps=None, hc=2.0):
 
 def _pos_ov(pos_per_epoch, dur_h, hc=1.6, lang="nl"):
     """Positie-tijdlijn (x-as in uren)."""
+    # x-labels alleen op laatste plot
     labels = POS_LABELS if lang=="nl" else POS_LABELS_FR if lang=="fr" else POS_LABELS_EN
     n = len(pos_per_epoch)
     epoch_h = 30/3600
     x_h = np.arange(n) * epoch_h
     y = np.array([min(p,4) for p in pos_per_epoch])
 
-    fig, ax = _ov_setup(hc, dur_h)
+    fig, ax = _ov_setup(hc, dur_h, show_xticklabels=False)
     ax.step(x_h, y, where="post", color="#27ae60", linewidth=0.8)
     for i,yv in enumerate(y):
         ax.fill_between([x_h[i], x_h[i]+epoch_h], [yv-.3,yv-.3], [yv+.3,yv+.3],
@@ -325,7 +331,7 @@ def _snore_ov(rms_1s, dur_h, hc=1.4):
     y = np.array(rms_1s, dtype=float)
     x_h = np.arange(len(y)) / 3600
 
-    fig, ax = _ov_setup(hc, dur_h)
+    fig, ax = _ov_setup(hc, dur_h, show_xticklabels=False)
     ax.fill_between(x_h, 0, y, color="#95a5a6", alpha=0.4, linewidth=0)
     ax.plot(x_h, y, color="#7f8c8d", linewidth=0.3)
     threshold = float(np.percentile(y, 60))
@@ -377,7 +383,7 @@ def _callbacks(site, lang="nl"):
         canvas.line(ML,MB-0.2*cm,W_A4-MR,MB-0.2*cm)
         canvas.setFont("Helvetica",6.5); canvas.setFillColor(GR)
         canvas.drawString(ML,MB-0.45*cm,
-            "YASAFlaskified v0.8.12  |  AASM 2.6  |  www.slaapkliniek.be  |  \u00a9 Bart Rombaut")
+            "YASAFlaskified v0.8.17  |  AASM 2.6  |  www.slaapkliniek.be  |  \u00a9 Bart Rombaut")
         canvas.drawRightString(W_A4-MR,MB-0.45*cm,f"{t('pdf_page',lang)} {doc.page}")
         canvas.restoreState()
     return draw,draw
@@ -447,7 +453,8 @@ def generate_pdf_report(results:dict, output_path:str,
     # ── TITEL ──────────────────────────────────────────────────
     sp(0.2)
     story.append(Paragraph("Polysomnografie — Slaaprapport",styles["T"]))
-    story.append(Paragraph(f"AASM-scoring via YASA  ·  {site.get('name','SleepAI')}",styles["ST"]))
+    _sp_label = pneumo.get("meta", {}).get("scoring_label", "Standard (AASM 2.6)")
+    story.append(Paragraph(f"AASM-scoring via YASA  ·  {site.get('name','SleepAI')}  ·  {_sp_label}",styles["ST"]))
     story.append(HRFlowable(width="100%",thickness=1.2,color=NAVY,spaceAfter=6))
 
     # ── PATIËNTGEGEVENS ────────────────────────────────────────
@@ -498,8 +505,34 @@ def generate_pdf_report(results:dict, output_path:str,
     ])); sp(0.35)
 
     # ══════════════════════════════════════════════════════════════
-    # OVERZICHTSPAGINA (v0.8.12) — kanalen + visueel overzicht
+    # OVERZICHTSPAGINA (v0.8.17) — patiënt + kanalen + visueel
     # ══════════════════════════════════════════════════════════════
+
+    # ── Patient info from EDF header (v0.8.17) ────────────────────
+    pat = pneumo.get("meta", {}).get("patient_info", {}) or {}
+    has_pat = any(pat.get(k) for k in ("name","sex","birthday_str","patient_code","equipment"))
+    if has_pat:
+        story.append(_hdr(t("rpt_patient_info", lang), color=BLUE)); sp(0.1)
+        pat_rows = []
+        if pat.get("name"):
+            pat_rows.append([t("pdf_name",lang), pat["name"]])
+        if pat.get("sex"):
+            sex_label = {"M": t("pdf_male",lang), "F": t("pdf_female",lang)}.get(pat["sex"], pat["sex"])
+            pat_rows.append([t("pdf_sex",lang), sex_label])
+        if pat.get("birthday_str"):
+            pat_rows.append([t("pdf_birthdate",lang), pat["birthday_str"]])
+        if pat.get("patient_code"):
+            pat_rows.append([t("pdf_patientcode",lang), pat["patient_code"]])
+        if pat.get("recording_date"):
+            pat_rows.append([t("pdf_recording_date",lang), pat["recording_date"]])
+        if pat.get("technician"):
+            pat_rows.append([t("pdf_technician",lang), pat["technician"]])
+        if pat.get("equipment"):
+            pat_rows.append([t("pdf_equipment",lang), pat["equipment"]])
+        story.append(KeepTogether([_tbl(
+            [t("pdf_param",lang), t("pdf_value",lang)],
+            pat_rows, [5, 9])]))
+        sp(0.2)
 
     # ── 0a. Registratie: kanalen in EDF ────────────────────────
     all_ch = pneumo.get("meta", {}).get("all_channels", [])
@@ -572,6 +605,26 @@ def generate_pdf_report(results:dict, output_path:str,
         try: story.append(_spo2_ov(spo2_ts, dur_h, hc=1.6))
         except: pass
         sp(0.1)
+
+    # ── Legende visueel overzicht ──────────────────────────────
+    sp(0.1)
+    leg_parts = [
+        '<font size="6" color="#6b7a99"><b>EVENT:</b></font>',
+        '<font size="6" color="#e74c3c">■</font><font size="6" color="#6b7a99"> OA (obstructief)</font>',
+        '<font size="6" color="#3498db">■</font><font size="6" color="#6b7a99"> CA (centraal)</font>',
+        '<font size="6" color="#9b59b6">■</font><font size="6" color="#6b7a99"> MA (gemengd)</font>',
+        '<font size="6" color="#e67e22">■</font><font size="6" color="#6b7a99"> HYP (hypopnea)</font>',
+        '<font size="6" color="#95a5a6">■</font><font size="6" color="#6b7a99"> FR (flow-reductie)</font>',
+        '&nbsp;&nbsp;',
+        '<font size="6" color="#6b7a99"><b>SpO2:</b></font>',
+        '<font size="6" color="#e74c3c">---</font><font size="6" color="#6b7a99"> 90% drempel</font>',
+        '<font size="6" color="#e74c3c">■</font><font size="6" color="#6b7a99"> &lt;90% zone</font>',
+        '&nbsp;&nbsp;',
+        '<font size="6" color="#6b7a99"><b>PHONO:</b></font>',
+        '<font size="6" color="#e67e22">---</font><font size="6" color="#6b7a99"> P60 drempel</font>',
+    ]
+    story.append(Paragraph("  ".join(leg_parts), styles["SM"]))
+    sp(0.1)
 
     story.append(PageBreak())
 
@@ -664,7 +717,12 @@ def generate_pdf_report(results:dict, output_path:str,
     # ── 7b. SIGNAAL KWALITEIT & CONFIDENCE ─────────────────────
     conf_rev = results.get("confidence_review", {})
     sig_q = results.get("signal_quality", {})
-    if conf_rev.get("n_low_confidence", 0) > 0 or sig_q.get("issues"):
+    sq_channels = sig_q.get("channels", {})
+    sq_warnings = sig_q.get("montage_warnings", [])
+    sq_grade = sig_q.get("overall_grade", "unknown")
+    has_sq = (sq_grade != "unknown" and sq_channels) or conf_rev.get("n_low_confidence", 0) > 0
+
+    if has_sq:
         story.append(_hdr(t("rpt_sec7b", lang),color=colors.HexColor("#e67e22"))); sp(0.1)
 
         # Confidence review
@@ -683,15 +741,44 @@ def generate_pdf_report(results:dict, output_path:str,
                     styles["SM"]))
             sp(0.15)
 
-        # Signal quality issues
-        if sig_q.get("issues"):
+        # v0.8.17: Signal quality per channel
+        if sq_channels:
+            grade_label = {"good": "Goed", "acceptable": "Acceptabel",
+                           "poor": "Slecht"}.get(sq_grade, sq_grade)
+            grade_clr = {"good": "#27ae60", "acceptable": "#e67e22",
+                         "poor": "#e74c3c"}.get(sq_grade, "#888")
             story.append(Paragraph(
-                f"<b>Signaal-kwaliteit:</b> {sig_q.get('overall','—')} "
-                f"({sig_q.get('n_good',0)} goed, {sig_q.get('n_moderate',0)} matig, "
-                f"{sig_q.get('n_poor',0)} slecht, {sig_q.get('n_unusable',0)} onbruikbaar)",
+                f"<b>{t('pdf_signal_quality',lang)}:</b> "
+                f"<font color='{grade_clr}'><b>{grade_label}</b></font>",
+                styles["B"])); sp(0.05)
+
+            sq_rows = []
+            for ch_name, ch_info in sorted(sq_channels.items()):
+                g = ch_info.get("quality_grade", "?")
+                g_clr = {"good":"#27ae60","acceptable":"#e67e22","poor":"#e74c3c"}.get(g,"#888")
+                sq_rows.append([
+                    ch_name,
+                    f"{ch_info.get('flat_pct',0):.1f}%",
+                    f"{ch_info.get('clip_pct',0):.1f}%",
+                    str(ch_info.get("n_disconnects", 0)),
+                    f"<font color='{g_clr}'>{g}</font>",
+                ])
+            if sq_rows:
+                story.append(KeepTogether([_tbl(
+                    [t("pdf_channel",lang), "Flat-line", "Clipping",
+                     "Disconnects", t("pdf_quality",lang)],
+                    sq_rows, [4, 2.5, 2.5, 2.5, 3])]))
+            sp(0.1)
+
+        # Montage warnings
+        if sq_warnings:
+            story.append(Paragraph(
+                f"<b><font color='#e74c3c'>{t('pdf_montage_warnings',lang)}:</font></b>",
                 styles["B"]))
-            for issue in sig_q.get("issues", [])[:5]:
-                story.append(Paragraph(f"  ⚠ {issue}", styles["SM"]))
+            for w in sq_warnings[:5]:
+                story.append(Paragraph(f"  ⚠ {w}", styles["SM"]))
+            sp(0.1)
+
         sp(0.3)
 
     story.append(PageBreak())
@@ -827,6 +914,58 @@ def generate_pdf_report(results:dict, output_path:str,
             "? Lage zekerheid (<0.40): signaalruis / ontbrekende effort</i>",
             styles["SM"])); sp(0.2)
 
+        # ── v0.8.17: RERA, RDI, REM/NREM AHI ──────────────────────────
+        rera_n   = rsum.get("n_rera", 0) or 0
+        rera_idx = rsum.get("rera_index", 0) or 0
+        rdi_val  = rsum.get("rdi", 0) or 0
+        rem_ahi  = rsum.get("rem_ahi")
+        nrem_ahi = rsum.get("nrem_ahi")
+        n_fri_pure = rsum.get("n_fri", 0) or 0
+
+        story.append(_hdr("RERA, RDI en slaapstadium-AHI", color=BLUE)); sp(0.1)
+        n_rera_fri  = rsum.get("n_rera_fri", 0) or 0
+        n_rera_flat = rsum.get("n_rera_flattening", 0) or 0
+        ext_rows = [
+            ["RERA — amplitude-reductie + arousal (FRI)",  str(n_rera_fri), f"{n_rera_fri}"],
+            ["RERA — flattening + arousal (flow limitation)", str(n_rera_flat), f"{n_rera_flat}"],
+            ["RERA totaal",  str(rera_n), f"{rera_idx:.1f} /u"],
+            ["FRI (flow-reductie zonder criteria)", str(n_fri_pure), ""],
+            ["RDI (AHI + RERA-index)",          "", f"{rdi_val:.1f} /u"],
+        ]
+        story.append(KeepTogether([_tbl(
+            [t("pdf_param",lang), "n", "Index"],
+            ext_rows,
+            [8, 2, 4])])); sp(0.1)
+
+        stage_rows = [
+            ["REM AHI",  f"{rem_ahi:.1f} /u" if rem_ahi is not None else "—"],
+            ["NREM AHI", f"{nrem_ahi:.1f} /u" if nrem_ahi is not None else "—"],
+        ]
+        # Positional AHI (from position analysis)
+        pos_sum = pneumo.get("position", {}).get("summary", {})
+        ahi_pos = pos_sum.get("ahi_per_pos", {})
+        if ahi_pos:
+            for pos_name, pos_ahi in sorted(ahi_pos.items()):
+                if pos_ahi is not None:
+                    stage_rows.append([f"AHI {pos_name}", f"{pos_ahi:.1f} /u"])
+        story.append(KeepTogether([_tbl(
+            [t("pdf_param",lang), t("pdf_value",lang)],
+            stage_rows,
+            [8, 6])])); sp(0.1)
+
+        story.append(Paragraph(
+            "<i>RERA = flow-reductie (≥30%, ≥10s) + arousal, zonder ≥3% desaturatie. "
+            "RDI = AHI + RERA-index. Klinisch relevant bij vermoeden UARS.</i>",
+            styles["SM"])); sp(0.2)
+
+        # ── SpO2 samplerate waarschuwing ────────────────────────────────
+        if pneumo.get("spo2", {}).get("spo2_low_samplerate"):
+            story.append(Paragraph(
+                "<b><font color='#e74c3c'>⚠ SpO2 samplerate &lt; 0.33 Hz "
+                "(&gt;3s averaging) — ODI en desaturatie-detectie mogelijk onderschat "
+                "(AASM: max 3s averaging).</font></b>",
+                styles["SM"])); sp(0.1)
+
         # ── Overschatting-correctie samenvatting (v0.8.11) ───────────────
         n_spo2_cc  = rsum.get("n_spo2_cross_contaminated", 0) or 0
         n_csr_fl   = rsum.get("n_csr_flagged", 0) or 0
@@ -910,6 +1049,34 @@ def generate_pdf_report(results:dict, output_path:str,
             story.append(Paragraph(
                 "<i>Dual-sensor scoring: apneu op thermistor, hypopneu op nasale druk (AASM 2.6).</i>",
                 styles["SM"]))
+
+        # ── Scoring profielen tabel ───────────────────────────────
+        _active_profile = pneumo.get("meta", {}).get("scoring_profile", "standard")
+        _profiles_data = [
+            ["Strict",    "70% (\u226530%)", "30s",  "—",   "15s", "Nee (envelope)"],
+            ["Standard",  "70% (\u226530%)", "45s",  "3s",  "15s", "Ja (peak+env)"],
+            ["Sensitive",  "75% (\u226525%)", "45s",  "5s",  "—",  "Ja (peak+env)"],
+        ]
+        # Markeer actief profiel met *
+        _pmap = {"strict": 0, "standard": 1, "sensitive": 2}
+        _ai = _pmap.get(_active_profile, 1)
+        _profiles_data[_ai][0] = f"\u25b6 {_profiles_data[_ai][0]}"
+
+        _prof_hdr = ["Profiel", "Hypopnea", "Nadir win", "Smoothing", "Cross-contam", "Peak detectie"]
+        _prof_tbl = Table([_prof_hdr] + _profiles_data,
+                          colWidths=[2.2*cm, 2.5*cm, 2*cm, 2*cm, 2.2*cm, 3.2*cm])
+        _prof_tbl.setStyle(TableStyle([
+            ("FONTNAME",   (0,0), (-1,0), "Helvetica-Bold"),
+            ("FONTSIZE",   (0,0), (-1,-1), 6),
+            ("TEXTCOLOR",  (0,0), (-1,-1), colors.HexColor("#2c3e50")),
+            ("BACKGROUND", (0,0), (-1,0),  colors.HexColor("#e8edf3")),
+            ("BACKGROUND", (0, _ai+1), (-1, _ai+1), colors.HexColor("#d5f5e3")),
+            ("GRID",       (0,0), (-1,-1), 0.3, colors.HexColor("#c0c8d4")),
+            ("VALIGN",     (0,0), (-1,-1), "MIDDLE"),
+            ("TOPPADDING",    (0,0), (-1,-1), 2),
+            ("BOTTOMPADDING", (0,0), (-1,-1), 2),
+        ]))
+        story.append(_prof_tbl)
         sp(0.25)
 
     # ── 8d. FLOW-REDUCTIE ZONDER CRITERIA (FRI) ──────────────
@@ -1007,7 +1174,7 @@ def generate_pdf_report(results:dict, output_path:str,
     manual_diag = pat.get("diagnosis", "").strip()
     manual_comment = pat.get("comments", "").strip()
 
-    # v0.8.12: Besluit wordt NIET meer automatisch gegenereerd.
+    # v0.8.17: Besluit wordt NIET meer automatisch gegenereerd.
     # De arts vult het besluit manueel in via de rapport-editor.
     if manual_diag:
         story.append(Paragraph(f"<b>{t('concl_diagnosis', lang)}:</b> {manual_diag}", styles["B"]))

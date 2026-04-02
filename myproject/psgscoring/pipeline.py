@@ -58,6 +58,7 @@ def run_pneumo_analysis(
     hypno: list,
     channel_map: dict | None = None,
     artifact_epochs: list | None = None,
+    scoring_profile: str = "standard",
 ) -> dict:
     """
     Run the full pneumological analysis on a single PSG recording.
@@ -68,12 +69,17 @@ def run_pneumo_analysis(
     hypno           : string hypnogram list ['W','N1','N2','N3','R',...]
     channel_map     : optional manual channel overrides (UI selection)
     artifact_epochs : list of epoch indices with artefacts (from YASA)
+    scoring_profile : 'strict', 'standard', or 'sensitive'
 
     Returns
     -------
     Nested dict with keys: meta, channel_availability, respiratory, spo2,
     position, heart_rate, snore, plm, arousal, cheyne_stokes.
     """
+    from .constants import SCORING_PROFILES
+    profile = SCORING_PROFILES.get(scoring_profile, SCORING_PROFILES["standard"])
+    logger.info("[pneumo] Scoring profile: %s (%s)", scoring_profile, profile["label"])
+
     ch = channel_map_from_user(channel_map, raw.ch_names)
 
     output: dict = {
@@ -82,6 +88,9 @@ def run_pneumo_analysis(
             "all_channels":  raw.ch_names,
             "sfreq":         raw.info["sfreq"],
             "duration_min":  round(raw.times[-1] / 60, 1),
+            "scoring_profile": scoring_profile,
+            "scoring_label":   profile["label"],
+            "patient_info":  _parse_edf_patient_info(raw),
         },
         "channel_availability": {k: (v in raw.ch_names) for k, v in ch.items()},
     }
@@ -134,6 +143,7 @@ def run_pneumo_analysis(
             artifact_epochs = artifact_epochs,
             pos_data     = pos_data,
             sf_pos       = sf_pos,
+            scoring_profile = profile,
         )
     else:
         resp = {
@@ -143,7 +153,22 @@ def run_pneumo_analysis(
         }
     output["respiratory"] = resp
 
-    # ── Step 1b (v0.8.11): Baseline Anchoring ─────────────────────────────
+    # ── Step 1b (v0.8.16): Signal quality assessment ─────────────────────
+    logger.info("[pneumo 1b/11] Signal quality assessment...")
+    try:
+        from .signal_quality import assess_signal_quality
+        output["signal_quality"] = assess_signal_quality(raw, ch, hypno)
+        sq = output["signal_quality"]
+        if sq.get("montage_warnings"):
+            for w in sq["montage_warnings"]:
+                logger.warning("[quality] MONTAGE: %s", w)
+        if sq.get("overall_grade") == "poor":
+            logger.warning("[quality] Overall signal quality: POOR")
+    except Exception as e:
+        logger.warning("Signal quality assessment failed: %s", e)
+        output["signal_quality"] = {"overall_grade": "unknown", "error": str(e)}
+
+    # ── Step 1c (v0.8.11): Baseline Anchoring ─────────────────────────────
     if apnea_flow is not None:
         try:
             from .signal import preprocess_flow as _pf, compute_anchor_baseline
@@ -166,12 +191,17 @@ def run_pneumo_analysis(
         output["anchor_baseline"] = {"anchor_reliable": False}
 
     # ── Step 2: SpO2 ───────────────────────────────────────────────────────
-    logger.info("[pneumo 2/9] SpO2 analysis...")
-    output["spo2"] = (
-        analyze_spo2(spo2_data, sf_spo2, hypno)
-        if spo2_data is not None
-        else {"success": False, "error": "No SpO2 channel", "summary": {}}
-    )
+    logger.info("[pneumo 2/11] SpO2 analysis...")
+    if spo2_data is not None:
+        output["spo2"] = analyze_spo2(spo2_data, sf_spo2, hypno)
+        # v0.8.16: SpO2 samplerate check (AASM: max 3s averaging)
+        if sf_spo2 is not None and sf_spo2 < 0.33:
+            output["spo2"]["spo2_low_samplerate"] = True
+            logger.warning("[pneumo] SpO2 samplerate %.2f Hz < 0.33 Hz "
+                           "(>3s averaging — may underestimate ODI)", sf_spo2)
+        output["spo2"]["spo2_samplerate"] = sf_spo2
+    else:
+        output["spo2"] = {"success": False, "error": "No SpO2 channel", "summary": {}}
 
     # ── Step 3: Position ───────────────────────────────────────────────────
     logger.info("[pneumo 3/9] Position analysis...")
@@ -232,7 +262,7 @@ def run_pneumo_analysis(
         output["arousal"] = _empty_arousal(reason)
 
     # ── Step 8: Rule 1B reinstatement ─────────────────────────────────────
-    logger.info("[pneumo 8/9] Rule 1B reinstatement...")
+    logger.info("[pneumo 8/10] Rule 1B reinstatement...")
     rejected  = resp.get("rejected_hypopneas", [])
     arousals  = output.get("arousal", {}).get("events", [])
     if rejected and arousals:
@@ -253,8 +283,12 @@ def run_pneumo_analysis(
     else:
         output["respiratory"].setdefault("rule1b_reinstated", 0)
 
+    # ── Step 8b (v0.8.16): RERA index and RDI ─────────────────────────────
+    logger.info("[pneumo 8b/10] RERA and RDI computation...")
+    _compute_rera_rdi(output, hypno, arousals, artifact_epochs)
+
     # ── Step 9: Cheyne-Stokes ──────────────────────────────────────────────
-    logger.info("[pneumo 9/9] Cheyne-Stokes detection...")
+    logger.info("[pneumo 9/10] Cheyne-Stokes detection...")
     if apnea_flow is not None:
         try:
             flow_env_csr = preprocess_flow(apnea_flow, sf_apnea)
@@ -371,6 +405,251 @@ def _compute_flow_norm(flow_data, sf_flow) -> np.ndarray | None:
         return np.clip(env / bl, 0, 2)
     except Exception:
         return None
+
+
+def _compute_rera_rdi(output: dict, hypno: list, arousals: list,
+                      artifact_epochs: list | None = None) -> None:
+    """Compute RERA index and RDI from FRI events + flattening + arousal coupling.
+
+    Two RERA sources (v0.8.16):
+      1. **FRI-RERA**: Flow-reduction events (≥30% amplitude drop, no ≥3% desat,
+         not reinstated by Rule 1B) WITH arousal within 15s. These are the
+         "classical" psgscoring RERAs from v0.8.16.
+      2. **Flattening-RERA** (NEW): Breath sequences with flattening index >0.30
+         (Hosselet et al., AJRCCM 1998), duration ≥10s, WITHOUT amplitude
+         reduction meeting hypopnea threshold, terminated by arousal.
+         These represent true upper-airway flow limitation — the "missing"
+         RERA type that amplitude-only analysis cannot detect.
+
+    RDI = AHI + RERA index.
+    """
+    resp = output.get("respiratory", {})
+    if not resp.get("success"):
+        return
+
+    # ── Source 1: FRI-based RERAs (amplitude reduction + arousal) ──────
+    rejected  = resp.get("rejected_hypopneas", [])
+    events = resp.get("events", [])
+    event_onsets = {round(float(e["onset_s"]), 1) for e in events}
+    fri_events = [r for r in rejected
+                  if round(float(r["onset_s"]), 1) not in event_onsets]
+
+    fri_rera_count = 0
+    if arousals and fri_events:
+        arousal_times = [(float(a.get("onset_s", 0)), float(a.get("duration_s", 3)))
+                         for a in arousals]
+        for fri in fri_events:
+            fri_end = float(fri["onset_s"]) + float(fri["duration_s"])
+            has_arousal = any(
+                fri["onset_s"] <= a_onset <= fri_end + 15.0
+                for a_onset, _ in arousal_times
+            )
+            if has_arousal:
+                fri_rera_count += 1
+
+    # ── Source 2: Flattening-based RERAs (flow limitation + arousal) ───
+    flat_rera_count = 0
+    breaths = resp.get("_breaths", [])
+    if arousals and breaths:
+        arousal_times = [(float(a.get("onset_s", 0)), float(a.get("duration_s", 3)))
+                         for a in arousals]
+        flat_seqs = _find_flattening_sequences(breaths)
+        for seq in flat_seqs:
+            seq_end = seq["onset_s"] + seq["duration_s"]
+            # Check arousal within 15s of sequence end
+            has_arousal = any(
+                seq["onset_s"] <= a_onset <= seq_end + 15.0
+                for a_onset, _ in arousal_times
+            )
+            # Exclude sequences already counted as respiratory events or FRI
+            overlaps_event = any(
+                abs(float(e["onset_s"]) - seq["onset_s"]) < 5.0
+                for e in events
+            )
+            overlaps_fri = any(
+                abs(float(f["onset_s"]) - seq["onset_s"]) < 5.0
+                for f in fri_events
+            )
+            if has_arousal and not overlaps_event and not overlaps_fri:
+                flat_rera_count += 1
+
+    rera_count = fri_rera_count + flat_rera_count
+
+    # ── TST and indices ────────────────────────────────────────────────
+    from .constants import EPOCH_LEN_S
+    sleep_stages = {"N1", "N2", "N3", "R"}
+    art_set = set(artifact_epochs or [])
+    n_sleep = sum(1 for i, s in enumerate(hypno)
+                  if s in sleep_stages and i not in art_set)
+    tst_h = max(n_sleep * EPOCH_LEN_S / 3600, 0.001)
+
+    ahi = float(resp.get("summary", {}).get("ahi_total", 0) or 0)
+    rera_index = round(rera_count / tst_h, 1)
+    rdi = round(ahi + rera_index, 1)
+
+    # Store in respiratory summary
+    resp["summary"]["n_rera"]          = rera_count
+    resp["summary"]["n_rera_fri"]      = fri_rera_count
+    resp["summary"]["n_rera_flattening"] = flat_rera_count
+    resp["summary"]["rera_index"]      = rera_index
+    resp["summary"]["rdi"]             = rdi
+    resp["summary"]["n_fri"]           = len(fri_events) - fri_rera_count
+
+    # REM vs NREM AHI (v0.8.16)
+    rem_events  = [e for e in events if e.get("stage") == "R"]
+    nrem_events = [e for e in events if e.get("stage") in {"N1","N2","N3"}]
+    n_rem  = sum(1 for i, s in enumerate(hypno) if s == "R" and i not in art_set)
+    n_nrem = sum(1 for i, s in enumerate(hypno) if s in {"N1","N2","N3"} and i not in art_set)
+    rem_h  = max(n_rem * EPOCH_LEN_S / 3600, 0.001)
+    nrem_h = max(n_nrem * EPOCH_LEN_S / 3600, 0.001)
+    resp["summary"]["rem_ahi"]  = round(len(rem_events) / rem_h, 1) if n_rem > 0 else None
+    resp["summary"]["nrem_ahi"] = round(len(nrem_events) / nrem_h, 1) if n_nrem > 0 else None
+
+    logger.info("[pneumo] RERA: %d (FRI:%d + flattening:%d), index %.1f/h; "
+                "RDI: %.1f/h; REM-AHI: %s, NREM-AHI: %s",
+                rera_count, fri_rera_count, flat_rera_count,
+                rera_index, rdi,
+                resp["summary"]["rem_ahi"], resp["summary"]["nrem_ahi"])
+
+
+def _find_flattening_sequences(breaths: list,
+                                min_flat_index: float = 0.30,
+                                min_dur_s: float = 10.0,
+                                min_consecutive: int = 3) -> list:
+    """Find consecutive breath sequences with elevated flattening index.
+
+    AASM: flow limitation = inspiratory flattening ≥10s.
+    Hosselet et al.: flattening index >0.30 indicates plateau.
+
+    Parameters
+    ----------
+    breaths : list of breath dicts with 'flattening', 'onset_s', 'duration_s'
+    min_flat_index : threshold for flattening (0.30 = plateau)
+    min_dur_s : minimum sequence duration (AASM: ≥10s)
+    min_consecutive : minimum consecutive flat breaths
+
+    Returns
+    -------
+    list of {onset_s, duration_s, avg_flattening, n_breaths}
+    """
+    sequences = []
+    run_start = None
+    run_breaths = []
+
+    for b in breaths:
+        fi = b.get("flattening")
+        if fi is not None and fi >= min_flat_index:
+            if run_start is None:
+                run_start = float(b["onset_s"])
+            run_breaths.append(b)
+        else:
+            # End of run — check if it qualifies
+            if run_breaths and len(run_breaths) >= min_consecutive:
+                last = run_breaths[-1]
+                dur = float(last["onset_s"]) + float(last["duration_s"]) - run_start
+                if dur >= min_dur_s:
+                    sequences.append({
+                        "onset_s": run_start,
+                        "duration_s": round(dur, 1),
+                        "avg_flattening": round(float(np.mean([
+                            b["flattening"] for b in run_breaths
+                            if b.get("flattening") is not None
+                        ])), 3),
+                        "n_breaths": len(run_breaths),
+                    })
+            run_start = None
+            run_breaths = []
+
+    # Handle trailing run
+    if run_breaths and len(run_breaths) >= min_consecutive:
+        last = run_breaths[-1]
+        dur = float(last["onset_s"]) + float(last["duration_s"]) - run_start
+        if dur >= min_dur_s:
+            sequences.append({
+                "onset_s": run_start,
+                "duration_s": round(dur, 1),
+                "avg_flattening": round(float(np.mean([
+                    b["flattening"] for b in run_breaths
+                    if b.get("flattening") is not None
+                ])), 3),
+                "n_breaths": len(run_breaths),
+            })
+
+    return sequences
+
+
+def _parse_edf_patient_info(raw) -> dict:
+    """Extract patient info from EDF/EDF+ header via MNE Raw object.
+
+    EDF+ Patient ID (80 bytes at offset 8):
+      patient_code  sex  birthdate  patient_name
+      e.g.: "MCH-0234567 F 02-MAY-1951 Haagse_Harry"
+
+    EDF+ Recording ID (80 bytes at offset 88):
+      Startdate dd-MMM-yyyy admincode techniciancode equipmentcode
+
+    Fields NOT in EDF: weight, height, BMI (require manual entry).
+    """
+    from datetime import datetime
+
+    info = {
+        "patient_code": None, "sex": None, "birthdate": None,
+        "birthday_str": None, "name": None, "recording_date": None,
+        "admin_code": None, "technician": None, "equipment": None,
+    }
+
+    # Get file path from MNE raw
+    fpath = None
+    if hasattr(raw, "filenames") and raw.filenames:
+        fpath = raw.filenames[0]
+    elif hasattr(raw, "_filenames") and raw._filenames:
+        fpath = raw._filenames[0]
+    if not fpath:
+        return info
+
+    try:
+        with open(fpath, "rb") as f:
+            f.seek(8)
+            patient_raw = f.read(80).decode("latin-1").strip()
+            recording_raw = f.read(80).decode("latin-1").strip()
+    except (OSError, UnicodeDecodeError):
+        return info
+
+    # Parse EDF+ patient ID
+    parts = patient_raw.split()
+    if len(parts) >= 4:
+        info["patient_code"] = parts[0] if parts[0] != "X" else None
+        info["sex"] = parts[1] if parts[1] in ("M", "F") else None
+        if parts[2] != "X":
+            try:
+                info["birthdate"] = datetime.strptime(parts[2], "%d-%b-%Y").isoformat()
+                info["birthday_str"] = parts[2]
+            except ValueError:
+                info["birthday_str"] = parts[2]
+        name_parts = parts[3:]
+        raw_name = " ".join(name_parts).replace("_", " ")
+        info["name"] = raw_name if raw_name and raw_name != "X" else None
+    elif len(parts) >= 1 and patient_raw and patient_raw != "X":
+        info["name"] = patient_raw.replace("_", " ")
+
+    # Parse EDF+ recording ID
+    rparts = recording_raw.split()
+    if len(rparts) >= 2 and rparts[0] == "Startdate":
+        try:
+            info["recording_date"] = datetime.strptime(rparts[1], "%d-%b-%Y").strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+        if len(rparts) >= 3:
+            info["admin_code"] = rparts[2] if rparts[2] != "X" else None
+        if len(rparts) >= 4:
+            info["technician"] = rparts[3].replace("_", " ") if rparts[3] != "X" else None
+        if len(rparts) >= 5:
+            info["equipment"] = rparts[4].replace("_", " ") if rparts[4] != "X" else None
+
+    logger.info("[pneumo] EDF patient: %s, sex=%s, dob=%s, equipment=%s",
+                info.get("name"), info.get("sex"),
+                info.get("birthday_str"), info.get("equipment"))
+    return info
 
 
 def _empty_arousal(reason: str) -> dict:

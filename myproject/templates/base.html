@@ -1,4 +1,4 @@
-{# templates/base.html — Layout voor YASAFlaskified v0.8.12 #}
+{# templates/base.html — Layout voor YASAFlaskified v0.8.17 #}
 <!DOCTYPE html>
 <html lang="{{ current_lang or 'nl' }}">
 <head>
@@ -63,7 +63,12 @@
   {# ── NAVIGATIEBALK ── #}
   <nav class="navbar navbar-dark navbar-expand-md">
     <div class="container">
-      <a class="navbar-brand" href="/">🧠 SleepAI</a>
+      <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+        <svg viewBox="0 0 80 24" width="50" height="16" style="vertical-align:middle">
+          <path d="M2,12 L18,12 L24,3 L30,21 L36,12 L52,12" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>YASAFlaskified</span>
+      </a>
 
       <button class="navbar-toggler" type="button"
               data-bs-toggle="collapse" data-bs-target="#navMenu">
@@ -149,12 +154,20 @@
   {# ── FOOTER ── #}
   <footer>
     <div class="container text-center">
-      YASAFlaskified v0.8.12 &nbsp;·&nbsp;
-      <a href="https://www.slaapkliniek.be">www.slaapkliniek.be</a>
+      <a href="https://github.com/bartromb/YASAFlaskified" target="_blank">YASAFlaskified</a> v0.8.17
       &nbsp;·&nbsp;
-      {{ t('only_authorized') }} &nbsp;·&nbsp;
-      Powered by <a href="https://raphaelvallat.com/yasa/" target="_blank">YASA</a>
-      (Vallat & Walker, 2021)
+      <a href="https://www.slaapkliniek.be">slaapkliniek.be</a>
+      &nbsp;·&nbsp;
+      {{ t('only_authorized') }}
+      <br>
+      Powered by
+      <a href="https://raphaelvallat.com/yasa/" target="_blank">YASA</a>
+      <small>(Vallat &amp; Walker, <i>eLife</i> 2021)</small>
+      &nbsp;·&nbsp;
+      <a href="https://pypi.org/project/psgscoring/" target="_blank">psgscoring</a>
+      <small>(Rombaut, 2026)</small>
+      &nbsp;·&nbsp;
+      AASM 2.6 <small>(Berry et al., 2020)</small>
       &nbsp;·&nbsp;
       &copy; 2024–2026 Bart Rombaut
     </div>
