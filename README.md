@@ -26,12 +26,13 @@ YASAFlaskified extends YASA into a complete clinical platform: AASM 2.6-complian
 - [Architecture](#architecture)
 - [Clinical Pipeline](#clinical-pipeline)
 - [Scoring Algorithms](#scoring-algorithms)
-- [Over-counting Corrections (v0.8.10)](#over-counting-corrections-v0810)
-- [Signal Processing Improvements (v0.8.11)](#signal-processing-improvements-v0811)
-- [Multi-site Access Control](#multi-site-access-control)
+- [Over-counting Corrections](#over-counting-corrections)
+- [Signal Processing Improvements](#signal-processing-improvements)
 - [Report Generation](#report-generation)
+- [Multi-site Access Control](#multi-site-access-control)
 - [Configuration](#configuration)
 - [Development](#development)
+- [Version History](#version-history)
 - [Citation](#citation)
 - [License](#license)
 
@@ -42,29 +43,35 @@ YASAFlaskified extends YASA into a complete clinical platform: AASM 2.6-complian
 ### Clinical Analysis
 - **AI sleep staging** via YASA LightGBM (~85% epoch agreement with RPSGT)
 - **AASM 2.6 respiratory scoring** — apneas, hypopneas (Rule 1A + 1B), RERAs
-- **Apnea type classification** — obstructive / central / mixed with confidence scores
-- **Two-phase arousal detection** with spindle exclusion and K-complex filter (v0.8.11)
+- **Dual-sensor scoring** — apnea on thermistor, hypopnea on nasal pressure (AASM 2.6)
+- **Apnea type classification** — obstructive / central / mixed via 7-rule decision tree with Hilbert phase-angle
+- **Two-phase arousal detection** with spindle exclusion, K-complex filter, and CVR coupling
 - **PLM scoring** per AASM 2.6 + WASM criteria
-- **SpO₂ analysis** — ODI 3%/4%, T90, CT85, nadir distribution
+- **SpO₂ analysis** — ODI 3%/4%, baseline (P90), time below 90%, nadir distribution
 - **Cheyne-Stokes detection** via autocorrelation
-- **Snoring index** and position-dependent AHI breakdown
-- **Signal quality assessment** per channel with artifact epoch flagging
+- **Snoring index** and position-dependent AHI breakdown (supine, left, right, prone, upright)
+- **REM/NREM AHI** — stage-specific respiratory indices
+- **Signal quality assessment** per channel with artifact epoch flagging and confidence review
+- **Study type support** — diagnostic PSG, titration (CPAP/MRA), polygraphy (REI)
 
 ### Scoring Quality
-- **Five systematic over-counting corrections** (v0.8.10):
-  post-apnoea baseline exclusion, SpO₂ cross-contamination filtering,
-  Cheyne-Stokes flagging, confidence stratification, artefact-flank masking
+- **Six systematic over-counting corrections** with transparency table in PDF: post-apnoea baseline exclusion, SpO₂ cross-contamination filtering, Cheyne-Stokes flagging, confidence stratification, artefact-flank masking, local baseline validation
+- **Local baseline validation** (v0.8.22) — rejects false-positive hypopneas where flow reduction <20% vs. pre-event breathing
+- **Maximum event duration** (v0.8.21) — hypopnea max 60s, apnea max 90s; splits at partial recovery point
 - **Threshold sensitivity table** — OAHI at confidence ≥0.85 / ≥0.60 / ≥0.40 / all
-- **Phase-angle effort classification** via Hilbert transform (v0.8.11)
-- **Patient-specific baseline anchoring** — mouth-breathing detection (v0.8.11)
-- **CVR arousal confidence boost** — bradycardia/tachycardia coupling (v0.8.11)
+- **Three scoring profiles** — strict (machine), standard (AASM 2.6), sensitive (RPSGT-like)
+- **Phase-angle effort classification** via Hilbert transform
+- **Patient-specific baseline anchoring** — mouth-breathing detection
+- **CVR arousal confidence boost** — bradycardia/tachycardia coupling
 
 ### Platform
 - **Interactive EDF browser** — channel-group filters, event overlay, multi-epoch zoom
-- **Manual scoring editor** — epoch-by-epoch review and correction
-- **Automated reports** — PDF (portrait A4), PSG report, Excel, EDF+ annotations, FHIR R4
-- **Multilingual** — Dutch, French, English, German (369 translation keys)
+- **Manual scoring editor** — epoch-by-epoch review, event add/delete/modify
+- **Automated reports** — PDF (portrait A4) with epoch signal examples, Excel, EDF+ annotations, FHIR R4
+- **Multilingual** — Dutch, French, English (449+ translation keys)
 - **Multi-site** — data isolation per clinical centre, role-based access
+- **EDF patient info** — auto-populate from EDF header (name, DOB, sex, equipment)
+- **Signal quality warnings** — red banner in PDF when channels unusable or AI confidence low
 - **8 parallel workers** — concurrent analysis on multi-core hardware
 - **Docker Compose** deployment — reproducible, single-command install
 
@@ -97,20 +104,24 @@ docker compose up -d
 
 The app is now running at `http://localhost:8071`.
 
-### Upgrade from previous version
+### Upgrade
 
 ```bash
-scp YASAFlaskified_0_8_11.zip root@yourserver:/tmp/
-ssh root@yourserver << 'EOF'
-  cd /tmp && unzip -o YASAFlaskified_0_8_11.zip
-  rsync -av --exclude='.env' --exclude='instance/' \
-    --exclude='uploads/' --exclude='processed/' \
-    --exclude='logs/' --exclude='config.json' \
-    YASAFlaskified_0.8.11/ /data/slaapkliniek/
-  cd /data/slaapkliniek
-  docker compose build --no-cache
-  docker compose down --remove-orphans && docker compose up -d
-EOF
+scp YASAFlaskified_v0_8_22.zip bart@yourserver:/tmp/ && \
+ssh -t bart@yourserver "sudo bash -c '
+  cd /tmp && rm -rf yasafix && unzip -o YASAFlaskified_v0_8_22.zip -d yasafix &&
+  rsync -av --no-group --no-owner \
+    --exclude=.env --exclude=instance/ --exclude=uploads/ \
+    --exclude=processed/ --exclude=logs/ --exclude=users.db \
+    --exclude=__pycache__/ \
+    /tmp/yasafix/myproject/ /data/slaapkliniek/myproject/ &&
+  cp /tmp/yasafix/CHANGES.md /tmp/yasafix/Dockerfile \
+     /tmp/yasafix/docker-compose.yml /tmp/yasafix/README.md \
+     /tmp/yasafix/DISCLAIMER.md /tmp/yasafix/ROADMAP.md \
+     /data/slaapkliniek/ &&
+  cd /data/slaapkliniek && docker compose build --no-cache &&
+  docker compose down && docker compose up -d &&
+  rm -rf /tmp/yasafix /tmp/YASAFlaskified_v0_8_22.zip'"
 ```
 
 ---
@@ -121,7 +132,7 @@ EOF
 ┌─────────────────────────────────────────────────────┐
 │                    Browser (HTTPS)                   │
 └──────────────────────┬──────────────────────────────┘
-                       │ nginx reverse proxy
+                       │ Nginx Proxy Manager
 ┌──────────────────────▼──────────────────────────────┐
 │           Flask / Gunicorn  (kliniek_app)            │
 │           SQLite · Flask-Login · Flask-Limiter       │
@@ -130,23 +141,28 @@ EOF
 ┌──────────────────────▼──────────────────────────────┐
 │        Redis Queue  (kliniek_redis)                  │
 └──┬──────┬──────┬──────┬──────┬──────┬──────┬───────┘
-   │      │      │      │      │      │      │
-  W1     W2     W3     W4     W5     W6     W7     W8
-  (8 parallel RQ workers — kliniek_worker1..8)
+   W1    W2    W3    W4    W5    W6    W7    W8
+   (8 parallel RQ workers)
    │
    ▼
 ┌──────────────────────────────────────────────────────┐
-│  Analysis pipeline (psgscoring + YASA)               │
-│  1. EDF load (MNE)          6. PLM                   │
-│  2. Sleep staging (YASA)    7. Arousal + Rule 1B     │
-│  3. Respiratory events      8. Rule 1B reinstatement │
-│  4. SpO₂                    9. Cheyne-Stokes         │
-│  5. Snore / position        + Anchor baseline (v0.8.11)│
+│  Analysis pipeline (11 steps)                        │
+│  1.  EDF load + channel mapping                      │
+│  1b. Signal quality assessment                       │
+│  1c. Baseline anchoring                              │
+│  2.  Sleep staging (YASA LightGBM)                   │
+│  3.  Respiratory events (apnea + hypopnea)           │
+│  4.  SpO₂ coupling + ODI 3%/4%                       │
+│  5.  Snore / position / heart rate                   │
+│  6.  PLM detection                                   │
+│  7.  Arousal detection + Rule 1B coupling             │
+│  8.  Rule 1B reinstatement + RERA/RDI                │
+│  9.  Cheyne-Stokes detection + CSR flagging           │
+│  10. PDF + Excel + EDF+ report generation             │
 └──────────────────────────────────────────────────────┘
 ```
 
-**Hardware reference:** Hetzner AX52 — AMD Ryzen 9 5950X (16 cores), 128 GB RAM.
-End-to-end analysis: 5–10 minutes per 8-hour PSG recording.
+**Hardware:** Hetzner AX52 — AMD Ryzen 9 5950X (16 cores), 128 GB ECC RAM, 2×3.84 TB NVMe (ZFS mirror).
 
 ---
 
@@ -155,16 +171,18 @@ End-to-end analysis: 5–10 minutes per 8-hour PSG recording.
 | Step | Module | Description |
 |------|--------|-------------|
 | 1 | `psgscoring/pipeline.py` | EDF load, channel mapping, unit validation |
-| 2 | `yasa_analysis.py` | Sleep staging (YASA LightGBM) + artifact epochs |
-| 3 | `psgscoring/respiratory.py` | Apnoea + hypopnoea detection (AASM 2.6) |
-| 3b | `psgscoring/signal.py` | Baseline anchoring — mouth-breathing detection (v0.8.11) |
-| 4 | `psgscoring/spo2.py` | SpO₂ coupling, ODI, T90 |
+| 1b | `psgscoring/signal_quality.py` | Per-channel quality: flat-line, clipping, disconnect, amplitude |
+| 1c | `psgscoring/signal.py` | Baseline anchoring, mouth-breathing detection |
+| 2 | `yasa_analysis.py` | Sleep staging + confidence review + sleep cycles (Feinberg & Floyd) |
+| 3 | `psgscoring/respiratory.py` | Apnoea + hypopnoea detection, local baseline validation, max duration split |
+| 4 | `psgscoring/spo2.py` | SpO₂ coupling, ODI 3%/4%, baseline (P90), time below thresholds |
 | 5 | `psgscoring/ancillary.py` | Snoring, position, heart rate |
 | 6 | `psgscoring/plm.py` | PLM detection (tibialis EMG) |
-| 7 | `arousal_analysis.py` | Arousal detection + RERA + respiratory coupling |
+| 7 | `arousal_analysis.py` | Two-phase arousal detection + RERA + respiratory coupling |
 | 8 | `psgscoring/respiratory.py` | Rule 1B reinstatement |
-| 9 | `psgscoring/ancillary.py` | Cheyne-Stokes autocorrelation |
-| Post | `psgscoring/pipeline.py` | CSR event flagging (Fix 3) |
+| 8b | `psgscoring/pipeline.py` | RERA index + RDI (FRI-RERA + flattening-RERA) |
+| 9 | `psgscoring/ancillary.py` | Cheyne-Stokes detection + CSR event flagging |
+| 10 | `generate_pdf_report.py` | PDF with epoch examples, Excel, EDF+ annotations |
 
 ---
 
@@ -172,93 +190,63 @@ End-to-end analysis: 5–10 minutes per 8-hour PSG recording.
 
 ### Respiratory Scoring
 
-**Signal processing:**
-- Square-root linearisation of nasal pressure — corrects the Bernoulli quadratic pressure–flow relationship, per AASM 2.6 ([Thurnheer et al. 2001](https://doi.org/10.1164/ajrccm.164.10.2010113); [Montserrat et al. 1997](https://doi.org/10.1164/ajrccm.155.1.9001310))
-- Butterworth bandpass 0.05–3 Hz
-- Hilbert envelope for instantaneous amplitude
-- Dynamic 5-minute sliding baseline (95th percentile, 10-second steps)
-- Stage-specific baseline blending (N2/N3/REM separate estimates)
-- MMSD (Mean Magnitude of Second Derivative) validation — drift-independent apnoea validation, distinguishes true cessation from signal dropout ([Lee et al. 2008](https://doi.org/10.5665/sleep.1188))
+**Signal processing:** square-root linearisation of nasal pressure (Thurnheer et al. 2001), Butterworth bandpass 0.05–3 Hz, Hilbert envelope, dynamic 5-minute sliding baseline (95th percentile), MMSD validation (Lee et al. 2008).
 
-**Apnoea detection:** oronasal thermistor, ≥90% flow reduction, ≥10 s, sleep epochs only ([Berry et al. 2020](https://aasm.org/clinical-resources/scoring-manual/))
+**Apnoea detection:** oronasal thermistor, ≥90% flow reduction, ≥10 s, max 90 s (split at recovery), sleep epochs only.
 
-**Hypopnoea detection:** nasal pressure transducer (NPT), 30–90% reduction, ≥10 s,
-Rule 1A (SpO₂ ≥3% drop, [Berry et al. 2020](https://aasm.org/clinical-resources/scoring-manual/)) or Rule 1B (EEG arousal within 3 s).
-SpO₂ coupling uses a 30-s temporally constrained post-event window ([Uddin et al. 2018](https://doi.org/10.1088/1361-6579/aab02d))
+**Hypopnoea detection:** nasal pressure transducer, ≥30% reduction, ≥10 s, max 60 s (split at partial recovery), Rule 1A (SpO₂ ≥3% drop) or Rule 1B (arousal within 3 s). Local baseline validation (v0.8.22): rejects events with <20% reduction vs. pre-event breathing.
 
-**Flattening index:** breath-by-breath flow-limitation detection per [Hosselet et al. 1998](https://doi.org/10.1164/ajrccm.157.5.9708008)
+**Apnoea type classification** — 7-rule decision tree with Hilbert phase-angle, paradoxical thoraco-abdominal correlation, effort envelope ratio, and raw signal variability. Optional LightGBM confidence calibration.
 
-**Cheyne-Stokes detection:** autocorrelation of flow envelope; periodicity 40–70 s flagged as CSR
+**Scoring profiles:**
 
-**Apnoea type classification** — 7-rule decision tree (`psgscoring/classify.py`):
-
-| Rule | Condition | Type | Reference |
-|------|-----------|------|-----------|
-| 0 | Phase angle ≥45° (Hilbert, v0.8.11) | Obstructive | Standard signal processing |
-| 1 | Paradox thoraco-abdominal correlation | Obstructive | [Berry et al. 2020](https://aasm.org/clinical-resources/scoring-manual/) |
-| 2 | High raw variability, low envelope | Obstructive | [Berry et al. 2020](https://aasm.org/clinical-resources/scoring-manual/) |
-| 3 | First half absent, second half present | Mixed | [Berry et al. 2020](https://aasm.org/clinical-resources/scoring-manual/) |
-| 4 | Clear effort present | Obstructive | [Berry et al. 2020](https://aasm.org/clinical-resources/scoring-manual/) |
-| 5 | Truly flat — no effort signs | Central | [Berry et al. 2020](https://aasm.org/clinical-resources/scoring-manual/) |
-| 6 | Borderline default | Obstructive (low confidence) | AASM consensus |
+| Profile | Hypopnea | SpO₂ window | Smoothing | Peak detection | Max hyp. | Max apnea |
+|---------|----------|-------------|-----------|----------------|----------|-----------|
+| Strict | ≥30% | 30 s | None | Envelope only | 60 s | 90 s |
+| Standard | ≥30% | 45 s | 3 s | Peak + envelope | 60 s | 90 s |
+| Sensitive | ≥25% | 45 s | 5 s | Peak + envelope | 90 s | 120 s |
 
 ### Sleep Staging — powered by YASA
 
-YASAFlaskified owes its staging capability entirely to the work of
-[Raphaël Vallat](https://raphaelvallat.com) and Matthew P. Walker.
-Their LightGBM model (published in *eLife* 2021, doi:[10.7554/eLife.70092](https://doi.org/10.7554/eLife.70092))
-was trained on >3,000 PSG nights from four large public datasets
-(MESA, SHHS, CFS, CHAT) and achieves ~85% epoch-level agreement with
-certified RPSGT technologists — comparable to human inter-rater reliability.
+LightGBM model by Raphaël Vallat and Matthew P. Walker (eLife 2021, doi:[10.7554/eLife.70092](https://doi.org/10.7554/eLife.70092)), ~85% epoch-level agreement with certified RPSGT technologists.
 
-Per-epoch features: delta/theta/alpha/sigma/beta band power, Hjorth parameters,
-spectral entropy, temporal context (adjacent epoch stages). The MNE-Python
-integration (Gramfort et al. 2013) handles EDF loading and channel preprocessing.
+### Sleep Cycles (v0.8.22)
 
-If you use YASAFlaskified for sleep staging, please cite Vallat & Walker (2021)
-directly — their work is the scientific foundation of every hypnogram this platform produces.
+Feinberg & Floyd criteria: minimum 15 min NREM required per cycle. REM consolidation with 2-min gap tolerance. Produces physiologically realistic 4–6 cycles.
 
 ---
 
-## Over-counting Corrections (v0.8.10)
+## Over-counting Corrections
 
-Five systematic bias mechanisms are identified and corrected. The official AASM
-AHI/OAHI remain unchanged; corrected indices are supplementary.
+Six systematic bias mechanisms identified and corrected. Official AHI/OAHI unchanged; corrections are supplementary and displayed in the PDF.
 
 | Fix | Mechanism | Correction |
 |-----|-----------|------------|
-| 1 | Post-apnoea hyperpnoea inflates baseline → false hypopnoeas | 30-s recovery mask excluded from baseline (sparse cumsum loop) |
-| 2 | SpO₂ nadir of event N attributed to event N+1 at AHI >60/h | Cross-contamination check; suppress SpO₂ coupling if preceding window still active |
-| 3 | Cheyne-Stokes decrescendo scored as hypopnoea | Retroactive CSR flagging via IEI matching (`csr_flagged` per event) |
-| 4 | Borderline Rule-6 defaults at poor RIP quality | Separate counts: `n_low_conf_borderline` (0.40–0.59), `n_low_conf_noise` (<0.40) |
-| 5 | Post-gap recovery ramp scored as event | 15-s post-gap exclusion mask after ≥10-s flatline gaps |
+| 1 | Post-apnoea hyperpnoea inflates baseline | 30-s recovery mask excluded from baseline |
+| 2 | SpO₂ nadir of event N attributed to N+1 | Cross-contamination flag (informative) |
+| 3 | Cheyne-Stokes decrescendo scored as hypopnoea | Retroactive CSR flagging via IEI matching |
+| 4 | Borderline defaults at poor RIP quality | Separate noise (<0.40) and borderline (0.40–0.59) counts |
+| 5 | Post-gap recovery ramp scored as event | 15-s exclusion mask after ≥10-s flatline gaps |
+| **6** | **Inflated rolling baseline → false-positive hypopneas** | **Local baseline validation: <20% reduction vs. pre-event → rejected (v0.8.22)** |
 
 ---
 
-## Signal Processing Improvements (v0.8.11)
+## Signal Processing Improvements
 
-| Feature | Module | Description |
-|---------|--------|-------------|
-| Phase-angle classification | `classify.py` | Hilbert instantaneous phase difference thorax/abdomen; Rule 0: ≥45° → obstructive |
-| K-complex exclusion | `arousal_analysis.py` | Bipolar waveform check (−75 µV + positive peak within 1 s); local min-duration raised to 5 s |
-| CVR arousal boost | `arousal_analysis.py` | Bradycardia → tachycardia (≥10 bpm) around borderline arousals: confidence +0.10–0.20 |
-| Baseline anchoring | `signal.py` | Event-free N2 median RMS as patient-specific anchor; `mouth_breathing_suspected` flag |
-| LightGBM confidence | `classify.py` | Optional pre-trained model via `PSGSCORING_LGBM_MODEL` env var; 10-feature schema |
-
----
-
-## Multi-site Access Control
-
-Three roles:
-
-| Role | Permissions |
-|------|-------------|
-| `admin` | All sites, user management, system config |
-| `site_admin` | Own site only — manage users, view all studies |
-| `user` | Upload, analyse, view own studies |
-
-Data isolation: each site has its own upload/processed directory and database scope.
-Patients of site A are never visible to site B users.
+| Feature | Version | Description |
+|---------|---------|-------------|
+| Phase-angle classification | v0.8.11 | Hilbert phase difference; ≥45° → obstructive |
+| K-complex exclusion | v0.8.11 | Bipolar waveform check; 5 s min-duration |
+| CVR arousal boost | v0.8.11 | Brady → tachycardia ≥10 bpm: confidence +0.10–0.20 |
+| Baseline anchoring | v0.8.11 | Event-free N2 median RMS as patient-specific anchor |
+| Signal quality assessment | v0.8.17 | Per-channel flat-line, clipping, disconnect, quality grade |
+| Montage plausibility | v0.8.17 | Cross-correlation checks |
+| Flattening-based RERA | v0.8.17 | Hosselet flattening index >0.30 + arousal |
+| RERA/RDI index | v0.8.16 | RDI = AHI + RERA-index |
+| Study type support | v0.8.19 | Diagnostic PSG / titration / polygraphy |
+| EDF header auto-fill | v0.8.19 | Patient info from EDF header |
+| **Max event duration + split** | **v0.8.21** | **Hyp. max 60s / apnea max 90s, split at recovery** |
+| **Local baseline validation** | **v0.8.22** | **Rejects false-positive hypopneas** |
 
 ---
 
@@ -266,13 +254,30 @@ Patients of site A are never visible to site B users.
 
 | Format | Module | Contents |
 |--------|--------|----------|
-| PDF (A4 portrait) | `generate_pdf_report.py` | Hypnogram, respiratory indices, confidence table, threshold sensitivity, over-counting corrections |
-| PSG Report | `generate_psg_report.py` | Portrait layout, per-stage breakdown, Cheyne-Stokes section |
+| PDF (A4) | `generate_pdf_report.py` | Full clinical report with epoch signal examples |
 | Excel | `generate_excel_report.py` | All indices, event list, raw summary |
-| EDF+ | `generate_edfplus.py` | Annotations for each scored event |
-| FHIR R4 | `fhir_export.py` | Observation + DiagnosticReport + CarePlan resources |
+| EDF+ | `generate_edfplus.py` | Annotations for each scored event (pyedflib) |
+| FHIR R4 | `fhir_export.py` | Observation + DiagnosticReport + CarePlan |
 
-Languages: Dutch (NL), French (FR), English (EN), German (DE).
+**PDF highlights (v0.8.22):**
+- Red warning banner for poor signal quality or low AI confidence
+- Section 8e: epoch signal examples with stacked pneumo channels
+- SpO₂ with mean, baseline (P90), nadir, T90, ODI 3%/4%
+- Spindle/slow wave tables per channel (not "—")
+- Realistic 4–6 sleep cycles (Feinberg & Floyd)
+- Over-counting correction transparency table (6 fixes)
+
+Languages: Dutch (NL), French (FR), English (EN).
+
+---
+
+## Multi-site Access Control
+
+| Role | Permissions |
+|------|-------------|
+| `admin` | All sites, user management, system config |
+| `site_admin` | Own site — manage users, view all studies |
+| `user` | Upload, analyse, view own studies |
 
 ---
 
@@ -286,16 +291,8 @@ Copy `config.json.example` to `config.json`:
   "ADMIN_PASSWORD": "strong-password",
   "SITE_NAME": "AZORG Slaapkliniek",
   "SITE_LANGUAGE": "nl",
-  "MAX_UPLOAD_MB": 512,
-  "RESULTS_PER_PAGE": 20
+  "MAX_UPLOAD_MB": 512
 }
-```
-
-Environment variables (docker-compose.yml):
-```yaml
-PSGSCORING_LGBM_MODEL: ""   # Optional: path to LightGBM confidence model
-MPLCONFIGDIR: /data/slaapkliniek/.mplconfig
-NUMBA_CACHE_DIR: /data/slaapkliniek/.numba_cache
 ```
 
 ---
@@ -303,18 +300,12 @@ NUMBA_CACHE_DIR: /data/slaapkliniek/.numba_cache
 ## Development
 
 ```bash
-# Local dev (no Docker)
 pip install -r requirements.txt
 export FLASK_APP=myproject/app.py
-export FLASK_ENV=development
 flask run
 
-# Run tests
-cd myproject
-python -m pytest psgscoring/tests/ -v
-
-# Lint
-flake8 myproject/psgscoring/ --max-line-length=100
+# Tests
+cd myproject && python -m pytest psgscoring/tests/ -v
 ```
 
 ### Project structure
@@ -322,21 +313,25 @@ flake8 myproject/psgscoring/ --max-line-length=100
 ```
 YASAFlaskified/
 ├── myproject/
-│   ├── psgscoring/         # Respiratory scoring library (also: github.com/bartromb/psgscoring)
-│   │   ├── classify.py     # Apnoea type classification (7-rule + Hilbert phase)
-│   │   ├── respiratory.py  # Apnoea/hypopnoea detection + 5 over-counting fixes
-│   │   ├── signal.py       # Signal processing, dynamic baseline, anchoring
-│   │   ├── pipeline.py     # Master analysis function
+│   ├── psgscoring/              # Respiratory scoring library
+│   │   ├── pipeline.py          # 11-step analysis pipeline
+│   │   ├── respiratory.py       # Apnea/hypopnea + 6 corrections
+│   │   ├── classify.py          # 7-rule classification + Hilbert
+│   │   ├── signal.py            # Signal processing, baseline
+│   │   ├── spo2.py              # SpO₂, ODI 3%/4%
+│   │   ├── signal_quality.py    # Per-channel quality
+│   │   ├── constants.py         # AASM thresholds, scoring profiles
 │   │   └── ...
-│   ├── arousal_analysis.py # EEG arousal detection + K-complex + CVR
-│   ├── generate_pdf_report.py
-│   ├── generate_psg_report.py
-│   └── ...
-├── docker-compose.yml      # 8 workers + app + redis
+│   ├── arousal_analysis.py      # Arousal + K-complex + CVR
+│   ├── yasa_analysis.py         # Staging, cycles, spindles, SW
+│   ├── generate_pdf_report.py   # PDF with epoch examples
+│   ├── i18n.py                  # 449+ keys (NL/FR/EN)
+│   ├── app.py                   # Flask (~2900 LOC)
+│   └── templates/               # 22 Jinja2 templates
+├── docker-compose.yml           # 8 workers + app + redis
 ├── Dockerfile
-├── requirements.txt
-├── deploy.sh               # One-command server install
-└── config.json.example
+├── deploy.sh
+└── CHANGES.md
 ```
 
 ---
@@ -345,21 +340,22 @@ YASAFlaskified/
 
 | Version | Milestone |
 |---------|-----------|
-| 0.8.0 | EDF browser, multi-site RBAC |
-| 0.8.1 | Rolling arousal baseline, Rule 1B breath-cycle validation, FHIR R4 |
-| 0.8.2–0.8.4 | Centralized i18n (NL/FR/EN/DE), redirect-loop fixes |
-| 0.8.5 | Modular `psgscoring` package (10 submodules, 112 unit tests) |
-| 0.8.6–0.8.9 | OAHI confidence stratification, threshold sensitivity table, AASM-conform OAHI |
-| **0.8.10** | **Five over-counting corrections, O(n²)→O(n) event iteration** |
-| **0.8.11** | **Hilbert phase-angle, K-complex exclusion, CVR arousal boost, baseline anchoring, LightGBM calibration** |
+| 0.8.0–0.8.4 | EDF browser, multi-site RBAC, centralized i18n |
+| 0.8.5 | Modular `psgscoring` package |
+| 0.8.6–0.8.9 | OAHI confidence stratification, sensitivity table |
+| 0.8.10 | Five over-counting corrections |
+| 0.8.11 | Hilbert phase-angle, K-complex, CVR, baseline anchoring |
+| 0.8.12–0.8.15 | SpO₂ speedup, peak-based hypopnea, scoring profiles |
+| 0.8.16 | RERA/RDI, REM/NREM AHI, positional AHI |
+| 0.8.17 | Signal quality, flattening-RERA, montage checks |
+| 0.8.19 | Study types, EDF header auto-fill, position legend |
+| **0.8.22** | **ODI 3%/4%, Feinberg & Floyd cycles, REM consolidation, channel fix, quality banners, epoch examples, max duration split, local baseline validation** |
 
 See [CHANGES.md](CHANGES.md) for full changelog.
 
 ---
 
 ## Citation
-
-If you use YASAFlaskified or psgscoring in your research, please cite:
 
 ```bibtex
 @software{rombaut2026yasaflaskified,
@@ -373,7 +369,7 @@ If you use YASAFlaskified or psgscoring in your research, please cite:
 }
 ```
 
-**Please also cite YASA** — it is the scientific foundation of this platform's sleep staging:
+**Please also cite YASA:**
 
 ```bibtex
 @article{vallat2021,
@@ -383,80 +379,7 @@ If you use YASAFlaskified or psgscoring in your research, please cite:
   year    = {2021},
   volume  = {10},
   pages   = {e70092},
-  doi     = {10.7554/eLife.70092},
-  url     = {https://github.com/raphaelvallat/yasa}
-}
-```
-
-Also cite the following for respiratory scoring:
-
-```bibtex
-@article{berry2020,
-  author  = {Berry, Richard B. and others},
-  title   = {The {AASM} Manual for the Scoring of Sleep and Associated Events, Version 2.6},
-  year    = {2020},
-  publisher = {American Academy of Sleep Medicine},
-  url     = {https://aasm.org/clinical-resources/scoring-manual/}
-}
-
-@article{thurnheer2001,
-  author  = {Thurnheer, Robert and Xie, Xijia and Bloch, Konrad E.},
-  title   = {Accuracy of nasal cannula pressure recordings for assessment of ventilation during sleep},
-  journal = {American Journal of Respiratory and Critical Care Medicine},
-  year    = {2001},
-  volume  = {164},
-  pages   = {1914--1919},
-  doi     = {10.1164/ajrccm.164.10.2010113}
-}
-
-@article{montserrat1997,
-  author  = {Montserrat, Josep M. and others},
-  title   = {Evaluation of nasal prongs for estimating nasal flow},
-  journal = {American Journal of Respiratory and Critical Care Medicine},
-  year    = {1997},
-  volume  = {155},
-  pages   = {211--215},
-  doi     = {10.1164/ajrccm.155.1.9001310}
-}
-
-@article{lee2008,
-  author  = {Lee, Sing A. and others},
-  title   = {Heavy snoring as a cause of carotid artery atherosclerosis},
-  journal = {Sleep},
-  year    = {2008},
-  volume  = {31},
-  pages   = {1207--1213},
-  doi     = {10.5665/sleep.1188}
-}
-
-@article{hosselet1998,
-  author  = {Hosselet, Jean-Jacques and others},
-  title   = {Detection of flow limitation with a nasal cannula/pressure transducer system},
-  journal = {American Journal of Respiratory and Critical Care Medicine},
-  year    = {1998},
-  volume  = {157},
-  pages   = {1461--1467},
-  doi     = {10.1164/ajrccm.157.5.9708008}
-}
-
-@article{uddin2018,
-  author  = {Uddin, Mohammad Bilal and Chow, Cheuk Ming and Su, Steven W.},
-  title   = {Classification methods to detect sleep apnea in adults based on respiratory and oximetry signals},
-  journal = {Physiological Measurement},
-  year    = {2018},
-  volume  = {39},
-  pages   = {03TR01},
-  doi     = {10.1088/1361-6579/aab02d}
-}
-
-@article{gramfort2013,
-  author  = {Gramfort, Alexandre and others},
-  title   = {{MEG} and {EEG} data analysis with {MNE-Python}},
-  journal = {Frontiers in Neuroscience},
-  year    = {2013},
-  volume  = {7},
-  pages   = {267},
-  doi     = {10.3389/fnins.2013.00267}
+  doi     = {10.7554/eLife.70092}
 }
 ```
 
@@ -464,5 +387,5 @@ Also cite the following for respiratory scoring:
 
 ## License
 
-BSD 3-Clause License — Copyright (c) 2024–2026 Bart Rombaut / Slaapkliniek AZORG.
-See [LICENSE](LICENSE) for full text.
+BSD 3-Clause — Copyright (c) 2024–2026 Bart Rombaut / Slaapkliniek AZORG.
+See [LICENSE](LICENSE).
