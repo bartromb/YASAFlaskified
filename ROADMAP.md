@@ -1,6 +1,6 @@
 # YASAFlaskified — Roadmap
 
-## Current: v0.8.11 (March 2026)
+## Current: v0.8.22 (April 2026)
 
 **Production-ready:**
 - AASM 2.6 respiratory scoring with 5 over-counting corrections

@@ -1,4 +1,4 @@
-# docker-compose.yml — YASAFlaskified v0.8.11 (slaapkliniek.be)
+# docker-compose.yml — YASAFlaskified v0.8.22 (slaapkliniek.be)
 # Paden: /data/slaapkliniek (host) = /data/slaapkliniek (container)
 # Exposed op 127.0.0.1:8071, gerouteerd door host Nginx
 #
@@ -15,7 +15,7 @@
 # RAM gebruik: 8 × 2 GB = ~16 GB van 128 GB beschikbaar
 
 x-worker-base: &worker-base
-  image: yasaflaskified:0.8.11
+  image: yasaflaskified:0.8.22
   restart: unless-stopped
   command: rq worker --url redis://redis:6379 default
   env_file: .env
@@ -57,7 +57,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: yasaflaskified:0.8.11
+    image: yasaflaskified:0.8.22
     container_name: kliniek_app
     restart: unless-stopped
     ports:

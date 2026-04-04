@@ -267,6 +267,20 @@
       </div>
     </div>
 
+    {# ── Studietype (v0.8.19) ── #}
+    <div class="card shadow-sm mb-4">
+      <div class="card-body">
+        <h6 class="card-title mb-3">🏥 &nbsp; {{ t('study_type_title') }}</h6>
+        <select name="study_type" class="form-select" id="studyType">
+          <option value="diagnostic_psg" selected>{{ t('study_diagnostic_psg') }}</option>
+          <option value="titration_psg_cpap">{{ t('study_titration_psg_cpap') }}</option>
+          <option value="titration_pg_cpap">{{ t('study_titration_pg_cpap') }}</option>
+          <option value="titration_pg_mra">{{ t('study_titration_pg_mra') }}</option>
+        </select>
+        <div class="form-text mt-2">{{ t('study_type_hint') }}</div>
+      </div>
+    </div>
+
     {# ── Scoring profiel ── #}
     <div class="card shadow-sm mb-4">
       <div class="card-body">

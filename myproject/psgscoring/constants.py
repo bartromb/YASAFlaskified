@@ -16,6 +16,8 @@ HYPOPNEA_SMOOTH_S      = 3.0    # v0.8.12: smooth flow before thresholding (seco
                                  # Mimics human visual averaging; reduces false negatives
 APNEA_MIN_DUR_S        = 10.0   # seconds
 HYPOPNEA_MIN_DUR_S     = 10.0   # seconds
+APNEA_MAX_DUR_S        = 90.0   # v0.8.22: events >90s are split at partial recovery
+HYPOPNEA_MAX_DUR_S     = 60.0   # v0.8.22: events >60s are split at partial recovery
 DESATURATION_DROP_PCT  = 3.0    # >= 3% SpO2 drop required for Rule 1A
 EFFORT_ABSENT_RATIO    = 0.20   # < 20% of baseline effort -> absent
 EFFORT_PRESENT_RATIO   = 0.40   # > 40% of baseline effort -> present
@@ -45,6 +47,8 @@ SCORING_PROFILES: dict[str, dict] = {
         "HYPOPNEA_SMOOTH_S":    0.0,    # no smoothing
         "CROSS_CONTAM_WINDOW_S": 15.0,
         "USE_PEAK_DETECTION":   False,  # envelope only
+        "HYPOPNEA_MAX_DUR_S":   60.0,   # v0.8.22
+        "APNEA_MAX_DUR_S":      90.0,   # v0.8.22
     },
     "standard": {
         "label":                "Standard (AASM 2.6)",
@@ -54,6 +58,8 @@ SCORING_PROFILES: dict[str, dict] = {
         "HYPOPNEA_SMOOTH_S":    3.0,
         "CROSS_CONTAM_WINDOW_S": 15.0,
         "USE_PEAK_DETECTION":   True,   # peak + envelope
+        "HYPOPNEA_MAX_DUR_S":   60.0,   # v0.8.22
+        "APNEA_MAX_DUR_S":      90.0,   # v0.8.22
     },
     "sensitive": {
         "label":                "Sensitive (RPSGT-like)",
@@ -63,6 +69,8 @@ SCORING_PROFILES: dict[str, dict] = {
         "HYPOPNEA_SMOOTH_S":    5.0,    # more smoothing
         "CROSS_CONTAM_WINDOW_S": 0.0,   # no cross-contam check
         "USE_PEAK_DETECTION":   True,
+        "HYPOPNEA_MAX_DUR_S":   90.0,   # v0.8.22: meer tolerant
+        "APNEA_MAX_DUR_S":      120.0,  # v0.8.22
     },
 }
 

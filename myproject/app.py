@@ -1,5 +1,5 @@
 """
-app.py — YASAFlaskified v0.8.17
+app.py — YASAFlaskified v0.8.22
 Automatische slaap- én pneumologische scoring via YASA + Flask
 
 Originele code volledig bewaard (auth, chunked upload, EDFProcessor).
@@ -1504,38 +1504,39 @@ def channel_select(job_id):
             best_eeg = channels[0] if channels else None
         logger.info("Beste EEG-kanaal: %s (uit %d kanalen)", best_eeg, len(channels))
 
-        # Patiëntgegevens uit EDF-header (indien beschikbaar)
-        subject_info = raw.info.get("subject_info") or {}
-        edf_name = subject_info.get("his_id", "")
-        # Probeer naam te splitsen in achternaam + voornaam
-        edf_lastname = edf_name
+        # Patiëntgegevens uit EDF-header (v0.8.22: eigen parser i.p.v. MNE)
+        # MNE's subject_info is onbetrouwbaar: his_id bevat vaak patient_code
+        # i.p.v. naam. Onze parser leest de raw 80-byte velden correct.
+        from psgscoring.pipeline import _parse_edf_patient_info
+        edf_pat = _parse_edf_patient_info(raw)
+
+        edf_lastname = ""
         edf_firstname = ""
-        if edf_name:
-            parts = edf_name.replace(",", " ").replace("_", " ").split()
+        if edf_pat.get("name"):
+            parts = edf_pat["name"].split()
             if len(parts) >= 2:
                 edf_lastname = parts[0]
                 edf_firstname = " ".join(parts[1:])
-        # Geslacht: MNE geeft 1=male, 2=female
-        edf_sex = subject_info.get("sex", None)
-        sex_str = {1: "M", 2: "V"}.get(edf_sex, "")
-        # Geboortedatum
-        edf_bday = subject_info.get("birthday", None)
+            else:
+                edf_lastname = edf_pat["name"]
+
+        sex_str = {"M": "M", "F": "V"}.get(edf_pat.get("sex", ""), "")
+
         dob_str = ""
-        if edf_bday:
-            try:
-                from datetime import date
-                if isinstance(edf_bday, date):
-                    dob_str = edf_bday.strftime("%Y-%m-%d")
-                else:
-                    dob_str = str(edf_bday)
-            except Exception:
-                dob_str = str(edf_bday)
+        if edf_pat.get("birthdate"):
+            dob_str = edf_pat["birthdate"][:10]  # ISO date
+        elif edf_pat.get("birthday_str"):
+            dob_str = edf_pat["birthday_str"]
+
         patient_prefill = {
-            "patient_id":        str(subject_info.get("id", "")),
+            "patient_id":        edf_pat.get("patient_code") or "",
             "patient_name":      edf_lastname,
             "patient_firstname": edf_firstname,
             "dob":               dob_str,
             "sex":               sex_str,
+            "equipment":         edf_pat.get("equipment") or "",
+            "technician":        edf_pat.get("technician") or "",
+            "recording_date":    edf_pat.get("recording_date") or "",
         }
 
     except Exception as e:
@@ -1632,8 +1633,9 @@ def start_analysis():
         "site_id":          current_user.site_id,
         "owner_username":   current_user.username,
         "language":         session.get("lang", "nl"),
-        # v0.8.17: scoring profiel
+        # v0.8.22: scoring profiel
         "scoring_profile":  request.form.get("scoring_profile", "standard"),
+        "study_type":       request.form.get("study_type", "diagnostic_psg"),
     }
     cfg_path = os.path.join(app.config["UPLOAD_FOLDER"], f"{job_id}_config.json")
     with open(cfg_path, "w") as f:
@@ -2707,7 +2709,7 @@ def health():
         "status":    "ok" if redis_ok else "degraded",
         "redis":     redis_ok,
         "timestamp": datetime.utcnow().isoformat(),
-        "version":   "0.8.17",
+        "version":   "0.8.22",
     }), 200 if redis_ok else 503
 
 
@@ -2863,5 +2865,5 @@ if __name__ == "__main__":
     initialize_database()
     port  = int(os.environ.get("PORT", 5000))
     debug = _cfg("DEBUG", "0") == "1"
-    app.logger.info("YASAFlaskified v0.8.17 starten op poort %d (debug=%s)", port, debug)
+    app.logger.info("YASAFlaskified v0.8.22 starten op poort %d (debug=%s)", port, debug)
     app.run(host="0.0.0.0", port=port, debug=debug, use_reloader=debug)

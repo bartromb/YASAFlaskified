@@ -23,6 +23,7 @@ from scipy.ndimage import label, find_objects, uniform_filter1d
 from .constants import (
     APNEA_THRESHOLD, HYPOPNEA_THRESHOLD, HYPOPNEA_SMOOTH_S,
     APNEA_MIN_DUR_S, HYPOPNEA_MIN_DUR_S,
+    APNEA_MAX_DUR_S, HYPOPNEA_MAX_DUR_S,
     DESATURATION_DROP_PCT, EPOCH_LEN_S,
     MMSD_APNEA_THRESH, RULE1B_AROUSAL_WINDOW_S,
 )
@@ -287,6 +288,8 @@ def detect_respiratory_events(
         _SMOOTH_S      = sp.get("HYPOPNEA_SMOOTH_S", HYPOPNEA_SMOOTH_S)
         _CONTAM_WIN    = sp.get("CROSS_CONTAM_WINDOW_S", 15.0)
         _USE_PEAK      = sp.get("USE_PEAK_DETECTION", True)
+        _APNEA_MAX     = sp.get("APNEA_MAX_DUR_S", APNEA_MAX_DUR_S)
+        _HYPOP_MAX     = sp.get("HYPOPNEA_MAX_DUR_S", HYPOPNEA_MAX_DUR_S)
         result["scoring_thresholds"] = {
             "hypopnea_threshold": _HYPOP_THRESH,
             "desaturation_pct":   _DESAT_PCT,
@@ -393,6 +396,7 @@ def detect_respiratory_events(
             sf_flow, sf_spo2, hypno,
             thorax_env, abdomen_env, thorax_data, abdomen_data, effort_bl,
             spo2_data, global_spo2_bl, mmsd_norm,
+            max_dur_s=_APNEA_MAX,
         )
 
         # ── Fix 1: Herbereken hypopnea-basislijn zonder post-apnea recovery ─
@@ -449,8 +453,16 @@ def detect_respiratory_events(
             desat_pct=_DESAT_PCT,
             contam_win_s=_CONTAM_WIN,
             post_event_win_s=_POST_WIN,
+            max_dur_s=_HYPOP_MAX,
         )
         events = new_events
+
+        # v0.8.22: log lokale basislijn-rejecties
+        n_local_rejected = sum(1 for r in rejected if "local_reduction" in str(r.get("reject_reason","")))
+        if n_local_rejected:
+            logger.info("v0.8.22: %d hypopnea-kandidaten afgewezen door lokale basislijn-validatie "
+                        "(flow-reductie <20%% t.o.v. pre-event ademhaling)", n_local_rejected)
+        result["n_local_baseline_rejected"] = n_local_rejected
 
         events.sort(key=lambda x: x["onset_s"])
 
@@ -730,11 +742,73 @@ def _global_spo2_baseline(spo2_data, sf_spo2, hypno, artifact_epochs):
     return float(np.percentile(spo2_clean, 95)) if len(spo2_clean) > 100 else None
 
 
+# ---------------------------------------------------------------------------
+# v0.8.22: Split overly long events at partial recovery points
+# ---------------------------------------------------------------------------
+
+def _split_long_region(
+    idx: np.ndarray,
+    flow_env: np.ndarray,
+    sf: float,
+    max_dur_s: float,
+    min_dur_s: float = 10.0,
+) -> list[np.ndarray]:
+    """Split een contiguous index-regio als die > max_dur_s duurt.
+
+    Zoekt het punt met de hoogste flow-amplitude (= beste partiële recovery)
+    en splitst daar. Recursief als sub-regio's nog te lang zijn.
+
+    Parameters
+    ----------
+    idx : np.ndarray        Indices in de flow-array (aaneengesloten)
+    flow_env : np.ndarray   Flow-envelope voor recovery-detectie
+    sf : float              Samplerate
+    max_dur_s : float       Maximale event-duur in seconden
+    min_dur_s : float       Minimale event-duur in seconden
+
+    Returns
+    -------
+    list[np.ndarray]  — Lijst van (sub-)regio indices, elk ≥ min_dur_s
+    """
+    dur_s = len(idx) / sf
+    if dur_s <= max_dur_s:
+        return [idx]
+
+    min_samples = int(min_dur_s * sf)
+    seg = flow_env[idx[0]:idx[-1] + 1]
+
+    if len(seg) < 2 * min_samples:
+        # Te kort om te splitsen in twee geldige events → neem hele regio
+        return [idx]
+
+    # Zoek de partiële recovery: hoogste flow in het midden
+    # (niet in de eerste/laatste min_dur_s samples — die moeten elk event vormen)
+    search_start = min_samples
+    search_end   = len(seg) - min_samples
+    if search_start >= search_end:
+        return [idx]
+
+    search_seg = seg[search_start:search_end]
+    split_local = int(np.argmax(search_seg))
+    split_abs   = search_start + split_local
+
+    left_idx  = idx[:split_abs]
+    right_idx = idx[split_abs:]
+
+    # Recursief splitsen als nog te lang
+    result = []
+    for sub in [left_idx, right_idx]:
+        if len(sub) / sf >= min_dur_s:
+            result.extend(_split_long_region(sub, flow_env, sf, max_dur_s, min_dur_s))
+    return result if result else [idx]
+
+
 def _detect_apneas(
     apnea_raw, sleep_mask_ap, flow_env, flow_norm, baseline,
     sf_flow, sf_spo2, hypno,
     thorax_env, abdomen_env, thorax_raw, abdomen_raw, effort_bl,
     spo2_data, global_spo2_bl, mmsd_norm,
+    max_dur_s: float = APNEA_MAX_DUR_S,
 ) -> list[dict]:
     """Detecteer apnea-events: ≥90% flow-reductie gedurende ≥10s (AASM 2.6)."""
     events: list[dict] = []
@@ -753,36 +827,40 @@ def _detect_apneas(
             if float(np.mean(mmsd_norm[idx[0] : idx[-1] + 1])) > MMSD_APNEA_THRESH:
                 continue
 
-        onset_s    = idx[0] / sf_flow
-        ep_idx     = int(onset_s // EPOCH_LEN_S)
-        stage      = hypno[ep_idx] if ep_idx < len(hypno) else "W"
-        pre_bl     = _pre_event_baseline(flow_env, idx[0], sf_flow, baseline)
-        flow_mean  = float(np.mean(flow_env[idx[0] : idx[-1] + 1]))
-        flow_red   = safe_r((1 - flow_mean / pre_bl) * 100) if pre_bl > 0 else None
+        # v0.8.22: split events die te lang zijn
+        sub_regions = _split_long_region(idx, flow_env, sf_flow, max_dur_s, APNEA_MIN_DUR_S)
+        for sub_idx in sub_regions:
+            sub_dur = len(sub_idx) / sf_flow
+            onset_s    = sub_idx[0] / sf_flow
+            ep_idx     = int(onset_s // EPOCH_LEN_S)
+            stage      = hypno[ep_idx] if ep_idx < len(hypno) else "W"
+            pre_bl     = _pre_event_baseline(flow_env, sub_idx[0], sf_flow, baseline)
+            flow_mean  = float(np.mean(flow_env[sub_idx[0] : sub_idx[-1] + 1]))
+            flow_red   = safe_r((1 - flow_mean / pre_bl) * 100) if pre_bl > 0 else None
 
-        ev_type, conf, detail = classify_apnea_type(
-            onset_idx=idx[0], end_idx=idx[-1] + 1,
-            thorax_env=thorax_env, abdomen_env=abdomen_env,
-            thorax_raw=thorax_raw, abdomen_raw=abdomen_raw,
-            effort_baseline=effort_bl, sf=sf_flow,
-        )
-        desat, min_spo2 = get_desaturation(
-            spo2_data, onset_s, dur_s, sf_spo2, global_spo2_bl
-        )
-        events.append({
-            "type":               ev_type,
-            "onset_s":            safe_r(onset_s),
-            "duration_s":         safe_r(dur_s),
-            "stage":              stage,
-            "desaturation_pct":   desat,
-            "min_spo2":           min_spo2,
-            "flow_nadir":         safe_r(float(np.min(flow_norm[idx[0] : idx[-1] + 1])), 3),
-            "flow_reduction_pct": flow_red,
-            "pre_baseline":       safe_r(pre_bl, 2),
-            "confidence":         conf,
-            "classify_detail":    detail,
-            "epoch":              ep_idx,
-        })
+            ev_type, conf, detail = classify_apnea_type(
+                onset_idx=sub_idx[0], end_idx=sub_idx[-1] + 1,
+                thorax_env=thorax_env, abdomen_env=abdomen_env,
+                thorax_raw=thorax_raw, abdomen_raw=abdomen_raw,
+                effort_baseline=effort_bl, sf=sf_flow,
+            )
+            desat, min_spo2 = get_desaturation(
+                spo2_data, onset_s, sub_dur, sf_spo2, global_spo2_bl
+            )
+            events.append({
+                "type":               ev_type,
+                "onset_s":            safe_r(onset_s),
+                "duration_s":         safe_r(sub_dur),
+                "stage":              stage,
+                "desaturation_pct":   desat,
+                "min_spo2":           min_spo2,
+                "flow_nadir":         safe_r(float(np.min(flow_norm[sub_idx[0] : sub_idx[-1] + 1])), 3),
+                "flow_reduction_pct": flow_red,
+                "pre_baseline":       safe_r(pre_bl, 2),
+                "confidence":         conf,
+                "classify_detail":    detail,
+                "epoch":              ep_idx,
+            })
     return events
 
 
@@ -795,6 +873,7 @@ def _detect_hypopneas(
     desat_pct: float = 3.0,
     contam_win_s: float = 15.0,
     post_event_win_s: float = 45,
+    max_dur_s: float = HYPOPNEA_MAX_DUR_S,
 ) -> tuple[list[dict], list[dict]]:
     """Return (all_events_including_new_hypopneas, rejected_candidates)."""
     # Build apnea exclusion mask (±5 s around each confirmed apnea)
@@ -819,72 +898,90 @@ def _detect_hypopneas(
         if dur_s < HYPOPNEA_MIN_DUR_S:
             continue
 
-        onset_s   = idx[0] / sf_hy
-        ep_idx    = int(onset_s // EPOCH_LEN_S)
-        stage     = hypno[ep_idx] if ep_idx < len(hypno) else "W"
-        pre_bl    = _pre_event_baseline(hypop_env, idx[0], sf_hy, hypop_baseline)
-        flow_mean = float(np.mean(hypop_env[idx[0] : idx[-1] + 1]))
-        flow_red  = safe_r((1 - flow_mean / pre_bl) * 100) if pre_bl > 0 else None
+        # v0.8.22: split events die te lang zijn
+        sub_regions = _split_long_region(idx, hypop_env, sf_hy, max_dur_s, HYPOPNEA_MIN_DUR_S)
+        for sub_idx in sub_regions:
+            sub_dur   = len(sub_idx) / sf_hy
+            onset_s   = sub_idx[0] / sf_hy
+            ep_idx    = int(onset_s // EPOCH_LEN_S)
+            stage     = hypno[ep_idx] if ep_idx < len(hypno) else "W"
+            pre_bl    = _pre_event_baseline(hypop_env, sub_idx[0], sf_hy, hypop_baseline)
+            flow_mean = float(np.mean(hypop_env[sub_idx[0] : sub_idx[-1] + 1]))
+            flow_red  = safe_r((1 - flow_mean / pre_bl) * 100) if pre_bl > 0 else None
 
-        # Fix 2 — SpO2 kruiscontaminatie (v0.8.14: flag only, niet blokkeren)
-        contaminated = (
-            apply_spo2_crosscontam_fix
-            and contam_win_s > 0 and _spo2_cross_contaminated(onset_s, new_events, post_event_window_s=contam_win_s)
-        )
-        # v0.8.14: ALTIJD desaturatie berekenen. Contamination is informatief,
-        # blokkeert de scoring NIET meer. De vorige aanpak (desat=None bij
-        # contamination) veroorzaakte massale ondertelling bij matig OSAS
-        # waar events typisch 20-40s apart liggen.
-        desat, min_spo2 = get_desaturation(
-            spo2_data, onset_s, dur_s, sf_spo2, global_spo2_bl,
-            post_win_s=post_event_win_s,
-        )
-        rule1a = desat is not None and desat >= desat_pct
+            # v0.8.22: Lokale basislijn-validatie — vergelijk met directe
+            # pre-event ademhaling. Voorkomt false positives door opgeblazen
+            # rollende basislijn (post-apnea recovery hyperpnea).
+            local_valid, local_red = _validate_local_reduction(
+                hypop_env, sub_idx[0], sub_idx[-1] + 1, sf_hy)
+            if not local_valid:
+                rejected.append({
+                    "onset_s":    safe_r(onset_s),
+                    "duration_s": safe_r(sub_dur),
+                    "stage":      stage,
+                    "desat":      None,
+                    "min_spo2":   None,
+                    "indices":    (sub_idx[0], sub_idx[-1] + 1),
+                    "epoch":      ep_idx,
+                    "reject_reason": f"local_reduction_{local_red}pct<20pct",
+                })
+                continue
 
-        if not rule1a:
-            rejected.append({
-                "onset_s":    safe_r(onset_s),
-                "duration_s": safe_r(dur_s),
-                "stage":      stage,
-                "desat":      desat,
-                "min_spo2":   min_spo2,
-                "indices":    (idx[0], idx[-1] + 1),
-                "epoch":      ep_idx,
+            # Fix 2 — SpO2 kruiscontaminatie (v0.8.14: flag only, niet blokkeren)
+            contaminated = (
+                apply_spo2_crosscontam_fix
+                and contam_win_s > 0 and _spo2_cross_contaminated(onset_s, new_events, post_event_window_s=contam_win_s)
+            )
+            desat, min_spo2 = get_desaturation(
+                spo2_data, onset_s, sub_dur, sf_spo2, global_spo2_bl,
+                post_win_s=post_event_win_s,
+            )
+            rule1a = desat is not None and desat >= desat_pct
+
+            if not rule1a:
+                rejected.append({
+                    "onset_s":    safe_r(onset_s),
+                    "duration_s": safe_r(sub_dur),
+                    "stage":      stage,
+                    "desat":      desat,
+                    "min_spo2":   min_spo2,
+                    "indices":    (sub_idx[0], sub_idx[-1] + 1),
+                    "epoch":      ep_idx,
+                })
+                continue
+
+            # Subtype classification
+            if sf_hy != sf_flow:
+                hy_oi = int(onset_s * sf_flow)
+                hy_ei = int((onset_s + sub_dur) * sf_flow)
+            else:
+                hy_oi, hy_ei = sub_idx[0], sub_idx[-1] + 1
+
+            hy_sub, hy_conf, hy_det = classify_apnea_type(
+                onset_idx=hy_oi, end_idx=hy_ei,
+                thorax_env=thorax_env, abdomen_env=abdomen_env,
+                thorax_raw=thorax_raw, abdomen_raw=abdomen_raw,
+                effort_baseline=effort_bl, sf=sf_flow,
+            )
+            hy_label = f"hypopnea_{hy_sub}" if hy_sub != "obstructive" else "hypopnea"
+            flow_red_ratio = safe_r(
+                1.0 - float(np.mean(hypop_norm[sub_idx[0] : sub_idx[-1] + 1])), 3
+            )
+            new_events.append({
+                "type":                   hy_label,
+                "onset_s":                safe_r(onset_s),
+                "duration_s":             safe_r(sub_dur),
+                "stage":                  stage,
+                "desaturation_pct":       desat,
+                "min_spo2":               min_spo2,
+                "flow_reduction":         flow_red_ratio,
+                "flow_reduction_pct":     flow_red,
+                "pre_baseline":           safe_r(pre_bl, 2),
+                "confidence":             hy_conf,
+                "classify_detail":        hy_det,
+                "epoch":                  ep_idx,
+                "spo2_cross_contaminated": contaminated,
             })
-            continue
-
-        # Subtype classification
-        if sf_hy != sf_flow:
-            hy_oi = int(onset_s * sf_flow)
-            hy_ei = int((onset_s + dur_s) * sf_flow)
-        else:
-            hy_oi, hy_ei = idx[0], idx[-1] + 1
-
-        hy_sub, hy_conf, hy_det = classify_apnea_type(
-            onset_idx=hy_oi, end_idx=hy_ei,
-            thorax_env=thorax_env, abdomen_env=abdomen_env,
-            thorax_raw=thorax_raw, abdomen_raw=abdomen_raw,
-            effort_baseline=effort_bl, sf=sf_flow,
-        )
-        hy_label = f"hypopnea_{hy_sub}" if hy_sub != "obstructive" else "hypopnea"
-        flow_red_ratio = safe_r(
-            1.0 - float(np.mean(hypop_norm[idx[0] : idx[-1] + 1])), 3
-        )
-        new_events.append({
-            "type":                   hy_label,
-            "onset_s":                safe_r(onset_s),
-            "duration_s":             safe_r(dur_s),
-            "stage":                  stage,
-            "desaturation_pct":       desat,
-            "min_spo2":               min_spo2,
-            "flow_reduction":         flow_red_ratio,
-            "flow_reduction_pct":     flow_red,
-            "pre_baseline":           safe_r(pre_bl, 2),
-            "confidence":             hy_conf,
-            "classify_detail":        hy_det,
-            "epoch":                  ep_idx,
-            "spo2_cross_contaminated": contaminated,
-        })
 
     return new_events, rejected
 
@@ -908,6 +1005,57 @@ def _pre_event_baseline(
         val = float(fallback_bl[onset_idx])
         return max(val, 1e-6)
     return float(fallback_bl) if np.ndim(fallback_bl) == 0 else 1.0
+
+
+def _validate_local_reduction(
+    env: np.ndarray,
+    event_start: int,
+    event_end: int,
+    sf: float,
+    min_reduction_pct: float = 20.0,
+    pre_win_s: float = 30.0,
+) -> tuple[bool, float]:
+    """v0.8.22: Valideer dat een event een echte flow-reductie toont t.o.v.
+    de directe pre-event ademhaling (zoals een menselijke scorer doet).
+
+    Vergelijkt de gemiddelde flow-envelope tijdens het event met de gemiddelde
+    flow-envelope in een venster vlak vóór het event. Als het verschil
+    < min_reduction_pct is, is de "reductie" een artefact van een opgeblazen
+    rollende basislijn (bv. door post-apnea recovery hyperpnea).
+
+    Parameters
+    ----------
+    env : np.ndarray         Flow-envelope
+    event_start, event_end : int  Sample-indices van het event
+    sf : float               Samplerate
+    min_reduction_pct : float  Minimale reductie (default 20%)
+    pre_win_s : float        Pre-event venster in seconden (default 30s)
+
+    Returns
+    -------
+    (is_valid, local_reduction_pct)
+    """
+    pre_samples = int(pre_win_s * sf)
+    pre_start   = max(0, event_start - pre_samples)
+
+    # Minimaal 3s pre-event signaal nodig
+    if event_start - pre_start < int(3 * sf):
+        return True, 100.0   # te weinig data → niet afwijzen
+
+    pre_seg   = env[pre_start:event_start]
+    event_seg = env[event_start:event_end]
+
+    if len(pre_seg) == 0 or len(event_seg) == 0:
+        return True, 100.0
+
+    pre_mean   = float(np.mean(pre_seg))
+    event_mean = float(np.mean(event_seg))
+
+    if pre_mean < 1e-9:
+        return True, 100.0   # pre-event ook plat → niet afwijzen
+
+    local_reduction = (1.0 - event_mean / pre_mean) * 100.0
+    return local_reduction >= min_reduction_pct, safe_r(local_reduction)
 
 
 # ---------------------------------------------------------------------------

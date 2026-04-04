@@ -3,7 +3,7 @@
 **An open-source web platform for automated polysomnography (PSG) analysis.**
 
 [![License: BSD-3](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.8.17-green.svg)](CHANGES.md)
+[![Version](https://img.shields.io/badge/version-0.8.22-green.svg)](CHANGES.md)
 [![Python](https://img.shields.io/badge/python-3.11-blue.svg)](requirements.txt)
 [![Docker](https://img.shields.io/badge/docker-compose-blue.svg)](docker-compose.yml)
 [![AASM](https://img.shields.io/badge/AASM-2.6-orange.svg)](https://aasm.org)
@@ -367,7 +367,7 @@ If you use YASAFlaskified or psgscoring in your research, please cite:
   title     = {{YASAFlaskified}: An open-source web platform for automated
                polysomnography analysis},
   year      = {2026},
-  version   = {0.8.11},
+  version   = {0.8.22},
   publisher = {GitHub},
   url       = {https://github.com/bartromb/YASAFlaskified}
 }

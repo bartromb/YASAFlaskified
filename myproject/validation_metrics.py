@@ -1,5 +1,5 @@
 """
-validation_metrics.py — YASAFlaskified v0.8.11
+validation_metrics.py — YASAFlaskified v0.8.22
 ============================================
 Berekent validatie-metrics voor AI vs manuele scoring.
 

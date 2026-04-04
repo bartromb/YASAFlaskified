@@ -4,23 +4,110 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 
 ---
 
+## [0.8.22]
+
+### Fixed — PDF rapport inconsistenties & klinische correctheid
+
+**Lokale basislijn-validatie (klinisch kritiek — v0.8.22):**
+- FIX: False-positive hypopneeën door opgeblazen rollende basislijn (post-apnea recovery hyperpnea)
+- NIEUW: `_validate_local_reduction()` — vergelijkt event-amplitude met de directe pre-event ademhaling (30s venster), exact zoals een menselijke scorer doet
+- Events met <20% lokale reductie worden afgewezen met reden `local_reduction_Xpct<20pct`
+- Voorkomt 60–80+ seconden "hypopneeën" waar visueel geen flow-reductie zichtbaar is
+- PDF: "Fix 6 — Lokale basislijn" in overschatting-correctie tabel toont aantal afgewezen events
+
+**Hypopnea/Apnea max-duur splitting (klinisch kritiek):**
+- FIX: Hypopneeën van 60–80+ seconden werden als één event gescoord — klinisch onrealistisch
+- NIEUW: `HYPOPNEA_MAX_DUR_S = 60s`, `APNEA_MAX_DUR_S = 90s` (configureerbaar per scoring profiel)
+- NIEUW: `_split_long_region()` splitst te lange events op het punt van maximale flow-recovery (partiële herstel-ademhaling)
+- Recursief: sub-regio's die nog te lang zijn worden opnieuw gesplitst
+- Elk sub-event krijgt eigen desaturatie-berekening, classificatie en confidence
+- Profiel-afhankelijk: strict=60/90s, standard=60/90s, sensitive=90/120s
+
+**SpO2 sectie (kritiek):**
+- FIX: `mean_spo2` key mismatch — PDF gebruikte `mean_spo2` maar SpO2 module retourneerde `avg_spo2` → Gemiddelde SpO2 toonde altijd "—"
+- FIX: ODI 3% en ODI 4% werden nooit berekend — PDF verwees naar `odi_3pct`/`odi_4pct` maar `analyze_spo2()` berekende deze niet → altijd "—"
+- NIEUW: ODI 3% en ODI 4% worden nu correct berekend via `detect_desaturations()` met respectievelijk `drop_pct=3.0` en `drop_pct=4.0`
+- NIEUW: Baseline SpO2 (P90) nu ook zichtbaar in SpO2-tabel
+- NIEUW: `mean_spo2` alias toegevoegd voor backward-compatibiliteit
+- NIEUW: `n_desat_3pct` en `n_desat_4pct` tellingen in summary dict
+
+**Slaapcycli (klinisch misleidend):**
+- FIX: Cycle-detectie herschreven — oude algoritme maakte nieuwe cyclus bij elke REM→NREM transitie, zonder minimale duur. Produceerde 33 micro-cycli (0.5–3.0 min) i.p.v. verwachte 4–6 cycli
+- NIEUW: Feinberg & Floyd criteria: minimaal 15 min NREM (30 epochs) vereist voor geldige cyclus
+- NIEUW: REM-consolidatie: korte N1/W onderbrekingen (≤2 min) breken REM-periode niet
+
+**REM-detectie (klinisch misleidend):**
+- FIX: REM-perioden werden gefragmenteerd geteld — elke R→non-R transitie was een "periode"
+- NIEUW: Geconsolideerde REM-perioden met gap-tolerantie (≤4 epochs N1/W)
+- Realistische n_rem_periods, mean_rem_period_min, longest_rem_period_min
+
+**Spindle & Slow Wave tabellen:**
+- FIX: "Stadium" kolom toonde altijd "—" — YASA summary met `grp_chan=True, grp_stage=False` heeft `Channel` key, niet `Stage`
+- FIX: Kolomheader veranderd van "Stadium" naar "Kanaal" (i18n: NL/FR/EN)
+- FIX: Row lookup zoekt nu Channel→channel→Stage→stage fallback chain
+
+**Signaal kwaliteit & confidence waarschuwing:**
+- NIEUW: Rode banner bovenaan rapport wanneer signaalkwaliteit "poor" is met onbruikbare kanalen
+- NIEUW: Rode banner wanneer ≥20% epochs AI-confidence <70% — "Manuele verificatie aanbevolen"
+- Waarschuwingen verschijnen direct na de KPI-balk, vóór de slaaparchitectuur
+
+**Signaalvoorbeelden in PDF (sectie 8e):**
+- NIEUW: Tot 3 representatieve respiratoire events als gestapelde signaalplots
+- Selectie: hoogste confidence, langste event, grootste desaturatie (gededupliceerd)
+- Per event: 15s pre + event + 30s post, alle beschikbare pneumokanalen (Flow, Nasal P., Thorax, Abdomen, SpO₂, Snore)
+- Rode band markeert event-duur, titel toont type/duur/desaturatie/confidence/slaapstadium
+- i18n: sectieheader en intro-tekst in NL/FR/EN
+- `edf_path` en `pneumo_channels` worden nu meegegeven via combined dict (tasks.py)
+
+### Changed
+- Versienummer: 0.8.19 → 0.8.22 in alle bestanden (app.py, i18n.py, generate_pdf_report.py, signal_quality.py, README.md, DISCLAIMER.md)
+
+---
+
+## [0.8.19]
+
+### Added — Study types, position legend, titration support
+
+**Study type support (v0.8.19):**
+- UI dropdown: Diagnostic PSG / Titration PSG CPAP / Titration PG CPAP / Titration PG MRA
+- Study type flows through config → results → PDF
+- PDF title: "Slaaprapport" vs "Titratierapport — CPAP" vs "Titratierapport — MRA"
+- Titration: "Residueel AHI" / "Residueel OAHI" labels + therapy note
+- Polygraphy: "REI" instead of "AHI", sections 2-7 + 8b arousals skipped
+- Polygraphy: "Geen slaapstaging" notice in section 1
+- 13 new i18n keys NL/FR/EN
+
+**Position legend in visual overview (v0.8.19):**
+- POS legend line added under EVENT/SpO2/PHONO legends
+
+### Fixed
+
+**EDF → header auto-fill (v0.8.18→0.8.19):**
+- Eigen EDF parser bij kanaalkeuz (MNE subject_info onbetrouwbaar)
+- EDF patient fields auto-populate PDF header + formulier
+- Numerieke naam (patiëntcode) wordt vervangen door EDF-naam
+- Duplicate "Patiëntgegevens (uit EDF)" tabel verwijderd
+- Heranalyse: slimme merge detecteert code vs naam
+
+---
+
 ## [0.8.17]
 
 ### Added — Signal quality, flattening RERA, montage checks
 
-**Signal quality assessment (v0.8.17):**
+**Signal quality assessment (v0.8.19):**
 - New module `psgscoring/signal_quality.py`
 - Per-channel: flat-line %, clipping %, line-noise %, disconnect count
 - Channel grade: good / acceptable / poor; overall recording grade
 - PDF Section 7b: table per channel with quality metrics
 
-**Montage plausibility checks (v0.8.17):**
+**Montage plausibility checks (v0.8.19):**
 - Cross-correlation EEG↔EOG (r>0.95 = shared reference warning)
 - Cross-correlation thorax↔abdomen (r>0.98 = duplication warning)
 - Cross-correlation flow↔effort (r>0.95 = duplication warning)
 - Warnings displayed prominently in PDF report
 
-**Flattening-based RERA detection (v0.8.17):**
+**Flattening-based RERA detection (v0.8.19):**
 - Dual-source RERA: FRI-RERA (amplitude) + Flattening-RERA (shape)
 - Hosselet et al. (AJRCCM 1998) flattening index >0.30 = flow limitation
 - ≥3 consecutive flat breaths, ≥10s, + arousal = flattening-RERA

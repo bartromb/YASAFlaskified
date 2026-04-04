@@ -123,7 +123,12 @@ def analyze_spo2(
         pct80, t80 = pct_below(80)
         pct70, t70 = pct_below(70)
 
-        desaturations = detect_desaturations(spo2_clean, sf, sleep_mask)
+        desaturations_3pct = detect_desaturations(spo2_clean, sf, sleep_mask, drop_pct=3.0)
+        desaturations_4pct = detect_desaturations(spo2_clean, sf, sleep_mask, drop_pct=4.0)
+        desaturations = desaturations_3pct  # backward compat
+
+        odi_3pct = safe_r(len(desaturations_3pct) / total_sleep_h)
+        odi_4pct = safe_r(len(desaturations_4pct) / total_sleep_h)
 
         # REM / NREM split
         hypno_num = hypno_to_numeric(hypno)
@@ -152,12 +157,18 @@ def analyze_spo2(
         rem_p90,  rem_t90,  rem_min  = stage_spo2_stats(rem_mask)
         nrem_p90, nrem_t90, nrem_min = stage_spo2_stats(nrem_mask)
 
+        _avg = safe_r(float(np.nanmean(spo2_sleep)))
         result["summary"] = {
             "baseline_spo2":      safe_r(baseline_spo2),
             "min_spo2":           safe_r(float(np.nanmin(spo2_sleep))),
-            "avg_spo2":           safe_r(float(np.nanmean(spo2_sleep))),
+            "avg_spo2":           _avg,
+            "mean_spo2":          _avg,           # v0.8.22: alias voor PDF
             "n_desaturations":    len(desaturations),
-            "desat_index":        safe_r(len(desaturations) / total_sleep_h),
+            "desat_index":        odi_3pct,
+            "odi_3pct":           odi_3pct,       # v0.8.22: ODI ≥3%
+            "odi_4pct":           odi_4pct,       # v0.8.22: ODI ≥4%
+            "n_desat_3pct":       len(desaturations_3pct),
+            "n_desat_4pct":       len(desaturations_4pct),
             "pct_below_90":       pct90,
             "time_below_90":      t90,
             "pct_below_80":       pct80,

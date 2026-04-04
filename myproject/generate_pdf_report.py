@@ -1,5 +1,5 @@
 """
-generate_pdf_report.py — YASAFlaskified v0.8.17
+generate_pdf_report.py — YASAFlaskified v0.8.22
 Site-config: via config.json["site"] of site_config parameter.
 """
 import json, os, io
@@ -216,7 +216,7 @@ def _spo2_img(ts,wc=16.2,hc=2.2):
     buf=io.BytesIO(); fig.savefig(buf,format="png",dpi=150,bbox_inches="tight"); plt.close(fig); buf.seek(0)
     return Image(buf,width=wc*cm,height=hc*cm)
 
-# ── v0.8.17: Overview plots — gedeelde x-as (uren) ────────────
+# ── v0.8.22: Overview plots — gedeelde x-as (uren) ────────────
 
 # Shared plot setup for all overview panels
 _OV_WC = 16.2   # cm width
@@ -383,7 +383,7 @@ def _callbacks(site, lang="nl"):
         canvas.line(ML,MB-0.2*cm,W_A4-MR,MB-0.2*cm)
         canvas.setFont("Helvetica",6.5); canvas.setFillColor(GR)
         canvas.drawString(ML,MB-0.45*cm,
-            "YASAFlaskified v0.8.17  |  AASM 2.6  |  www.slaapkliniek.be  |  \u00a9 Bart Rombaut")
+            "YASAFlaskified v0.8.22  |  AASM 2.6  |  www.slaapkliniek.be  |  \u00a9 Bart Rombaut")
         canvas.drawRightString(W_A4-MR,MB-0.45*cm,f"{t('pdf_page',lang)} {doc.page}")
         canvas.restoreState()
     return draw,draw
@@ -408,6 +408,241 @@ def _aasm_tbl(stats, lang="nl"):
     ]
     return _tbl([t("pdf_param",lang),t("pdf_value",lang),"% TST","Ref (AASM)"],
                 rows,[7.5,3,3,3.5])
+
+
+# ══════════════════════════════════════════════════════════════
+# v0.8.22: EPOCH-VOORBEELDEN — representatieve signaalfragmenten
+# ══════════════════════════════════════════════════════════════
+
+# Kanalen die we willen tonen (in volgorde van boven naar beneden)
+_EPOCH_CH_ORDER = [
+    ("flow",            "Flow",         "#2980b9"),
+    ("flow_pressure",   "Nasal P.",     "#3498db"),
+    ("flow_thermistor", "Thermistor",   "#1abc9c"),
+    ("thorax",          "Thorax",       "#e67e22"),
+    ("abdomen",         "Abdomen",      "#d35400"),
+    ("spo2",            "SpO₂",         "#e74c3c"),
+    ("snore",           "Snore",        "#8e44ad"),
+]
+
+def _select_example_events(events, n=3):
+    """Selecteer representatieve events voor epoch-voorbeelden.
+
+    Strategie: 1 event met hoogste confidence, 1 langste event,
+    1 event met grootste desaturatie. Deduplicatie op tijdsoverlap.
+    """
+    if not events:
+        return []
+    # Filter alleen events met onset_s
+    valid = [e for e in events if e.get("onset_s") is not None]
+    if not valid:
+        return []
+
+    picks = {}
+
+    # Hoogste confidence
+    by_conf = sorted(valid, key=lambda e: e.get("confidence", 0), reverse=True)
+    if by_conf:
+        picks["best"] = by_conf[0]
+
+    # Langste event
+    by_dur = sorted(valid, key=lambda e: e.get("duration_s", 0), reverse=True)
+    if by_dur:
+        picks["longest"] = by_dur[0]
+
+    # Grootste desaturatie
+    by_desat = sorted(valid, key=lambda e: e.get("desaturation_pct", 0) or 0, reverse=True)
+    if by_desat and (by_desat[0].get("desaturation_pct") or 0) >= 3:
+        picks["desat"] = by_desat[0]
+
+    # Deduplicatie: events die <60s uit elkaar liggen zijn "hetzelfde"
+    result = []
+    for label, ev in picks.items():
+        overlap = False
+        for existing in result:
+            if abs(ev["onset_s"] - existing["onset_s"]) < 60:
+                overlap = True
+                break
+        if not overlap:
+            ev = dict(ev)
+            ev["_label"] = label
+            result.append(ev)
+        if len(result) >= n:
+            break
+
+    return result
+
+
+def _plot_epoch_example(edf_path, channel_map, event, hypno=None,
+                        pre_s=15, post_s=30, wc=16.2, hc_per_ch=1.2):
+    """Plot een enkel epoch-voorbeeld: gestapelde pneumokanalen rond een event.
+
+    Parameters
+    ----------
+    edf_path : str       Pad naar EDF-bestand
+    channel_map : dict   {type: channel_name} mapping
+    event : dict         Event met onset_s, duration_s, type, etc.
+    hypno : list         Hypnogram (optioneel, voor stage label)
+    pre_s, post_s : float  Seconden vóór/na event
+    """
+    import mne
+    mne.set_log_level("ERROR")
+
+    onset  = float(event["onset_s"])
+    dur    = float(event["duration_s"])
+    t_start = max(0, onset - pre_s)
+    t_end   = onset + dur + post_s
+
+    # Bepaal welke kanalen beschikbaar zijn
+    try:
+        raw_hdr = mne.io.read_raw_edf(edf_path, preload=False, verbose=False)
+        available = raw_hdr.ch_names
+    except Exception:
+        return None
+
+    ch_to_plot = []
+    for ch_type, label, color in _EPOCH_CH_ORDER:
+        ch_name = channel_map.get(ch_type)
+        if ch_name and ch_name in available:
+            ch_to_plot.append((ch_type, ch_name, label, color))
+
+    if len(ch_to_plot) < 2:
+        return None
+
+    # Laad alleen de benodigde kanalen
+    try:
+        ch_names_load = [c[1] for c in ch_to_plot]
+        raw = mne.io.read_raw_edf(edf_path, preload=False, verbose=False)
+        raw.pick(ch_names_load)
+        raw.load_data()
+        sf = raw.info["sfreq"]
+    except Exception:
+        return None
+
+    n_ch = len(ch_to_plot)
+    total_hc = max(n_ch * hc_per_ch, 3)
+    fig, axes = plt.subplots(n_ch, 1, figsize=(wc/2.54, total_hc/2.54),
+                              sharex=True, dpi=150)
+    if n_ch == 1:
+        axes = [axes]
+    fig.patch.set_facecolor("white")
+
+    s_start = int(t_start * sf)
+    s_end   = min(int(t_end * sf), raw.n_times)
+    times   = np.arange(s_start, s_end) / sf  # in seconds
+
+    for i, (ch_type, ch_name, label, color) in enumerate(ch_to_plot):
+        ax = axes[i]
+        ax.set_facecolor("white")
+        try:
+            data = raw.get_data(picks=[ch_name])[0][s_start:s_end]
+        except Exception:
+            data = np.zeros(s_end - s_start)
+
+        # SpO2: vaste y-as
+        if ch_type == "spo2":
+            ax.plot(times, data, color=color, linewidth=0.6)
+            valid = data[(data >= 50) & (data <= 100)]
+            if len(valid) > 0:
+                ax.set_ylim(max(50, np.min(valid) - 3), min(102, np.max(valid) + 2))
+            ax.axhline(90, color="#e74c3c", linewidth=0.4, linestyle="--", alpha=0.5)
+        else:
+            ax.plot(times, data, color=color, linewidth=0.5)
+            # Auto-scale met clipping op P1/P99
+            if len(data) > 10:
+                p1, p99 = np.percentile(data, [1, 99])
+                margin = max((p99 - p1) * 0.1, 1)
+                ax.set_ylim(p1 - margin, p99 + margin)
+
+        # Event markering (grijze band)
+        ax.axvspan(onset, onset + dur, color="#e74c3c", alpha=0.12, zorder=0)
+        ax.axvline(onset, color="#e74c3c", linewidth=0.5, alpha=0.6)
+        ax.axvline(onset + dur, color="#e74c3c", linewidth=0.5, alpha=0.6)
+
+        ax.set_ylabel(label, fontsize=5.5, color="#4a5568", rotation=0,
+                      labelpad=30, ha="right", va="center")
+        ax.tick_params(axis="y", labelsize=4.5, length=2, width=0.3)
+        ax.tick_params(axis="x", labelsize=5, length=2, width=0.3)
+        ax.spines[["top", "right"]].set_visible(False)
+        ax.spines["left"].set_linewidth(0.3)
+        ax.spines["bottom"].set_linewidth(0.3)
+
+        if i < n_ch - 1:
+            ax.tick_params(axis="x", labelbottom=False)
+
+    # X-as label op onderste paneel
+    axes[-1].set_xlabel("Tijd (s)", fontsize=5.5, color="#6b7a99")
+    # Tijdstip in de nacht (uren:minuten)
+    onset_hm = f"{int(onset//3600):02d}:{int((onset%3600)//60):02d}:{int(onset%60):02d}"
+
+    # Event type + stage label
+    ev_type = event.get("type", "?").upper()
+    ev_dur  = f"{dur:.0f}s"
+    ev_desat = ""
+    if event.get("desaturation_pct"):
+        ev_desat = f", desat {event['desaturation_pct']:.1f}%"
+    ev_conf = ""
+    if event.get("confidence"):
+        ev_conf = f", conf {event['confidence']:.2f}"
+    stage = ""
+    if hypno:
+        ep_idx = int(onset / 30)
+        if 0 <= ep_idx < len(hypno):
+            stage = f" [{hypno[ep_idx]}]"
+
+    title = f"{ev_type} — {ev_dur}{ev_desat}{ev_conf}{stage} — t={onset_hm}"
+    fig.suptitle(title, fontsize=6.5, color="#1a3a5c", fontweight="bold", y=0.99)
+
+    plt.tight_layout(pad=0.3)
+    fig.subplots_adjust(top=0.94, hspace=0.15)
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    buf.seek(0)
+    return Image(buf, width=wc*cm, height=total_hc*cm)
+
+
+def _build_epoch_examples(results, wc=16.2):
+    """Bouw epoch-voorbeeld Image objecten voor het PDF-rapport.
+
+    Returns list of (event_dict, Image) tuples, max 3.
+    """
+    edf_path = results.get("edf_path")
+    if not edf_path or not os.path.exists(str(edf_path)):
+        return []
+
+    pneumo = results.get("pneumo", {})
+    resp   = pneumo.get("respiratory", {})
+    events = resp.get("events", [])
+    if not events:
+        return []
+
+    # Kanaalmap: probeer pneumo_channels, dan meta.channels_used
+    ch_map = results.get("pneumo_channels", {})
+    if not ch_map:
+        ch_map = pneumo.get("meta", {}).get("channels_used", {})
+    if not ch_map:
+        return []
+
+    # Hypnogram voor stage-labels
+    hypno = None
+    timeline = results.get("timeline")
+    if timeline:
+        hypno = [ep.get("stage", "W") for ep in timeline]
+
+    picks = _select_example_events(events, n=3)
+    images = []
+    for ev in picks:
+        try:
+            img = _plot_epoch_example(edf_path, ch_map, ev, hypno=hypno,
+                                       pre_s=15, post_s=30, wc=wc)
+            if img:
+                images.append((ev, img))
+        except Exception:
+            continue
+    return images
+
 
 # ══════════════════════════════════════════════════════════════
 # HOOFD FUNCTIE
@@ -448,11 +683,55 @@ def generate_pdf_report(results:dict, output_path:str,
     pneumo=results.get("pneumo",{})
     rsum  =pneumo.get("respiratory",{}).get("summary",{})
 
+    # v0.8.22: Als manuele velden leeg zijn, vul aan met EDF-header data
+    edf_pat = pneumo.get("meta", {}).get("patient_info", {}) or {}
+    if edf_pat:
+        # v0.8.22: EDF-naam heeft voorrang als formulier-naam ontbreekt
+        # OF als formulier-naam puur numeriek is (= patiëntcode, niet naam)
+        form_name = (pat.get("patient_name") or "").strip()
+        edf_name = (edf_pat.get("name") or "").strip()
+        name_is_code = form_name.isdigit() or form_name == edf_pat.get("patient_code")
+        if edf_name and (not form_name or name_is_code):
+            parts = edf_name.split()
+            if len(parts) >= 2:
+                pat["patient_name"] = parts[0]
+                pat["patient_firstname"] = " ".join(parts[1:])
+            else:
+                pat["patient_name"] = edf_name
+        if edf_pat.get("sex"):
+            form_sex = (pat.get("sex") or "").strip()
+            if not form_sex or form_sex == "—":
+                pat["sex"] = {"M": "Man", "F": "Vrouw"}.get(edf_pat["sex"], edf_pat["sex"])
+        if edf_pat.get("birthdate"):
+            form_dob = (pat.get("dob") or "").strip()
+            if not form_dob or form_dob == "—":
+                pat["dob"] = edf_pat["birthdate"][:10]
+        if edf_pat.get("patient_code"):
+            form_id = (pat.get("patient_id") or "").strip()
+            if not form_id or form_id == "—":
+                pat["patient_id"] = edf_pat["patient_code"]
+
     story=[]; sp=lambda n=0.25:story.append(Spacer(1,n*cm))
 
-    # ── TITEL ──────────────────────────────────────────────────
+    # ── TITEL (v0.8.22: studietype-afhankelijk) ──────────────────
+    study_type = results.get("study_type", "diagnostic_psg")
+    is_titration = study_type.startswith("titration_")
+    is_polygraphy = "_pg_" in study_type
+    therapy_label = ""
+    if study_type == "titration_psg_cpap":
+        title_txt = t("pdf_titration_cpap", lang)
+        therapy_label = "CPAP"
+    elif study_type == "titration_pg_cpap":
+        title_txt = t("pdf_titration_cpap", lang)
+        therapy_label = "CPAP"
+    elif study_type == "titration_pg_mra":
+        title_txt = t("pdf_titration_mra", lang)
+        therapy_label = "MRA"
+    else:
+        title_txt = "Polysomnografie — Slaaprapport"
+
     sp(0.2)
-    story.append(Paragraph("Polysomnografie — Slaaprapport",styles["T"]))
+    story.append(Paragraph(title_txt, styles["T"]))
     _sp_label = pneumo.get("meta", {}).get("scoring_label", "Standard (AASM 2.6)")
     story.append(Paragraph(f"AASM-scoring via YASA  ·  {site.get('name','SleepAI')}  ·  {_sp_label}",styles["ST"]))
     story.append(HRFlowable(width="100%",thickness=1.2,color=NAVY,spaceAfter=6))
@@ -496,59 +775,91 @@ def generate_pdf_report(results:dict, output_path:str,
 
     # ── KPI-BALK ───────────────────────────────────────────────
     ahi_v=_f(rsum,"ahi_total"); ahi_s=f"{ahi_v:.1f}" if ahi_v is not None else "—"
+    # v0.8.22: Label afhankelijk van studietype
+    if is_polygraphy:
+        ahi_label = f"REI  ({_sev(ahi_v)})"
+    elif is_titration:
+        ahi_label = f"{t('pdf_residual',lang)} AHI  ({_sev(ahi_v)})"
+    else:
+        ahi_label = f"AHI  ({_sev(ahi_v)})"
     story.append(_kpi([
-        (ahi_s, f"AHI  ({_sev(ahi_v)})", "/u", _sev_clr(ahi_v) if ahi_v else GR),
+        (ahi_s, ahi_label, "/u", _sev_clr(ahi_v) if ahi_v else GR),
         (_v(stats,"TST",fmt="{:.0f}"),  "TST", "min", NAVY),
         (_v(stats,"SE",fmt="{:.1f}"),   t("pdf_se",lang),  "%",   NAVY),
         (_v(stats,"SOL",fmt="{:.0f}"),  t("pdf_sol",lang),    "min", NAVY),
         (_v(stats,"WASO",fmt="{:.0f}"), "WASO",                   "min", NAVY),
     ])); sp(0.35)
 
+    # ── v0.8.22: Prominente waarschuwing bij slechte signaalkwaliteit ──
+    sig_q = results.get("signal_quality", {})
+    conf_rev = results.get("confidence_review", {})
+    sq_grade = sig_q.get("overall_grade", "unknown")
+    pct_low_conf = conf_rev.get("pct_low_confidence", 0) or 0
+    _warnings = []
+    if sq_grade == "poor":
+        _n_unusable = sum(1 for ch in (sig_q.get("channels") or [])
+                         if ch.get("quality_grade") == "unusable")
+        if _n_unusable > 0:
+            _warnings.append(
+                f"⚠ Signaalkwaliteit: {_n_unusable} kanalen onbruikbaar "
+                f"(amplitude &lt; minimum). Staging en micro-architectuur "
+                f"(spindles, slow waves) zijn mogelijk onbetrouwbaar.")
+    if pct_low_conf >= 20:
+        _warnings.append(
+            f"⚠ AI-staging confidence: {pct_low_conf:.0f}% van epochs "
+            f"met confidence &lt;70%. Manuele verificatie aanbevolen.")
+    if _warnings:
+        _warn_style = ParagraphStyle("WarnBanner", fontName="Helvetica-Bold",
+                                      fontSize=7.5, textColor=colors.white,
+                                      backColor=colors.HexColor("#e74c3c"),
+                                      leading=11, spaceBefore=2, spaceAfter=2,
+                                      leftIndent=4, rightIndent=4)
+        for _w in _warnings:
+            story.append(Paragraph(_w, _warn_style))
+        sp(0.2)
+
     # ══════════════════════════════════════════════════════════════
-    # OVERZICHTSPAGINA (v0.8.17) — patiënt + kanalen + visueel
+    # OVERZICHTSPAGINA (v0.8.22) — patiënt + kanalen + visueel
     # ══════════════════════════════════════════════════════════════
 
-    # ── Patient info from EDF header (v0.8.17) ────────────────────
-    pat = pneumo.get("meta", {}).get("patient_info", {}) or {}
-    has_pat = any(pat.get(k) for k in ("name","sex","birthday_str","patient_code","equipment"))
-    if has_pat:
-        story.append(_hdr(t("rpt_patient_info", lang), color=BLUE)); sp(0.1)
-        pat_rows = []
-        if pat.get("name"):
-            pat_rows.append([t("pdf_name",lang), pat["name"]])
-        if pat.get("sex"):
-            sex_label = {"M": t("pdf_male",lang), "F": t("pdf_female",lang)}.get(pat["sex"], pat["sex"])
-            pat_rows.append([t("pdf_sex",lang), sex_label])
-        if pat.get("birthday_str"):
-            pat_rows.append([t("pdf_birthdate",lang), pat["birthday_str"]])
-        if pat.get("patient_code"):
-            pat_rows.append([t("pdf_patientcode",lang), pat["patient_code"]])
-        if pat.get("recording_date"):
-            pat_rows.append([t("pdf_recording_date",lang), pat["recording_date"]])
-        if pat.get("technician"):
-            pat_rows.append([t("pdf_technician",lang), pat["technician"]])
-        if pat.get("equipment"):
-            pat_rows.append([t("pdf_equipment",lang), pat["equipment"]])
-        story.append(KeepTogether([_tbl(
-            [t("pdf_param",lang), t("pdf_value",lang)],
-            pat_rows, [5, 9])]))
-        sp(0.2)
+    # ── Patient info from EDF: equipment/technician in header (v0.8.22) ──
+    # Name, sex, DOB, patient_code already merged into header above.
+    # Only show equipment/technician as extra line if present.
+    _edf_extras = []
+    _edf_p = pneumo.get("meta", {}).get("patient_info", {}) or {}
+    if _edf_p.get("equipment"):
+        _edf_extras.append(f"{t('pdf_equipment',lang)}: {_edf_p['equipment']}")
+    if _edf_p.get("technician"):
+        _edf_extras.append(f"{t('pdf_technician',lang)}: {_edf_p['technician']}")
+    if _edf_p.get("recording_date"):
+        _edf_extras.append(f"{t('pdf_recording_date',lang)}: {_edf_p['recording_date']}")
+    if _edf_extras:
+        story.append(Paragraph(
+            "<i>" + "  ·  ".join(_edf_extras) + "</i>",
+            styles["SM"])); sp(0.1)
 
     # ── 0a. Registratie: kanalen in EDF ────────────────────────
     all_ch = pneumo.get("meta", {}).get("all_channels", [])
     if all_ch:
         story.append(_hdr(t("rpt_sec0a", lang))); sp(0.1)
-        # Groepeer kanalen in rijen van 4
+        # Groepeer kanalen in rijen van 4, geen header, klein lettertype
         ch_rows = []
         for i in range(0, len(all_ch), 4):
             row = all_ch[i:i+4]
             while len(row) < 4:
                 row.append("")
             ch_rows.append(row)
-        story.append(_tbl(
-            [t("pdf_ch_col", lang)+" 1", t("pdf_ch_col", lang)+" 2",
-             t("pdf_ch_col", lang)+" 3", t("pdf_ch_col", lang)+" 4"],
-            ch_rows, [4.25, 4.25, 4.25, 4.25])); sp(0.1)
+        ch_style = ParagraphStyle("CH", fontName="Helvetica", fontSize=7,
+                                   textColor=colors.HexColor("#4a5568"), leading=9)
+        ch_data = [[Paragraph(c, ch_style) for c in row] for row in ch_rows]
+        ch_tbl = Table(ch_data, colWidths=[4.25*cm]*4)
+        ch_tbl.setStyle(TableStyle([
+            ("GRID", (0,0), (-1,-1), 0.3, colors.HexColor("#e2e8f0")),
+            ("TOPPADDING", (0,0), (-1,-1), 2),
+            ("BOTTOMPADDING", (0,0), (-1,-1), 2),
+            ("LEFTPADDING", (0,0), (-1,-1), 4),
+        ]))
+        story.append(ch_tbl); sp(0.1)
         story.append(Paragraph(
             f"<i>{len(all_ch)} {t('pdf_ch_total', lang)}</i>",
             styles["SM"])); sp(0.2)
@@ -624,17 +935,35 @@ def generate_pdf_report(results:dict, output_path:str,
         '<font size="6" color="#e67e22">---</font><font size="6" color="#6b7a99"> P60 drempel</font>',
     ]
     story.append(Paragraph("  ".join(leg_parts), styles["SM"]))
+    # v0.8.22: Positie-legende
+    pos_leg = [
+        '<font size="6" color="#6b7a99"><b>POS:</b></font>',
+        '<font size="6" color="#2ecc71">■</font><font size="6" color="#6b7a99"> BUK (buiklig)</font>',
+        '<font size="6" color="#3498db">■</font><font size="6" color="#6b7a99"> LNK (linker zijlig)</font>',
+        '<font size="6" color="#e74c3c">■</font><font size="6" color="#6b7a99"> RUG (ruglig)</font>',
+        '<font size="6" color="#9b59b6">■</font><font size="6" color="#6b7a99"> REC (rechter zijlig)</font>',
+        '<font size="6" color="#95a5a6">■</font><font size="6" color="#6b7a99"> STA (staand/rechtop)</font>',
+    ]
+    story.append(Paragraph("  ".join(pos_leg), styles["SM"]))
     sp(0.1)
 
     story.append(PageBreak())
 
     # ── 1. AASM SLAAPARCHITECTUUR ──────────────────────────────
-    story.append(_hdr(t("rpt_sec1", lang))); sp(0.15)
-    story.append(KeepTogether([_aasm_tbl(stats, lang=lang)])); sp(0.3)
+    if is_polygraphy:
+        story.append(_hdr(t("rpt_sec1", lang))); sp(0.1)
+        story.append(Paragraph(
+            f"<b>{t('pdf_no_staging',lang)}</b><br/>"
+            f"<i>{t('pdf_rei',lang)}: events per uur registratietijd (TIB) i.p.v. TST.</i>",
+            styles["B"])); sp(0.3)
+    else:
+        story.append(_hdr(t("rpt_sec1", lang))); sp(0.15)
+        story.append(KeepTogether([_aasm_tbl(stats, lang=lang)])); sp(0.3)
 
     # ── 2. SLAAPCYCLI ──────────────────────────────────────────
-    cyc=results.get("sleep_cycles",{})
-    if cyc.get("success") and cyc.get("cycles"):
+    if not is_polygraphy:
+      cyc=results.get("sleep_cycles",{})
+      if cyc.get("success") and cyc.get("cycles"):
         story.append(_hdr(t("rpt_sec2", lang))); sp(0.1)
         story.append(Paragraph(f"{cyc['n_cycles']} NREM/REM-cycli gedetecteerd.",styles["B"]))
         cyc_rows=[[c["cycle"],f"{c['start_epoch']}–{c['end_epoch']}",
@@ -644,40 +973,42 @@ def generate_pdf_report(results:dict, output_path:str,
         story.append(_tbl([t("cycle",lang),t("epochs",lang),t("duration",lang),t("composition",lang)],
                           cyc_rows,[2,3,2.5,9.5])); sp(0.3)
 
-    story.append(PageBreak())
+      story.append(PageBreak())
 
-    # ── 3. SPINDLES ────────────────────────────────────────────
-    spd=results.get("spindles",{})
-    story.append(_hdr(t("rpt_sec3", lang))); sp(0.1)
-    if spd.get("success"):
+      # ── 3. SPINDLES ────────────────────────────────────────────
+      spd=results.get("spindles",{})
+      story.append(_hdr(t("rpt_sec3", lang))); sp(0.1)
+      if spd.get("success"):
         story.append(Paragraph(f"{spd.get('total_spindles',0)} spindels gedetecteerd (N1+N2).",styles["B"]))
         summ=spd.get("summary",[])
         if summ:
-            keys=[k for k in summ[0] if k not in ("Stage","stage")]
-            rows=[[s.get("Stage",s.get("stage","—"))]+[_rnd(s.get(k)) for k in keys] for s in summ]
-            story.append(_tbl(["Stadium"]+[k.replace("_"," ").capitalize() for k in keys],rows))
-    else:
+            _skip={"Stage","stage","Channel","channel"}
+            keys=[k for k in summ[0] if k not in _skip]
+            rows=[[s.get("Channel",s.get("channel",s.get("Stage",s.get("stage","—"))))]+[_rnd(s.get(k)) for k in keys] for s in summ]
+            story.append(_tbl([t("pdf_channel",lang)]+[k.replace("_"," ").capitalize() for k in keys],rows))
+      else:
         story.append(Paragraph(f"Niet beschikbaar: {spd.get('error','—')}",styles["SM"]))
-    sp(0.25)
+      sp(0.25)
 
-    # ── 4. SLOW WAVES ──────────────────────────────────────────
-    sw=results.get("slow_waves",{})
-    story.append(_hdr(t("rpt_sec4", lang))); sp(0.1)
-    if sw.get("success"):
+      # ── 4. SLOW WAVES ──────────────────────────────────────────
+      sw=results.get("slow_waves",{})
+      story.append(_hdr(t("rpt_sec4", lang))); sp(0.1)
+      if sw.get("success"):
         story.append(Paragraph(f"{sw.get('total_slow_waves',0)} trage golven gedetecteerd.",styles["B"]))
         summ=sw.get("summary",[])
         if summ:
-            keys=[k for k in summ[0] if k not in ("Stage","stage")]
-            rows=[[s.get("Stage",s.get("stage","—"))]+[_rnd(s.get(k)) for k in keys] for s in summ]
-            story.append(_tbl(["Stadium"]+[k.replace("_"," ").capitalize() for k in keys],rows))
-    else:
+            _skip={"Stage","stage","Channel","channel"}
+            keys=[k for k in summ[0] if k not in _skip]
+            rows=[[s.get("Channel",s.get("channel",s.get("Stage",s.get("stage","—"))))]+[_rnd(s.get(k)) for k in keys] for s in summ]
+            story.append(_tbl([t("pdf_channel",lang)]+[k.replace("_"," ").capitalize() for k in keys],rows))
+      else:
         story.append(Paragraph(f"Niet beschikbaar: {sw.get('error','—')}",styles["SM"]))
-    sp(0.25)
+      sp(0.25)
 
-    # ── 5. REM ─────────────────────────────────────────────────
-    rem=results.get("rem",{})
-    story.append(_hdr(t("rpt_sec5", lang))); sp(0.1)
-    if rem.get("success"):
+      # ── 5. REM ─────────────────────────────────────────────────
+      rem=results.get("rem",{})
+      story.append(_hdr(t("rpt_sec5", lang))); sp(0.1)
+      if rem.get("success"):
         rs=rem.get("summary",{})
         story.append(_kpi([
             (str(rs.get("n_rem_periods","—")),t("pdf_rem_periods",lang),"",NAVY),
@@ -685,34 +1016,35 @@ def generate_pdf_report(results:dict, output_path:str,
             (str(rs.get("mean_rem_period_min","—")),t("pdf_mean_period",lang),"min",NAVY),
             (str(rs.get("longest_rem_period_min","—")),t("pdf_longest",lang),"min",NAVY),
         ]))
-    else:
+      else:
         story.append(Paragraph(f"Niet beschikbaar: {rem.get('error','—')}",styles["SM"]))
-    sp(0.25)
+      sp(0.25)
 
-    # ── 6. BANDVERMOGEN ────────────────────────────────────────
-    bp=results.get("bandpower",{})
-    story.append(_hdr(t("rpt_sec6", lang))); sp(0.1)
-    if bp.get("success"):
+      # ── 6. BANDVERMOGEN ────────────────────────────────────────
+      bp=results.get("bandpower",{})
+      story.append(_hdr(t("rpt_sec6", lang))); sp(0.1)
+      if bp.get("success"):
         bands=["delta","theta","alpha","sigma","beta"]
         ps=bp.get("per_stage",{})
         rows=[[st]+[_rnd(bd.get(b),3) if bd.get(b) is not None else "—" for b in bands]
               for st,bd in ps.items()]
         story.append(_tbl(["Fase"]+[b.capitalize() for b in bands],rows,[2.5,3,3,3,2.5,3]))
-    else:
+      else:
         story.append(Paragraph(f"Niet beschikbaar: {bp.get('error','—')}",styles["SM"]))
-    sp(0.25)
+      sp(0.25)
 
-    # ── 7. ARTEFACTEN ──────────────────────────────────────────
-    art=results.get("artifacts",{})
-    story.append(_hdr(t("rpt_sec7", lang))); sp(0.1)
-    if art.get("success"):
+      # ── 7. ARTEFACTEN ──────────────────────────────────────────
+      art=results.get("artifacts",{})
+      story.append(_hdr(t("rpt_sec7", lang))); sp(0.1)
+      if art.get("success"):
         sa=art.get("summary",{}); pct=sa.get("artifact_percent",0)
         story.append(Paragraph(
             f"{sa.get('n_artifact_epochs',0)} van {sa.get('n_total_epochs',0)} epochs ({pct}%) als artefact.",
             styles["B"]))
-    else:
+      else:
         story.append(Paragraph(f"Niet beschikbaar: {art.get('error','—')}",styles["SM"]))
-    sp(0.3)
+      sp(0.3)
+    # ── END polygraphy skip ──────────────────────────────────────
 
     # ── 7b. SIGNAAL KWALITEIT & CONFIDENCE ─────────────────────
     conf_rev = results.get("confidence_review", {})
@@ -741,7 +1073,7 @@ def generate_pdf_report(results:dict, output_path:str,
                     styles["SM"]))
             sp(0.15)
 
-        # v0.8.17: Signal quality per channel
+        # v0.8.22: Signal quality per channel
         if sq_channels:
             grade_label = {"good": "Goed", "acceptable": "Acceptabel",
                            "poor": "Slecht"}.get(sq_grade, sq_grade)
@@ -788,10 +1120,14 @@ def generate_pdf_report(results:dict, output_path:str,
     story.append(_hdr(t("rpt_sec8", lang))); sp(0.15)
     if resp.get("success") and rsum:
         ahi   = _f(rsum, "ahi_total") or 0
-        oahi  = _f(rsum, "oahi")      or 0   # alle obstructief + hypopneas (AASM-conform)
-        oahi60 = _f(rsum, "oahi_conf60") or oahi  # supplementair conf>0.60
+        oahi  = _f(rsum, "oahi")      or 0
+        oahi60 = _f(rsum, "oahi_conf60") or oahi
         oahi_all = _f(rsum, "oahi_all") or oahi
         sev   = _sev(ahi);  osev = _sev(oahi);  clr = _sev_clr(ahi)
+        # v0.8.22: Labels per studietype
+        _ahi_lbl = "REI" if is_polygraphy else (f"{t('pdf_residual',lang)} AHI" if is_titration else "AHI")
+        _oahi_lbl = "REI" if is_polygraphy else (f"{t('pdf_residual',lang)} OAHI" if is_titration else "OAHI")
+        _therapy_note = f"  [{t('pdf_therapy',lang)}: {therapy_label}]" if is_titration else ""
         cb    = rsum.get("confidence_bands") or {}
         thr   = rsum.get("oahi_thresholds")  or {}
         avg_c = rsum.get("avg_classification_confidence")
@@ -799,8 +1135,8 @@ def generate_pdf_report(results:dict, output_path:str,
 
         # ── Classificatiebalk ────────────────────────────────────────────
         ab = Table([[Paragraph(
-            f"AHI = {ahi:.1f}/u  →  <b>{sev}</b>   |   "
-            f"OAHI = {oahi:.1f}/u  →  <b>{osev}</b>",
+            f"{_ahi_lbl} = {ahi:.1f}/u  →  <b>{sev}</b>   |   "
+            f"{_oahi_lbl} = {oahi:.1f}/u  →  <b>{osev}</b>{_therapy_note}",
             ParagraphStyle("AB", fontName="Helvetica-Bold", fontSize=9,
                            textColor=W, leading=12))]],
             colWidths=[CW])
@@ -914,7 +1250,7 @@ def generate_pdf_report(results:dict, output_path:str,
             "? Lage zekerheid (<0.40): signaalruis / ontbrekende effort</i>",
             styles["SM"])); sp(0.2)
 
-        # ── v0.8.17: RERA, RDI, REM/NREM AHI ──────────────────────────
+        # ── v0.8.22: RERA, RDI, REM/NREM AHI ──────────────────────────
         rera_n   = rsum.get("n_rera", 0) or 0
         rera_idx = rsum.get("rera_index", 0) or 0
         rdi_val  = rsum.get("rdi", 0) or 0
@@ -992,6 +1328,12 @@ def generate_pdf_report(results:dict, output_path:str,
                  "Gecorrigeerd",
                  "Post-gap exclusie 15s na signaaluitval ≥10s"],
             ]
+            n_local_rej = resp.get("n_local_baseline_rejected", 0) or 0
+            if n_local_rej > 0:
+                corr_rows.append(
+                    ["Fix 6 — Lokale basislijn",
+                     f"{n_local_rej} afgewezen",
+                     "Hypopneas met <20% reductie t.o.v. pre-event ademhaling"])
             story.append(KeepTogether([_tbl(
                 ["Correctie", "Impact", "Toelichting"],
                 corr_rows, [4.0, 3.5, 9.5])]))
@@ -1011,9 +1353,9 @@ def generate_pdf_report(results:dict, output_path:str,
              ["Max. apnea-duur",            f"{rsum.get('max_apnea_dur_s','—')} s", ""],
             ], [8, 4, 5])])); sp(0.2)
 
-        # Arousal / RERA / RDI
+        # Arousal / RERA / RDI (v0.8.22: skip bij polygrafie)
         arous=pneumo.get("arousal",{}); asum=arous.get("summary",{})
-        if arous.get("success") and asum:
+        if not is_polygraphy and arous.get("success") and asum:
             story.append(_hdr(t("rpt_sec8b", lang),color=BLUE)); sp(0.1)
             rdi=_f(asum,"rdi")
             story.append(_tbl([t("pdf_param",lang),t("pdf_value",lang)],[
@@ -1095,16 +1437,29 @@ def generate_pdf_report(results:dict, output_path:str,
         story.append(Paragraph(
             f"<i>{t('pdf_fri_note', lang)}</i>", styles["SM"])); sp(0.2)
 
+    # ── 8e. Signaalvoorbeelden ────────────────────────────────
+    if not is_polygraphy:
+        epoch_imgs = _build_epoch_examples(results)
+        if epoch_imgs:
+            story.append(PageBreak())
+            story.append(_hdr(t("rpt_sec8e", lang), color=BLUE)); sp(0.1)
+            story.append(Paragraph(
+                t("pdf_epoch_intro", lang), styles["SM"])); sp(0.15)
+            for ev, img in epoch_imgs:
+                story.append(KeepTogether([img, Spacer(1, 0.15*cm)]))
+                sp(0.1)
+
     # ── 9. SpO2 ───────────────────────────────────────────────
     spo2=pneumo.get("spo2",{}); ss=spo2.get("summary",{})
     story.append(_hdr(t("rpt_sec9", lang))); sp(0.1)
     if spo2.get("success") and ss:
         story.append(_tbl([t("pdf_param",lang),t("pdf_value",lang),"Ref"],[
-            ["Gemiddelde SpO2",  f"{ss.get('mean_spo2','—')} %", "≥ 95%"],
+            ["Gemiddelde SpO2",  f"{ss.get('mean_spo2', ss.get('avg_spo2','—'))} %", "≥ 95%"],
+            ["Baseline SpO2",    f"{ss.get('baseline_spo2','—')} %",  ""],
             ["Minimale SpO2",   f"{ss.get('min_spo2','—')} %",  ""],
             [t("pdf_time_below90",lang),       f"{ss.get('pct_below_90','—')} %","< 1%"],
-            ["ODI 3%",           str(ss.get("odi_3pct","—")),    "< 5/u"],
-            ["ODI 4%",           str(ss.get("odi_4pct","—")),    "< 5/u"],
+            ["ODI 3%",           f"{ss.get('odi_3pct','—')} /u",    "< 5/u"],
+            ["ODI 4%",           f"{ss.get('odi_4pct','—')} /u",    "< 5/u"],
         ],[8,4.5,4.5]))
         ts=spo2.get("timeseries")
         if ts and len(ts)>10:
@@ -1174,7 +1529,7 @@ def generate_pdf_report(results:dict, output_path:str,
     manual_diag = pat.get("diagnosis", "").strip()
     manual_comment = pat.get("comments", "").strip()
 
-    # v0.8.17: Besluit wordt NIET meer automatisch gegenereerd.
+    # v0.8.22: Besluit wordt NIET meer automatisch gegenereerd.
     # De arts vult het besluit manueel in via de rapport-editor.
     if manual_diag:
         story.append(Paragraph(f"<b>{t('concl_diagnosis', lang)}:</b> {manual_diag}", styles["B"]))

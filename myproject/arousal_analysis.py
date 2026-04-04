@@ -1,6 +1,6 @@
 """
 arousal_analysis.py — Arousal detectie & respiratoir-arousal koppeling
-voor YASAFlaskified v0.8.11
+voor YASAFlaskified v0.8.22
 
 Conform AASM 2.6 Adult Scoring Manual, Chapter 5 (Arousals):
   - Arousal: abrupte EEG-frequentieverandering ≥3s (α/θ/β in NREM; α in REM)

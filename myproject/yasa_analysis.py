@@ -1,5 +1,5 @@
 """
-yasa_analysis.py — Uitgebreide slaapanalyse module voor YASAFlaskified v0.8.11
+yasa_analysis.py — Uitgebreide slaapanalyse module voor YASAFlaskified v0.8.22
 Compatibel met YASA 0.7.x (Hypnogram object) EN 0.6.x (numpy array).
 
 Fixes t.o.v. v7.1:
@@ -288,26 +288,44 @@ def run_sw_detection(raw: mne.io.BaseRaw, hypno: list,
 
 def run_rem_detection(raw: mne.io.BaseRaw, hypno: list,
                       eog_channel: str,
-                      eeg_channel: str = None) -> dict:
-    """Detecteer REM-episodes en oogrekkewegingen."""
+                      eeg_channel: str = None,
+                      gap_tolerance: int = 4) -> dict:
+    """Detecteer REM-episodes en oogbewegingen (v0.8.22: geconsolideerd).
+
+    gap_tolerance : int
+        Max epochs N1/W die een REM-periode niet onderbreken (default 4 = 2 min).
+    """
     result = {"success": False, "rem_events": [], "summary": {}, "transitions": [], "error": None}
     try:
         hypno_arr    = np.array(hypno)
         rem_mask     = hypno_arr == "R"
         n_rem_epochs = int(np.sum(rem_mask))
+        n = len(hypno_arr)
 
-        # REM-perioden
+        # ── Geconsolideerde REM-perioden (v0.8.22) ──────────────
         rem_durations = []
-        in_rem, count = False, 0
-        for stage in hypno_arr:
-            if stage == "R":
-                in_rem = True
-                count += 1
-            elif in_rem:
-                rem_durations.append(count * 0.5)
-                count, in_rem = 0, False
-        if in_rem:
-            rem_durations.append(count * 0.5)
+        i = 0
+        while i < n:
+            if hypno_arr[i] == "R":
+                start = i
+                end = i
+                while end < n - 1:
+                    if hypno_arr[end + 1] == "R":
+                        end += 1
+                    else:
+                        gap = 0
+                        j = end + 1
+                        while j < n and hypno_arr[j] != "R" and gap < gap_tolerance:
+                            gap += 1
+                            j += 1
+                        if j < n and hypno_arr[j] == "R" and gap <= gap_tolerance:
+                            end = j
+                        else:
+                            break
+                rem_durations.append((end - start + 1) * 0.5)
+                i = end + 1
+            else:
+                i += 1
 
         # NREM→REM transities
         transitions = []
@@ -400,37 +418,103 @@ def run_bandpower(raw: mne.io.BaseRaw, hypno: list,
 # 7. SLAAPCYCLI DETECTIE
 # ─────────────────────────────────────────────
 
-def run_sleep_cycles(hypno: list) -> dict:
-    """Identificeer NREM/REM-cycli."""
+def run_sleep_cycles(hypno: list,
+                     min_nrem_epochs: int = 30,
+                     rem_gap_tolerance: int = 4) -> dict:
+    """Identificeer NREM/REM-cycli (v0.8.22 — Feinberg & Floyd criteria).
+
+    Parameters
+    ----------
+    min_nrem_epochs : int
+        Minimaal aantal NREM-epochs (excl. W) om als NREM-periode te tellen.
+        Default 30 = 15 min.
+    rem_gap_tolerance : int
+        Maximaal aantal N1/W-epochs die een REM-periode niet onderbreken.
+        Default 4 = 2 min (korte arousal / N1 tijdens REM).
+    """
     result = {"success": False, "cycles": [], "n_cycles": 0, "error": None}
     try:
-        hypno_arr     = np.array(hypno)
-        cycles        = []
-        current_cycle = []
-        cycle_num     = 1
-        in_sleep      = False
+        hypno_arr = np.array(hypno)
+        n = len(hypno_arr)
 
-        for i, stage in enumerate(hypno_arr):
-            if stage != "W":
-                in_sleep = True
-                current_cycle.append(stage)
-                if (stage == "R" and
-                        i + 1 < len(hypno_arr) and
-                        hypno_arr[i + 1] in ["N1", "N2", "N3", "W"]):
-                    counts       = Counter(current_cycle)
-                    duration_min = safe_round(len(current_cycle) * 0.5)
-                    cycles.append({
-                        "cycle":      cycle_num,
-                        "start_epoch": i - len(current_cycle) + 1,
-                        "end_epoch":   i,
-                        "duration_min": duration_min,
-                        "stage_distribution": {
-                            k: safe_round(v / len(current_cycle) * 100)
-                            for k, v in counts.items()
-                        },
-                    })
-                    cycle_num    += 1
-                    current_cycle = []
+        # ── Stap 1: Consolideer REM-blokken ──────────────────────
+        # Merge aaneengesloten REM-epochs, met tolerantie voor korte
+        # N1/W onderbrekingen (≤ rem_gap_tolerance epochs).
+        is_rem_arr = (hypno_arr == "R")
+        rem_blocks = []  # [(start, end), ...]
+        i = 0
+        while i < n:
+            if is_rem_arr[i]:
+                start = i
+                end = i
+                while end < n - 1:
+                    if is_rem_arr[end + 1]:
+                        end += 1
+                    else:
+                        # Kijk of er binnen gap_tolerance weer REM komt
+                        gap = 0
+                        j = end + 1
+                        while j < n and not is_rem_arr[j] and gap < rem_gap_tolerance:
+                            gap += 1
+                            j += 1
+                        if j < n and is_rem_arr[j] and gap <= rem_gap_tolerance:
+                            end = j
+                        else:
+                            break
+                rem_blocks.append((start, end))
+                i = end + 1
+            else:
+                i += 1
+
+        # ── Stap 2: Bouw cycli (NREM-periode → REM-blok) ─────────
+        cycles = []
+        cycle_num = 1
+        nrem_start = None
+        # Zoek het eerste slaap-epoch als NREM-start
+        for idx, s in enumerate(hypno_arr):
+            if s in ("N1", "N2", "N3"):
+                nrem_start = idx
+                break
+
+        if nrem_start is None:
+            result["cycles"] = []
+            result["n_cycles"] = 0
+            result["success"] = True
+            return result
+
+        for rb_start, rb_end in rem_blocks:
+            if nrem_start is None or rb_start <= nrem_start:
+                continue
+
+            # Tel NREM-epochs in het segment vóór dit REM-blok
+            seg = hypno_arr[nrem_start:rb_start]
+            n_nrem = int(np.sum((seg == "N1") | (seg == "N2") | (seg == "N3")))
+
+            if n_nrem < min_nrem_epochs:
+                # Te kort NREM — geen echte cyclus, skip dit REM-blok
+                continue
+
+            # Cyclus gevonden
+            cycle_seg = hypno_arr[nrem_start:rb_end + 1]
+            counts = Counter(cycle_seg.tolist())
+            duration_min = safe_round(len(cycle_seg) * 0.5)
+            cycles.append({
+                "cycle":      cycle_num,
+                "start_epoch": nrem_start,
+                "end_epoch":   rb_end,
+                "duration_min": duration_min,
+                "stage_distribution": {
+                    k: safe_round(v / len(cycle_seg) * 100)
+                    for k, v in counts.items()
+                },
+            })
+            cycle_num += 1
+            # Volgende NREM-start = eerste NREM na dit REM-blok
+            nrem_start = None
+            for idx in range(rb_end + 1, n):
+                if hypno_arr[idx] in ("N1", "N2", "N3"):
+                    nrem_start = idx
+                    break
 
         result["cycles"]   = cycles
         result["n_cycles"] = len(cycles)
