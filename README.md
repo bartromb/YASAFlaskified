@@ -385,6 +385,12 @@ See [CHANGES.md](CHANGES.md) for full changelog.
 
 ---
 
+## Disclaimer
+
+YASAFlaskified is **research software**, not a cleared medical device. It carries no CE mark, FDA clearance, or equivalent certification. All computed indices (AHI, OAHI, ODI, PLMI, RDI) are research-grade estimates that must be reviewed by a qualified clinician before any diagnostic or therapeutic decision. See [DISCLAIMER.md](DISCLAIMER.md) for full terms.
+
+---
+
 ## License
 
 BSD 3-Clause — Copyright (c) 2024–2026 Bart Rombaut / Slaapkliniek AZORG.
