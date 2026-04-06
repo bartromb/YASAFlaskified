@@ -104,6 +104,7 @@
                         <option value="nl" {{ 'selected' if user.language=='nl' }}>NL</option>
                         <option value="fr" {{ 'selected' if user.language=='fr' }}>FR</option>
                         <option value="en" {{ 'selected' if user.language=='en' }}>EN</option>
+              <option value="de">DE</option>
                       </select>
                     </div>
                     <div class="col-auto"><button class="btn btn-primary btn-sm">{{ t('save') }}</button></div>
@@ -178,6 +179,7 @@
             <label class="form-label small fw-semibold">{{ t('language') }}</label>
             <select name="new_lang" class="form-select form-select-sm">
               <option value="nl" selected>NL</option><option value="fr">FR</option><option value="en">EN</option>
+              <option value="de">DE</option>
             </select>
           </div>
         </div>

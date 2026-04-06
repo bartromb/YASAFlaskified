@@ -1,5 +1,5 @@
 """
-generate_edfplus.py — YASAFlaskified v0.8.25
+generate_edfplus.py — YASAFlaskified v0.8.27
 ==========================================
 Snelle, geheugenefficiënte EDF+ export met slaapstaging en events.
 

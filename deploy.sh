@@ -1,6 +1,6 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════
-# deploy.sh — YASAFlaskified v0.8.4 automated deployment
+# deploy.sh — YASAFlaskified v0.8.27 automated deployment
 # ═══════════════════════════════════════════════════════════════
 #
 # Installs YASAFlaskified on a vanilla Ubuntu 22.04/24.04 server.

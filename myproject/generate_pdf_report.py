@@ -1,5 +1,5 @@
 """
-generate_pdf_report.py — YASAFlaskified v0.8.25
+generate_pdf_report.py — YASAFlaskified v0.8.27
 Site-config: via config.json["site"] of site_config parameter.
 """
 import json, os, io
@@ -41,7 +41,14 @@ ORA   = colors.HexColor("#d68910")
 GRN   = colors.HexColor("#1e8449")
 
 STAGE_CLR = {"W":"#e74c3c","N1":"#f39c12","N2":"#2980b9","N3":"#1a3a8f","R":"#8e44ad"}
-AHI_SEV = [(5,GRN,"Normaal"),(15,ORA,"Mild OSA"),(30,RED,"Matig OSA"),(9999,colors.HexColor("#7b241c"),"Ernstig OSA")]
+AHI_SEV = [(5,GRN,"Normal"),(15,ORA,"Mild OSA"),(30,RED,"Moderate OSA"),(9999,colors.HexColor("#7b241c"),"Severe OSA")]
+
+_SEV_LABELS = {
+    "Normal":       {"nl": "Normaal",     "fr": "Normal",      "en": "Normal",       "de": "Normal"},
+    "Mild OSA":     {"nl": "Mild OSA",    "fr": "SAOS léger",  "en": "Mild OSA",     "de": "Leichtes OSA"},
+    "Moderate OSA": {"nl": "Matig OSA",   "fr": "SAOS modéré", "en": "Moderate OSA",  "de": "Mittelgradiges OSA"},
+    "Severe OSA":   {"nl": "Ernstig OSA", "fr": "SAOS sévère", "en": "Severe OSA",    "de": "Schweres OSA"},
+}
 
 # ── Site-config ────────────────────────────────────────────────
 _DSITE = {"name":"Slaapkliniek AZORG","address":"","phone":"","email":"","logo_path":"AZORG_rood.png","url":"https://www.slaapkliniek.be"}
@@ -92,12 +99,12 @@ def _rnd(v,dec=2):
     try: return f"{float(v):.{dec}f}"
     except: return str(v) if v is not None else "—"
 
-def _sev(ahi):
+def _sev(ahi, lang="nl"):
     try: v=float(ahi)
     except: return "—"
     for t,_,l in AHI_SEV:
-        if v<t: return l
-    return "Ernstig OSA"
+        if v<t: return _SEV_LABELS.get(l, {}).get(lang, l)
+    return _SEV_LABELS.get("Severe OSA", {}).get(lang, "Severe OSA")
 
 def _sev_clr(ahi):
     try: v=float(ahi)
@@ -383,7 +390,7 @@ def _callbacks(site, lang="nl"):
         canvas.line(ML,MB-0.2*cm,W_A4-MR,MB-0.2*cm)
         canvas.setFont("Helvetica",6.5); canvas.setFillColor(GR)
         canvas.drawString(ML,MB-0.45*cm,
-            "YASAFlaskified v0.8.25  |  AASM 2.6  |  www.slaapkliniek.be  |  \u00a9 Bart Rombaut")
+            "YASAFlaskified v0.8.27  |  AASM 2.6  |  www.slaapkliniek.be  |  \u00a9 Bart Rombaut")
         canvas.drawRightString(W_A4-MR,MB-0.45*cm,f"{t('pdf_page',lang)} {doc.page}")
         canvas.restoreState()
     return draw,draw
@@ -728,7 +735,7 @@ def generate_pdf_report(results:dict, output_path:str,
         title_txt = t("pdf_titration_mra", lang)
         therapy_label = "MRA"
     else:
-        title_txt = "Polysomnografie — Slaaprapport"
+        title_txt = t("pdf_title_psg", lang)
 
     sp(0.2)
     story.append(Paragraph(title_txt, styles["T"]))
@@ -777,11 +784,11 @@ def generate_pdf_report(results:dict, output_path:str,
     ahi_v=_f(rsum,"ahi_total"); ahi_s=f"{ahi_v:.1f}" if ahi_v is not None else "—"
     # v0.8.22: Label afhankelijk van studietype
     if is_polygraphy:
-        ahi_label = f"REI  ({_sev(ahi_v)})"
+        ahi_label = f"REI  ({_sev(ahi_v, lang)})"
     elif is_titration:
-        ahi_label = f"{t('pdf_residual',lang)} AHI  ({_sev(ahi_v)})"
+        ahi_label = f"{t('pdf_residual',lang)} AHI  ({_sev(ahi_v, lang)})"
     else:
-        ahi_label = f"AHI  ({_sev(ahi_v)})"
+        ahi_label = f"AHI  ({_sev(ahi_v, lang)})"
     story.append(_kpi([
         (ahi_s, ahi_label, "/u", _sev_clr(ahi_v) if ahi_v else GR),
         (_v(stats,"TST",fmt="{:.0f}"),  "TST", "min", NAVY),
@@ -954,7 +961,7 @@ def generate_pdf_report(results:dict, output_path:str,
         story.append(_hdr(t("rpt_sec1", lang))); sp(0.1)
         story.append(Paragraph(
             f"<b>{t('pdf_no_staging',lang)}</b><br/>"
-            f"<i>{t('pdf_rei',lang)}: events per uur registratietijd (TIB) i.p.v. TST.</i>",
+            f"<i>{t('pdf_rei',lang)}: {t('pdf_rei_explanation', lang)}</i>",
             styles["B"])); sp(0.3)
     else:
         story.append(_hdr(t("rpt_sec1", lang))); sp(0.15)
@@ -979,7 +986,7 @@ def generate_pdf_report(results:dict, output_path:str,
       spd=results.get("spindles",{})
       story.append(_hdr(t("rpt_sec3", lang))); sp(0.1)
       if spd.get("success"):
-        story.append(Paragraph(f"{spd.get('total_spindles',0)} spindels gedetecteerd (N1+N2).",styles["B"]))
+        story.append(Paragraph(f"{spd.get('total_spindles',0)} {t('pdf_spindles_detected', lang)}",styles["B"]))
         summ=spd.get("summary",[])
         if summ:
             _skip={"Stage","stage","Channel","channel"}
@@ -987,14 +994,14 @@ def generate_pdf_report(results:dict, output_path:str,
             rows=[[s.get("Channel",s.get("channel",s.get("Stage",s.get("stage","—"))))]+[_rnd(s.get(k)) for k in keys] for s in summ]
             story.append(_tbl([t("pdf_channel",lang)]+[k.replace("_"," ").capitalize() for k in keys],rows))
       else:
-        story.append(Paragraph(f"Niet beschikbaar: {spd.get('error','—')}",styles["SM"]))
+        story.append(Paragraph(f"{t('pdf_not_available', lang)}: {spd.get('error','—')}",styles["SM"]))
       sp(0.25)
 
       # ── 4. SLOW WAVES ──────────────────────────────────────────
       sw=results.get("slow_waves",{})
       story.append(_hdr(t("rpt_sec4", lang))); sp(0.1)
       if sw.get("success"):
-        story.append(Paragraph(f"{sw.get('total_slow_waves',0)} trage golven gedetecteerd.",styles["B"]))
+        story.append(Paragraph(f"{sw.get('total_slow_waves',0)} {t('pdf_slow_waves_detected', lang)}",styles["B"]))
         summ=sw.get("summary",[])
         if summ:
             _skip={"Stage","stage","Channel","channel"}
@@ -1002,7 +1009,7 @@ def generate_pdf_report(results:dict, output_path:str,
             rows=[[s.get("Channel",s.get("channel",s.get("Stage",s.get("stage","—"))))]+[_rnd(s.get(k)) for k in keys] for s in summ]
             story.append(_tbl([t("pdf_channel",lang)]+[k.replace("_"," ").capitalize() for k in keys],rows))
       else:
-        story.append(Paragraph(f"Niet beschikbaar: {sw.get('error','—')}",styles["SM"]))
+        story.append(Paragraph(f"{t('pdf_not_available', lang)}: {sw.get('error','—')}",styles["SM"]))
       sp(0.25)
 
       # ── 5. REM ─────────────────────────────────────────────────
@@ -1017,7 +1024,7 @@ def generate_pdf_report(results:dict, output_path:str,
             (str(rs.get("longest_rem_period_min","—")),t("pdf_longest",lang),"min",NAVY),
         ]))
       else:
-        story.append(Paragraph(f"Niet beschikbaar: {rem.get('error','—')}",styles["SM"]))
+        story.append(Paragraph(f"{t('pdf_not_available', lang)}: {rem.get('error','—')}",styles["SM"]))
       sp(0.25)
 
       # ── 6. BANDVERMOGEN ────────────────────────────────────────
@@ -1028,9 +1035,9 @@ def generate_pdf_report(results:dict, output_path:str,
         ps=bp.get("per_stage",{})
         rows=[[st]+[_rnd(bd.get(b),3) if bd.get(b) is not None else "—" for b in bands]
               for st,bd in ps.items()]
-        story.append(_tbl(["Fase"]+[b.capitalize() for b in bands],rows,[2.5,3,3,3,2.5,3]))
+        story.append(_tbl([t("pdf_phase",lang)]+[b.capitalize() for b in bands],rows,[2.5,3,3,3,2.5,3]))
       else:
-        story.append(Paragraph(f"Niet beschikbaar: {bp.get('error','—')}",styles["SM"]))
+        story.append(Paragraph(f"{t('pdf_not_available', lang)}: {bp.get('error','—')}",styles["SM"]))
       sp(0.25)
 
       # ── 7. ARTEFACTEN ──────────────────────────────────────────
@@ -1042,7 +1049,7 @@ def generate_pdf_report(results:dict, output_path:str,
             f"{sa.get('n_artifact_epochs',0)} van {sa.get('n_total_epochs',0)} epochs ({pct}%) als artefact.",
             styles["B"]))
       else:
-        story.append(Paragraph(f"Niet beschikbaar: {art.get('error','—')}",styles["SM"]))
+        story.append(Paragraph(f"{t('pdf_not_available', lang)}: {art.get('error','—')}",styles["SM"]))
       sp(0.3)
     # ── END polygraphy skip ──────────────────────────────────────
 
@@ -1075,8 +1082,8 @@ def generate_pdf_report(results:dict, output_path:str,
 
         # v0.8.22: Signal quality per channel
         if sq_channels:
-            grade_label = {"good": "Goed", "acceptable": "Acceptabel",
-                           "poor": "Slecht"}.get(sq_grade, sq_grade)
+            grade_label = {"good": t("pdf_grade_good",lang), "acceptable": t("pdf_grade_acceptable",lang),
+                           "poor": t("pdf_grade_poor",lang)}.get(sq_grade, sq_grade)
             grade_clr = {"good": "#27ae60", "acceptable": "#e67e22",
                          "poor": "#e74c3c"}.get(sq_grade, "#888")
             story.append(Paragraph(
@@ -1123,7 +1130,7 @@ def generate_pdf_report(results:dict, output_path:str,
         oahi  = _f(rsum, "oahi")      or 0
         oahi60 = _f(rsum, "oahi_conf60") or oahi
         oahi_all = _f(rsum, "oahi_all") or oahi
-        sev   = _sev(ahi);  osev = _sev(oahi);  clr = _sev_clr(ahi)
+        sev   = _sev(ahi, lang);  osev = _sev(oahi, lang);  clr = _sev_clr(ahi)
         # v0.8.22: Labels per studietype
         _ahi_lbl = "REI" if is_polygraphy else (f"{t('pdf_residual',lang)} AHI" if is_titration else "AHI")
         _oahi_lbl = "REI" if is_polygraphy else (f"{t('pdf_residual',lang)} OAHI" if is_titration else "OAHI")
@@ -1134,9 +1141,13 @@ def generate_pdf_report(results:dict, output_path:str,
         avg_s = f"{avg_c:.2f}" if avg_c else "—"
 
         # ── Classificatiebalk ────────────────────────────────────────────
+        _active_prof = pneumo.get("meta", {}).get("scoring_profile", "standard")
+        _prof_labels = {"strict": "Strict", "standard": "Standard (AASM 2.6)", "sensitive": "Sensitive"}
+        _prof_lbl = _prof_labels.get(_active_prof, _active_prof)
         ab = Table([[Paragraph(
             f"{_ahi_lbl} = {ahi:.1f}/u  →  <b>{sev}</b>   |   "
-            f"{_oahi_lbl} = {oahi:.1f}/u  →  <b>{osev}</b>{_therapy_note}",
+            f"{_oahi_lbl} = {oahi:.1f}/u  →  <b>{osev}</b>{_therapy_note}"
+            f"   |   Profile: {_prof_lbl}",
             ParagraphStyle("AB", fontName="Helvetica-Bold", fontSize=9,
                            textColor=W, leading=12))]],
             colWidths=[CW])
@@ -1181,19 +1192,19 @@ def generate_pdf_report(results:dict, output_path:str,
             "~\n0.40–0.59", "?\n<0.40"
         ]
         conf_rows = [
-            ["Obstructief",
+            [t("pdf_obstructive",lang),
              str(n_obstr), _v(rsum, "obstructive_index", fmt="{:.1f}"),
              str(_ev_conf("obstructive","high")),
              str(_ev_conf("obstructive","moderate")),
              str(_ev_conf("obstructive","borderline")),
              str(_ev_conf("obstructive","low"))],
-            ["Centraal",
+            [t("pdf_central",lang),
              str(n_centr), _v(rsum, "central_index", fmt="{:.1f}"),
              str(_ev_conf("central","high")),
              str(_ev_conf("central","moderate")),
              str(_ev_conf("central","borderline")),
              str(_ev_conf("central","low"))],
-            ["Gemengd",
+            [t("pdf_mixed",lang),
              str(n_mixed), _v(rsum, "mixed_index", fmt="{:.1f}"),
              str(_ev_conf("mixed","high")),
              str(_ev_conf("mixed","moderate")),
@@ -1223,19 +1234,19 @@ def generate_pdf_report(results:dict, output_path:str,
         oahi_rows = [
             ["≥ 0.85 (hoge zekerheid)",
              f"{thr.get('0.85', '—'):.1f}" if isinstance(thr.get('0.85'), float) else "—",
-             _sev(thr.get('0.85') or 0),
+             _sev(thr.get('0.85') or 0, lang),
              f"{cb.get('high',0)} events"],
             ["≥ 0.60 (matig + hoog)",
              f"{oahi60:.1f}",
-             _sev(oahi60),
+             _sev(oahi60, lang),
              f"{cb.get('high',0) + cb.get('moderate',0)} events"],
             ["≥ 0.40 (incl. grensgebied)",
              f"{thr.get('0.40', '—'):.1f}" if isinstance(thr.get('0.40'), float) else "—",
-             _sev(thr.get('0.40') or 0),
+             _sev(thr.get('0.40') or 0, lang),
              f"{cb.get('high',0)+cb.get('moderate',0)+cb.get('borderline',0)} events"],
             ["Alle events  ← officiële OAHI",
              f"{oahi:.1f}",
-             _sev(oahi),
+             _sev(oahi, lang),
              f"{rsum.get('n_obstructive',0)+rsum.get('n_hypopnea',0)} events"],
         ]
         story.append(KeepTogether([_tbl(
@@ -1290,7 +1301,7 @@ def generate_pdf_report(results:dict, output_path:str,
             [8, 6])])); sp(0.1)
 
         story.append(Paragraph(
-            "<i>RERA = flow-reductie (≥30%, ≥10s) + arousal, zonder ≥3% desaturatie. "
+            f"<i>{t('pdf_rera_explanation',lang)} "
             "RDI = AHI + RERA-index. Klinisch relevant bij vermoeden UARS.</i>",
             styles["SM"])); sp(0.2)
 
@@ -1310,44 +1321,42 @@ def generate_pdf_report(results:dict, output_path:str,
         ahi_csr    = rsum.get("ahi_csr_corrected")
         ahi_noise  = rsum.get("ahi_excl_noise")
         if n_spo2_cc > 0 or n_csr_fl > 0 or n_noise > 0:
-            story.append(_hdr("Overschatting-correctie", color=BLUE)); sp(0.1)
+            story.append(_hdr(t("pdf_overcounting_corrections", lang), color=BLUE)); sp(0.1)
             corr_rows = [
-                ["Fix 1 — Post-apnea basislijn",
-                 "Gecorrigeerd",
-                 "Hyperpnea recovery 30s uitgesloten uit basislijnberekening"],
-                ["Fix 2 — SpO2 kruiscontaminatie",
+                [t("pdf_fix1_name",lang),
+                 t("pdf_corrected",lang),
+                 t("pdf_fix1_desc",lang)],
+                [t("pdf_fix2_name",lang),
                  f"{n_spo2_cc} events",
-                 "Hypopneas waarvoor SpO2-nadir mogelijk van vorig event stamt"],
-                ["Fix 3 — Cheyne-Stokes events",
+                 t("pdf_fix2_desc",lang)],
+                [t("pdf_fix3_name",lang),
                  (f"{n_csr_fl} events  →  AHI {ahi_csr:.1f}/u" if ahi_csr else f"{n_csr_fl} events"),
-                 "Events gemarkeerd als CSR-cyclus gerelateerd"],
-                ["Fix 4 — Lage confidence",
+                 t("pdf_fix3_desc",lang)],
+                [t("pdf_fix4_name",lang),
                  f"{n_noise} ruis  +  {n_border} borderline",
                  (f"AHI excl. ruis (<0.40): {ahi_noise:.1f}/u" if ahi_noise else "conf<0.40 = signaalruis")],
-                ["Fix 5 — Artefact-flanken",
-                 "Gecorrigeerd",
-                 "Post-gap exclusie 15s na signaaluitval ≥10s"],
+                [t("pdf_fix5_name",lang),
+                 t("pdf_corrected",lang),
+                 t("pdf_fix5_desc",lang)],
             ]
             n_local_rej = resp.get("n_local_baseline_rejected", 0) or 0
             if n_local_rej > 0:
                 corr_rows.append(
-                    ["Fix 6 — Lokale basislijn",
+                    [t("pdf_fix6_name",lang),
                      f"{n_local_rej} afgewezen",
-                     "Hypopneas met <20% reductie t.o.v. pre-event ademhaling"])
+                     t("pdf_fix6_desc",lang)])
             n_ecg_reclass = rsum.get("n_ecg_reclassified_central", 0) or 0
             if n_ecg_reclass > 0:
                 corr_rows.append(
-                    ["ECG effort (TECG)",
-                     f"{n_ecg_reclass} → centraal",
-                     "Events herclassificeerd via ECG-afgeleide effort-analyse (Berry 2019)"])
+                    [t("pdf_ecg_fix_name",lang),
+                     f"{n_ecg_reclass} {t('pdf_to_central',lang)}",
+                     t("pdf_ecg_fix_desc",lang)])
             story.append(KeepTogether([_tbl(
-                ["Correctie", "Impact", "Toelichting"],
+                [t("pdf_correction",lang), t("pdf_impact",lang), t("pdf_explanation",lang)],
                 corr_rows, [4.0, 3.5, 9.5])]))
             sp(0.15)
             story.append(Paragraph(
-                "<i>Deze correcties zijn informatief. De officiele AHI en OAHI blijven "
-                "AASM 2.6-conform (alle events). Bovenstaande indices helpen de clinicus "
-                "de robuustheid van de scoring te beoordelen.</i>",
+                f"<i>{t('pdf_disc_informative',lang)}</i>",
                 styles["SM"])); sp(0.2)
 
         # ── Overige respiratoire indices ─────────────────────────────────
@@ -1373,7 +1382,7 @@ def generate_pdf_report(results:dict, output_path:str,
                 ["RDI (AHI + RERA)",         f"{rdi:.1f} /u" if rdi else "—"],
             ],[9,8])); sp(0.2)
     else:
-        story.append(Paragraph(f"Niet beschikbaar: {resp.get('error','geen data')}",styles["SM"]))
+        story.append(Paragraph(f"{t('pdf_not_available', lang)}: {resp.get('error','—')}",styles["SM"]))
     sp(0.25)
 
     # ── 8c. Breath-by-breath analyse ───────────────────────────
@@ -1401,16 +1410,16 @@ def generate_pdf_report(results:dict, output_path:str,
         # ── Scoring profielen tabel ───────────────────────────────
         _active_profile = pneumo.get("meta", {}).get("scoring_profile", "standard")
         _profiles_data = [
-            ["Strict",    "70% (\u226530%)", "30s",  "—",   "15s", "Nee (envelope)"],
-            ["Standard",  "70% (\u226530%)", "45s",  "3s",  "15s", "Ja (peak+env)"],
-            ["Sensitive",  "75% (\u226525%)", "45s",  "5s",  "—",  "Ja (peak+env)"],
+            ["Strict",    "70% (\u226530%)", "30s",  "—",   "15s", f"{t('pdf_no',lang)} (envelope)"],
+            ["Standard",  "70% (\u226530%)", "45s",  "3s",  "15s", f"{t('pdf_yes',lang)} (peak+env)"],
+            ["Sensitive",  "75% (\u226525%)", "45s",  "5s",  "—",  f"{t('pdf_yes',lang)} (peak+env)"],
         ]
         # Markeer actief profiel met *
         _pmap = {"strict": 0, "standard": 1, "sensitive": 2}
         _ai = _pmap.get(_active_profile, 1)
         _profiles_data[_ai][0] = f"\u25b6 {_profiles_data[_ai][0]}"
 
-        _prof_hdr = ["Profiel", "Hypopnea", "Nadir win", "Smoothing", "Cross-contam", "Peak detectie"]
+        _prof_hdr = [t("pdf_prof_header",lang), t("pdf_prof_hypopnea",lang), t("pdf_prof_nadir",lang), "Smoothing", "Cross-contam", t("pdf_prof_peak",lang)]
         _prof_tbl = Table([_prof_hdr] + _profiles_data,
                           colWidths=[2.2*cm, 2.5*cm, 2*cm, 2*cm, 2.2*cm, 3.2*cm])
         _prof_tbl.setStyle(TableStyle([

@@ -1097,7 +1097,7 @@ def generate_psg_report(
         canvas.drawRightString(PAGE_W - MARGIN, 0.9*cm, f"Pagina {doc.page}")
         # Tweede regel: versie-info (lager, geen overlap)
         canvas.drawString(MARGIN, 0.55*cm,
-            "YASAFlaskified v0.8.25 | AASM 2.6 | www.slaapkliniek.be | \u00a9 Bart Rombaut")
+            "YASAFlaskified v0.8.27 | AASM 2.6 | www.slaapkliniek.be | \u00a9 Bart Rombaut")
         canvas.restoreState()
 
     doc.build(story, onFirstPage=make_footer, onLaterPages=make_footer)

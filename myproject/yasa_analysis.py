@@ -1,5 +1,5 @@
 """
-yasa_analysis.py — Uitgebreide slaapanalyse module voor YASAFlaskified v0.8.25
+yasa_analysis.py — Uitgebreide slaapanalyse module voor YASAFlaskified v0.8.27
 Compatibel met YASA 0.7.x (Hypnogram object) EN 0.6.x (numpy array).
 
 Fixes t.o.v. v7.1:
@@ -742,67 +742,104 @@ def run_full_analysis(raw: mne.io.BaseRaw,
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# v0.8.25: U-Sleep integration stub (Perslev et al., npj Digital Med 2021)
+# v0.8.27: U-Sleep integration stub (Perslev et al., npj Digital Med 2021)
 # ═══════════════════════════════════════════════════════════════════════════
 
 def _run_usleep_staging(raw, eeg_ch: str, eog_ch: str = None) -> dict:
-    """Run U-Sleep staging as alternative/complement to YASA.
+    """Run U-Sleep staging via the cloud API (sleep.ai.ku.dk).
 
-    Requires: pip install u-sleep-api  (or local u-sleep model)
-    See: https://github.com/perslev/U-Sleep
+    Requirements
+    ------------
+    1. pip install git+https://github.com/perslev/U-Sleep-API-Python-Bindings.git
+    2. API token in environment: USLEEP_API_TOKEN=eyJ0eXAi...
+       (create at https://sleep.ai.ku.dk)
 
-    This is a stub that provides the integration interface.
-    Full implementation requires either:
-      1. u-sleep-api package (cloud API)
-      2. Local U-Sleep model weights + tensorflow
-
-    Returns same dict format as run_sleep_staging() for interoperability.
+    The function saves the raw to a temporary EDF, uploads it to the
+    U-Sleep webserver, waits for the result, and returns the hypnogram
+    in the same format as run_sleep_staging().
     """
+    import os
+    import tempfile
+
     result = {"success": False, "hypnogram": [], "confidence": {}, "error": None,
               "backend": "usleep"}
+
+    api_token = os.environ.get("USLEEP_API_TOKEN")
+    if not api_token:
+        result["error"] = (
+            "USLEEP_API_TOKEN not set. Create a free account at "
+            "https://sleep.ai.ku.dk and add the token to your .env file."
+        )
+        return result
+
     try:
-        import usleep_api
-        logger.info("U-Sleep API package found, running staging...")
+        from usleep_api import USleepAPI
+    except ImportError:
+        result["error"] = (
+            "usleep-api not installed. Run:\n"
+            "  pip install git+https://github.com/perslev/U-Sleep-API-Python-Bindings.git"
+        )
+        return result
 
-        # Extract EEG and EOG data
-        eeg_data = raw.get_data(picks=[eeg_ch])[0]
-        sf = raw.info["sfreq"]
+    try:
+        # ── Save raw to temporary EDF ────────────────────────────────
+        with tempfile.NamedTemporaryFile(suffix=".edf", delete=False) as tmp:
+            tmp_path = tmp.name
+        raw.save(tmp_path, overwrite=True, verbose=False)
+        logger.info("U-Sleep: saved temp EDF (%d channels, %.0f s)",
+                     len(raw.ch_names), raw.times[-1])
 
-        api = usleep_api.USleepAPI()
-        # U-Sleep expects: (n_channels, n_samples) at 128 Hz
-        # Resample if needed
-        if sf != 128:
-            import scipy.signal as sig
-            n_new = int(len(eeg_data) * 128 / sf)
-            eeg_data = sig.resample(eeg_data, n_new)
+        # ── Create API session ───────────────────────────────────────
+        api = USleepAPI(api_token=api_token)
+        session = api.new_session(session_name="yasaflaskified_staging")
+        session.set_model("U-Sleep v1.0")
 
-        channels = [eeg_data]
+        # ── Upload EDF (anonymized) ──────────────────────────────────
+        logger.info("U-Sleep: uploading EDF to sleep.ai.ku.dk ...")
+        session.upload_file(tmp_path, anonymize_before_upload=True)
+
+        # ── Define channel groups ────────────────────────────────────
+        # U-Sleep works with pairs: [EEG, EOG] or just [EEG]
+        channel_groups = []
         if eog_ch and eog_ch in raw.ch_names:
-            eog_data = raw.get_data(picks=[eog_ch])[0]
-            if sf != 128:
-                eog_data = sig.resample(eog_data, n_new)
-            channels.append(eog_data)
+            channel_groups.append([eeg_ch, eog_ch])
+        else:
+            channel_groups.append([eeg_ch])
 
-        import numpy as np
-        data = np.array(channels)
-        hypno = api.predict(data, sf=128)
+        # ── Run prediction ───────────────────────────────────────────
+        logger.info("U-Sleep: predicting (channels: %s) ...", channel_groups)
+        session.predict(
+            data_per_prediction=128 * 30,  # 30s epochs at 128 Hz
+            channel_groups=channel_groups,
+        )
+
+        success = session.wait_for_completion()
+        if not success:
+            result["error"] = "U-Sleep prediction failed on server"
+            return result
+
+        # ── Fetch hypnogram ──────────────────────────────────────────
+        hyp_data = session.get_hypnogram()
+        hypno_raw = hyp_data.get("hypnogram", [])
 
         # U-Sleep returns: 0=W, 1=N1, 2=N2, 3=N3, 4=REM
         stage_map = {0: "W", 1: "N1", 2: "N2", 3: "N3", 4: "R"}
-        hypno_list = [stage_map.get(int(s), "W") for s in hypno]
+        hypno_list = [stage_map.get(int(s), "W") for s in hypno_raw]
 
         result["hypnogram"] = hypno_list
         result["n_epochs"] = len(hypno_list)
         result["success"] = True
+        logger.info("U-Sleep: %d epochs scored, stages=%s",
+                     len(hypno_list), dict(Counter(hypno_list)))
 
-    except ImportError:
-        result["error"] = (
-            "U-Sleep not installed. Install with: pip install u-sleep-api  "
-            "or download model weights from https://github.com/perslev/U-Sleep"
-        )
-        logger.warning("U-Sleep not available: %s", result["error"])
     except Exception as e:
         result["error"] = f"U-Sleep failed: {e}"
-        logger.error("U-Sleep staging failed: %s", e)
+        logger.error("U-Sleep staging failed: %s", e, exc_info=True)
+    finally:
+        # Cleanup temp file
+        try:
+            os.unlink(tmp_path)
+        except Exception:
+            pass
 
     return result

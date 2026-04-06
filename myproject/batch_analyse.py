@@ -16,7 +16,7 @@ Usage
     python batch_analyse.py /path/to/edfs/ --profile strict standard sensitive
 
 Author:  Bart Rombaut, MD — Slaapkliniek AZORG
-Version: 0.8.25
+Version: 0.8.27
 """
 
 from __future__ import annotations

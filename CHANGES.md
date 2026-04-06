@@ -4,6 +4,24 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 
 ---
 
+## [0.8.27] — April 2026
+
+### Fixed — Complete PDF report multilingual (Vallat feedback)
+- **36 new i18n keys** for PDF report: fix table (Fix 1–6 + ECG), apnea type labels, severity grades, signal quality grades, scoring profile table headers, RERA explanation, disclaimers, warnings
+- **All hardcoded Dutch strings removed** from `generate_pdf_report.py`: title, severity labels, fix table labels/descriptions, profile table headers, quality grades, informative disclaimers — all now use `t()` calls
+- **601 total i18n keys**, 100% NL/FR/EN/DE coverage
+- PDF report now fully renders in the user's selected language (NL/FR/EN/DE)
+
+## [0.8.26] — April 2026
+
+### Fixed — Multilingual & clinical display
+- **German (DE) as language choice**: added to `SUPPORTED_LANGS`, `LANG_NAMES`, `LANG_FLAGS`, and all HTML dropdown selectors (`base.html`, `admin_sites.html`, `admin_users.html`)
+- **Scoring profile in AHI classification bar**: PDF now shows `Profile: Standard (AASM 2.6)` alongside AHI/OAHI values
+- **Severity labels multilingual**: `Normaal/Mild/Matig/Ernstig` → language-dependent via `_SEV_LABELS` dict (NL/FR/EN/DE)
+- **Hardcoded Dutch in PDF report**: `Niet beschikbaar`, `Overschatting-correctie` replaced with `t()` i18n calls
+- **5 new i18n keys**: `pdf_not_available`, `pdf_overcounting_corrections`, `pdf_correction`, `pdf_impact`, `pdf_explanation` (all 4 languages)
+- **568 total i18n keys**, 100% coverage NL/FR/EN/DE
+
 ## [0.8.25] — April 2026
 
 ### Added — Platform improvements (items 9–18)
