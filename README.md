@@ -107,21 +107,21 @@ The app is now running at `http://localhost:8071`.
 ### Upgrade
 
 ```bash
-scp YASAFlaskified_v0_8_22.zip bart@yourserver:/tmp/ && \
-ssh -t bart@yourserver "sudo bash -c '
-  cd /tmp && rm -rf yasafix && unzip -o YASAFlaskified_v0_8_22.zip -d yasafix &&
+scp YASAFlaskified_v0_8_23.zip user@yourserver:/tmp/ && \
+ssh -t user@yourserver "sudo bash -c '
+  cd /tmp && rm -rf yasafix && unzip -o YASAFlaskified_v0_8_23.zip -d yasafix &&
   rsync -av --no-group --no-owner \
     --exclude=.env --exclude=instance/ --exclude=uploads/ \
     --exclude=processed/ --exclude=logs/ --exclude=users.db \
     --exclude=__pycache__/ \
-    /tmp/yasafix/myproject/ /data/slaapkliniek/myproject/ &&
+    /tmp/yasafix/myproject/ /data/yasaflaskified/myproject/ &&
   cp /tmp/yasafix/CHANGES.md /tmp/yasafix/Dockerfile \
      /tmp/yasafix/docker-compose.yml /tmp/yasafix/README.md \
      /tmp/yasafix/DISCLAIMER.md /tmp/yasafix/ROADMAP.md \
-     /data/slaapkliniek/ &&
-  cd /data/slaapkliniek && docker compose build --no-cache &&
+     /data/yasaflaskified/ &&
+  cd /data/yasaflaskified && docker compose build --no-cache &&
   docker compose down && docker compose up -d &&
-  rm -rf /tmp/yasafix /tmp/YASAFlaskified_v0_8_22.zip'"
+  rm -rf /tmp/yasafix /tmp/YASAFlaskified_v0_8_23.zip'"
 ```
 
 ---
@@ -289,7 +289,7 @@ Copy `config.json.example` to `config.json`:
 {
   "SECRET_KEY": "change-me-to-random-64-chars",
   "ADMIN_PASSWORD": "strong-password",
-  "SITE_NAME": "AZORG Slaapkliniek",
+  "SITE_NAME": "Your Sleep Clinic",
   "SITE_LANGUAGE": "nl",
   "MAX_UPLOAD_MB": 512
 }
