@@ -70,7 +70,7 @@ YASAFlaskified extends YASA into a complete clinical platform: AASM 2.6-complian
 - **Interactive EDF browser** — channel-group filters, event overlay, multi-epoch zoom
 - **Manual scoring editor** — epoch-by-epoch review, event add/delete/modify
 - **Automated reports** — PDF (portrait A4) with epoch signal examples, Excel, EDF+ annotations, FHIR R4
-- **Multilingual** — Dutch, French, English (449+ translation keys)
+- **Multilingual** — Dutch, French, English, German — 619 translation keys
 - **Multi-site** — data isolation per clinical centre, role-based access
 - **EDF patient info** — auto-populate from EDF header (name, DOB, sex, equipment)
 - **Signal quality warnings** — red banner in PDF when channels unusable or AI confidence low
@@ -109,9 +109,9 @@ The app is now running at `http://localhost:8071`.
 ### Upgrade
 
 ```bash
-scp YASAFlaskified_v0_8_23.zip user@yourserver:/tmp/ && \
+scp YASAFlaskified_v0_8_31.zip user@yourserver:/tmp/ && \
 ssh -t user@yourserver "sudo bash -c '
-  cd /tmp && rm -rf yasafix && unzip -o YASAFlaskified_v0_8_23.zip -d yasafix &&
+  cd /tmp && rm -rf yasafix && unzip -o YASAFlaskified_v0_8_31.zip -d yasafix &&
   rsync -av --no-group --no-owner \
     --exclude=.env --exclude=instance/ --exclude=uploads/ \
     --exclude=processed/ --exclude=logs/ --exclude=users.db \
@@ -123,7 +123,7 @@ ssh -t user@yourserver "sudo bash -c '
      /data/yasaflaskified/ &&
   cd /data/yasaflaskified && docker compose build --no-cache &&
   docker compose down && docker compose up -d &&
-  rm -rf /tmp/yasafix /tmp/YASAFlaskified_v0_8_23.zip'"
+  rm -rf /tmp/yasafix /tmp/YASAFlaskified_v0_8_31.zip'"
 ```
 
 ---
@@ -261,15 +261,18 @@ Six systematic bias mechanisms identified and corrected. Official AHI/OAHI uncha
 | EDF+ | `generate_edfplus.py` | Annotations for each scored event (pyedflib) |
 | FHIR R4 | `fhir_export.py` | Observation + DiagnosticReport + CarePlan |
 
-**PDF highlights (v0.8.22):**
+**PDF highlights (v0.8.31):**
+- Executive summary: AHI (large font, severity-colored), OAHI, CAI, SpO2, arousal index, PLMI
+- Sleep stage transition matrix (5×5)
+- HR/ECG section with bradycardia/tachycardia detection
 - Red warning banner for poor signal quality or low AI confidence
 - Section 8e: epoch signal examples with stacked pneumo channels
-- SpO₂ with mean, baseline (P90), nadir, T90, ODI 3%/4%
-- Spindle/slow wave tables per channel (not "—")
-- Realistic 4–6 sleep cycles (Feinberg & Floyd)
+- SpO2 with mean, baseline (P90), nadir, T90, ODI 3%/4%
+- Scoring profile comparison table with OAHI per profile
 - Over-counting correction transparency table (6 fixes)
+- Compact layout with 40–60% reduced spacing
 
-Languages: Dutch (NL), French (FR), English (EN).
+Languages: Dutch (NL), French (FR), English (EN), German (DE).
 
 ---
 
@@ -327,7 +330,7 @@ YASAFlaskified/
 │   ├── arousal_analysis.py      # Arousal + K-complex + CVR
 │   ├── yasa_analysis.py         # Staging, cycles, spindles, SW
 │   ├── generate_pdf_report.py   # PDF with epoch examples
-│   ├── i18n.py                  # 449+ keys (NL/FR/EN)
+│   ├── i18n.py                  # 619 keys (NL/FR/EN/DE)
 │   ├── app.py                   # Flask (~2900 LOC)
 │   └── templates/               # 22 Jinja2 templates
 ├── docker-compose.yml           # 8 workers + app + redis
@@ -351,7 +354,12 @@ YASAFlaskified/
 | 0.8.16 | RERA/RDI, REM/NREM AHI, positional AHI |
 | 0.8.17 | Signal quality, flattening-RERA, montage checks |
 | 0.8.19 | Study types, EDF header auto-fill, position legend |
-| **0.8.30** | **ECG-derived effort (TECG Berry 2019), spectral effort classifier, central apnea reclassification, psgscoring v0.2.5** |
+| **0.8.31** | **PDF fixes (SpO2 subscript, transition matrix, signal quality), 18 algorithm references in README, 619 i18n keys** |
+| **0.8.30** | **Clinical PDF layout: executive summary, stage transition matrix, HR/ECG section, spacing reduction** |
+| **0.8.29** | **47 tests (regression + Hypothesis property-based), flattening index wired to classification** |
+| **0.8.28** | **Central/mixed apnea under-classification fix: Rule 5/5a/5b/3/6 relaxed for cardiac pulsation** |
+| **0.8.27** | **Complete PDF multilingual (NL/FR/EN/DE), breath snap off by default, OAHI per scoring profile** |
+| **0.8.23** | **ECG-derived effort (TECG Berry 2019), spectral effort classifier, central apnea reclassification, psgscoring v0.2.5** |
 | **0.8.22** | **ODI 3%/4%, Feinberg & Floyd cycles, REM consolidation, channel fix, quality banners, epoch examples, max duration split, local baseline validation** |
 
 See [CHANGES.md](CHANGES.md) for full changelog.
@@ -366,7 +374,7 @@ See [CHANGES.md](CHANGES.md) for full changelog.
   title     = {{YASAFlaskified}: An open-source web platform for automated
                polysomnography analysis},
   year      = {2026},
-  version   = {0.8.30},
+  version   = {0.8.31},
   publisher = {GitHub},
   url       = {https://github.com/bartromb/YASAFlaskified}
 }
@@ -392,12 +400,44 @@ See [CHANGES.md](CHANGES.md) for full changelog.
 
 YASAFlaskified is **research software**, not a cleared medical device. It carries no CE mark, FDA clearance, or equivalent certification. All computed indices (AHI, OAHI, ODI, PLMI, RDI) are research-grade estimates that must be reviewed by a qualified clinician before any diagnostic or therapeutic decision. See [DISCLAIMER.md](DISCLAIMER.md) for full terms.
 
-## What's New in v0.8.30
+## References
 
-- **ECG-derived effort classification (TECG)**: Implements the Transformed ECG method (Berry et al., JCSM 2019) for improved central vs. obstructive apnea differentiation. QRS blanking + high-pass filtering reveals inspiratory EMG bursts from the routinely recorded ECG signal.
-- **Spectral effort classifier**: Compares cardiac (0.8–2.5 Hz) vs. respiratory (0.1–0.5 Hz) power during apnea events on RIP bands to detect cardiac pulsation artefact.
-- **Combined reclassification**: Events where both TECG and spectral analysis agree on absent respiratory effort are reclassified as central (confidence 0.85).
-- **New output field**: `n_ecg_reclassified_central` — number of events reclassified from obstructive to central via ECG-derived effort analysis.
+Algorithms and methods used in YASAFlaskified and psgscoring:
+
+### Sleep staging
+- **Vallat R, Walker MP.** An open-source, high-performance tool for automated sleep staging. *eLife*. 2021;10:e70092. [doi:10.7554/eLife.70092](https://doi.org/10.7554/eLife.70092) — *YASA LightGBM staging model*
+- **Perslev M et al.** U-Sleep: resilient high-frequency sleep staging. *npj Digital Medicine*. 2021;4:72. [doi:10.1038/s41746-021-00440-5](https://doi.org/10.1038/s41746-021-00440-5) — *Alternative deep learning staging (U-Sleep stub)*
+
+### Respiratory scoring
+- **Berry RB et al.** The AASM Manual for the Scoring of Sleep and Associated Events, Version 2.6. AASM, 2020. — *Scoring rules (Rule 1A, 1B, apnea/hypopnea/RERA definitions)*
+- **Thurnheer R, Xie X, Bloch KE.** Accuracy of nasal cannula pressure recordings. *Am J Respir Crit Care Med*. 2001;164(10):1914–1919. [doi:10.1164/ajrccm.164.10.2010113](https://doi.org/10.1164/ajrccm.164.10.2010113) — *Nasal pressure square-root linearisation (Bernoulli)*
+- **Montserrat JM et al.** Evaluation of nasal prongs for estimating nasal flow. *Am J Respir Crit Care Med*. 1997;155(1):211–215. [doi:10.1164/ajrccm.155.1.9001310](https://doi.org/10.1164/ajrccm.155.1.9001310) — *Nasal pressure linearisation validation*
+- **Lee H et al.** Detection of apneic events from single-channel nasal airflow using 2nd derivative method. *Physiol Meas*. 2008;29:N37–N45. [doi:10.1088/0967-3334/29/5/N01](https://doi.org/10.1088/0967-3334/29/5/N01) — *MMSD validation (artefact vs. true apnea)*
+- **Hosselet J et al.** Detection of flow limitation with a nasal cannula/pressure transducer system. *Am J Respir Crit Care Med*. 1998;157(5):1461–1467. [doi:10.1164/ajrccm.157.5.9708008](https://doi.org/10.1164/ajrccm.157.5.9708008) — *Flattening index for inspiratory flow limitation / RERA detection*
+
+### Apnea type classification (obstructive / central / mixed)
+- **Berry RB et al.** Use of a transformed ECG signal to detect respiratory effort during apnea. *J Clin Sleep Med*. 2019;15(11):1653–1660. [doi:10.5664/jcsm.7880](https://doi.org/10.5664/jcsm.7880) — *TECG method: QRS blanking + high-pass filter reveals inspiratory EMG bursts*
+- **Berry RB et al.** Use of chest wall electromyography to detect respiratory effort during polysomnography. *J Clin Sleep Med*. 2016;12(9):1239–1244. [doi:10.5664/jcsm.6122](https://doi.org/10.5664/jcsm.6122) — *Cardiac pulsation artefact on effort bands*
+
+### PLM scoring
+- **Zucconi M et al.** WASM standards for recording and scoring periodic leg movements in sleep. *Sleep Med*. 2006;7(2):175–183. [doi:10.1016/j.sleep.2006.01.001](https://doi.org/10.1016/j.sleep.2006.01.001) — *PLM detection criteria*
+
+### Sleep cycles
+- **Feinberg I, Floyd TC.** Systematic trends across the night in human sleep cycles. *Psychophysiology*. 1979;16(3):283–291. — *NREM/REM cycle detection criteria*
+
+### Over-counting / scoring variability
+- **Malhotra A et al.** Performance of an automated polysomnography scoring system versus computer-assisted manual scoring. *Sleep*. 2013;36(4):573–582. [doi:10.5665/sleep.2548](https://doi.org/10.5665/sleep.2548) — *Baseline definition challenges in automated scoring*
+- **Parekh A et al.** Ventilatory burden as a measure of OSA severity is predictive of cardiovascular and all-cause mortality. *Am J Respir Crit Care Med*. 2023;208(11):1216–1226. [doi:10.1164/rccm.202301-0109OC](https://doi.org/10.1164/rccm.202301-0109OC) — *Alternative event-free metrics (ventilatory burden)*
+- **Rosenberg RS, Van Hout S.** The AASM inter-scorer reliability program. *J Clin Sleep Med*. 2013;9(1):81–87. [doi:10.5664/jcsm.2350](https://doi.org/10.5664/jcsm.2350) — *Inter-scorer variability benchmarks*
+- **Ruehland WR et al.** The new AASM criteria for scoring hypopneas: impact on the AHI. *Sleep*. 2009;32(2):150–157. [doi:10.1093/sleep/32.2.150](https://doi.org/10.1093/sleep/32.2.150) — *Hypopnea definition impact on AHI*
+
+### Prevalence
+- **Peppard PE et al.** Increased prevalence of sleep-disordered breathing in adults. *Am J Epidemiol*. 2013;177(9):1006–1014. — *936 million adults with OSA worldwide*
+
+### Software dependencies
+- **Gramfort A et al.** MNE software for processing MEG and EEG data. *NeuroImage*. 2014;86:446–460. [doi:10.1016/j.neuroimage.2013.10.027](https://doi.org/10.1016/j.neuroimage.2013.10.027) — *MNE-Python (EDF I/O, signal processing)*
+- **Ke G et al.** LightGBM: A highly efficient gradient boosting decision tree. *NeurIPS*. 2017;30:3146–3154. — *LightGBM classifier (YASA staging + optional confidence calibration)*
+- **Vallat R.** Pingouin: statistics in Python. *JOSS*. 2018;3(31):1026. — *Statistical analysis (ICC, correlation)*
 
 ---
 
