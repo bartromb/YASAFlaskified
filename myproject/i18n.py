@@ -1709,9 +1709,9 @@ TRANSLATIONS.update(_PDF_V027b)
 
 # ── v0.8.30: HR/ECG + SpO2/PLM i18n ─────────────────────────────────
 _PDF_V030 = {
-    "pdf_mean_spo2":      {"nl": "Gemiddelde SpO₂", "fr": "SpO₂ moyenne", "en": "Mean SpO₂", "de": "Mittlere SpO₂"},
-    "pdf_baseline_spo2":  {"nl": "Baseline SpO₂",   "fr": "SpO₂ de base", "en": "Baseline SpO₂", "de": "Baseline SpO₂"},
-    "pdf_min_spo2":       {"nl": "Minimale SpO₂",   "fr": "SpO₂ minimale", "en": "Minimum SpO₂", "de": "Minimale SpO₂"},
+    "pdf_mean_spo2":      {"nl": "Gemiddelde SpO<sub>2</sub>", "fr": "SpO<sub>2</sub> moyenne", "en": "Mean SpO<sub>2</sub>", "de": "Mittlere SpO<sub>2</sub>"},
+    "pdf_baseline_spo2":  {"nl": "Baseline SpO<sub>2</sub>",   "fr": "SpO<sub>2</sub> de base", "en": "Baseline SpO<sub>2</sub>", "de": "Baseline SpO<sub>2</sub>"},
+    "pdf_min_spo2":       {"nl": "Minimale SpO<sub>2</sub>",   "fr": "SpO<sub>2</sub> minimale", "en": "Minimum SpO<sub>2</sub>", "de": "Minimale SpO<sub>2</sub>"},
     "pdf_mean_hr":        {"nl": "Gem. hartfrequentie", "fr": "FC moyenne",    "en": "Mean heart rate", "de": "Mittl. Herzfrequenz"},
     "pdf_min_hr":         {"nl": "Min. hartfrequentie", "fr": "FC minimale",   "en": "Min heart rate",  "de": "Min. Herzfrequenz"},
     "pdf_max_hr":         {"nl": "Max. hartfrequentie", "fr": "FC maximale",   "en": "Max heart rate",  "de": "Max. Herzfrequenz"},

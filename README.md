@@ -3,7 +3,7 @@
 **An open-source web platform for automated polysomnography (PSG) analysis.**
 
 [![License: BSD-3](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.8.30-green.svg)](CHANGES.md)
+[![Version](https://img.shields.io/badge/version-0.8.31-green.svg)](CHANGES.md)
 [![psgscoring](https://img.shields.io/badge/psgscoring-v0.2.5-green.svg)](https://github.com/bartromb/psgscoring)
 [![Tests](https://img.shields.io/badge/tests-47%20passed-brightgreen.svg)](myproject/psgscoring/tests/)
 [![Python](https://img.shields.io/badge/python-3.11-blue.svg)](requirements.txt)

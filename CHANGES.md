@@ -4,6 +4,15 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 
 ---
 
+## [0.8.31] — April 2026
+
+### Fixed — PDF report bugs
+- **Removed duplicate executive summary** that overlapped with existing KPI boxes on page 1
+- **Fixed SpO2 subscript rendering**: Unicode ₂ → ReportLab `<sub>2</sub>` (was rendering as black boxes ■)
+- **Fixed stage transition matrix**: was showing all dots — now correctly reads `timeline[i]["stage"]` instead of the raw dict
+- **Fixed signal quality table**: field name mismatch (`quality_grade` vs `quality`, `flat_pct` vs `flatline_pct`) — was showing "?" for all channels
+- 619 i18n keys, 47 tests passing
+
 ## [0.8.30] — April 2026
 
 ### Improved — Clinical PDF report layout (AASM-compliant)

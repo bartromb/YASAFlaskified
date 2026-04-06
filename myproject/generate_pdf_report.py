@@ -428,7 +428,7 @@ _EPOCH_CH_ORDER = [
     ("flow_thermistor", "Thermistor",   "#1abc9c"),
     ("thorax",          "Thorax",       "#e67e22"),
     ("abdomen",         "Abdomen",      "#d35400"),
-    ("spo2",            "SpO₂",         "#e74c3c"),
+    ("spo2",            "SpO<sub>2</sub>",         "#e74c3c"),
     ("snore",           "Snore",        "#8e44ad"),
 ]
 
@@ -845,70 +845,6 @@ def generate_pdf_report(results:dict, output_path:str,
             "<i>" + "  ·  ".join(_edf_extras) + "</i>",
             styles["SM"])); sp(0.1)
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # EXECUTIVE SUMMARY — key findings at a glance (v0.8.30)
-    # ═══════════════════════════════════════════════════════════════════════
-    _rsum = pneumo.get("respiratory", {}).get("summary", {})
-    _spo2s = pneumo.get("spo2", {}).get("summary", {})
-    _arous = pneumo.get("arousal", {}).get("summary", {})
-    _plms  = pneumo.get("plm", {}).get("summary", {})
-    _hrs   = pneumo.get("heart_rate", {}).get("summary", {})
-
-    if _rsum:
-        _ahi_v = _f(_rsum, "ahi_total")
-        _oahi_v = _f(_rsum, "oahi") or 0
-        _cahi_v = _f(_rsum, "cahi") or 0
-        _sev_txt = _sev(_ahi_v, lang) if _ahi_v is not None else "—"
-        _sev_c   = _sev_clr(_ahi_v) if _ahi_v is not None else GR
-
-        # Row 1: AHI (big) + severity
-        _ahi_str = f"{_ahi_v:.1f}" if _ahi_v is not None else "—"
-        _big = ParagraphStyle("BIG", fontName="Helvetica-Bold", fontSize=22,
-                               textColor=_sev_c, alignment=TA_CENTER, leading=24)
-        _med = ParagraphStyle("MED", fontName="Helvetica-Bold", fontSize=10,
-                               textColor=TXT, alignment=TA_CENTER, leading=12)
-        _sm2 = ParagraphStyle("SM2", fontName="Helvetica", fontSize=7,
-                               textColor=GR, alignment=TA_CENTER, leading=9)
-
-        def _kv_cell(val, label, unit=""):
-            v = f"{val:.1f}{unit}" if val is not None else "—"
-            return [Paragraph(v, _med), Paragraph(label, _sm2)]
-
-        _exec_data = [
-            # Row 1: AHI big + OAHI + CAHI + SpO2 + Arousal + PLM
-            [
-                [Paragraph(_ahi_str, _big), Paragraph(f"AHI — {_sev_txt}", _sm2)],
-                _kv_cell(_oahi_v, "OAHI", "/h"),
-                _kv_cell(_cahi_v, "CAI", "/h"),
-                _kv_cell(_f(_spo2s, "baseline_spo2"), "SpO₂ base", "%"),
-                _kv_cell(_f(_spo2s, "min_spo2"), "SpO₂ nadir", "%"),
-                _kv_cell(_f(_arous, "arousal_index"), "Arousal idx", "/h"),
-                _kv_cell(_f(_plms, "plmi"), "PLMI", "/h"),
-            ]
-        ]
-
-        # Flatten: each cell is a list of [value_para, label_para] → stack in mini table
-        _exec_cells = []
-        for cell_parts in _exec_data[0]:
-            mini = Table([cell_parts], colWidths=[2.2*cm])
-            mini.setStyle(TableStyle([
-                ("ALIGN", (0,0), (-1,-1), "CENTER"),
-                ("TOPPADDING", (0,0), (-1,-1), 1),
-                ("BOTTOMPADDING", (0,0), (-1,-1), 1),
-            ]))
-            _exec_cells.append(mini)
-
-        _exec_tbl = Table([_exec_cells],
-                          colWidths=[3.0*cm, 2.2*cm, 2.2*cm, 2.2*cm, 2.2*cm, 2.5*cm, 2.2*cm])
-        _exec_tbl.setStyle(TableStyle([
-            ("BACKGROUND", (0,0), (-1,-1), colors.HexColor("#f0f4f8")),
-            ("BOX", (0,0), (-1,-1), 1.0, _sev_c),
-            ("TOPPADDING", (0,0), (-1,-1), 4),
-            ("BOTTOMPADDING", (0,0), (-1,-1), 4),
-            ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
-        ]))
-        story.append(_exec_tbl); sp(0.15)
-
     # ── 0a. Registratie: kanalen in EDF ────────────────────────
     all_ch = pneumo.get("meta", {}).get("all_channels", [])
     if all_ch:
@@ -1036,7 +972,7 @@ def generate_pdf_report(results:dict, output_path:str,
             _stages_order = ["W", "N1", "N2", "N3", "R"]
             _trans = {s1: {s2: 0 for s2 in _stages_order} for s1 in _stages_order}
             for i in range(len(timeline) - 1):
-                s1, s2 = str(timeline[i]), str(timeline[i+1])
+                s1, s2 = str(timeline[i].get("stage","")), str(timeline[i+1].get("stage",""))
                 if s1 in _trans and s2 in _trans[s1]:
                     _trans[s1][s2] += 1
             _tr_rows = []
@@ -1197,12 +1133,12 @@ def generate_pdf_report(results:dict, output_path:str,
 
             sq_rows = []
             for ch_name, ch_info in sorted(sq_channels.items()):
-                g = ch_info.get("quality_grade", "?")
+                g = ch_info.get("quality_grade", ch_info.get("quality", "—"))
                 g_clr = {"good":"#27ae60","acceptable":"#e67e22","poor":"#e74c3c"}.get(g,"#888")
                 sq_rows.append([
                     ch_name,
-                    f"{ch_info.get('flat_pct',0):.1f}%",
-                    f"{ch_info.get('clip_pct',0):.1f}%",
+                    f"{ch_info.get('flat_pct', ch_info.get('flatline_pct', 0)):.1f}%",
+                    f"{ch_info.get('clip_pct', ch_info.get('clipping_pct', 0)):.1f}%",
                     str(ch_info.get("n_disconnects", 0)),
                     f"<font color='{g_clr}'>{g}</font>",
                 ])
