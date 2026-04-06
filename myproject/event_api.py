@@ -1,6 +1,6 @@
 from __future__ import annotations
 """
-event_api.py — YASAFlaskified v0.8.29
+event_api.py — YASAFlaskified v0.8.30
 ===================================
 Server-side event beheer: laden, opslaan, herberekenen AHI.
 

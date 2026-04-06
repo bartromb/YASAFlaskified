@@ -1,5 +1,5 @@
 """
-fhir_export.py — YASAFlaskified v0.8.29
+fhir_export.py — YASAFlaskified v0.8.30
 ===================================
 Exporteert analyseresultaten als FHIR R4 DiagnosticReport (JSON).
 Conform: https://www.hl7.org/fhir/diagnosticreport.html
@@ -118,7 +118,7 @@ def results_to_fhir(results: dict, job_id: str,
     treatment_text = " ".join(tx_parts) if tx_parts else ""
 
     conclusion = (
-        f"Automated PSG analysis (YASAFlaskified v0.8.29, AASM 2.6). "
+        f"Automated PSG analysis (YASAFlaskified v0.8.30, AASM 2.6). "
         f"AHI = {_fmt_val(ahi)} /h ({severity}). "
         f"TST = {_fmt_val(stats.get('TST'))} min, "
         f"SE = {_fmt_val(stats.get('SE'))} %. "

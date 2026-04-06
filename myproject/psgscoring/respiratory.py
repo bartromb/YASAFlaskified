@@ -314,7 +314,7 @@ def detect_respiratory_events(
         _SMOOTH_S      = sp.get("HYPOPNEA_SMOOTH_S", HYPOPNEA_SMOOTH_S)
         _CONTAM_WIN    = sp.get("CROSS_CONTAM_WINDOW_S", 15.0)
         _USE_PEAK      = sp.get("USE_PEAK_DETECTION", True)
-        _USE_SNAP      = sp.get("USE_BREATH_SNAP", False)  # v0.8.29: off by default
+        _USE_SNAP      = sp.get("USE_BREATH_SNAP", False)  # v0.8.30: off by default
         _APNEA_MAX     = sp.get("APNEA_MAX_DUR_S", APNEA_MAX_DUR_S)
         _HYPOP_MAX     = sp.get("HYPOPNEA_MAX_DUR_S", HYPOPNEA_MAX_DUR_S)
         result["scoring_thresholds"] = {
@@ -403,7 +403,7 @@ def detect_respiratory_events(
 
         apnea_raw    = flow_norm  < APNEA_THRESHOLD
 
-        # v0.2.5/v0.8.29: bandpass-filtered flow for breath boundary snapping
+        # v0.2.5/v0.8.30: bandpass-filtered flow for breath boundary snapping
         # Only computed when USE_BREATH_SNAP is True (sensitive profile only)
         _flow_filt_snap = bandpass_flow(flow_data, sf_flow) if _USE_SNAP else None
 
@@ -1095,7 +1095,7 @@ def _detect_hypopneas(
             else:
                 hy_oi, hy_ei = sub_idx[0], sub_idx[-1] + 1
 
-            # v0.8.29: compute mean flattening index for overlapping breaths
+            # v0.8.30: compute mean flattening index for overlapping breaths
             _ev_flat = None
             if breaths:
                 _overlapping = [

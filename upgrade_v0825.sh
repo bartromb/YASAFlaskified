@@ -1,6 +1,6 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════
-# upgrade_v0825.sh — Upgrade YASAFlaskified to v0.8.29
+# upgrade_v0825.sh — Upgrade YASAFlaskified to v0.8.30
 # ═══════════════════════════════════════════════════════════════
 #
 # Run on the Hetzner server (65.108.230.243):
@@ -35,7 +35,7 @@ ZIP_FILE="${1:-/tmp/YASAFlaskified_v0_8_25.zip}"
 BACKUP_DIR="/data/backups/slaapkliniek_$(date +%Y%m%d_%H%M%S)"
 
 echo -e "${BLUE}═══════════════════════════════════════════${NC}"
-echo -e "${BLUE}  YASAFlaskified v0.8.29 Upgrade${NC}"
+echo -e "${BLUE}  YASAFlaskified v0.8.30 Upgrade${NC}"
 echo -e "${BLUE}═══════════════════════════════════════════${NC}"
 echo ""
 
@@ -111,7 +111,7 @@ fi
 
 echo ""
 echo -e "${GREEN}═══════════════════════════════════════════${NC}"
-echo -e "${GREEN}  Upgrade to v0.8.29 complete!${NC}"
+echo -e "${GREEN}  Upgrade to v0.8.30 complete!${NC}"
 echo -e "${GREEN}═══════════════════════════════════════════${NC}"
 echo ""
 echo "  Backup:   ${BACKUP_DIR}"

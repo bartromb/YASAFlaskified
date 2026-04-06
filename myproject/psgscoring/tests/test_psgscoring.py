@@ -386,7 +386,7 @@ class TestSpo2LowBaseline:
 
 
 # ═══════════════════════════════════════════════════════════════
-# K. Regression tests — golden standard (v0.8.29)
+# K. Regression tests — golden standard (v0.8.30)
 # ═══════════════════════════════════════════════════════════════
 
 class TestRegressionGoldenStandard:
@@ -515,7 +515,7 @@ class TestRegressionGoldenStandard:
 
 
 # ═══════════════════════════════════════════════════════════════
-# L. Property-based tests — Hypothesis (v0.8.29)
+# L. Property-based tests — Hypothesis (v0.8.30)
 # ═══════════════════════════════════════════════════════════════
 
 try:

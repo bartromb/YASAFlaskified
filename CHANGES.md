@@ -4,6 +4,14 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 
 ---
 
+## [0.8.30] — April 2026
+
+### Improved — Clinical PDF report layout (AASM-compliant)
+- **Executive Summary box** on page 1: AHI (large font, severity-colored), OAHI, CAI, SpO₂ baseline/nadir, arousal index, PLMI — all critical numbers visible at a glance
+- **Sleep stage transition matrix**: compact 5×5 table (W/N1/N2/N3/R) with transition counts after sleep architecture
+- **HR/ECG summary section** (§10c): mean/min/max HR, bradycardia/tachycardia episodes
+- **Spacing reduction**: 40–60% less whitespace for denser clinician-friendly layout
+
 ## [0.8.29] — April 2026
 
 ### Added — Regression & property-based testing + flattening wiring

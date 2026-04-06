@@ -240,7 +240,7 @@ def classify_apnea_type(
             return "obstructive", safe_r(_conf(conf, 2), 2), detail
 
     # ── Rule 3: Mixed ─────────────────────────────────────────────────────
-    # v0.8.29: relaxed first-half threshold (0.20 → 0.35) to catch mixed
+    # v0.8.30: relaxed first-half threshold (0.20 → 0.35) to catch mixed
     # apneas with gradual effort onset (not always a clean binary transition)
     if first_ratio < 0.35 and second_ratio > EFFORT_PRESENT_RATIO:
         # Stronger mixed signal when first half is truly absent
@@ -260,7 +260,7 @@ def classify_apnea_type(
         return "obstructive", safe_r(_conf(conf, 4), 2), detail
 
     # ── Rule 5: Truly flat → central ─────────────────────────────────────
-    # v0.8.29: relaxed thresholds to account for cardiac pulsation artefact
+    # v0.8.30: relaxed thresholds to account for cardiac pulsation artefact
     # on RIP bands (typically raw_var 0.10–0.20, effort_ratio 0.10–0.25)
     quarters_absent = sum(1 for q in quarter_efforts if q < EFFORT_ABSENT_RATIO)
     quarters_low    = sum(1 for q in quarter_efforts if q < EFFORT_PRESENT_RATIO)
@@ -279,7 +279,7 @@ def classify_apnea_type(
         )
         return "central", safe_r(_conf(conf, 5), 2), detail
 
-    # ── Rule 5a (v0.8.29): Probable central — low effort, no paradox ─────
+    # ── Rule 5a (v0.8.30): Probable central — low effort, no paradox ─────
     # Catches events where effort is low but not fully absent (cardiac
     # pulsation artefact inflates effort_ratio to 0.20–0.35).
     if (
@@ -305,7 +305,7 @@ def classify_apnea_type(
             k: v for k, v in ecg_assessment.items()
             if k not in ("tecg_detail", "spectral_detail")
         }
-        # v0.8.29: relaxed threshold from 1.5× to 2× EFFORT_PRESENT
+        # v0.8.30: relaxed threshold from 1.5× to 2× EFFORT_PRESENT
         if effort_ratio < EFFORT_PRESENT_RATIO * 2.0:
             conf = 0.75
             if ecg_assessment.get("ecg_effort_present") is False:
@@ -316,7 +316,7 @@ def classify_apnea_type(
             return "central", safe_r(_conf(conf, 5), 2), detail
 
     # ── Rule 6: Borderline default ────────────────────────────────────────
-    # v0.8.29: if effort is in the "low" range and no clear obstructive
+    # v0.8.30: if effort is in the "low" range and no clear obstructive
     # evidence, classify as central rather than defaulting to obstructive.
     if (
         effort_ratio < EFFORT_PRESENT_RATIO and

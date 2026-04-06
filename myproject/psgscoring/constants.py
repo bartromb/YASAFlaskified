@@ -47,7 +47,7 @@ SCORING_PROFILES: dict[str, dict] = {
         "HYPOPNEA_SMOOTH_S":    0.0,    # no smoothing
         "CROSS_CONTAM_WINDOW_S": 15.0,
         "USE_PEAK_DETECTION":   False,  # envelope only
-        "USE_BREATH_SNAP":      False,  # v0.8.29: off by default
+        "USE_BREATH_SNAP":      False,  # v0.8.30: off by default
         "HYPOPNEA_MAX_DUR_S":   60.0,   # v0.8.22
         "APNEA_MAX_DUR_S":      90.0,   # v0.8.22
     },
@@ -59,7 +59,7 @@ SCORING_PROFILES: dict[str, dict] = {
         "HYPOPNEA_SMOOTH_S":    3.0,
         "CROSS_CONTAM_WINDOW_S": 15.0,
         "USE_PEAK_DETECTION":   True,   # peak + envelope
-        "USE_BREATH_SNAP":      False,  # v0.8.29: off in standard
+        "USE_BREATH_SNAP":      False,  # v0.8.30: off in standard
         "HYPOPNEA_MAX_DUR_S":   60.0,   # v0.8.22
         "APNEA_MAX_DUR_S":      90.0,   # v0.8.22
     },
@@ -71,7 +71,7 @@ SCORING_PROFILES: dict[str, dict] = {
         "HYPOPNEA_SMOOTH_S":    5.0,    # more smoothing
         "CROSS_CONTAM_WINDOW_S": 0.0,   # no cross-contam check
         "USE_PEAK_DETECTION":   True,
-        "USE_BREATH_SNAP":      True,   # v0.8.29: only in sensitive
+        "USE_BREATH_SNAP":      True,   # v0.8.30: only in sensitive
         "HYPOPNEA_MAX_DUR_S":   90.0,   # v0.8.22: meer tolerant
         "APNEA_MAX_DUR_S":      120.0,  # v0.8.22
     },
