@@ -2710,7 +2710,7 @@ def health():
         "status":    "ok" if redis_ok else "degraded",
         "redis":     redis_ok,
         "timestamp": datetime.utcnow().isoformat(),
-        "version":   "0.8.27",
+        "version":   "0.8.29",
     }), 200 if redis_ok else 503
 
 
@@ -2866,5 +2866,5 @@ if __name__ == "__main__":
     initialize_database()
     port  = int(os.environ.get("PORT", 5000))
     debug = _cfg("DEBUG", "0") == "1"
-    app.logger.info("YASAFlaskified v0.8.27 starten op poort %d (debug=%s)", port, debug)
+    app.logger.info("YASAFlaskified v0.8.29 starten op poort %d (debug=%s)", port, debug)
     app.run(host="0.0.0.0", port=port, debug=debug, use_reloader=debug)

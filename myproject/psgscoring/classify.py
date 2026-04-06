@@ -240,9 +240,17 @@ def classify_apnea_type(
             return "obstructive", safe_r(_conf(conf, 2), 2), detail
 
     # ── Rule 3: Mixed ─────────────────────────────────────────────────────
-    if first_ratio < EFFORT_ABSENT_RATIO and second_ratio > EFFORT_PRESENT_RATIO:
-        conf = min(0.95, 0.6 + (second_ratio - first_ratio))
-        detail["decision_reason"] = "first_absent_second_present"
+    # v0.8.29: relaxed first-half threshold (0.20 → 0.35) to catch mixed
+    # apneas with gradual effort onset (not always a clean binary transition)
+    if first_ratio < 0.35 and second_ratio > EFFORT_PRESENT_RATIO:
+        # Stronger mixed signal when first half is truly absent
+        mixed_conf = 0.6 + (second_ratio - first_ratio) * 0.5
+        if first_ratio < EFFORT_ABSENT_RATIO:
+            mixed_conf += 0.15  # classic mixed: absent → present
+        conf = min(0.95, mixed_conf)
+        detail["decision_reason"] = (
+            f"mixed_first={safe_r(first_ratio,3)}_second={safe_r(second_ratio,3)}"
+        )
         return "mixed", safe_r(_conf(conf, 3), 2), detail
 
     # ── Rule 4: Clear effort ──────────────────────────────────────────────
@@ -252,19 +260,40 @@ def classify_apnea_type(
         return "obstructive", safe_r(_conf(conf, 4), 2), detail
 
     # ── Rule 5: Truly flat → central ─────────────────────────────────────
+    # v0.8.29: relaxed thresholds to account for cardiac pulsation artefact
+    # on RIP bands (typically raw_var 0.10–0.20, effort_ratio 0.10–0.25)
     quarters_absent = sum(1 for q in quarter_efforts if q < EFFORT_ABSENT_RATIO)
-    no_paradox      = paradox_corr is None or paradox_corr > 0.0
-    no_phase_signal = phase_angle_deg is None or phase_angle_deg < 20.0
+    quarters_low    = sum(1 for q in quarter_efforts if q < EFFORT_PRESENT_RATIO)
+    no_paradox      = paradox_corr is None or paradox_corr > -0.10
+    no_phase_signal = phase_angle_deg is None or phase_angle_deg < 30.0
     if (
-        raw_var_ratio < 0.15 and
+        raw_var_ratio < 0.25 and
         effort_ratio  < EFFORT_ABSENT_RATIO and
-        quarters_absent >= 3 and
+        quarters_absent >= 2 and
         no_paradox and
         no_phase_signal
     ):
         conf = min(0.90, 0.5 + (EFFORT_ABSENT_RATIO - effort_ratio) * 3 + _flat_central_boost)
         detail["decision_reason"] = (
             f"truly_flat_var={safe_r(raw_var_ratio,3)}_effort={safe_r(effort_ratio,3)}"
+        )
+        return "central", safe_r(_conf(conf, 5), 2), detail
+
+    # ── Rule 5a (v0.8.29): Probable central — low effort, no paradox ─────
+    # Catches events where effort is low but not fully absent (cardiac
+    # pulsation artefact inflates effort_ratio to 0.20–0.35).
+    if (
+        raw_var_ratio < 0.30 and
+        effort_ratio  < EFFORT_PRESENT_RATIO and   # < 0.40
+        quarters_low  >= 3 and                      # most quarters below 0.40
+        no_paradox and
+        no_phase_signal and
+        not is_paradox and
+        not has_raw_move
+    ):
+        conf = min(0.75, 0.45 + (EFFORT_PRESENT_RATIO - effort_ratio) + _flat_central_boost)
+        detail["decision_reason"] = (
+            f"probable_central_var={safe_r(raw_var_ratio,3)}_effort={safe_r(effort_ratio,3)}"
         )
         return "central", safe_r(_conf(conf, 5), 2), detail
 
@@ -276,8 +305,8 @@ def classify_apnea_type(
             k: v for k, v in ecg_assessment.items()
             if k not in ("tecg_detail", "spectral_detail")
         }
-        # Only reclassify if effort is ambiguous (ratio < clear threshold)
-        if effort_ratio < EFFORT_PRESENT_RATIO * 1.5:
+        # v0.8.29: relaxed threshold from 1.5× to 2× EFFORT_PRESENT
+        if effort_ratio < EFFORT_PRESENT_RATIO * 2.0:
             conf = 0.75
             if ecg_assessment.get("ecg_effort_present") is False:
                 conf = 0.85  # both TECG and spectral agree
@@ -287,6 +316,20 @@ def classify_apnea_type(
             return "central", safe_r(_conf(conf, 5), 2), detail
 
     # ── Rule 6: Borderline default ────────────────────────────────────────
+    # v0.8.29: if effort is in the "low" range and no clear obstructive
+    # evidence, classify as central rather than defaulting to obstructive.
+    if (
+        effort_ratio < EFFORT_PRESENT_RATIO and
+        raw_var_ratio < 0.30 and
+        not is_paradox and
+        no_phase_signal
+    ):
+        conf_6 = 0.35 + _flat_central_boost
+        detail["decision_reason"] = (
+            f"low_effort_default_central_var={safe_r(raw_var_ratio,3)}_effort={safe_r(effort_ratio,3)}"
+        )
+        return "central", safe_r(_conf(conf_6, 6), 2), detail
+
     conf_6 = 0.40 + _flat_obstr_boost  # flattening can lift borderline confidence
     detail["decision_reason"] = (
         f"borderline_default_var={safe_r(raw_var_ratio,3)}_effort={safe_r(effort_ratio,3)}"

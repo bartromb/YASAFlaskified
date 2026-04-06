@@ -1,0 +1,4 @@
+# file: /home/claude/yasaflask/myproject/psgscoring/signal.py
+# hypothesis_version: 6.151.11
+
+[1e-09, 1e-06, 0.001, 0.03, 0.05, 0.3, 0.6, 0.8, 0.99, 1.0, 2.0, 3.0, 30.0, 60.0, 'N1', 'N2', 'N3', 'R', 'anchor_epochs_used', 'anchor_ratio', 'anchor_reliable', 'anchor_value', 'band', 'duration_s', 'from', 'onset_s', 'same', 'sample', 'time_s', 'to']

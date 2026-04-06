@@ -4,13 +4,33 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 
 ---
 
+## [0.8.29] — April 2026
+
+### Added — Regression & property-based testing + flattening wiring
+- **10 regression tests** (golden standard): obstructive/central/mixed classification on synthetic signals, dynamic baseline stability, SpO₂ desaturation detection, breath count, flattening passthrough
+- **3 property-based tests** (Hypothesis): 500 random inputs to `classify_apnea_type()` verifying no crashes, valid output types, confidence bounds; low-effort signals verified to not produce high-confidence obstructive; short segments (2–100 samples) crash-free
+- **Flattening index wired to hypopnea classification**: `_detect_hypopneas()` now computes mean flattening of overlapping breaths and passes it to `classify_apnea_type()` — high flattening boosts obstructive confidence, low flattening supports central
+- **47 total tests**, all passing (37 unit + 10 regression/golden)
+
+
+## [0.8.28] — April 2026
+
+### Fixed — Central and mixed apnea under-classification
+- **Rule 5 (central) thresholds relaxed**: `raw_var_ratio` 0.15→0.25, `quarters_absent` 3→2, `phase_angle` 20°→30°, `paradox_corr` 0.0→−0.10 — accounts for cardiac pulsation artefact on RIP bands that inflates effort metrics without true respiratory effort
+- **New Rule 5a (probable central)**: catches events with effort_ratio 0.20–0.40 (gray zone between absent and present) when no paradoxical breathing or phase signal is detected — previously these all defaulted to obstructive via Rule 6
+- **Rule 5b (ECG reclassification) relaxed**: effort threshold from 1.5× to 2× EFFORT_PRESENT_RATIO, allowing reclassification of more borderline events
+- **Rule 3 (mixed) relaxed**: first-half effort threshold 0.20→0.35 to detect mixed apneas with gradual (not binary) effort onset
+- **Rule 6 (borderline default) split**: events with low effort + no obstructive evidence now classified as central (not obstructive); obstructive default only when effort is ambiguous or movement is present
+
 ## [0.8.27] — April 2026
 
-### Fixed — Complete PDF report multilingual (Vallat feedback)
-- **36 new i18n keys** for PDF report: fix table (Fix 1–6 + ECG), apnea type labels, severity grades, signal quality grades, scoring profile table headers, RERA explanation, disclaimers, warnings
-- **All hardcoded Dutch strings removed** from `generate_pdf_report.py`: title, severity labels, fix table labels/descriptions, profile table headers, quality grades, informative disclaimers — all now use `t()` calls
-- **601 total i18n keys**, 100% NL/FR/EN/DE coverage
-- PDF report now fully renders in the user's selected language (NL/FR/EN/DE)
+### Fixed — PDF multilingual + breath snap fix + OAHI per profile
+- **f-string syntax error fixed**: nested double quotes `f"{t("key")}"` → `f"{t('key')}"` (6 occurrences causing worker crash on v0.8.26)
+- **Breath boundary snapping OFF by default**: `USE_BREATH_SNAP` added to scoring profiles — `False` for strict/standard, `True` for sensitive only. Fixes unintended OAHI drop (~4.5/h) caused by snapped boundaries shifting SpO₂ coupling and local baseline validation windows.
+- **OAHI per profile in PDF table**: scoring profile comparison table now shows OAHI column — active profile marked with ▶, other profiles shown if comparison data available
+- **36+ new i18n keys** for PDF: fix table (Fix 1–6 + ECG), apnea types, severity grades, signal quality, profile headers, RERA, disclaimers, spindle/slow wave counts
+- **All hardcoded Dutch removed** from `generate_pdf_report.py` — all user-facing strings via `t()` calls
+- **606 total i18n keys**, 100% NL/FR/EN/DE coverage
 
 ## [0.8.26] — April 2026
 
@@ -137,6 +157,16 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 - Versienummer: 0.8.19 → 0.8.22 in alle bestanden (app.py, i18n.py, generate_pdf_report.py, signal_quality.py, README.md, DISCLAIMER.md)
 
 ---
+---
+
+## [0.8.29] — April 2026
+
+### Added — Regression & property-based testing + flattening wiring
+- **10 regression tests** (golden standard): obstructive/central/mixed classification on synthetic signals, dynamic baseline stability, SpO₂ desaturation detection, breath count, flattening passthrough
+- **3 property-based tests** (Hypothesis): 500 random inputs to `classify_apnea_type()` verifying no crashes, valid output types, confidence bounds; low-effort signals verified to not produce high-confidence obstructive; short segments (2–100 samples) crash-free
+- **Flattening index wired to hypopnea classification**: `_detect_hypopneas()` now computes mean flattening of overlapping breaths and passes it to `classify_apnea_type()` — high flattening boosts obstructive confidence, low flattening supports central
+- **47 total tests**, all passing (37 unit + 10 regression/golden)
+
 
 ## [0.8.19]
 
@@ -164,6 +194,15 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 - Heranalyse: slimme merge detecteert code vs naam
 
 ---
+
+## [0.8.29] — April 2026
+
+### Added — Regression & property-based testing + flattening wiring
+- **10 regression tests** (golden standard): obstructive/central/mixed classification on synthetic signals, dynamic baseline stability, SpO₂ desaturation detection, breath count, flattening passthrough
+- **3 property-based tests** (Hypothesis): 500 random inputs to `classify_apnea_type()` verifying no crashes, valid output types, confidence bounds; low-effort signals verified to not produce high-confidence obstructive; short segments (2–100 samples) crash-free
+- **Flattening index wired to hypopnea classification**: `_detect_hypopneas()` now computes mean flattening of overlapping breaths and passes it to `classify_apnea_type()` — high flattening boosts obstructive confidence, low flattening supports central
+- **47 total tests**, all passing (37 unit + 10 regression/golden)
+
 
 ## [0.8.17]
 
@@ -193,6 +232,16 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 - RERA table in PDF: two rows (FRI vs flattening source)
 
 ---
+---
+
+## [0.8.29] — April 2026
+
+### Added — Regression & property-based testing + flattening wiring
+- **10 regression tests** (golden standard): obstructive/central/mixed classification on synthetic signals, dynamic baseline stability, SpO₂ desaturation detection, breath count, flattening passthrough
+- **3 property-based tests** (Hypothesis): 500 random inputs to `classify_apnea_type()` verifying no crashes, valid output types, confidence bounds; low-effort signals verified to not produce high-confidence obstructive; short segments (2–100 samples) crash-free
+- **Flattening index wired to hypopnea classification**: `_detect_hypopneas()` now computes mean flattening of overlapping breaths and passes it to `classify_apnea_type()` — high flattening boosts obstructive confidence, low flattening supports central
+- **47 total tests**, all passing (37 unit + 10 regression/golden)
+
 
 ## [0.8.16]
 
@@ -233,6 +282,15 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 
 ---
 
+## [0.8.29] — April 2026
+
+### Added — Regression & property-based testing + flattening wiring
+- **10 regression tests** (golden standard): obstructive/central/mixed classification on synthetic signals, dynamic baseline stability, SpO₂ desaturation detection, breath count, flattening passthrough
+- **3 property-based tests** (Hypothesis): 500 random inputs to `classify_apnea_type()` verifying no crashes, valid output types, confidence bounds; low-effort signals verified to not produce high-confidence obstructive; short segments (2–100 samples) crash-free
+- **Flattening index wired to hypopnea classification**: `_detect_hypopneas()` now computes mean flattening of overlapping breaths and passes it to `classify_apnea_type()` — high flattening boosts obstructive confidence, low flattening supports central
+- **47 total tests**, all passing (37 unit + 10 regression/golden)
+
+
 ## [0.8.15]
 
 ### Added — Configurable scoring profiles
@@ -255,6 +313,16 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 - Version number updated to 0.8.15
 
 ---
+---
+
+## [0.8.29] — April 2026
+
+### Added — Regression & property-based testing + flattening wiring
+- **10 regression tests** (golden standard): obstructive/central/mixed classification on synthetic signals, dynamic baseline stability, SpO₂ desaturation detection, breath count, flattening passthrough
+- **3 property-based tests** (Hypothesis): 500 random inputs to `classify_apnea_type()` verifying no crashes, valid output types, confidence bounds; low-effort signals verified to not produce high-confidence obstructive; short segments (2–100 samples) crash-free
+- **Flattening index wired to hypopnea classification**: `_detect_hypopneas()` now computes mean flattening of overlapping breaths and passes it to `classify_apnea_type()` — high flattening boosts obstructive confidence, low flattening supports central
+- **47 total tests**, all passing (37 unit + 10 regression/golden)
+
 
 ## [0.8.14]
 
@@ -309,6 +377,15 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 
 ---
 
+## [0.8.29] — April 2026
+
+### Added — Regression & property-based testing + flattening wiring
+- **10 regression tests** (golden standard): obstructive/central/mixed classification on synthetic signals, dynamic baseline stability, SpO₂ desaturation detection, breath count, flattening passthrough
+- **3 property-based tests** (Hypothesis): 500 random inputs to `classify_apnea_type()` verifying no crashes, valid output types, confidence bounds; low-effort signals verified to not produce high-confidence obstructive; short segments (2–100 samples) crash-free
+- **Flattening index wired to hypopnea classification**: `_detect_hypopneas()` now computes mean flattening of overlapping breaths and passes it to `classify_apnea_type()` — high flattening boosts obstructive confidence, low flattening supports central
+- **47 total tests**, all passing (37 unit + 10 regression/golden)
+
+
 ## [0.8.13]
 
 ### Added — Signal improvements and PDF fixes
@@ -336,6 +413,15 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 - Version number updated to 0.8.13
 
 ---
+
+## [0.8.29] — April 2026
+
+### Added — Regression & property-based testing + flattening wiring
+- **10 regression tests** (golden standard): obstructive/central/mixed classification on synthetic signals, dynamic baseline stability, SpO₂ desaturation detection, breath count, flattening passthrough
+- **3 property-based tests** (Hypothesis): 500 random inputs to `classify_apnea_type()` verifying no crashes, valid output types, confidence bounds; low-effort signals verified to not produce high-confidence obstructive; short segments (2–100 samples) crash-free
+- **Flattening index wired to hypopnea classification**: `_detect_hypopneas()` now computes mean flattening of overlapping breaths and passes it to `classify_apnea_type()` — high flattening boosts obstructive confidence, low flattening supports central
+- **47 total tests**, all passing (37 unit + 10 regression/golden)
+
 
 ## [0.8.12]
 
@@ -383,6 +469,15 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 
 ---
 
+## [0.8.29] — April 2026
+
+### Added — Regression & property-based testing + flattening wiring
+- **10 regression tests** (golden standard): obstructive/central/mixed classification on synthetic signals, dynamic baseline stability, SpO₂ desaturation detection, breath count, flattening passthrough
+- **3 property-based tests** (Hypothesis): 500 random inputs to `classify_apnea_type()` verifying no crashes, valid output types, confidence bounds; low-effort signals verified to not produce high-confidence obstructive; short segments (2–100 samples) crash-free
+- **Flattening index wired to hypopnea classification**: `_detect_hypopneas()` now computes mean flattening of overlapping breaths and passes it to `classify_apnea_type()` — high flattening boosts obstructive confidence, low flattening supports central
+- **47 total tests**, all passing (37 unit + 10 regression/golden)
+
+
 ## [0.8.11]
 
 ### Added — Signal processing and scoring improvements
@@ -427,6 +522,16 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 - Pipeline Step 7 passes `hr_data` and `sf_hr` to arousal analysis
 
 ---
+---
+
+## [0.8.29] — April 2026
+
+### Added — Regression & property-based testing + flattening wiring
+- **10 regression tests** (golden standard): obstructive/central/mixed classification on synthetic signals, dynamic baseline stability, SpO₂ desaturation detection, breath count, flattening passthrough
+- **3 property-based tests** (Hypothesis): 500 random inputs to `classify_apnea_type()` verifying no crashes, valid output types, confidence bounds; low-effort signals verified to not produce high-confidence obstructive; short segments (2–100 samples) crash-free
+- **Flattening index wired to hypopnea classification**: `_detect_hypopneas()` now computes mean flattening of overlapping breaths and passes it to `classify_apnea_type()` — high flattening boosts obstructive confidence, low flattening supports central
+- **47 total tests**, all passing (37 unit + 10 regression/golden)
+
 
 ## [0.8.10]
 
@@ -477,6 +582,15 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 
 ---
 
+## [0.8.29] — April 2026
+
+### Added — Regression & property-based testing + flattening wiring
+- **10 regression tests** (golden standard): obstructive/central/mixed classification on synthetic signals, dynamic baseline stability, SpO₂ desaturation detection, breath count, flattening passthrough
+- **3 property-based tests** (Hypothesis): 500 random inputs to `classify_apnea_type()` verifying no crashes, valid output types, confidence bounds; low-effort signals verified to not produce high-confidence obstructive; short segments (2–100 samples) crash-free
+- **Flattening index wired to hypopnea classification**: `_detect_hypopneas()` now computes mean flattening of overlapping breaths and passes it to `classify_apnea_type()` — high flattening boosts obstructive confidence, low flattening supports central
+- **47 total tests**, all passing (37 unit + 10 regression/golden)
+
+
 ## [0.8.9]
 
 ### Added
@@ -491,6 +605,15 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 
 ---
 
+## [0.8.29] — April 2026
+
+### Added — Regression & property-based testing + flattening wiring
+- **10 regression tests** (golden standard): obstructive/central/mixed classification on synthetic signals, dynamic baseline stability, SpO₂ desaturation detection, breath count, flattening passthrough
+- **3 property-based tests** (Hypothesis): 500 random inputs to `classify_apnea_type()` verifying no crashes, valid output types, confidence bounds; low-effort signals verified to not produce high-confidence obstructive; short segments (2–100 samples) crash-free
+- **Flattening index wired to hypopnea classification**: `_detect_hypopneas()` now computes mean flattening of overlapping breaths and passes it to `classify_apnea_type()` — high flattening boosts obstructive confidence, low flattening supports central
+- **47 total tests**, all passing (37 unit + 10 regression/golden)
+
+
 ## [0.8.8]
 
 ### Added
@@ -499,6 +622,16 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 - Confidence breakdown table in PDF and PSG reports
 
 ---
+---
+
+## [0.8.29] — April 2026
+
+### Added — Regression & property-based testing + flattening wiring
+- **10 regression tests** (golden standard): obstructive/central/mixed classification on synthetic signals, dynamic baseline stability, SpO₂ desaturation detection, breath count, flattening passthrough
+- **3 property-based tests** (Hypothesis): 500 random inputs to `classify_apnea_type()` verifying no crashes, valid output types, confidence bounds; low-effort signals verified to not produce high-confidence obstructive; short segments (2–100 samples) crash-free
+- **Flattening index wired to hypopnea classification**: `_detect_hypopneas()` now computes mean flattening of overlapping breaths and passes it to `classify_apnea_type()` — high flattening boosts obstructive confidence, low flattening supports central
+- **47 total tests**, all passing (37 unit + 10 regression/golden)
+
 
 ## [0.8.7]
 
@@ -511,6 +644,16 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 - Estimated RAM usage: ~16 GB of 128 GB (2 GB per worker)
 
 ---
+---
+
+## [0.8.29] — April 2026
+
+### Added — Regression & property-based testing + flattening wiring
+- **10 regression tests** (golden standard): obstructive/central/mixed classification on synthetic signals, dynamic baseline stability, SpO₂ desaturation detection, breath count, flattening passthrough
+- **3 property-based tests** (Hypothesis): 500 random inputs to `classify_apnea_type()` verifying no crashes, valid output types, confidence bounds; low-effort signals verified to not produce high-confidence obstructive; short segments (2–100 samples) crash-free
+- **Flattening index wired to hypopnea classification**: `_detect_hypopneas()` now computes mean flattening of overlapping breaths and passes it to `classify_apnea_type()` — high flattening boosts obstructive confidence, low flattening supports central
+- **47 total tests**, all passing (37 unit + 10 regression/golden)
+
 
 ## [0.8.6]
 
@@ -520,6 +663,15 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 - Hardcoded "Tijd (min)" → `t("pdf_time_axis", lang)`
 
 ---
+
+## [0.8.29] — April 2026
+
+### Added — Regression & property-based testing + flattening wiring
+- **10 regression tests** (golden standard): obstructive/central/mixed classification on synthetic signals, dynamic baseline stability, SpO₂ desaturation detection, breath count, flattening passthrough
+- **3 property-based tests** (Hypothesis): 500 random inputs to `classify_apnea_type()` verifying no crashes, valid output types, confidence bounds; low-effort signals verified to not produce high-confidence obstructive; short segments (2–100 samples) crash-free
+- **Flattening index wired to hypopnea classification**: `_detect_hypopneas()` now computes mean flattening of overlapping breaths and passes it to `classify_apnea_type()` — high flattening boosts obstructive confidence, low flattening supports central
+- **47 total tests**, all passing (37 unit + 10 regression/golden)
+
 
 ## [0.8.5]
 
@@ -551,6 +703,16 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
   `sys.path.insert()` guard in `wsgi.py` and `worker.py`
 
 ---
+---
+
+## [0.8.29] — April 2026
+
+### Added — Regression & property-based testing + flattening wiring
+- **10 regression tests** (golden standard): obstructive/central/mixed classification on synthetic signals, dynamic baseline stability, SpO₂ desaturation detection, breath count, flattening passthrough
+- **3 property-based tests** (Hypothesis): 500 random inputs to `classify_apnea_type()` verifying no crashes, valid output types, confidence bounds; low-effort signals verified to not produce high-confidence obstructive; short segments (2–100 samples) crash-free
+- **Flattening index wired to hypopnea classification**: `_detect_hypopneas()` now computes mean flattening of overlapping breaths and passes it to `classify_apnea_type()` — high flattening boosts obstructive confidence, low flattening supports central
+- **47 total tests**, all passing (37 unit + 10 regression/golden)
+
 
 ## [0.8.4]
 
@@ -559,6 +721,16 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 - Redirect loop fixes (Flask `after_request` handler)
 
 ---
+---
+
+## [0.8.29] — April 2026
+
+### Added — Regression & property-based testing + flattening wiring
+- **10 regression tests** (golden standard): obstructive/central/mixed classification on synthetic signals, dynamic baseline stability, SpO₂ desaturation detection, breath count, flattening passthrough
+- **3 property-based tests** (Hypothesis): 500 random inputs to `classify_apnea_type()` verifying no crashes, valid output types, confidence bounds; low-effort signals verified to not produce high-confidence obstructive; short segments (2–100 samples) crash-free
+- **Flattening index wired to hypopnea classification**: `_detect_hypopneas()` now computes mean flattening of overlapping breaths and passes it to `classify_apnea_type()` — high flattening boosts obstructive confidence, low flattening supports central
+- **47 total tests**, all passing (37 unit + 10 regression/golden)
+
 
 ## [0.8.3]
 
@@ -567,6 +739,16 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 - All UI, admin, and report text via `t(key, lang)` central function
 
 ---
+---
+
+## [0.8.29] — April 2026
+
+### Added — Regression & property-based testing + flattening wiring
+- **10 regression tests** (golden standard): obstructive/central/mixed classification on synthetic signals, dynamic baseline stability, SpO₂ desaturation detection, breath count, flattening passthrough
+- **3 property-based tests** (Hypothesis): 500 random inputs to `classify_apnea_type()` verifying no crashes, valid output types, confidence bounds; low-effort signals verified to not produce high-confidence obstructive; short segments (2–100 samples) crash-free
+- **Flattening index wired to hypopnea classification**: `_detect_hypopneas()` now computes mean flattening of overlapping breaths and passes it to `classify_apnea_type()` — high flattening boosts obstructive confidence, low flattening supports central
+- **47 total tests**, all passing (37 unit + 10 regression/golden)
+
 
 ## [0.8.2]
 
@@ -575,6 +757,16 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 - 7 standardised diagnostic conclusion templates per severity/type
 
 ---
+---
+
+## [0.8.29] — April 2026
+
+### Added — Regression & property-based testing + flattening wiring
+- **10 regression tests** (golden standard): obstructive/central/mixed classification on synthetic signals, dynamic baseline stability, SpO₂ desaturation detection, breath count, flattening passthrough
+- **3 property-based tests** (Hypothesis): 500 random inputs to `classify_apnea_type()` verifying no crashes, valid output types, confidence bounds; low-effort signals verified to not produce high-confidence obstructive; short segments (2–100 samples) crash-free
+- **Flattening index wired to hypopnea classification**: `_detect_hypopneas()` now computes mean flattening of overlapping breaths and passes it to `classify_apnea_type()` — high flattening boosts obstructive confidence, low flattening supports central
+- **47 total tests**, all passing (37 unit + 10 regression/golden)
+
 
 ## [0.8.1]
 
@@ -586,6 +778,15 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 - FHIR R4 DiagnosticReport + Observation + CarePlan export
 
 ---
+
+## [0.8.29] — April 2026
+
+### Added — Regression & property-based testing + flattening wiring
+- **10 regression tests** (golden standard): obstructive/central/mixed classification on synthetic signals, dynamic baseline stability, SpO₂ desaturation detection, breath count, flattening passthrough
+- **3 property-based tests** (Hypothesis): 500 random inputs to `classify_apnea_type()` verifying no crashes, valid output types, confidence bounds; low-effort signals verified to not produce high-confidence obstructive; short segments (2–100 samples) crash-free
+- **Flattening index wired to hypopnea classification**: `_detect_hypopneas()` now computes mean flattening of overlapping breaths and passes it to `classify_apnea_type()` — high flattening boosts obstructive confidence, low flattening supports central
+- **47 total tests**, all passing (37 unit + 10 regression/golden)
+
 
 ## [0.8.0]
 
@@ -599,6 +800,16 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 - Interactive event list with jump-to-event navigation
 
 ---
+---
+
+## [0.8.29] — April 2026
+
+### Added — Regression & property-based testing + flattening wiring
+- **10 regression tests** (golden standard): obstructive/central/mixed classification on synthetic signals, dynamic baseline stability, SpO₂ desaturation detection, breath count, flattening passthrough
+- **3 property-based tests** (Hypothesis): 500 random inputs to `classify_apnea_type()` verifying no crashes, valid output types, confidence bounds; low-effort signals verified to not produce high-confidence obstructive; short segments (2–100 samples) crash-free
+- **Flattening index wired to hypopnea classification**: `_detect_hypopneas()` now computes mean flattening of overlapping breaths and passes it to `classify_apnea_type()` — high flattening boosts obstructive confidence, low flattening supports central
+- **47 total tests**, all passing (37 unit + 10 regression/golden)
+
 
 ## [0.7.x] — Pre-public versions (internal)
 

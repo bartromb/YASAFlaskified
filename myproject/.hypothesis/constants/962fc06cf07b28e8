@@ -1,0 +1,4 @@
+# file: /home/claude/yasaflask/myproject/psgscoring/spo2.py
+# hypothesis_version: 6.151.11
+
+[0.0, 0.001, 3.0, 4.0, 88.0, 95.0, 100, 120, 200, 3600, 'avg_spo2', 'baseline_spo2', 'desat_index', 'desaturations', 'drop_pct', 'duration_s', 'error', 'low_baseline_note', 'low_baseline_warning', 'mean_spo2', 'min_spo2', 'n_desat_3pct', 'n_desat_4pct', 'n_desaturations', 'nadir_spo2', 'nrem_min_spo2', 'nrem_pct_below_90', 'nrem_time_below_90', 'odi_3pct', 'odi_4pct', 'onset_s', 'pct_below_70', 'pct_below_80', 'pct_below_90', 'rem_min_spo2', 'rem_pct_below_90', 'rem_time_below_90', 'same', 'success', 'summary', 'time_below_70', 'time_below_80', 'time_below_90', 'timeseries', 'total_sleep_s', 'traceback']

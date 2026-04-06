@@ -1,0 +1,4 @@
+# file: /home/claude/yasaflask/myproject/psgscoring/breath.py
+# hypothesis_version: 6.151.11
+
+[0.0, 1e-09, 0.8, 1.0, 10.0, 15.0, 'W', 'amplitude', 'avg_flattening', 'breath_end', 'breath_start', 'duration_s', 'end', 'epoch', 'insp_segment', 'mid', 'min_ratio', 'n_breaths', 'onset_s', 'peak_insp', 'sample_end', 'sample_start', 'stage', 'start', 'trough_exp']

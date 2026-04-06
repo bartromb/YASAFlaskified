@@ -3,11 +3,13 @@
 **An open-source web platform for automated polysomnography (PSG) analysis.**
 
 [![License: BSD-3](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.8.27-green.svg)](CHANGES.md)
+[![Version](https://img.shields.io/badge/version-0.8.29-green.svg)](CHANGES.md)
+[![psgscoring](https://img.shields.io/badge/psgscoring-v0.2.5-green.svg)](https://github.com/bartromb/psgscoring)
+[![Tests](https://img.shields.io/badge/tests-47%20passed-brightgreen.svg)](myproject/psgscoring/tests/)
 [![Python](https://img.shields.io/badge/python-3.11-blue.svg)](requirements.txt)
 [![Docker](https://img.shields.io/badge/docker-compose-blue.svg)](docker-compose.yml)
 [![AASM](https://img.shields.io/badge/AASM-2.6-orange.svg)](https://aasm.org)
-[![i18n](https://img.shields.io/badge/i18n-NL%20%7C%20FR%20%7C%20EN-purple.svg)](myproject/i18n.py)
+[![i18n](https://img.shields.io/badge/i18n-NL%20%7C%20FR%20%7C%20EN%20%7C%20DE-purple.svg)](myproject/i18n.py)
 
 YASAFlaskified builds on [YASA](https://github.com/raphaelvallat/yasa) (**Y**et **A**nother **S**pindle **A**lgorithm), the outstanding open-source sleep analysis library created by [Raphaël Vallat](https://raphaelvallat.com) (UC Berkeley) together with Matthew P. Walker. YASA's LightGBM sleep staging model — trained on thousands of polysomnographic recordings and validated in *eLife* (2021) — provides the automated hypnogram that underpins every analysis in this platform.
 
@@ -349,7 +351,7 @@ YASAFlaskified/
 | 0.8.16 | RERA/RDI, REM/NREM AHI, positional AHI |
 | 0.8.17 | Signal quality, flattening-RERA, montage checks |
 | 0.8.19 | Study types, EDF header auto-fill, position legend |
-| **0.8.27** | **ECG-derived effort (TECG Berry 2019), spectral effort classifier, central apnea reclassification, psgscoring v0.2.5** |
+| **0.8.29** | **ECG-derived effort (TECG Berry 2019), spectral effort classifier, central apnea reclassification, psgscoring v0.2.5** |
 | **0.8.22** | **ODI 3%/4%, Feinberg & Floyd cycles, REM consolidation, channel fix, quality banners, epoch examples, max duration split, local baseline validation** |
 
 See [CHANGES.md](CHANGES.md) for full changelog.
@@ -364,7 +366,7 @@ See [CHANGES.md](CHANGES.md) for full changelog.
   title     = {{YASAFlaskified}: An open-source web platform for automated
                polysomnography analysis},
   year      = {2026},
-  version   = {0.8.27},
+  version   = {0.8.29},
   publisher = {GitHub},
   url       = {https://github.com/bartromb/YASAFlaskified}
 }
@@ -390,7 +392,7 @@ See [CHANGES.md](CHANGES.md) for full changelog.
 
 YASAFlaskified is **research software**, not a cleared medical device. It carries no CE mark, FDA clearance, or equivalent certification. All computed indices (AHI, OAHI, ODI, PLMI, RDI) are research-grade estimates that must be reviewed by a qualified clinician before any diagnostic or therapeutic decision. See [DISCLAIMER.md](DISCLAIMER.md) for full terms.
 
-## What's New in v0.8.27
+## What's New in v0.8.29
 
 - **ECG-derived effort classification (TECG)**: Implements the Transformed ECG method (Berry et al., JCSM 2019) for improved central vs. obstructive apnea differentiation. QRS blanking + high-pass filtering reveals inspiratory EMG bursts from the routinely recorded ECG signal.
 - **Spectral effort classifier**: Compares cardiac (0.8–2.5 Hz) vs. respiratory (0.1–0.5 Hz) power during apnea events on RIP bands to detect cardiac pulsation artefact.

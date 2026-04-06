@@ -1,5 +1,5 @@
 """
-generate_pdf_report.py — YASAFlaskified v0.8.27
+generate_pdf_report.py — YASAFlaskified v0.8.29
 Site-config: via config.json["site"] of site_config parameter.
 """
 import json, os, io
@@ -390,7 +390,7 @@ def _callbacks(site, lang="nl"):
         canvas.line(ML,MB-0.2*cm,W_A4-MR,MB-0.2*cm)
         canvas.setFont("Helvetica",6.5); canvas.setFillColor(GR)
         canvas.drawString(ML,MB-0.45*cm,
-            "YASAFlaskified v0.8.27  |  AASM 2.6  |  www.slaapkliniek.be  |  \u00a9 Bart Rombaut")
+            "YASAFlaskified v0.8.29  |  AASM 2.6  |  www.slaapkliniek.be  |  \u00a9 Bart Rombaut")
         canvas.drawRightString(W_A4-MR,MB-0.45*cm,f"{t('pdf_page',lang)} {doc.page}")
         canvas.restoreState()
     return draw,draw
@@ -1409,19 +1409,46 @@ def generate_pdf_report(results:dict, output_path:str,
 
         # ── Scoring profielen tabel ───────────────────────────────
         _active_profile = pneumo.get("meta", {}).get("scoring_profile", "standard")
+        _prof_comp = pneumo.get("profile_comparison", {})
+
+        # OAHI per profile: show active profile result, others if comparison available
+        _oahi_strict    = _prof_comp.get("strict", {}).get("oahi")
+        _oahi_standard  = _prof_comp.get("standard", {}).get("oahi")
+        _oahi_sensitive = _prof_comp.get("sensitive", {}).get("oahi")
+
+        # Fill active profile from current results
+        if _active_profile == "strict" and _oahi_strict is None:
+            _oahi_strict = oahi
+        elif _active_profile == "standard" and _oahi_standard is None:
+            _oahi_standard = oahi
+        elif _active_profile == "sensitive" and _oahi_sensitive is None:
+            _oahi_sensitive = oahi
+
+        def _oahi_cell(val, is_active):
+            if val is not None:
+                s = f"{val:.1f}"
+                return f"\u25b6 {s}" if is_active else s
+            return "—"
+
         _profiles_data = [
-            ["Strict",    "70% (\u226530%)", "30s",  "—",   "15s", f"{t('pdf_no',lang)} (envelope)"],
-            ["Standard",  "70% (\u226530%)", "45s",  "3s",  "15s", f"{t('pdf_yes',lang)} (peak+env)"],
-            ["Sensitive",  "75% (\u226525%)", "45s",  "5s",  "—",  f"{t('pdf_yes',lang)} (peak+env)"],
+            ["Strict",    "70% (\u226530%)", "30s",  "—",   "15s",
+             f"{t('pdf_no',lang)} (envelope)",
+             _oahi_cell(_oahi_strict, _active_profile == "strict")],
+            ["Standard",  "70% (\u226530%)", "45s",  "3s",  "15s",
+             f"{t('pdf_yes',lang)} (peak+env)",
+             _oahi_cell(_oahi_standard, _active_profile == "standard")],
+            ["Sensitive",  "75% (\u226525%)", "45s",  "5s",  "—",
+             f"{t('pdf_yes',lang)} (peak+env)",
+             _oahi_cell(_oahi_sensitive, _active_profile == "sensitive")],
         ]
         # Markeer actief profiel met *
         _pmap = {"strict": 0, "standard": 1, "sensitive": 2}
         _ai = _pmap.get(_active_profile, 1)
         _profiles_data[_ai][0] = f"\u25b6 {_profiles_data[_ai][0]}"
 
-        _prof_hdr = [t("pdf_prof_header",lang), t("pdf_prof_hypopnea",lang), t("pdf_prof_nadir",lang), "Smoothing", "Cross-contam", t("pdf_prof_peak",lang)]
+        _prof_hdr = [t("pdf_prof_header",lang), t("pdf_prof_hypopnea",lang), t("pdf_prof_nadir",lang), "Smoothing", "Cross-contam", t("pdf_prof_peak",lang), "OAHI"]
         _prof_tbl = Table([_prof_hdr] + _profiles_data,
-                          colWidths=[2.2*cm, 2.5*cm, 2*cm, 2*cm, 2.2*cm, 3.2*cm])
+                          colWidths=[2.0*cm, 2.3*cm, 1.6*cm, 1.6*cm, 2.0*cm, 2.8*cm, 1.8*cm])
         _prof_tbl.setStyle(TableStyle([
             ("FONTNAME",   (0,0), (-1,0), "Helvetica-Bold"),
             ("FONTSIZE",   (0,0), (-1,-1), 6),

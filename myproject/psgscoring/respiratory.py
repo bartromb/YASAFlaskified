@@ -314,6 +314,7 @@ def detect_respiratory_events(
         _SMOOTH_S      = sp.get("HYPOPNEA_SMOOTH_S", HYPOPNEA_SMOOTH_S)
         _CONTAM_WIN    = sp.get("CROSS_CONTAM_WINDOW_S", 15.0)
         _USE_PEAK      = sp.get("USE_PEAK_DETECTION", True)
+        _USE_SNAP      = sp.get("USE_BREATH_SNAP", False)  # v0.8.29: off by default
         _APNEA_MAX     = sp.get("APNEA_MAX_DUR_S", APNEA_MAX_DUR_S)
         _HYPOP_MAX     = sp.get("HYPOPNEA_MAX_DUR_S", HYPOPNEA_MAX_DUR_S)
         result["scoring_thresholds"] = {
@@ -402,8 +403,9 @@ def detect_respiratory_events(
 
         apnea_raw    = flow_norm  < APNEA_THRESHOLD
 
-        # v0.2.5: bandpass-filtered flow for breath boundary snapping
-        _flow_filt_snap = bandpass_flow(flow_data, sf_flow)
+        # v0.2.5/v0.8.29: bandpass-filtered flow for breath boundary snapping
+        # Only computed when USE_BREATH_SNAP is True (sensitive profile only)
+        _flow_filt_snap = bandpass_flow(flow_data, sf_flow) if _USE_SNAP else None
 
         # ── v0.8.14: AASM-conforme peak-gebaseerde hypopnea-detectie ─────
         # AASM 2.6: "peak signal excursions drop by ≥30%"
@@ -504,6 +506,7 @@ def detect_respiratory_events(
             ecg_data=ecg_data, tecg=_tecg, r_peaks=_r_peaks,
             sf_ecg=_sf_ecg_local,
             flow_filt=_flow_filt_snap,
+            breaths=breaths,
         )
         events = new_events
 
@@ -1003,6 +1006,7 @@ def _detect_hypopneas(
     max_dur_s: float = HYPOPNEA_MAX_DUR_S,
     ecg_data=None, tecg=None, r_peaks=None, sf_ecg=None,
     flow_filt: np.ndarray | None = None,
+    breaths: list | None = None,
 ) -> tuple[list[dict], list[dict]]:
     """Return (all_events_including_new_hypopneas, rejected_candidates)."""
     # Build apnea exclusion mask (±5 s around each confirmed apnea)
@@ -1091,6 +1095,17 @@ def _detect_hypopneas(
             else:
                 hy_oi, hy_ei = sub_idx[0], sub_idx[-1] + 1
 
+            # v0.8.29: compute mean flattening index for overlapping breaths
+            _ev_flat = None
+            if breaths:
+                _overlapping = [
+                    b.get("flattening", None) for b in breaths
+                    if b["onset_s"] >= onset_s and b["onset_s"] < onset_s + sub_dur
+                       and b.get("flattening") is not None
+                ]
+                if _overlapping:
+                    _ev_flat = float(np.mean(_overlapping))
+
             hy_sub, hy_conf, hy_det = classify_apnea_type(
                 onset_idx=hy_oi, end_idx=hy_ei,
                 thorax_env=thorax_env, abdomen_env=abdomen_env,
@@ -1100,6 +1115,7 @@ def _detect_hypopneas(
                     ecg_data, tecg, r_peaks, thorax_raw, abdomen_raw,
                     sf_flow, sf_ecg or sf_flow, hy_oi, hy_ei
                 ) if tecg is not None else None,
+                flattening_index=_ev_flat,
             )
             hy_label = f"hypopnea_{hy_sub}" if hy_sub != "obstructive" else "hypopnea"
             flow_red_ratio = safe_r(

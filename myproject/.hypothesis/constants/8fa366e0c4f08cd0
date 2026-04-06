@@ -1,0 +1,4 @@
+# file: /home/claude/yasaflask/myproject/psgscoring/plm.py
+# hypothesis_version: 6.151.11
+
+[0.001, 0.1, 0.5, 0.99, 5.0, 8.0, 10.0, 90.0, 100.0, 1000000.0, 200, 3600, 'W', 'amplitude_uv', 'band', 'bilateral', 'duration_s', 'end_s', 'epoch', 'error', 'events', 'is_plm', 'lm_index', 'mild', 'moderate', 'n_lm_sleep', 'n_lm_total', 'n_lm_wake', 'n_lms', 'n_plm', 'n_plm_eligible', 'n_plm_series', 'n_resp_associated', 'normal', 'onset_s', 'plm_index', 'plm_severity', 'resp_associated', 'series', 'severe', 'stage', 'start_s', 'success', 'summary', 'total_sleep_h']
