@@ -277,3 +277,39 @@
 ---
 
 *© 2024–2026 Bart Rombaut — Slaapkliniek AZORG — www.slaapkliniek.be*
+
+---
+
+> **Note:** From v0.8.11 onwards, the monolithic `pneumo_analysis.py` was refactored into the modular `psgscoring` package. Detailed changelogs for the v0.8.x series are maintained in [CHANGES.md](CHANGES.md).
+
+## v0.8.11–v0.8.19 — Modular psgscoring & Over-counting Corrections
+
+- Extracted `psgscoring` as standalone pip-installable library (BSD-3)
+- 5 over-counting corrections (Fix 1–5): baseline inflation, SpO₂ cross-contamination, CSR flagging, borderline classification, artefact-flank exclusion
+- 5 under-counting corrections: peak-based detection, SpO₂ de-blocking, extended nadir window, flow smoothing, position auto-mapping
+- Hilbert phase-angle effort classification for apnea typing
+- Configurable scoring profiles (strict, standard, sensitive)
+- Dual-sensor flow detection (thermistor + nasal pressure per AASM 2.6)
+- Full i18n system (NL/FR/EN/DE) with 449+ translation keys
+- EDF+ export via pyedflib
+- Report editor page with diagnosis editing and PDF regeneration
+
+## v0.8.22 — Local Baseline Validation & Clinical Polish
+
+- **Fix 6:** Local baseline validation — rejects false-positive hypopneas where flow reduction <20% vs. pre-event breathing
+- Maximum event duration: hypopnea ≤60 s, apnea ≤90 s, with splitting at partial flow recovery
+- ODI at 3% and 4% thresholds, mean SpO₂
+- Sleep cycle detection (Feinberg & Floyd criteria)
+- REM consolidation (merge gaps ≤2 epochs)
+- Signal quality assessment with confidence banners
+- Epoch signal examples in PDF report
+- Spindle/slow wave channel fix
+
+## v0.8.23 — ECG-Derived Effort & Central Apnea Reclassification (Current)
+
+- **ECG-derived effort classification (TECG):** Transformed ECG method (Berry et al., JCSM 2019) — high-pass filter + QRS blanking reveals inspiratory EMG bursts from routinely recorded ECG
+- **Spectral effort classifier:** cardiac (0.8–2.5 Hz) vs. respiratory (0.1–0.5 Hz) power analysis on RIP bands
+- **Combined reclassification:** events reclassified as central when both TECG and spectral analysis agree on absent effort (confidence 0.85)
+- New output field: `n_ecg_reclassified_central`
+- **psgscoring v0.2.4** with `ecg_effort` module
+- All version references updated to v0.8.23

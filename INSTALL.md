@@ -1,4 +1,4 @@
-# YASAFlaskified v0.8.5 — Installatiegids
+# YASAFlaskified v0.8.23 — Installatiegids
 
 > **Screeningtool — niet CE-gekeurd of FDA-cleared voor klinische diagnose.**
 > Enkel voor onderzoek en screening.
@@ -10,13 +10,13 @@
 1. [Systeemvereisten](#1-systeemvereisten)
 2. [Snelle installatie (Docker)](#2-snelle-installatie-docker)
 3. [Stap-voor-stap: nieuwe server](#3-stap-voor-stap-nieuwe-server)
-4. [Update van v0.8.4 naar v0.8.5](#4-update-van-v084-naar-v085)
+4. [Update naar v0.8.23](#4-update-van-update-naar-v0823)
 5. [Nginx + SSL instellen](#5-nginx--ssl-instellen)
 6. [Configuratie](#6-configuratie)
 7. [Eerste login en gebruikersbeheer](#7-eerste-login-en-gebruikersbeheer)
 8. [Dagelijks beheer](#8-dagelijks-beheer)
 9. [Probleemoplossing](#9-probleemoplossing)
-10. [Wat er veranderd is in v0.8.5](#10-wat-er-veranderd-is-in-v085)
+10. [Wat er veranderd is in v0.8.23](#10-wat-er-veranderd-is-in-v0823)
 
 ---
 
@@ -33,7 +33,7 @@
 
 **Python wordt NIET lokaal vereist** — alles draait in Docker-containers.
 
-De `psgscoring` library (v0.2.0) is meegeleverd in de zip als
+De `psgscoring library (v0.2.4) is meegeleverd in de zip als
 `myproject/psgscoring/` en vereist geen aparte `pip install`.
 
 ---
@@ -43,7 +43,7 @@ De `psgscoring` library (v0.2.0) is meegeleverd in de zip als
 ```bash
 # 1. Uitpakken
 unzip YASAFlaskified_0_8_5.zip
-cd YASAFlaskified_0.8.5
+cd YASAFlaskified_v0_8_23
 
 # 2. Configuratie aanmaken
 cp config.json.example config.json
@@ -105,7 +105,7 @@ sudo mkdir -p /data/slaapkliniek
 sudo chown $USER:$USER /data/slaapkliniek
 
 # Kopieer de uitgepakte bestanden
-cp -r YASAFlaskified_0.8.5/* /data/slaapkliniek/
+cp -r YASAFlaskified_v0_8_23/* /data/slaapkliniek/
 cd /data/slaapkliniek
 
 # Datamappen aanmaken
@@ -177,7 +177,7 @@ kliniek_worker   running
 
 ---
 
-## 4. Update van v0.8.4 naar v0.8.5
+## 4. Update naar v0.8.23
 
 **Geen database-migratie nodig.** De datastructuur is ongewijzigd.
 
@@ -189,10 +189,10 @@ docker compose down
 
 # 2. Nieuwe bestanden kopiëren
 #    config.json en .env NIET overschrijven
-cp -r /pad/naar/YASAFlaskified_0.8.5/myproject ./
-cp /pad/naar/YASAFlaskified_0.8.5/docker-compose.yml ./
-cp /pad/naar/YASAFlaskified_0.8.5/Dockerfile ./
-cp /pad/naar/YASAFlaskified_0.8.5/requirements.txt ./
+cp -r /pad/naar/YASAFlaskified_v0_8_23/myproject ./
+cp /pad/naar/YASAFlaskified_v0_8_23/docker-compose.yml ./
+cp /pad/naar/YASAFlaskified_v0_8_23/Dockerfile ./
+cp /pad/naar/YASAFlaskified_v0_8_23/requirements.txt ./
 
 # 3. Nieuw image bouwen en starten
 docker compose build
@@ -203,7 +203,7 @@ docker compose exec app python3 -c \
   "import psgscoring; print('psgscoring', psgscoring.__version__, 'OK')"
 ```
 
-Verwachte output: `psgscoring 0.2.0 OK`
+Verwachte output: `psgscoring 0.2.4 OK`
 
 Uw `config.json`, `.env`, en alle data in `uploads/`, `processed/` en
 `instance/` (database) blijven volledig intact bij een update.
@@ -406,7 +406,7 @@ Herstart: `docker compose restart app && sudo systemctl reload nginx`
 
 ---
 
-## 10. Wat er veranderd is in v0.8.5
+## 10. Wat er veranderd is in v0.8.23
 
 De monolithische `pneumo_analysis.py` (2 439 regels) is gesplitst in het
 modulaire `psgscoring`-pakket (`myproject/psgscoring/`):
@@ -450,5 +450,5 @@ du -sh /data/slaapkliniek/*/                  # schijfruimte
 
 ---
 
-*YASAFlaskified v0.8.5 — Bart Rombaut MD, Slaapkliniek AZORG, Aalst*
+*YASAFlaskified v0.8.23 — Bart Rombaut MD, Slaapkliniek AZORG, Aalst*
 *www.slaapkliniek.be — Niet CE-gekeurd. Enkel voor screening.*

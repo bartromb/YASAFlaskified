@@ -1,14 +1,16 @@
 # YASAFlaskified — Roadmap
 
-## Current: v0.8.22 (April 2026)
+## Current: v0.8.23 (April 2026)
 
 **Production-ready:**
-- AASM 2.6 respiratory scoring with 5 over-counting corrections
+- AASM 2.6 respiratory scoring with 6 over-counting + 6 under-counting corrections
+- ECG-derived effort classification (TECG Berry 2019 + spectral classifier) for central/obstructive differentiation
 - Hilbert phase-angle effort classification, K-complex exclusion
 - CVR arousal confidence boost, patient-specific baseline anchoring
 - Optional LightGBM confidence calibration (framework ready, model pending)
 - 8 parallel RQ workers, multilingual reports (NL/FR/EN/DE)
 - Interactive EDF browser, manual scoring editor
+- psgscoring v0.2.4 (BSD-3, PyPI)
 
 ---
 

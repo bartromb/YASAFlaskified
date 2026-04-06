@@ -112,6 +112,7 @@ def classify_apnea_type(
     abdomen_raw:  np.ndarray | None,
     effort_baseline: float,
     sf: float,
+    ecg_assessment: dict | None = None,
 ) -> tuple[str, float, dict]:
     """
     Classify an apnea event as ``"obstructive"``, ``"central"``, or
@@ -126,8 +127,18 @@ def classify_apnea_type(
     3. **Mixed pattern** – absent effort first half, present second half
     4. **Effort clearly present** → obstructive
     5. **Truly flat** – no raw movement, low envelope → central
+    5b. **ECG-derived reclassification** (v0.8.23) – TECG + spectral
+        analysis overrides RIP-based obstructive if cardiac artefact only.
     6. **Borderline default** → obstructive (low confidence)
        If LightGBM model available, confidence is calibrated by model.
+
+    Parameters
+    ----------
+    ecg_assessment : dict, optional
+        Output of ``ecg_effort.ecg_effort_assessment()``.
+        If provided and ``reclassify_as_central`` is True, events that
+        would otherwise be classified as obstructive (rules 4, 6) are
+        reclassified as central.
 
     Returns
     -------
@@ -238,6 +249,24 @@ def classify_apnea_type(
             f"truly_flat_var={safe_r(raw_var_ratio,3)}_effort={safe_r(effort_ratio,3)}"
         )
         return "central", safe_r(_conf(conf, 5), 2), detail
+
+    # ── Rule 5b (v0.8.23): ECG-derived reclassification ──────────────────
+    # If TECG shows no inspiratory bursts AND spectral analysis shows
+    # cardiac dominance, reclassify borderline/effort-present as central.
+    if ecg_assessment is not None and ecg_assessment.get("reclassify_as_central"):
+        detail["ecg_assessment"] = {
+            k: v for k, v in ecg_assessment.items()
+            if k not in ("tecg_detail", "spectral_detail")
+        }
+        # Only reclassify if effort is ambiguous (ratio < clear threshold)
+        if effort_ratio < EFFORT_PRESENT_RATIO * 1.5:
+            conf = 0.75
+            if ecg_assessment.get("ecg_effort_present") is False:
+                conf = 0.85  # both TECG and spectral agree
+            detail["decision_reason"] = (
+                f"ecg_reclassified_central_effort={safe_r(effort_ratio,3)}"
+            )
+            return "central", safe_r(_conf(conf, 5), 2), detail
 
     # ── Rule 6: Borderline default ────────────────────────────────────────
     detail["decision_reason"] = (

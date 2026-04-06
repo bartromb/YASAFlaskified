@@ -20,6 +20,7 @@ spo2         – SpO2 coupling (Rule 1A) and full SpO2 analysis
 plm          – PLM detection (AASM 2.6)
 ancillary    – position, heart rate, snore, Cheyne-Stokes
 respiratory  – apnea/hypopnea detection, Rule 1B, summary statistics
+ecg_effort   – ECG-derived effort (TECG, spectral classifier) for central/obstructive differentiation
 pipeline     – MNE-facing master function (run_pneumo_analysis)
 """
 
@@ -49,6 +50,7 @@ from .breath import (
     detect_breath_events,
 )
 from .classify import classify_apnea_type
+from .ecg_effort import ecg_effort_assessment, compute_tecg
 from .spo2 import analyze_spo2, detect_desaturations, get_desaturation
 from .plm import analyze_plm
 from .ancillary import (
@@ -66,7 +68,7 @@ from .utils import (
     safe_r,
 )
 
-__version__ = "0.2.0"
+__version__ = "0.2.4"
 __all__ = [
     # Master
     "run_pneumo_analysis",
@@ -91,6 +93,9 @@ __all__ = [
     "detect_breath_events",
     # Classify
     "classify_apnea_type",
+    # ECG effort
+    "ecg_effort_assessment",
+    "compute_tecg",
     # SpO2
     "analyze_spo2",
     "detect_desaturations",

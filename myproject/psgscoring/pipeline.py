@@ -129,6 +129,8 @@ def run_pneumo_analysis(
 
     # ── Step 1: Respiratory events ─────────────────────────────────────────
     logger.info("[pneumo 1/9] Apnea / hypopnea detection (AASM 2.6)...")
+    # Extract ECG for effort-based apnea type classification (v0.8.23)
+    ecg_data_resp, sf_ecg_resp = get("ecg")
     if apnea_flow is not None:
         resp = detect_respiratory_events(
             flow_data    = apnea_flow,
@@ -144,6 +146,8 @@ def run_pneumo_analysis(
             pos_data     = pos_data,
             sf_pos       = sf_pos,
             scoring_profile = profile,
+            ecg_data     = ecg_data_resp,
+            sf_ecg       = sf_ecg_resp,
         )
     else:
         resp = {

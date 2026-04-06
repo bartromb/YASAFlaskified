@@ -1,5 +1,5 @@
 """
-generate_pdf_report.py — YASAFlaskified v0.8.22
+generate_pdf_report.py — YASAFlaskified v0.8.23
 Site-config: via config.json["site"] of site_config parameter.
 """
 import json, os, io
@@ -383,7 +383,7 @@ def _callbacks(site, lang="nl"):
         canvas.line(ML,MB-0.2*cm,W_A4-MR,MB-0.2*cm)
         canvas.setFont("Helvetica",6.5); canvas.setFillColor(GR)
         canvas.drawString(ML,MB-0.45*cm,
-            "YASAFlaskified v0.8.22  |  AASM 2.6  |  www.slaapkliniek.be  |  \u00a9 Bart Rombaut")
+            "YASAFlaskified v0.8.23  |  AASM 2.6  |  www.slaapkliniek.be  |  \u00a9 Bart Rombaut")
         canvas.drawRightString(W_A4-MR,MB-0.45*cm,f"{t('pdf_page',lang)} {doc.page}")
         canvas.restoreState()
     return draw,draw

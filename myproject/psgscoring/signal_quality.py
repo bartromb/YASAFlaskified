@@ -7,7 +7,7 @@ Detects:
   3. High-impedance noise (50/60 Hz dominant)
   4. Montage plausibility (cross-correlation sanity checks)
 
-v0.8.22 — AZORG Slaapkliniek
+v0.8.23 — AZORG Slaapkliniek
 """
 
 import numpy as np

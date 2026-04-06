@@ -4,6 +4,20 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 
 ---
 
+## [0.8.23]
+
+### Added
+- **ECG-derived effort classification (TECG)**: Transformed ECG method (Berry et al., JCSM 2019) for improved central vs. obstructive apnea differentiation
+- **Spectral effort classifier**: cardiac (0.8–2.5 Hz) vs. respiratory (0.1–0.5 Hz) power analysis on RIP bands during apnea events
+- **Combined reclassification logic**: events reclassified as central when both TECG (no inspiratory bursts) and spectral analysis (cardiac dominance) agree
+- New output field `n_ecg_reclassified_central` in respiratory results
+- New module `psgscoring/ecg_effort.py` with `compute_tecg()`, `detect_r_peaks()`, `qrs_blanking()`, `detect_inspiratory_bursts()`, `spectral_effort_classifier()`, `ecg_effort_assessment()`
+
+### Changed
+- `pipeline.py`: ECG channel now extracted and passed to respiratory scoring
+- `respiratory.py`: TECG computed once per recording; ECG assessment passed to both apnea and hypopnea `classify_apnea_type()` calls
+- `classify.py`: ECG-based reclassification integrated into 7-rule classification (Rule 5b)
+
 ## [0.8.22]
 
 ### Fixed — PDF rapport inconsistenties & klinische correctheid

@@ -1,5 +1,5 @@
 """
-yasa_analysis.py — Uitgebreide slaapanalyse module voor YASAFlaskified v0.8.22
+yasa_analysis.py — Uitgebreide slaapanalyse module voor YASAFlaskified v0.8.23
 Compatibel met YASA 0.7.x (Hypnogram object) EN 0.6.x (numpy array).
 
 Fixes t.o.v. v7.1:

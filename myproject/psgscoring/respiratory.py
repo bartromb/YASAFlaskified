@@ -231,6 +231,30 @@ def _flag_csr_events(
 # Main detection function
 # ---------------------------------------------------------------------------
 
+def _get_ecg_assessment(ecg_data, tecg, r_peaks, thorax_raw, abdomen_raw,
+                        sf_flow, sf_ecg, onset_idx, end_idx):
+    """Compute ECG-derived effort assessment for one event.
+
+    Handles sample-rate conversion between flow and ECG signals.
+    """
+    try:
+        from .ecg_effort import ecg_effort_assessment
+        # Convert flow-signal indices to ECG-signal indices
+        ratio = sf_ecg / sf_flow if sf_flow > 0 else 1.0
+        ecg_onset = int(onset_idx * ratio)
+        ecg_end   = int(end_idx * ratio)
+        ecg_end   = min(ecg_end, len(ecg_data) if ecg_data is not None else ecg_end)
+        return ecg_effort_assessment(
+            ecg=ecg_data, thorax_raw=thorax_raw, abdomen_raw=abdomen_raw,
+            sf=sf_ecg, onset_idx=ecg_onset, end_idx=ecg_end,
+            tecg=tecg, r_peaks=r_peaks,
+        )
+    except Exception as exc:
+        logger.debug("ECG effort assessment failed for event %d-%d: %s",
+                     onset_idx, end_idx, exc)
+        return None
+
+
 def detect_respiratory_events(
     flow_data:    np.ndarray,
     thorax_data:  np.ndarray | None,
@@ -247,6 +271,8 @@ def detect_respiratory_events(
     sf_pos:            float | None = None,
     csr_info:          dict | None = None,
     scoring_profile:   dict | None = None,
+    ecg_data:          np.ndarray | None = None,
+    sf_ecg:            float | None = None,
 ) -> dict:
     """
     Detect and classify apneas and hypopneas per AASM 2.6.
@@ -304,6 +330,21 @@ def detect_respiratory_events(
         result["n_gap_excluded"] = n_gaps
         if n_gaps > 0:
             logger.info("Fix5: %d signaaluitvalgaten gedetecteerd → post-gap masker actief", n_gaps)
+
+        # ── v0.8.23: ECG-derived effort (TECG) — compute once ────────────
+        _tecg = None
+        _r_peaks = None
+        _sf_ecg_local = sf_ecg or sf_flow
+        if ecg_data is not None and len(ecg_data) > 0:
+            try:
+                from .ecg_effort import compute_tecg, detect_r_peaks
+                _r_peaks = detect_r_peaks(ecg_data, _sf_ecg_local)
+                _tecg = compute_tecg(ecg_data, _sf_ecg_local, _r_peaks)
+                logger.info("TECG computed: %d R-peaks detected, signal length %d",
+                            len(_r_peaks), len(_tecg))
+            except Exception as exc:
+                logger.warning("TECG computation failed: %s", exc)
+                _tecg = None
 
         # ── Apnea-channel preprocessing (thermistor, no sqrt) ──────────────
         flow_env = preprocess_flow(flow_data, sf_flow, is_nasal_pressure=False)
@@ -397,6 +438,8 @@ def detect_respiratory_events(
             thorax_env, abdomen_env, thorax_data, abdomen_data, effort_bl,
             spo2_data, global_spo2_bl, mmsd_norm,
             max_dur_s=_APNEA_MAX,
+            ecg_data=ecg_data, tecg=_tecg, r_peaks=_r_peaks,
+            sf_ecg=_sf_ecg_local,
         )
 
         # ── Fix 1: Herbereken hypopnea-basislijn zonder post-apnea recovery ─
@@ -454,6 +497,8 @@ def detect_respiratory_events(
             contam_win_s=_CONTAM_WIN,
             post_event_win_s=_POST_WIN,
             max_dur_s=_HYPOP_MAX,
+            ecg_data=ecg_data, tecg=_tecg, r_peaks=_r_peaks,
+            sf_ecg=_sf_ecg_local,
         )
         events = new_events
 
@@ -476,6 +521,14 @@ def detect_respiratory_events(
         result["rejected_hypopneas"] = rejected
         result["summary"]            = _compute_summary(events, hypno, artifact_epochs,
                                                          csr_info=csr_info)
+        # v0.8.23: count ECG-reclassified events
+        n_ecg_reclass = sum(
+            1 for e in events
+            if e.get("classify_detail", {}).get("ecg_assessment", {}).get("reclassify_as_central", False)
+        )
+        result["n_ecg_reclassified_central"] = n_ecg_reclass
+        if n_ecg_reclass > 0:
+            logger.info("ECG-TECG: %d events reclassified as central", n_ecg_reclass)
         result["success"]            = True
 
     except Exception as e:
@@ -809,6 +862,7 @@ def _detect_apneas(
     thorax_env, abdomen_env, thorax_raw, abdomen_raw, effort_bl,
     spo2_data, global_spo2_bl, mmsd_norm,
     max_dur_s: float = APNEA_MAX_DUR_S,
+    ecg_data=None, tecg=None, r_peaks=None, sf_ecg=None,
 ) -> list[dict]:
     """Detecteer apnea-events: ≥90% flow-reductie gedurende ≥10s (AASM 2.6)."""
     events: list[dict] = []
@@ -843,6 +897,10 @@ def _detect_apneas(
                 thorax_env=thorax_env, abdomen_env=abdomen_env,
                 thorax_raw=thorax_raw, abdomen_raw=abdomen_raw,
                 effort_baseline=effort_bl, sf=sf_flow,
+                ecg_assessment=_get_ecg_assessment(
+                    ecg_data, tecg, r_peaks, thorax_raw, abdomen_raw,
+                    sf_flow, sf_ecg or sf_flow, sub_idx[0], sub_idx[-1] + 1
+                ) if tecg is not None else None,
             )
             desat, min_spo2 = get_desaturation(
                 spo2_data, onset_s, sub_dur, sf_spo2, global_spo2_bl
@@ -874,6 +932,7 @@ def _detect_hypopneas(
     contam_win_s: float = 15.0,
     post_event_win_s: float = 45,
     max_dur_s: float = HYPOPNEA_MAX_DUR_S,
+    ecg_data=None, tecg=None, r_peaks=None, sf_ecg=None,
 ) -> tuple[list[dict], list[dict]]:
     """Return (all_events_including_new_hypopneas, rejected_candidates)."""
     # Build apnea exclusion mask (±5 s around each confirmed apnea)
@@ -962,6 +1021,10 @@ def _detect_hypopneas(
                 thorax_env=thorax_env, abdomen_env=abdomen_env,
                 thorax_raw=thorax_raw, abdomen_raw=abdomen_raw,
                 effort_baseline=effort_bl, sf=sf_flow,
+                ecg_assessment=_get_ecg_assessment(
+                    ecg_data, tecg, r_peaks, thorax_raw, abdomen_raw,
+                    sf_flow, sf_ecg or sf_flow, hy_oi, hy_ei
+                ) if tecg is not None else None,
             )
             hy_label = f"hypopnea_{hy_sub}" if hy_sub != "obstructive" else "hypopnea"
             flow_red_ratio = safe_r(

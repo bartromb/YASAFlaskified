@@ -1,6 +1,6 @@
 from __future__ import annotations
 """
-edf_api.py — YASAFlaskified v0.8.22
+edf_api.py — YASAFlaskified v0.8.23
 ================================
 Server-side EDF-data API voor de browser-signaalviewer.
 
