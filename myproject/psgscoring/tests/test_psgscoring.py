@@ -207,5 +207,183 @@ class TestUtils:
         assert not mask[int(5.5 * 30 * SF)]  # middle of last W
 
 
+# ═══════════════════════════════════════════════════════════════
+# H. ECG effort module (v0.2.5)
+# ═══════════════════════════════════════════════════════════════
+
+class TestEcgEffort:
+    """Tests for ecg_effort: R-peak detection, TECG, spectral classifier."""
+
+    @staticmethod
+    def _make_ecg(duration_s=30, hr_bpm=72):
+        """Synthetic ECG: QRS spikes at given heart rate."""
+        t = np.arange(0, duration_s, 1 / SF)
+        ecg = np.random.randn(len(t)) * 0.05  # noise floor
+        rr_s = 60.0 / hr_bpm
+        n_beats = int(duration_s / rr_s)
+        peak_locs = []
+        for i in range(n_beats):
+            idx = int(i * rr_s * SF)
+            if idx < len(ecg):
+                ecg[idx] = 1.5   # R-peak
+                if idx + 1 < len(ecg):
+                    ecg[idx + 1] = -0.5  # S-wave
+                peak_locs.append(idx)
+        return ecg, peak_locs
+
+    def test_detect_r_peaks_count(self):
+        from psgscoring.ecg_effort import detect_r_peaks
+        ecg, expected = self._make_ecg(duration_s=20, hr_bpm=60)
+        peaks = detect_r_peaks(ecg, SF)
+        # Should detect roughly 20 peaks (1/s for 20s)
+        assert 15 < len(peaks) < 25, f"Expected ~20 peaks, got {len(peaks)}"
+
+    def test_detect_r_peaks_empty(self):
+        from psgscoring.ecg_effort import detect_r_peaks
+        flat = np.zeros(int(5 * SF))
+        peaks = detect_r_peaks(flat, SF)
+        assert len(peaks) == 0
+
+    def test_compute_tecg_shape(self):
+        from psgscoring.ecg_effort import compute_tecg, detect_r_peaks
+        ecg, _ = self._make_ecg(duration_s=10)
+        r_peaks = detect_r_peaks(ecg, SF)
+        tecg = compute_tecg(ecg, SF, r_peaks)
+        assert tecg.shape == ecg.shape
+
+    def test_compute_tecg_blanking_reduces_qrs(self):
+        from psgscoring.ecg_effort import compute_tecg, detect_r_peaks
+        ecg, _ = self._make_ecg(duration_s=10)
+        r_peaks = detect_r_peaks(ecg, SF)
+        tecg = compute_tecg(ecg, SF, r_peaks)
+        # TECG should have lower peak amplitude than raw (QRS removed)
+        assert np.max(np.abs(tecg)) < np.max(np.abs(ecg))
+
+    def test_adaptive_cardiac_band_normal_hr(self):
+        from psgscoring.ecg_effort import compute_adaptive_cardiac_band, detect_r_peaks
+        ecg, _ = self._make_ecg(duration_s=30, hr_bpm=72)
+        r_peaks = detect_r_peaks(ecg, SF)
+        low, high = compute_adaptive_cardiac_band(r_peaks, SF)
+        hr_hz = 72 / 60  # 1.2 Hz
+        assert low < hr_hz < high, f"Band ({low}, {high}) should contain {hr_hz}"
+
+    def test_adaptive_cardiac_band_bradycardia(self):
+        from psgscoring.ecg_effort import compute_adaptive_cardiac_band, detect_r_peaks
+        ecg, _ = self._make_ecg(duration_s=30, hr_bpm=45)
+        r_peaks = detect_r_peaks(ecg, SF)
+        low, high = compute_adaptive_cardiac_band(r_peaks, SF)
+        hr_hz = 45 / 60  # 0.75 Hz
+        # Band should adapt downward for bradycardia
+        assert low < 0.75, f"Low bound {low} should be below 0.75 for 45 bpm"
+
+    def test_adaptive_cardiac_band_no_peaks(self):
+        from psgscoring.ecg_effort import compute_adaptive_cardiac_band, CARDIAC_BAND_HZ
+        low, high = compute_adaptive_cardiac_band(None, SF)
+        assert (low, high) == CARDIAC_BAND_HZ
+
+    def test_spectral_effort_cardiac_dominant(self):
+        from psgscoring.ecg_effort import spectral_effort_classifier
+        t = np.arange(0, 15, 1 / SF)
+        # Pure 1.2 Hz (cardiac) — no respiratory component
+        signal = np.sin(2 * np.pi * 1.2 * t)
+        result = spectral_effort_classifier(signal, SF, 0, len(signal))
+        assert result["cardiac_fraction"] > 0.6, f"Expected cardiac dominant, got {result}"
+
+    def test_spectral_effort_respiratory_present(self):
+        from psgscoring.ecg_effort import spectral_effort_classifier
+        t = np.arange(0, 15, 1 / SF)
+        # Pure 0.25 Hz (respiratory) — no cardiac
+        signal = np.sin(2 * np.pi * 0.25 * t)
+        result = spectral_effort_classifier(signal, SF, 0, len(signal))
+        assert result["respiratory_fraction"] > 0.6
+        assert not result["cardiac_dominant"]
+
+    def test_spectral_effort_with_adaptive_band(self):
+        from psgscoring.ecg_effort import spectral_effort_classifier
+        t = np.arange(0, 15, 1 / SF)
+        signal = np.sin(2 * np.pi * 1.2 * t)
+        result = spectral_effort_classifier(signal, SF, 0, len(signal),
+                                             cardiac_band_hz=(0.9, 2.0))
+        assert "cardiac_band_hz" in result
+        assert result["cardiac_band_hz"] == (0.9, 2.0)
+
+    def test_ecg_effort_assessment_combined(self):
+        from psgscoring.ecg_effort import ecg_effort_assessment
+        ecg, _ = self._make_ecg(duration_s=30, hr_bpm=72)
+        # Create a flat effort signal (no respiratory effort → central)
+        flat_effort = np.random.randn(len(ecg)) * 0.001
+        result = ecg_effort_assessment(
+            ecg=ecg, thorax_raw=flat_effort, abdomen_raw=flat_effort,
+            sf=SF, onset_idx=int(5 * SF), end_idx=int(15 * SF))
+        assert "ecg_effort_present" in result
+        assert "spectral_cardiac_dominant" in result
+        assert "reclassify_as_central" in result
+
+    def test_spectral_short_segment(self):
+        from psgscoring.ecg_effort import spectral_effort_classifier
+        short = np.random.randn(int(2 * SF))  # only 2s — too short
+        result = spectral_effort_classifier(short, SF, 0, len(short))
+        assert result["classification_hint"] == "insufficient_data"
+
+
+# ═══════════════════════════════════════════════════════════════
+# I. Classify — flattening index integration (v0.2.5)
+# ═══════════════════════════════════════════════════════════════
+
+class TestClassifyFlattening:
+    def _make_effort(self, n, amp=1.0):
+        return np.ones(n) * amp
+
+    def test_high_flattening_boosts_obstructive(self):
+        from psgscoring.classify import classify_apnea_type
+        n = int(15 * SF)
+        thorax = self._make_effort(n, 0.5)
+        abdomen = self._make_effort(n, 0.5)
+        # Borderline event — Rule 6
+        typ1, conf1, _ = classify_apnea_type(
+            0, n, thorax, abdomen, thorax, abdomen, 1.0, SF,
+            flattening_index=None)
+        typ2, conf2, _ = classify_apnea_type(
+            0, n, thorax, abdomen, thorax, abdomen, 1.0, SF,
+            flattening_index=0.50)
+        # With high flattening, confidence should be higher
+        assert conf2 >= conf1, f"Flattening should boost conf: {conf2} >= {conf1}"
+
+    def test_low_flattening_supports_central(self):
+        from psgscoring.classify import classify_apnea_type
+        n = int(15 * SF)
+        # Very low effort — should trigger central (Rule 5)
+        thorax = np.random.randn(n) * 0.001
+        abdomen = np.random.randn(n) * 0.001
+        typ, conf, detail = classify_apnea_type(
+            0, n, thorax, abdomen, thorax, abdomen, 1.0, SF,
+            flattening_index=0.05)
+        assert "flattening_index" in detail
+
+
+# ═══════════════════════════════════════════════════════════════
+# J. SpO2 low baseline warning (v0.2.5)
+# ═══════════════════════════════════════════════════════════════
+
+class TestSpo2LowBaseline:
+    def test_normal_baseline_no_warning(self):
+        from psgscoring.spo2 import analyze_spo2
+        spo2 = np.full(int(60 * SF), 95.0)
+        hypno = ["N2"] * (60 // 30)
+        result = analyze_spo2(spo2, SF, hypno)
+        if result["success"]:
+            assert result["summary"]["low_baseline_warning"] is False
+
+    def test_low_baseline_warning(self):
+        from psgscoring.spo2 import analyze_spo2
+        spo2 = np.full(int(60 * SF), 85.0)
+        hypno = ["N2"] * (60 // 30)
+        result = analyze_spo2(spo2, SF, hypno)
+        if result["success"]:
+            assert result["summary"]["low_baseline_warning"] is True
+            assert result["summary"]["low_baseline_note"] is not None
+            assert "COPD" in result["summary"]["low_baseline_note"]
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

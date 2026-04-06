@@ -1,5 +1,5 @@
 """
-generate_pdf_report.py — YASAFlaskified v0.8.23
+generate_pdf_report.py — YASAFlaskified v0.8.25
 Site-config: via config.json["site"] of site_config parameter.
 """
 import json, os, io
@@ -383,7 +383,7 @@ def _callbacks(site, lang="nl"):
         canvas.line(ML,MB-0.2*cm,W_A4-MR,MB-0.2*cm)
         canvas.setFont("Helvetica",6.5); canvas.setFillColor(GR)
         canvas.drawString(ML,MB-0.45*cm,
-            "YASAFlaskified v0.8.23  |  AASM 2.6  |  www.slaapkliniek.be  |  \u00a9 Bart Rombaut")
+            "YASAFlaskified v0.8.25  |  AASM 2.6  |  www.slaapkliniek.be  |  \u00a9 Bart Rombaut")
         canvas.drawRightString(W_A4-MR,MB-0.45*cm,f"{t('pdf_page',lang)} {doc.page}")
         canvas.restoreState()
     return draw,draw
@@ -1334,6 +1334,12 @@ def generate_pdf_report(results:dict, output_path:str,
                     ["Fix 6 — Lokale basislijn",
                      f"{n_local_rej} afgewezen",
                      "Hypopneas met <20% reductie t.o.v. pre-event ademhaling"])
+            n_ecg_reclass = rsum.get("n_ecg_reclassified_central", 0) or 0
+            if n_ecg_reclass > 0:
+                corr_rows.append(
+                    ["ECG effort (TECG)",
+                     f"{n_ecg_reclass} → centraal",
+                     "Events herclassificeerd via ECG-afgeleide effort-analyse (Berry 2019)"])
             story.append(KeepTogether([_tbl(
                 ["Correctie", "Impact", "Toelichting"],
                 corr_rows, [4.0, 3.5, 9.5])]))

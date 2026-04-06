@@ -1,5 +1,5 @@
 """
-validation_metrics.py — YASAFlaskified v0.8.23
+validation_metrics.py — YASAFlaskified v0.8.25
 ============================================
 Berekent validatie-metrics voor AI vs manuele scoring.
 
@@ -368,3 +368,140 @@ def generate_confusion_matrix_plot(ai_stages, manual_stages, output_path,
     plt.close(fig)
 
     return {"plot_path": output_path, "accuracy": round(accuracy, 4), "kappa": round(kappa, 4)}
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# v0.8.25: Event-level comparison (manual vs automated scoring)
+# ═══════════════════════════════════════════════════════════════════════════
+
+def compare_respiratory_events(
+    manual_events: list[dict],
+    auto_events: list[dict],
+    tolerance_s: float = 5.0,
+) -> dict:
+    """Compare manual vs automated respiratory events with temporal matching.
+
+    Each event dict must have at minimum: onset_s, duration_s, type.
+
+    Parameters
+    ----------
+    manual_events : list of dict
+        Reference (human-scored) events.
+    auto_events : list of dict
+        Algorithm-detected events.
+    tolerance_s : float
+        Maximum temporal distance (seconds) between event midpoints for a match.
+
+    Returns
+    -------
+    dict with keys:
+        matched (list of tuples), false_positives (list), false_negatives (list),
+        type_mismatches (list), sensitivity, ppv, f1, n_manual, n_auto.
+    """
+    def _mid(ev):
+        return ev["onset_s"] + ev["duration_s"] / 2
+
+    manual_used = set()
+    auto_used = set()
+    matched = []
+    type_mismatches = []
+
+    # Greedy matching: for each manual event, find closest unmatched auto event
+    for mi, m_ev in enumerate(manual_events):
+        m_mid = _mid(m_ev)
+        best_ai, best_dist = None, float("inf")
+        for ai, a_ev in enumerate(auto_events):
+            if ai in auto_used:
+                continue
+            dist = abs(_mid(a_ev) - m_mid)
+            if dist < best_dist:
+                best_dist = dist
+                best_ai = ai
+        if best_ai is not None and best_dist <= tolerance_s:
+            manual_used.add(mi)
+            auto_used.add(best_ai)
+            pair = {
+                "manual": m_ev,
+                "auto": auto_events[best_ai],
+                "time_diff_s": round(_mid(auto_events[best_ai]) - m_mid, 2),
+                "type_match": _types_match(m_ev.get("type"), auto_events[best_ai].get("type")),
+            }
+            matched.append(pair)
+            if not pair["type_match"]:
+                type_mismatches.append(pair)
+
+    false_negatives = [manual_events[i] for i in range(len(manual_events)) if i not in manual_used]
+    false_positives = [auto_events[i] for i in range(len(auto_events)) if i not in auto_used]
+
+    n_m = len(manual_events)
+    n_a = len(auto_events)
+    tp = len(matched)
+    sens = tp / n_m if n_m > 0 else 0.0
+    ppv = tp / n_a if n_a > 0 else 0.0
+    f1 = 2 * sens * ppv / (sens + ppv) if (sens + ppv) > 0 else 0.0
+
+    return {
+        "matched": matched,
+        "false_positives": false_positives,
+        "false_negatives": false_negatives,
+        "type_mismatches": type_mismatches,
+        "n_manual": n_m,
+        "n_auto": n_a,
+        "n_matched": tp,
+        "n_false_positive": len(false_positives),
+        "n_false_negative": len(false_negatives),
+        "n_type_mismatch": len(type_mismatches),
+        "sensitivity": round(sens, 4),
+        "ppv": round(ppv, 4),
+        "f1": round(f1, 4),
+    }
+
+
+def _types_match(t1: str | None, t2: str | None) -> bool:
+    """Check if two event types are concordant (case-insensitive)."""
+    if t1 is None or t2 is None:
+        return False
+    t1, t2 = t1.lower().strip(), t2.lower().strip()
+    # Normalize aliases
+    aliases = {"oa": "obstructive", "ca": "central", "ma": "mixed",
+               "h": "hypopnea", "hyp": "hypopnea", "a": "apnea"}
+    t1 = aliases.get(t1, t1)
+    t2 = aliases.get(t2, t2)
+    return t1 == t2
+
+
+def compute_event_type_confusion(
+    manual_events: list[dict],
+    auto_events: list[dict],
+    tolerance_s: float = 5.0,
+) -> dict:
+    """Per-type confusion matrix for matched respiratory events.
+
+    Returns dict with confusion_matrix (dict of dicts), per-type sensitivity/PPV.
+    """
+    comparison = compare_respiratory_events(manual_events, auto_events, tolerance_s)
+    types = ["obstructive", "central", "mixed", "hypopnea"]
+
+    cm = {t: {t2: 0 for t2 in types + ["unmatched"]} for t in types + ["unmatched"]}
+
+    for pair in comparison["matched"]:
+        mt = pair["manual"].get("type", "unknown").lower()
+        at = pair["auto"].get("type", "unknown").lower()
+        mt = mt if mt in types else "unmatched"
+        at = at if at in types else "unmatched"
+        cm[mt][at] += 1
+
+    for ev in comparison["false_negatives"]:
+        mt = ev.get("type", "unknown").lower()
+        mt = mt if mt in types else "unmatched"
+        cm[mt]["unmatched"] += 1
+
+    for ev in comparison["false_positives"]:
+        at = ev.get("type", "unknown").lower()
+        at = at if at in types else "unmatched"
+        cm["unmatched"][at] += 1
+
+    return {
+        "confusion_matrix": cm,
+        "event_comparison": comparison,
+    }

@@ -12,7 +12,7 @@ Berry RB et al. Use of a Transformed ECG Signal to Detect Respiratory
 Berry RB et al. Use of Chest Wall Electromyography to Detect Respiratory
     Effort during Polysomnography. J Clin Sleep Med. 2016;12(9):1239-1244.
 
-v0.2.4 — April 2026
+v0.2.5 — April 2026
 """
 
 from __future__ import annotations
@@ -28,10 +28,11 @@ QRS_REFRACTORY_MS     = 200         # minimum R-R interval (300 bpm max)
 QRS_SEARCH_WINDOW_S   = 0.15        # s window for R-peak refinement
 
 # Spectral thresholds
-CARDIAC_BAND_HZ       = (0.8, 2.5)  # cardiac pulsation band
+CARDIAC_BAND_HZ       = (0.8, 2.5)  # cardiac pulsation band (default)
 RESPIRATORY_BAND_HZ   = (0.1, 0.5)  # respiratory effort band
 CARDIAC_DOMINANCE_THR = 0.75        # cardiac power fraction → central
 RESPIRATORY_MIN_THR   = 0.20        # minimum respiratory power → not central
+CARDIAC_BAND_MARGIN   = 0.3         # Hz margin around HR fundamental for adaptive band
 
 # TECG inspiratory burst detection
 TECG_HP_FREQ          = 30.0        # Hz — high-pass cutoff for TECG
@@ -240,12 +241,70 @@ def detect_inspiratory_bursts(tecg: np.ndarray, sf: float,
     }
 
 
+def compute_adaptive_cardiac_band(
+    r_peaks: np.ndarray | None,
+    sf: float,
+    onset_idx: int = 0,
+    end_idx: int | None = None,
+) -> tuple[float, float]:
+    """Compute patient-adaptive cardiac frequency band from R-R intervals.
+
+    In bradycardic patients (athletes, beta-blocker users) the cardiac
+    fundamental can drop to 0.5–0.6 Hz, overlapping the respiratory band.
+    This function derives the actual HR and centres the cardiac band around
+    the fundamental and its first harmonic.
+
+    Parameters
+    ----------
+    r_peaks : array or None
+        R-peak sample indices.  Falls back to default band if None.
+    sf : float
+        Sampling frequency.
+    onset_idx, end_idx : int
+        Optional window to restrict R-peaks used for HR estimation.
+
+    Returns
+    -------
+    (low_hz, high_hz) : tuple of float
+        Adaptive cardiac band boundaries.
+    """
+    if r_peaks is None or len(r_peaks) < 3:
+        return CARDIAC_BAND_HZ
+
+    if end_idx is not None:
+        mask = (r_peaks >= onset_idx) & (r_peaks <= end_idx)
+        local_peaks = r_peaks[mask]
+    else:
+        local_peaks = r_peaks
+
+    if len(local_peaks) < 3:
+        return CARDIAC_BAND_HZ
+
+    rr = np.diff(local_peaks) / sf            # R-R intervals in seconds
+    rr = rr[(rr > 0.25) & (rr < 2.5)]        # reject artefact (24–240 bpm)
+    if len(rr) < 2:
+        return CARDIAC_BAND_HZ
+
+    median_rr  = float(np.median(rr))
+    hr_hz      = 1.0 / median_rr              # fundamental frequency
+
+    low_hz  = max(0.55, hr_hz - CARDIAC_BAND_MARGIN)
+    high_hz = min(3.5,  hr_hz * 2 + CARDIAC_BAND_MARGIN)   # up to 1st harmonic
+
+    return (round(low_hz, 2), round(high_hz, 2))
+
+
 def spectral_effort_classifier(effort_signal: np.ndarray, sf: float,
-                                onset_idx: int, end_idx: int) -> dict:
+                                onset_idx: int, end_idx: int,
+                                cardiac_band_hz: tuple[float, float] | None = None,
+                                ) -> dict:
     """Classify effort signal as cardiac artefact vs respiratory effort.
 
-    Compares power in cardiac (0.8–2.5 Hz) and respiratory (0.1–0.5 Hz)
-    frequency bands during an apnea event.
+    Compares power in cardiac and respiratory frequency bands during an
+    apnea event.  When *cardiac_band_hz* is provided (from
+    :func:`compute_adaptive_cardiac_band`), the cardiac band is adapted
+    to the patient's actual heart rate, preventing misclassification in
+    bradycardic patients.
 
     Parameters
     ----------
@@ -255,37 +314,45 @@ def spectral_effort_classifier(effort_signal: np.ndarray, sf: float,
         Sampling frequency.
     onset_idx, end_idx : int
         Sample indices of the apnea event.
+    cardiac_band_hz : tuple, optional
+        (low, high) Hz for cardiac band.  Defaults to module constant.
 
     Returns
     -------
     result : dict
         Keys: cardiac_fraction, respiratory_fraction,
-        cardiac_dominant (bool), classification_hint (str).
+        cardiac_dominant (bool), classification_hint (str),
+        cardiac_band_hz (tuple).
     """
+    if cardiac_band_hz is None:
+        cardiac_band_hz = CARDIAC_BAND_HZ
+
     seg = effort_signal[onset_idx:end_idx]
 
-    if len(seg) < int(4 * sf):  # need at least 4s for spectral analysis
-        return {"cardiac_fraction": 0.0, "respiratory_fraction": 0.0,
-                "cardiac_dominant": False, "classification_hint": "insufficient_data"}
+    empty = {"cardiac_fraction": 0.0, "respiratory_fraction": 0.0,
+             "cardiac_dominant": False, "classification_hint": "insufficient_data",
+             "cardiac_band_hz": cardiac_band_hz}
+
+    if len(seg) < int(4 * sf):
+        return empty
 
     nperseg = min(len(seg), int(4 * sf))
     try:
         freqs, psd = welch(seg, fs=sf, nperseg=nperseg, noverlap=nperseg // 2)
     except Exception:
-        return {"cardiac_fraction": 0.0, "respiratory_fraction": 0.0,
-                "cardiac_dominant": False, "classification_hint": "welch_failed"}
+        empty["classification_hint"] = "welch_failed"
+        return empty
 
-    # Power in bands
     resp_mask    = (freqs >= RESPIRATORY_BAND_HZ[0]) & (freqs <= RESPIRATORY_BAND_HZ[1])
-    cardiac_mask = (freqs >= CARDIAC_BAND_HZ[0])     & (freqs <= CARDIAC_BAND_HZ[1])
+    cardiac_mask = (freqs >= cardiac_band_hz[0])      & (freqs <= cardiac_band_hz[1])
 
     resp_power    = float(np.sum(psd[resp_mask]))
     cardiac_power = float(np.sum(psd[cardiac_mask]))
     total_power   = resp_power + cardiac_power
 
     if total_power < 1e-12:
-        return {"cardiac_fraction": 0.0, "respiratory_fraction": 0.0,
-                "cardiac_dominant": False, "classification_hint": "no_signal"}
+        empty["classification_hint"] = "no_signal"
+        return empty
 
     cardiac_frac = cardiac_power / total_power
     resp_frac    = resp_power / total_power
@@ -305,6 +372,7 @@ def spectral_effort_classifier(effort_signal: np.ndarray, sf: float,
         "respiratory_fraction": round(resp_frac, 3),
         "cardiac_dominant":    cardiac_dominant,
         "classification_hint": hint,
+        "cardiac_band_hz":     cardiac_band_hz,
     }
 
 
@@ -362,6 +430,9 @@ def ecg_effort_assessment(ecg: np.ndarray | None,
         result["ecg_effort_present"] = burst_result["effort_present"]
 
     # ── Spectral analysis on effort bands ────────────────────────────────
+    # v0.2.5: Use adaptive cardiac band based on actual heart rate
+    adaptive_band = compute_adaptive_cardiac_band(r_peaks, sf, onset_idx, end_idx)
+
     effort_signal = None
     if thorax_raw is not None and len(thorax_raw) > end_idx:
         effort_signal = thorax_raw
@@ -370,7 +441,8 @@ def ecg_effort_assessment(ecg: np.ndarray | None,
 
     if effort_signal is not None:
         spectral = spectral_effort_classifier(effort_signal, sf,
-                                               onset_idx, end_idx)
+                                               onset_idx, end_idx,
+                                               cardiac_band_hz=adaptive_band)
         result["spectral_detail"] = spectral
         result["spectral_cardiac_dominant"] = spectral["cardiac_dominant"]
 

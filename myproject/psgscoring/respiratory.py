@@ -402,6 +402,9 @@ def detect_respiratory_events(
 
         apnea_raw    = flow_norm  < APNEA_THRESHOLD
 
+        # v0.2.5: bandpass-filtered flow for breath boundary snapping
+        _flow_filt_snap = bandpass_flow(flow_data, sf_flow)
+
         # ── v0.8.14: AASM-conforme peak-gebaseerde hypopnea-detectie ─────
         # AASM 2.6: "peak signal excursions drop by ≥30%"
         # = per-ademhaling piek-amplitude, NIET continue envelope.
@@ -440,6 +443,7 @@ def detect_respiratory_events(
             max_dur_s=_APNEA_MAX,
             ecg_data=ecg_data, tecg=_tecg, r_peaks=_r_peaks,
             sf_ecg=_sf_ecg_local,
+            flow_filt=_flow_filt_snap,
         )
 
         # ── Fix 1: Herbereken hypopnea-basislijn zonder post-apnea recovery ─
@@ -499,6 +503,7 @@ def detect_respiratory_events(
             max_dur_s=_HYPOP_MAX,
             ecg_data=ecg_data, tecg=_tecg, r_peaks=_r_peaks,
             sf_ecg=_sf_ecg_local,
+            flow_filt=_flow_filt_snap,
         )
         events = new_events
 
@@ -856,6 +861,64 @@ def _split_long_region(
     return result if result else [idx]
 
 
+# ---------------------------------------------------------------------------
+# v0.2.5: Breath boundary snapping
+# ---------------------------------------------------------------------------
+
+def _snap_to_breath_boundaries(
+    onset: int,
+    end: int,
+    flow_filt: np.ndarray,
+    sf: float,
+    max_shift_s: float = 3.0,
+) -> tuple[int, int]:
+    """Snap event onset/end to the nearest zero-crossing of the flow signal.
+
+    Human scorers delineate events at breath transitions (inspiration onset
+    or expiration end).  This function adjusts the algorithmically detected
+    boundaries to the nearest zero-crossing within *max_shift_s* seconds,
+    improving per-event concordance with manual scoring.
+
+    Parameters
+    ----------
+    onset, end : int
+        Sample indices of the detected event.
+    flow_filt : array
+        Bandpass-filtered flow signal (not envelope).
+    sf : float
+        Sampling frequency.
+    max_shift_s : float
+        Maximum allowed shift in seconds.
+
+    Returns
+    -------
+    (snapped_onset, snapped_end) : tuple of int
+    """
+    max_shift = int(max_shift_s * sf)
+    n = len(flow_filt)
+
+    def _nearest_zero_crossing(idx: int, direction: int) -> int:
+        """Find nearest negative-to-positive zero crossing near idx.
+        direction: -1 = search backward, +1 = search forward."""
+        best = idx
+        limit = max(0, idx - max_shift) if direction < 0 else min(n - 1, idx + max_shift)
+        rng = range(idx, limit, direction)
+        for i in rng:
+            if 0 < i < n and flow_filt[i - 1] <= 0 < flow_filt[i]:
+                best = i
+                break
+        return best
+
+    snapped_onset = _nearest_zero_crossing(onset, -1)
+    snapped_end   = _nearest_zero_crossing(end,   +1)
+
+    # Ensure minimum event duration is preserved
+    if (snapped_end - snapped_onset) < int(10 * sf):
+        return onset, end
+
+    return snapped_onset, snapped_end
+
+
 def _detect_apneas(
     apnea_raw, sleep_mask_ap, flow_env, flow_norm, baseline,
     sf_flow, sf_spo2, hypno,
@@ -863,6 +926,7 @@ def _detect_apneas(
     spo2_data, global_spo2_bl, mmsd_norm,
     max_dur_s: float = APNEA_MAX_DUR_S,
     ecg_data=None, tecg=None, r_peaks=None, sf_ecg=None,
+    flow_filt: np.ndarray | None = None,
 ) -> list[dict]:
     """Detecteer apnea-events: ≥90% flow-reductie gedurende ≥10s (AASM 2.6)."""
     events: list[dict] = []
@@ -884,6 +948,11 @@ def _detect_apneas(
         # v0.8.22: split events die te lang zijn
         sub_regions = _split_long_region(idx, flow_env, sf_flow, max_dur_s, APNEA_MIN_DUR_S)
         for sub_idx in sub_regions:
+            # v0.2.5: snap to nearest breath boundary
+            if flow_filt is not None:
+                s0, s1 = _snap_to_breath_boundaries(
+                    sub_idx[0], sub_idx[-1], flow_filt, sf_flow)
+                sub_idx = np.arange(s0, s1 + 1)
             sub_dur = len(sub_idx) / sf_flow
             onset_s    = sub_idx[0] / sf_flow
             ep_idx     = int(onset_s // EPOCH_LEN_S)
@@ -933,6 +1002,7 @@ def _detect_hypopneas(
     post_event_win_s: float = 45,
     max_dur_s: float = HYPOPNEA_MAX_DUR_S,
     ecg_data=None, tecg=None, r_peaks=None, sf_ecg=None,
+    flow_filt: np.ndarray | None = None,
 ) -> tuple[list[dict], list[dict]]:
     """Return (all_events_including_new_hypopneas, rejected_candidates)."""
     # Build apnea exclusion mask (±5 s around each confirmed apnea)
@@ -960,6 +1030,11 @@ def _detect_hypopneas(
         # v0.8.22: split events die te lang zijn
         sub_regions = _split_long_region(idx, hypop_env, sf_hy, max_dur_s, HYPOPNEA_MIN_DUR_S)
         for sub_idx in sub_regions:
+            # v0.2.5: snap to nearest breath boundary
+            if flow_filt is not None and sf_hy == sf_flow:
+                s0, s1 = _snap_to_breath_boundaries(
+                    sub_idx[0], sub_idx[-1], flow_filt, sf_hy)
+                sub_idx = np.arange(s0, s1 + 1)
             sub_dur   = len(sub_idx) / sf_hy
             onset_s   = sub_idx[0] / sf_hy
             ep_idx    = int(onset_s // EPOCH_LEN_S)

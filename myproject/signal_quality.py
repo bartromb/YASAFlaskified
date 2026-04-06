@@ -1,5 +1,5 @@
 """
-signal_quality.py — YASAFlaskified v0.8.23
+signal_quality.py — YASAFlaskified v0.8.25
 ========================================
 Automatische signaal-kwaliteitscheck per kanaal.
 

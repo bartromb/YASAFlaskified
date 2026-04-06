@@ -1,5 +1,5 @@
 """
-tasks.py — RQ worker voor YASAFlaskified v0.8.23
+tasks.py — RQ worker voor YASAFlaskified v0.8.25
 Integreert: YASA slaapanalyse + pneumologische scoring + PSG-rapport
 
 Fixes t.o.v. v8.0:
@@ -702,7 +702,7 @@ def _send_email_notification(job_id: str, results: dict):
         <a href="{report_url}"
            style="background:#1a3a8f;color:white;padding:8px 18px;
                   border-radius:4px;text-decoration:none">Bekijk rapport</a></p>
-        <p style="color:#999;font-size:12px">YASAFlaskified v0.8.23 · {site_url}<br>
+        <p style="color:#999;font-size:12px">YASAFlaskified v0.8.25 · {site_url}<br>
         Screening-tool — geen medische diagnose.</p>
         </body></html>"""
 
@@ -714,3 +714,61 @@ def _send_email_notification(job_id: str, results: dict):
         logger.info("E-mail verstuurd naar: %s", to_list)
     except Exception as e:
         logger.warning("E-mail mislukt: %s", e)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# v0.8.25: Scoring profile comparison
+# ═══════════════════════════════════════════════════════════════════════════
+
+def run_profile_comparison(edf_path: str, results_dir: str) -> dict:
+    """Run all three scoring profiles and return comparison table.
+
+    Returns dict with keys: strict, standard, sensitive — each containing
+    the AHI, OAHI, n_events, and per-fix counters.
+    """
+    import mne
+    mne.set_log_level("ERROR")
+
+    from yasa_analysis import run_sleep_staging
+    from pneumo_analysis import run_pneumo_analysis
+
+    raw = mne.io.read_raw_edf(edf_path, preload=True, verbose=False)
+    staging = run_sleep_staging(raw)
+    hypno = staging.get("hypnogram", [])
+
+    comparison = {}
+    for profile in ("strict", "standard", "sensitive"):
+        pneumo = run_pneumo_analysis(raw, hypno, scoring_profile=profile)
+        rsum = pneumo.get("respiratory", {}).get("summary", {})
+        comparison[profile] = {
+            "ahi_total":    rsum.get("ahi_total"),
+            "oahi":         rsum.get("oahi"),
+            "cahi":         rsum.get("cahi"),
+            "n_apneas":     rsum.get("n_apneas"),
+            "n_hypopneas":  rsum.get("n_hypopneas"),
+            "ahi_rem":      rsum.get("ahi_rem"),
+            "ahi_nrem":     rsum.get("ahi_nrem"),
+            "rera_index":   rsum.get("rera_index"),
+            "rdi":          rsum.get("rdi"),
+            "n_local_baseline_rejected": pneumo.get("respiratory", {}).get("n_local_baseline_rejected", 0),
+        }
+
+    # Severity classification per profile
+    for profile, data in comparison.items():
+        ahi = data.get("ahi_total") or 0
+        if ahi < 5:
+            data["severity"] = "Normal"
+        elif ahi < 15:
+            data["severity"] = "Mild"
+        elif ahi < 30:
+            data["severity"] = "Moderate"
+        else:
+            data["severity"] = "Severe"
+
+    # Save comparison JSON
+    import json, os
+    json_path = os.path.join(results_dir, "profile_comparison.json")
+    with open(json_path, "w") as f:
+        json.dump(comparison, f, indent=2, default=str)
+
+    return comparison

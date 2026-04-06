@@ -182,6 +182,13 @@ def analyze_spo2(
             "nrem_pct_below_90":  nrem_p90,
             "nrem_time_below_90": nrem_t90,
             "nrem_min_spo2":      nrem_min,
+            # v0.2.5: Low baseline warning for COPD/OHS overlap
+            "low_baseline_warning": baseline_spo2 < 88.0,
+            "low_baseline_note": (
+                "Baseline SpO₂ < 88%: consider COPD/OHS overlap. "
+                "The 3% desaturation criterion may undercount events; "
+                "absolute SpO₂ thresholds (T90, T80) are more informative."
+            ) if baseline_spo2 < 88.0 else None,
         }
         result["desaturations"] = desaturations[:200]
         # v0.8.12: 1-Hz timeseries for PDF overview plot

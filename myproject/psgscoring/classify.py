@@ -113,6 +113,7 @@ def classify_apnea_type(
     effort_baseline: float,
     sf: float,
     ecg_assessment: dict | None = None,
+    flattening_index: float | None = None,
 ) -> tuple[str, float, dict]:
     """
     Classify an apnea event as ``"obstructive"``, ``"central"``, or
@@ -139,6 +140,11 @@ def classify_apnea_type(
         If provided and ``reclassify_as_central`` is True, events that
         would otherwise be classified as obstructive (rules 4, 6) are
         reclassified as central.
+    flattening_index : float, optional
+        Mean inspiratory flattening index for the event (0–1).
+        >0.30 indicates flow limitation (supports obstructive);
+        <0.10 with low effort supports central classification.
+        Computed by ``breath.compute_flattening_index()``.
 
     Returns
     -------
@@ -184,10 +190,22 @@ def classify_apnea_type(
         "quarter_efforts":     [safe_r(q, 3) for q in quarter_efforts],
         "paradox_correlation": safe_r(paradox_corr,    3),
         "phase_angle_deg":     safe_r(phase_angle_deg, 1),
+        "flattening_index":    safe_r(flattening_index, 3),
     }
 
     is_paradox   = paradox_corr is not None and paradox_corr < -0.15
     has_raw_move = raw_var_ratio > 0.25
+
+    # v0.2.5: Flattening index modulates confidence
+    # High flattening (>0.30) = flow limitation = obstructive evidence
+    # Low flattening (<0.10) with low effort = supports central
+    _flat_obstr_boost = 0.0
+    _flat_central_boost = 0.0
+    if flattening_index is not None:
+        if flattening_index > 0.30:
+            _flat_obstr_boost = min(0.10, (flattening_index - 0.30) * 0.25)
+        elif flattening_index < 0.10 and effort_ratio < EFFORT_ABSENT_RATIO:
+            _flat_central_boost = min(0.10, (0.10 - flattening_index) * 0.5)
 
     # Helper to optionally replace rule-based confidence with LightGBM
     def _conf(rule_conf: float, rule_idx: int) -> float:
@@ -204,7 +222,7 @@ def classify_apnea_type(
 
     # ── Rule 0 (v0.8.11): Phase angle ≥45° during event ──────────────────
     if phase_angle_deg is not None and phase_angle_deg >= 45.0:
-        conf = min(0.97, 0.75 + (phase_angle_deg - 45) / 180 * 0.2)
+        conf = min(0.97, 0.75 + (phase_angle_deg - 45) / 180 * 0.2 + _flat_obstr_boost)
         detail["decision_reason"] = f"phase_angle={safe_r(phase_angle_deg,1)}deg"
         return "obstructive", safe_r(_conf(conf, 0), 2), detail
 
@@ -244,7 +262,7 @@ def classify_apnea_type(
         no_paradox and
         no_phase_signal
     ):
-        conf = min(0.90, 0.5 + (EFFORT_ABSENT_RATIO - effort_ratio) * 3)
+        conf = min(0.90, 0.5 + (EFFORT_ABSENT_RATIO - effort_ratio) * 3 + _flat_central_boost)
         detail["decision_reason"] = (
             f"truly_flat_var={safe_r(raw_var_ratio,3)}_effort={safe_r(effort_ratio,3)}"
         )
@@ -269,10 +287,11 @@ def classify_apnea_type(
             return "central", safe_r(_conf(conf, 5), 2), detail
 
     # ── Rule 6: Borderline default ────────────────────────────────────────
+    conf_6 = 0.40 + _flat_obstr_boost  # flattening can lift borderline confidence
     detail["decision_reason"] = (
         f"borderline_default_var={safe_r(raw_var_ratio,3)}_effort={safe_r(effort_ratio,3)}"
     )
-    return "obstructive", safe_r(_conf(0.40, 6), 2), detail
+    return "obstructive", safe_r(_conf(conf_6, 6), 2), detail
 
 
 # ---------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 """
-yasa_analysis.py — Uitgebreide slaapanalyse module voor YASAFlaskified v0.8.23
+yasa_analysis.py — Uitgebreide slaapanalyse module voor YASAFlaskified v0.8.25
 Compatibel met YASA 0.7.x (Hypnogram object) EN 0.6.x (numpy array).
 
 Fixes t.o.v. v7.1:
@@ -121,11 +121,39 @@ def _get_confidence(sls_obj) -> dict:
 def run_sleep_staging(raw: mne.io.BaseRaw,
                       eeg_ch: str,
                       eog_ch: str = None,
-                      emg_ch: str = None) -> dict:
+                      emg_ch: str = None,
+                      backend: str = "yasa") -> dict:
     """
-    Automatische slaapfase-indeling via YASA SleepStaging.
+    Automatische slaapfase-indeling via YASA SleepStaging of U-Sleep.
+
+    Parameters
+    ----------
+    backend : str
+        "yasa" (default) — YASA LightGBM staging
+        "usleep" — U-Sleep deep learning staging (requires usleep package)
+        "both" — run both and return comparison in result["staging_comparison"]
+
     Compatibel met YASA 0.6 en 0.7.
     """
+    if backend == "usleep":
+        return _run_usleep_staging(raw, eeg_ch, eog_ch)
+    elif backend == "both":
+        yasa_result = run_sleep_staging(raw, eeg_ch, eog_ch, emg_ch, backend="yasa")
+        try:
+            usleep_result = _run_usleep_staging(raw, eeg_ch, eog_ch)
+            if yasa_result["success"] and usleep_result["success"]:
+                from validation_metrics import compute_staging_metrics
+                comp = compute_staging_metrics(
+                    yasa_result["hypnogram"], usleep_result["hypnogram"])
+                yasa_result["staging_comparison"] = {
+                    "usleep_hypnogram": usleep_result["hypnogram"],
+                    "agreement": comp,
+                }
+        except Exception as e:
+            logger.warning("U-Sleep comparison failed: %s", e)
+            yasa_result["staging_comparison"] = {"error": str(e)}
+        return yasa_result
+    # Default: YASA
     result = {"success": False, "hypnogram": [], "confidence": {}, "error": None}
     try:
         raw_stag = raw.copy()
@@ -711,3 +739,70 @@ def run_full_analysis(raw: mne.io.BaseRaw,
 
     logger.info("✅ Alle analyses voltooid.")
     return output
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# v0.8.25: U-Sleep integration stub (Perslev et al., npj Digital Med 2021)
+# ═══════════════════════════════════════════════════════════════════════════
+
+def _run_usleep_staging(raw, eeg_ch: str, eog_ch: str = None) -> dict:
+    """Run U-Sleep staging as alternative/complement to YASA.
+
+    Requires: pip install u-sleep-api  (or local u-sleep model)
+    See: https://github.com/perslev/U-Sleep
+
+    This is a stub that provides the integration interface.
+    Full implementation requires either:
+      1. u-sleep-api package (cloud API)
+      2. Local U-Sleep model weights + tensorflow
+
+    Returns same dict format as run_sleep_staging() for interoperability.
+    """
+    result = {"success": False, "hypnogram": [], "confidence": {}, "error": None,
+              "backend": "usleep"}
+    try:
+        import usleep_api
+        logger.info("U-Sleep API package found, running staging...")
+
+        # Extract EEG and EOG data
+        eeg_data = raw.get_data(picks=[eeg_ch])[0]
+        sf = raw.info["sfreq"]
+
+        api = usleep_api.USleepAPI()
+        # U-Sleep expects: (n_channels, n_samples) at 128 Hz
+        # Resample if needed
+        if sf != 128:
+            import scipy.signal as sig
+            n_new = int(len(eeg_data) * 128 / sf)
+            eeg_data = sig.resample(eeg_data, n_new)
+
+        channels = [eeg_data]
+        if eog_ch and eog_ch in raw.ch_names:
+            eog_data = raw.get_data(picks=[eog_ch])[0]
+            if sf != 128:
+                eog_data = sig.resample(eog_data, n_new)
+            channels.append(eog_data)
+
+        import numpy as np
+        data = np.array(channels)
+        hypno = api.predict(data, sf=128)
+
+        # U-Sleep returns: 0=W, 1=N1, 2=N2, 3=N3, 4=REM
+        stage_map = {0: "W", 1: "N1", 2: "N2", 3: "N3", 4: "R"}
+        hypno_list = [stage_map.get(int(s), "W") for s in hypno]
+
+        result["hypnogram"] = hypno_list
+        result["n_epochs"] = len(hypno_list)
+        result["success"] = True
+
+    except ImportError:
+        result["error"] = (
+            "U-Sleep not installed. Install with: pip install u-sleep-api  "
+            "or download model weights from https://github.com/perslev/U-Sleep"
+        )
+        logger.warning("U-Sleep not available: %s", result["error"])
+    except Exception as e:
+        result["error"] = f"U-Sleep failed: {e}"
+        logger.error("U-Sleep staging failed: %s", e)
+
+    return result
