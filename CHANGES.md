@@ -4,6 +4,15 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 
 ---
 
+## [0.8.33] — April 2026
+
+### Fixed — FHIR export + PDF event plots
+- **FHIR: sleep stage values were minutes, not percentages** — N1/N2/N3/REM observations now correctly exported as % of TST (e.g., REM=140.5 min → 39.9%)
+- **PDF event plots: SpO2 label** — was literal HTML `SpO<sub>2</sub>` in matplotlib; now uses LaTeX `$SpO_2$`
+- **PDF event plots: artefact-resistant scaling** — replaced P1/P99 with median ± 4×MAD; prevents artefact spikes from hiding flow reductions
+- **PDF event plots: detection channel highlighted** — thicker line + ◀ marker on the channel where the event was actually detected (thermistor for apnea, nasal pressure for hypopnea); detection channel name shown in title
+- 47 tests passing, 619 i18n keys
+
 ## [0.8.31] — April 2026
 
 ### Fixed — PDF report bugs

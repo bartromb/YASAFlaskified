@@ -1,5 +1,5 @@
 """
-validation_metrics.py — YASAFlaskified v0.8.30
+validation_metrics.py — YASAFlaskified v0.8.33
 ============================================
 Berekent validatie-metrics voor AI vs manuele scoring.
 
@@ -371,7 +371,7 @@ def generate_confusion_matrix_plot(ai_stages, manual_stages, output_path,
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# v0.8.30: Event-level comparison (manual vs automated scoring)
+# v0.8.33: Event-level comparison (manual vs automated scoring)
 # ═══════════════════════════════════════════════════════════════════════════
 
 def compare_respiratory_events(

@@ -19,7 +19,7 @@ Usage:
     python generate_demo_edf.py --duration 60 --output demo_60min.edf
 
 Author:  Bart Rombaut, MD — Slaapkliniek AZORG
-Version: 0.8.30
+Version: 0.8.33
 """
 
 from __future__ import annotations

@@ -3,7 +3,7 @@
 **An open-source web platform for automated polysomnography (PSG) analysis.**
 
 [![License: BSD-3](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.8.31-green.svg)](CHANGES.md)
+[![Version](https://img.shields.io/badge/version-0.8.33-green.svg)](CHANGES.md)
 [![psgscoring](https://img.shields.io/badge/psgscoring-v0.2.5-green.svg)](https://github.com/bartromb/psgscoring)
 [![Tests](https://img.shields.io/badge/tests-47%20passed-brightgreen.svg)](myproject/psgscoring/tests/)
 [![Python](https://img.shields.io/badge/python-3.11-blue.svg)](requirements.txt)
@@ -109,9 +109,9 @@ The app is now running at `http://localhost:8071`.
 ### Upgrade
 
 ```bash
-scp YASAFlaskified_v0_8_31.zip user@yourserver:/tmp/ && \
+scp YASAFlaskified_v0_8_33.zip user@yourserver:/tmp/ && \
 ssh -t user@yourserver "sudo bash -c '
-  cd /tmp && rm -rf yasafix && unzip -o YASAFlaskified_v0_8_31.zip -d yasafix &&
+  cd /tmp && rm -rf yasafix && unzip -o YASAFlaskified_v0_8_33.zip -d yasafix &&
   rsync -av --no-group --no-owner \
     --exclude=.env --exclude=instance/ --exclude=uploads/ \
     --exclude=processed/ --exclude=logs/ --exclude=users.db \
@@ -123,7 +123,7 @@ ssh -t user@yourserver "sudo bash -c '
      /data/yasaflaskified/ &&
   cd /data/yasaflaskified && docker compose build --no-cache &&
   docker compose down && docker compose up -d &&
-  rm -rf /tmp/yasafix /tmp/YASAFlaskified_v0_8_31.zip'"
+  rm -rf /tmp/yasafix /tmp/YASAFlaskified_v0_8_33.zip'"
 ```
 
 ---
@@ -261,7 +261,7 @@ Six systematic bias mechanisms identified and corrected. Official AHI/OAHI uncha
 | EDF+ | `generate_edfplus.py` | Annotations for each scored event (pyedflib) |
 | FHIR R4 | `fhir_export.py` | Observation + DiagnosticReport + CarePlan |
 
-**PDF highlights (v0.8.31):**
+**PDF highlights (v0.8.33):**
 - Executive summary: AHI (large font, severity-colored), OAHI, CAI, SpO2, arousal index, PLMI
 - Sleep stage transition matrix (5×5)
 - HR/ECG section with bradycardia/tachycardia detection
@@ -354,6 +354,7 @@ YASAFlaskified/
 | 0.8.16 | RERA/RDI, REM/NREM AHI, positional AHI |
 | 0.8.17 | Signal quality, flattening-RERA, montage checks |
 | 0.8.19 | Study types, EDF header auto-fill, position legend |
+| **0.8.33** | **FHIR sleep stage fix (min→%), PDF event plots: detection channel marker, artefact-resistant scaling** |
 | **0.8.31** | **PDF fixes (SpO2 subscript, transition matrix, signal quality), 18 algorithm references in README, 619 i18n keys** |
 | **0.8.30** | **Clinical PDF layout: executive summary, stage transition matrix, HR/ECG section, spacing reduction** |
 | **0.8.29** | **47 tests (regression + Hypothesis property-based), flattening index wired to classification** |
@@ -374,7 +375,7 @@ See [CHANGES.md](CHANGES.md) for full changelog.
   title     = {{YASAFlaskified}: An open-source web platform for automated
                polysomnography analysis},
   year      = {2026},
-  version   = {0.8.31},
+  version   = {0.8.33},
   publisher = {GitHub},
   url       = {https://github.com/bartromb/YASAFlaskified}
 }

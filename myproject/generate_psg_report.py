@@ -13,6 +13,7 @@ Gebruik:
     generate_psg_report(results, pneumo, patient_info, output_path)
 """
 
+from version import __version__ as _APP_VERSION
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm, mm
 from reportlab.lib import colors
@@ -1097,7 +1098,7 @@ def generate_psg_report(
         canvas.drawRightString(PAGE_W - MARGIN, 0.9*cm, f"Pagina {doc.page}")
         # Tweede regel: versie-info (lager, geen overlap)
         canvas.drawString(MARGIN, 0.55*cm,
-            "YASAFlaskified v0.8.30 | AASM 2.6 | www.slaapkliniek.be | \u00a9 Bart Rombaut")
+            f"YASAFlaskified v{_APP_VERSION} | AASM 2.6 | www.slaapkliniek.be | \u00a9 Bart Rombaut")
         canvas.restoreState()
 
     doc.build(story, onFirstPage=make_footer, onLaterPages=make_footer)

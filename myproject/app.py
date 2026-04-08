@@ -628,6 +628,7 @@ def inject_i18n():
         "current_lang": lang,
         "SUPPORTED_LANGS": SUPPORTED_LANGS,
         "current_site": _site,
+        "APP_VERSION":  APP_VERSION,
     }
 
 
@@ -1516,8 +1517,33 @@ def channel_select(job_id):
         if edf_pat.get("name"):
             parts = edf_pat["name"].split()
             if len(parts) >= 2:
-                edf_lastname = parts[0]
-                edf_firstname = " ".join(parts[1:])
+                # v0.8.33: Handle Belgian/Dutch compound surnames
+                # (Van, De, Van de, Van den, Van der, etc.)
+                _PREFIXES = {
+                    "van", "de", "den", "der", "het", "ten", "ter",
+                    "le", "la", "du", "des", "von", "zu",
+                }
+                _COMPOUND = {
+                    ("van", "de"), ("van", "den"), ("van", "der"),
+                    ("van", "het"), ("de", "la"), ("von", "der"),
+                }
+                prefix_len = 0
+                lp = [p.lower() for p in parts]
+                # Check two-word prefix first (Van de, Van den, etc.)
+                if len(lp) >= 3 and (lp[0], lp[1]) in _COMPOUND:
+                    prefix_len = 2
+                # Then single-word prefix (Van, De, etc.)
+                elif len(lp) >= 3 and lp[0] in _PREFIXES:
+                    prefix_len = 1
+
+                if prefix_len > 0 and len(parts) > prefix_len + 1:
+                    # Surname = prefix + next word(s) until we hit a clear firstname
+                    # Heuristic: prefix + 1 word = surname, rest = firstname
+                    edf_lastname = " ".join(parts[:prefix_len + 1])
+                    edf_firstname = " ".join(parts[prefix_len + 1:])
+                else:
+                    edf_lastname = parts[0]
+                    edf_firstname = " ".join(parts[1:])
             else:
                 edf_lastname = edf_pat["name"]
 
@@ -2710,7 +2736,7 @@ def health():
         "status":    "ok" if redis_ok else "degraded",
         "redis":     redis_ok,
         "timestamp": datetime.utcnow().isoformat(),
-        "version":   "0.8.30",
+        "version":   APP_VERSION,
     }), 200 if redis_ok else 503
 
 
@@ -2866,5 +2892,5 @@ if __name__ == "__main__":
     initialize_database()
     port  = int(os.environ.get("PORT", 5000))
     debug = _cfg("DEBUG", "0") == "1"
-    app.logger.info("YASAFlaskified v0.8.30 starten op poort %d (debug=%s)", port, debug)
+    app.logger.info(f"YASAFlaskified v{APP_VERSION} starten op poort %d (debug=%s)", port, debug)
     app.run(host="0.0.0.0", port=port, debug=debug, use_reloader=debug)

@@ -1,10 +1,11 @@
 """
-generate_pdf_report.py — YASAFlaskified v0.8.30
+generate_pdf_report.py — YASAFlaskified v0.8.33
 Site-config: via config.json["site"] of site_config parameter.
 """
 import json, os, io
 from datetime import datetime, date
 from i18n import t
+from version import __version__ as _APP_VERSION
 
 import matplotlib
 matplotlib.use("Agg")
@@ -390,7 +391,7 @@ def _callbacks(site, lang="nl"):
         canvas.line(ML,MB-0.2*cm,W_A4-MR,MB-0.2*cm)
         canvas.setFont("Helvetica",6.5); canvas.setFillColor(GR)
         canvas.drawString(ML,MB-0.45*cm,
-            "YASAFlaskified v0.8.30  |  AASM 2.6  |  www.slaapkliniek.be  |  \u00a9 Bart Rombaut")
+            f"YASAFlaskified v{_APP_VERSION}  |  AASM 2.6  |  www.slaapkliniek.be  |  \u00a9 Bart Rombaut")
         canvas.drawRightString(W_A4-MR,MB-0.45*cm,f"{t('pdf_page',lang)} {doc.page}")
         canvas.restoreState()
     return draw,draw
@@ -428,7 +429,7 @@ _EPOCH_CH_ORDER = [
     ("flow_thermistor", "Thermistor",   "#1abc9c"),
     ("thorax",          "Thorax",       "#e67e22"),
     ("abdomen",         "Abdomen",      "#d35400"),
-    ("spo2",            "SpO<sub>2</sub>",         "#e74c3c"),
+    ("spo2",            "$SpO_2$",      "#e74c3c"),
     ("snore",           "Snore",        "#8e44ad"),
 ]
 
@@ -481,7 +482,8 @@ def _select_example_events(events, n=3):
 
 
 def _plot_epoch_example(edf_path, channel_map, event, hypno=None,
-                        pre_s=15, post_s=30, wc=16.2, hc_per_ch=1.2):
+                        pre_s=15, post_s=30, wc=16.2, hc_per_ch=1.2,
+                        all_events=None):
     """Plot een enkel epoch-voorbeeld: gestapelde pneumokanalen rond een event.
 
     Parameters
@@ -491,6 +493,7 @@ def _plot_epoch_example(edf_path, channel_map, event, hypno=None,
     event : dict         Event met onset_s, duration_s, type, etc.
     hypno : list         Hypnogram (optioneel, voor stage label)
     pre_s, post_s : float  Seconden vóór/na event
+    all_events : list    Alle events (optioneel, voor markering van andere events in venster)
     """
     import mne
     mne.set_log_level("ERROR")
@@ -538,6 +541,37 @@ def _plot_epoch_example(edf_path, channel_map, event, hypno=None,
     s_end   = min(int(t_end * sf), raw.n_times)
     times   = np.arange(s_start, s_end) / sf  # in seconds
 
+    # Determine detection channel for this event type
+    _det_ch_type = None
+    ev_type_raw = event.get("type", "").lower()
+    if "apnea" in ev_type_raw or ev_type_raw in ("obstructive", "central", "mixed"):
+        _det_ch_type = "flow"  # thermistor for apneas
+        if "flow" not in [c[0] for c in ch_to_plot]:
+            _det_ch_type = "flow_thermistor"
+    elif "hypopnea" in ev_type_raw:
+        _det_ch_type = "flow_pressure"  # nasal pressure for hypopneas
+        if "flow_pressure" not in [c[0] for c in ch_to_plot]:
+            _det_ch_type = "flow"
+
+    # ── Blue marks: other scored events in window (v0.8.33) ─────
+    if all_events:
+        for oe in all_events:
+            oe_onset = float(oe.get("onset_s", -999))
+            oe_dur = float(oe.get("duration_s", 0))
+            oe_end = oe_onset + oe_dur
+            if oe_onset < t_start + 2 or oe_end > t_end - 2:
+                continue
+            if abs(oe_onset - onset) < 1.0:
+                continue
+            oe_type = oe.get("type", "").lower()
+            if "fri" in oe_type or "rejected" in oe_type:
+                continue
+            for ax_j in axes:
+                ax_j.axvspan(oe_onset, oe_end, color="#3182CE", alpha=0.10, zorder=0)
+                ax_j.axvline(oe_onset, color="#3182CE", linewidth=0.4, alpha=0.4)
+                ax_j.axvline(oe_end, color="#3182CE", linewidth=0.4, alpha=0.4)
+
+    # ── Per-channel data + red primary event marking ──────────
     for i, (ch_type, ch_name, label, color) in enumerate(ch_to_plot):
         ax = axes[i]
         ax.set_facecolor("white")
@@ -546,27 +580,39 @@ def _plot_epoch_example(edf_path, channel_map, event, hypno=None,
         except Exception:
             data = np.zeros(s_end - s_start)
 
+        # Detection channel: thicker line
+        lw = 0.9 if ch_type == _det_ch_type else 0.5
+
         # SpO2: vaste y-as
         if ch_type == "spo2":
-            ax.plot(times, data, color=color, linewidth=0.6)
+            ax.plot(times, data, color=color, linewidth=lw)
             valid = data[(data >= 50) & (data <= 100)]
             if len(valid) > 0:
                 ax.set_ylim(max(50, np.min(valid) - 3), min(102, np.max(valid) + 2))
             ax.axhline(90, color="#e74c3c", linewidth=0.4, linestyle="--", alpha=0.5)
         else:
-            ax.plot(times, data, color=color, linewidth=0.5)
-            # Auto-scale met clipping op P1/P99
+            ax.plot(times, data, color=color, linewidth=lw)
+            # v0.8.33: Robust scaling with median ± 4*MAD (artefact-resistant)
             if len(data) > 10:
-                p1, p99 = np.percentile(data, [1, 99])
-                margin = max((p99 - p1) * 0.1, 1)
-                ax.set_ylim(p1 - margin, p99 + margin)
+                med = np.median(data)
+                mad = np.median(np.abs(data - med))
+                if mad > 0:
+                    lo = med - 4 * mad
+                    hi = med + 4 * mad
+                else:
+                    p1, p99 = np.percentile(data, [1, 99])
+                    lo, hi = p1, p99
+                margin = max((hi - lo) * 0.05, 1)
+                ax.set_ylim(lo - margin, hi + margin)
 
-        # Event markering (grijze band)
+        # Primary event (red)
         ax.axvspan(onset, onset + dur, color="#e74c3c", alpha=0.12, zorder=0)
         ax.axvline(onset, color="#e74c3c", linewidth=0.5, alpha=0.6)
         ax.axvline(onset + dur, color="#e74c3c", linewidth=0.5, alpha=0.6)
 
-        ax.set_ylabel(label, fontsize=5.5, color="#4a5568", rotation=0,
+        # Detection channel marker in ylabel
+        det_marker = " ◀" if ch_type == _det_ch_type else ""
+        ax.set_ylabel(f"{label}{det_marker}", fontsize=5.5, color="#4a5568", rotation=0,
                       labelpad=30, ha="right", va="center")
         ax.tick_params(axis="y", labelsize=4.5, length=2, width=0.3)
         ax.tick_params(axis="x", labelsize=5, length=2, width=0.3)
@@ -597,7 +643,15 @@ def _plot_epoch_example(edf_path, channel_map, event, hypno=None,
         if 0 <= ep_idx < len(hypno):
             stage = f" [{hypno[ep_idx]}]"
 
-    title = f"{ev_type} — {ev_dur}{ev_desat}{ev_conf}{stage} — t={onset_hm}"
+    # Detection channel label for title
+    _det_label = ""
+    if _det_ch_type:
+        for ct, cn, lb, _ in ch_to_plot:
+            if ct == _det_ch_type:
+                _det_label = f" [{lb}]"
+                break
+
+    title = f"{ev_type}{_det_label} — {ev_dur}{ev_desat}{ev_conf}{stage} — t={onset_hm}"
     fig.suptitle(title, fontsize=6.5, color="#1a3a5c", fontweight="bold", y=0.99)
 
     plt.tight_layout(pad=0.3)
@@ -643,7 +697,8 @@ def _build_epoch_examples(results, wc=16.2):
     for ev in picks:
         try:
             img = _plot_epoch_example(edf_path, ch_map, ev, hypno=hypno,
-                                       pre_s=15, post_s=30, wc=wc)
+                                       pre_s=15, post_s=30, wc=wc,
+                                       all_events=events)
             if img:
                 images.append((ev, img))
         except Exception:
@@ -967,7 +1022,7 @@ def generate_pdf_report(results:dict, output_path:str,
         story.append(_hdr(t("rpt_sec1", lang))); sp(0.15)
         story.append(KeepTogether([_aasm_tbl(stats, lang=lang)])); sp(0.15)
 
-        # ── 1b. Stage transition matrix (v0.8.30) ────────────────────
+        # ── 1b. Stage transition matrix (v0.8.33) ────────────────────
         if timeline and len(timeline) > 10:
             _stages_order = ["W", "N1", "N2", "N3", "R"]
             _trans = {s1: {s2: 0 for s2 in _stages_order} for s1 in _stages_order}
@@ -1586,7 +1641,7 @@ def generate_pdf_report(results:dict, output_path:str,
     except NameError:
         asum = pneumo.get("arousal", {}).get("summary", {})
 
-    # ── 10c. HARTRITME / ECG (v0.8.30) ──────────────────────────
+    # ── 10c. HARTRITME / ECG (v0.8.33) ──────────────────────────
     _hr = pneumo.get("heart_rate", {})
     _hr_sum = _hr.get("summary", {})
     if _hr.get("success") and _hr_sum:
@@ -1668,7 +1723,7 @@ def generate_pdf_report(results:dict, output_path:str,
             styles["B"]))
         sp(0.1)
 
-    disc_text = t("pdf_disc_auto", lang) + " "
+    disc_text = t("pdf_disc_auto", lang).format(version=_APP_VERSION) + " "
     if verified_by and verified_role:
         disc_text += t("pdf_disc_verified", lang).format(role=role_label, name=verified_by)
     else:

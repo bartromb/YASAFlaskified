@@ -1,5 +1,5 @@
 """
-fhir_export.py — YASAFlaskified v0.8.30
+fhir_export.py — YASAFlaskified v0.8.33
 ===================================
 Exporteert analyseresultaten als FHIR R4 DiagnosticReport (JSON).
 Conform: https://www.hl7.org/fhir/diagnosticreport.html
@@ -9,6 +9,7 @@ Gebruik:
     fhir_json = results_to_fhir(results, job_id, site_config)
 """
 import json
+from version import __version__ as _APP_VERSION
 from datetime import datetime, timezone
 
 
@@ -69,10 +70,12 @@ def results_to_fhir(results: dict, job_id: str,
     _obs("93830-8", "Sleep efficiency",           stats.get("SE"),    "%")
     _obs("93828-2", "Sleep onset latency",        stats.get("SOL"),   "min")
     _obs("93829-0", "Wake after sleep onset",     stats.get("WASO"),  "min")
-    _obs("93833-2", "N1 sleep %",                 stats.get("N1"),    "%")
-    _obs("93834-0", "N2 sleep %",                 stats.get("N2"),    "%")
-    _obs("93835-7", "N3 sleep %",                 stats.get("N3"),    "%")
-    _obs("93836-5", "REM sleep %",                stats.get("REM"),   "%")
+    # v0.8.33: convert stage durations (minutes) to % of TST
+    _tst = _to_float(stats.get("TST")) or 1
+    _obs("93833-2", "N1 sleep %",   round((_to_float(stats.get("N1"))  or 0) / _tst * 100, 1), "%")
+    _obs("93834-0", "N2 sleep %",   round((_to_float(stats.get("N2"))  or 0) / _tst * 100, 1), "%")
+    _obs("93835-7", "N3 sleep %",   round((_to_float(stats.get("N3"))  or 0) / _tst * 100, 1), "%")
+    _obs("93836-5", "REM sleep %",  round((_to_float(stats.get("REM")) or 0) / _tst * 100, 1), "%")
 
     # Respiratoir
     ahi = rsum.get("ahi_total")
@@ -118,7 +121,7 @@ def results_to_fhir(results: dict, job_id: str,
     treatment_text = " ".join(tx_parts) if tx_parts else ""
 
     conclusion = (
-        f"Automated PSG analysis (YASAFlaskified v0.8.30, AASM 2.6). "
+        f"Automated PSG analysis (YASAFlaskified v{_APP_VERSION}, AASM 2.6). "
         f"AHI = {_fmt_val(ahi)} /h ({severity}). "
         f"TST = {_fmt_val(stats.get('TST'))} min, "
         f"SE = {_fmt_val(stats.get('SE'))} %. "
