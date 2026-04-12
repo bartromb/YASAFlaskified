@@ -40,40 +40,43 @@ CROSS_CONTAM_WINDOW_S  = 15.0   # v0.8.14: was 30; flag only, not blocker
 # ---------------------------------------------------------------------------
 SCORING_PROFILES: dict[str, dict] = {
     "strict": {
-        "label":                "Strict (machine)",
+        "label":                "Strict (research)",
         "HYPOPNEA_THRESHOLD":   0.70,   # ≥30% reduction (AASM exact)
         "DESATURATION_DROP_PCT": 3.0,
         "POST_EVENT_WINDOW_S":  30,     # conservative window
         "HYPOPNEA_SMOOTH_S":    0.0,    # no smoothing
         "CROSS_CONTAM_WINDOW_S": 15.0,
         "USE_PEAK_DETECTION":   False,  # envelope only
-        "USE_BREATH_SNAP":      False,  # v0.8.30: off by default
-        "HYPOPNEA_MAX_DUR_S":   60.0,   # v0.8.22
-        "APNEA_MAX_DUR_S":      90.0,   # v0.8.22
+        "USE_BREATH_SNAP":      False,
+        "PEAK_MIN_CONSECUTIVE_BREATHS": 3,  # v0.2.8
+        "HYPOPNEA_MAX_DUR_S":   60.0,
+        "APNEA_MAX_DUR_S":      90.0,
     },
     "standard": {
         "label":                "Standard (AASM 2.6)",
         "HYPOPNEA_THRESHOLD":   0.70,
         "DESATURATION_DROP_PCT": 3.0,
         "POST_EVENT_WINDOW_S":  45,
-        "HYPOPNEA_SMOOTH_S":    3.0,
+        "HYPOPNEA_SMOOTH_S":    0.0,    # v0.2.8: removed (was 3.0, caused +54 false hyp)
         "CROSS_CONTAM_WINDOW_S": 15.0,
         "USE_PEAK_DETECTION":   True,   # peak + envelope
-        "USE_BREATH_SNAP":      False,  # v0.8.30: off in standard
-        "HYPOPNEA_MAX_DUR_S":   60.0,   # v0.8.22
-        "APNEA_MAX_DUR_S":      90.0,   # v0.8.22
+        "USE_BREATH_SNAP":      False,
+        "PEAK_MIN_CONSECUTIVE_BREATHS": 3,  # v0.2.8
+        "HYPOPNEA_MAX_DUR_S":   60.0,
+        "APNEA_MAX_DUR_S":      90.0,
     },
     "sensitive": {
-        "label":                "Sensitive (RPSGT-like)",
+        "label":                "Sensitive (UARS/screening)",
         "HYPOPNEA_THRESHOLD":   0.75,   # ≥25% reduction
         "DESATURATION_DROP_PCT": 3.0,
         "POST_EVENT_WINDOW_S":  45,
         "HYPOPNEA_SMOOTH_S":    5.0,    # more smoothing
         "CROSS_CONTAM_WINDOW_S": 0.0,   # no cross-contam check
         "USE_PEAK_DETECTION":   True,
-        "USE_BREATH_SNAP":      True,   # v0.8.30: only in sensitive
-        "HYPOPNEA_MAX_DUR_S":   90.0,   # v0.8.22: meer tolerant
-        "APNEA_MAX_DUR_S":      120.0,  # v0.8.22
+        "USE_BREATH_SNAP":      True,
+        "PEAK_MIN_CONSECUTIVE_BREATHS": 2,  # v0.2.8: lower for UARS sensitivity
+        "HYPOPNEA_MAX_DUR_S":   90.0,
+        "APNEA_MAX_DUR_S":      120.0,
     },
 }
 

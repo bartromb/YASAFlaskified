@@ -120,9 +120,23 @@ def results_to_fhir(results: dict, job_id: str,
 
     treatment_text = " ".join(tx_parts) if tx_parts else ""
 
+    # v0.2.8: AHI confidence interval
+    _interval = pneumo.get("ahi_interval", {})
+    _intv_lo = _interval.get("interval", [None, None])[0]
+    _intv_hi = _interval.get("interval", [None, None])[1]
+    _robust = _interval.get("robustness_grade", "")
+    _robust_label = _interval.get("robustness_label", "")
+
     conclusion = (
         f"Automated PSG analysis (YASAFlaskified v{_APP_VERSION}, AASM 2.6). "
         f"AHI = {_fmt_val(ahi)} /h ({severity}). "
+    )
+    if _intv_lo is not None and _intv_hi is not None:
+        conclusion += (
+            f"AHI interval [{_intv_lo:.1f} – {_intv_hi:.1f}] /h "
+            f"(robustness: {_robust}). "
+        )
+    conclusion += (
         f"TST = {_fmt_val(stats.get('TST'))} min, "
         f"SE = {_fmt_val(stats.get('SE'))} %. "
         f"Patient: {patient['name'][0]['family']}."

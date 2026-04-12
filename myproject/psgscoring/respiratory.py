@@ -414,17 +414,33 @@ def detect_respiratory_events(
         _smooth_win = max(1, int(_SMOOTH_S * sf_hy)) if _SMOOTH_S > 0 else 1
 
         # Peak-based mask from breath-by-breath analysis
+        # v0.2.8: require MIN_CONSEC consecutive reduced breaths to avoid
+        # scoring isolated low breaths as hypopnea (human scorers see patterns)
         peak_mask_hy = np.zeros(len(hypop_norm), dtype=bool)
+        _MIN_CONSEC = sp.get("PEAK_MIN_CONSECUTIVE_BREATHS", 3)
         if _USE_PEAK and breaths and len(breaths) > 10:
             ratios = compute_breath_amplitudes(breaths, sf_hy)
-            for bi, br in enumerate(breaths):
-                if ratios[bi] < _HYPOP_THRESH and ratios[bi] >= APNEA_THRESHOLD:
-                    s_idx = int(br["onset_s"] * sf_hy)
-                    e_idx = int((br["onset_s"] + br["duration_s"]) * sf_hy)
-                    peak_mask_hy[max(0,s_idx):min(len(peak_mask_hy),e_idx)] = True
+            reduced = [(ratios[i] < _HYPOP_THRESH and ratios[i] >= APNEA_THRESHOLD)
+                       for i in range(len(breaths))]
+            i = 0
+            while i < len(breaths):
+                if not reduced[i]:
+                    i += 1
+                    continue
+                # Count consecutive reduced breaths from position i
+                j = i
+                while j < len(breaths) and reduced[j]:
+                    j += 1
+                if (j - i) >= _MIN_CONSEC:
+                    for k in range(i, j):
+                        br = breaths[k]
+                        s_idx = int(br["onset_s"] * sf_hy)
+                        e_idx = int((br["onset_s"] + br["duration_s"]) * sf_hy)
+                        peak_mask_hy[max(0, s_idx):min(len(peak_mask_hy), e_idx)] = True
+                i = j
             n_peak = int(peak_mask_hy.sum())
-            logger.info("[pneumo] Peak-based hypopnea mask: %d samples (%.1f s)",
-                        n_peak, n_peak / sf_hy)
+            logger.info("[pneumo] Peak-based hypopnea mask (min %d consec): %d samples (%.1f s)",
+                        _MIN_CONSEC, n_peak, n_peak / sf_hy)
 
         # Envelope-based mask (smoothed, originele methode)
         hypop_norm_smooth = uniform_filter1d(hypop_norm, _smooth_win)
@@ -476,19 +492,32 @@ def detect_respiratory_events(
         )
         # v0.8.14: peak + envelope merge voor gecorrigeerde pass
         # Peak-mask herberekenen met gecorrigeerde basislijn
+        # v0.2.8: same consecutive breath requirement as initial pass
         peak_mask_corrected = np.zeros(len(hypop_norm_corrected), dtype=bool)
         if _USE_PEAK and breaths and len(breaths) > 10:
             amps = np.array([b["amplitude"] for b in breaths])
-            # Herbereken ratios met gecorrigeerde basislijn per ademhaling
+            reduced_c = []
             for bi, br in enumerate(breaths):
                 mid_idx = int((br["onset_s"] + br["duration_s"]/2) * sf_hy)
                 mid_idx = min(mid_idx, len(hypop_baseline_corrected) - 1)
                 local_bl = float(hypop_baseline_corrected[max(0,mid_idx)])
                 ratio_c = amps[bi] / local_bl if local_bl > 1e-9 else 1.0
-                if ratio_c < _HYPOP_THRESH and ratio_c >= APNEA_THRESHOLD:
-                    s_idx = int(br["onset_s"] * sf_hy)
-                    e_idx = int((br["onset_s"] + br["duration_s"]) * sf_hy)
-                    peak_mask_corrected[max(0,s_idx):min(len(peak_mask_corrected),e_idx)] = True
+                reduced_c.append(ratio_c < _HYPOP_THRESH and ratio_c >= APNEA_THRESHOLD)
+            i = 0
+            while i < len(breaths):
+                if not reduced_c[i]:
+                    i += 1
+                    continue
+                j = i
+                while j < len(breaths) and reduced_c[j]:
+                    j += 1
+                if (j - i) >= _MIN_CONSEC:
+                    for k in range(i, j):
+                        br = breaths[k]
+                        s_idx = int(br["onset_s"] * sf_hy)
+                        e_idx = int((br["onset_s"] + br["duration_s"]) * sf_hy)
+                        peak_mask_corrected[max(0,s_idx):min(len(peak_mask_corrected),e_idx)] = True
+                i = j
         hypopnea_raw_corrected = peak_mask_corrected | envelope_mask_corrected
 
         # ── Detect hypopneas (met gecorrigeerde basislijn + Fix 2 SpO₂) ───
@@ -509,6 +538,41 @@ def detect_respiratory_events(
             breaths=breaths,
         )
         events = new_events
+
+        # v0.2.8: Breath-amplitude stability filter
+        # Bij stabiele ademhaling (lage CV van per-breath amplitudes)
+        # worden hypopneeën afgewezen die normale variatie vertegenwoordigen.
+        # Dit lost het over-counting probleem op bij normale patiënten (SN2, SN4).
+        if breaths and len(breaths) > 20:
+            breath_amps = np.array([b["amplitude"] for b in breaths])
+            breath_onsets = np.array([b["onset_s"] for b in breaths])
+            n_stable_rejected = 0
+            stable_events = []
+            for ev in events:
+                if ev.get("type") != "hypopnea":
+                    stable_events.append(ev)
+                    continue
+                # Vind ademhalingen in ±120s venster rond het event
+                ev_mid = ev["onset_s"] + ev["duration_s"] / 2
+                win_mask = (breath_onsets >= ev_mid - 120) & (breath_onsets <= ev_mid + 120)
+                local_amps = breath_amps[win_mask]
+                if len(local_amps) >= 10:
+                    local_cv = float(np.std(local_amps) / np.mean(local_amps)) if np.mean(local_amps) > 1e-9 else 1.0
+                    if local_cv < 0.45:
+                        # Stabiele ademhaling: dit is waarschijnlijk normale variatie
+                        n_stable_rejected += 1
+                        rejected.append({
+                            "onset_s": ev["onset_s"],
+                            "duration_s": ev["duration_s"],
+                            "reject_reason": f"stable_breathing_cv_{local_cv:.2f}<0.45",
+                        })
+                        continue
+                stable_events.append(ev)
+            events = stable_events
+            if n_stable_rejected:
+                logger.info("v0.2.8: %d hypopneeën afgewezen door stabiele-ademhaling filter "
+                            "(breath-amplitude CV < 0.45)", n_stable_rejected)
+            result["n_stable_breathing_rejected"] = n_stable_rejected
 
         # v0.8.22: log lokale basislijn-rejecties
         n_local_rejected = sum(1 for r in rejected if "local_reduction" in str(r.get("reject_reason","")))
@@ -1169,13 +1233,14 @@ def _validate_local_reduction(
     min_reduction_pct: float = 20.0,
     pre_win_s: float = 30.0,
 ) -> tuple[bool, float]:
-    """v0.8.22: Valideer dat een event een echte flow-reductie toont t.o.v.
-    de directe pre-event ademhaling (zoals een menselijke scorer doet).
+    """v0.8.22/v0.2.8: Valideer dat een event een echte flow-reductie toont
+    t.o.v. de directe pre-event ademhaling.
 
-    Vergelijkt de gemiddelde flow-envelope tijdens het event met de gemiddelde
-    flow-envelope in een venster vlak vóór het event. Als het verschil
-    < min_reduction_pct is, is de "reductie" een artefact van een opgeblazen
-    rollende basislijn (bv. door post-apnea recovery hyperpnea).
+    v0.2.8 toevoeging: stabiliteits-bewuste drempel.
+    Bij stabiele ademhaling (lage CV in het omringende venster) wordt de
+    minimale reductie-eis verhoogd van 20% naar 30%. Dit voorkomt dat
+    normale ademhalingsvariatie als hypopneu gescoord wordt bij patiënten
+    zonder significante OSA — precies wat menselijke scorers intuïtief doen.
 
     Parameters
     ----------
@@ -1209,6 +1274,23 @@ def _validate_local_reduction(
         return True, 100.0   # pre-event ook plat → niet afwijzen
 
     local_reduction = (1.0 - event_mean / pre_mean) * 100.0
+
+    # v0.2.8: Stabiliteits-bewuste drempel
+    # Bij stabiele ademhaling (lage CV) is de basislijn-variatie de oorzaak
+    # van schijnbare reducties. Verhoog de drempel om valse positieven te voorkomen.
+    # Gebruik een breder venster (120s) voor stabiliteitsbeoordeling.
+    stability_win = int(120 * sf)
+    stab_start = max(0, event_start - stability_win)
+    stab_end = min(len(env), event_end + stability_win)
+    stab_seg = env[stab_start:stab_end]
+
+    if len(stab_seg) > int(10 * sf) and np.mean(stab_seg) > 1e-9:
+        local_cv = float(np.std(stab_seg) / np.mean(stab_seg))
+        # Stabiele ademhaling: CV < 0.30 → verhoog drempel naar 30%
+        # Instabiele ademhaling: CV ≥ 0.30 → standaard drempel (20%)
+        if local_cv < 0.30:
+            min_reduction_pct = max(min_reduction_pct, 30.0)
+
     return local_reduction >= min_reduction_pct, safe_r(local_reduction)
 
 

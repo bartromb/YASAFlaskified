@@ -157,6 +157,89 @@ def run_pneumo_analysis(
         }
     output["respiratory"] = resp
 
+    # ── Step 1a (v0.2.8): AHI Confidence Interval ─────────────────────────
+    # Run all 3 profiles and compute [strict–sensitive] interval + robustness
+    logger.info("[pneumo 1a/11] AHI confidence interval (3 profiles)...")
+    try:
+        _all_profiles = ["strict", "standard", "sensitive"]
+        _profile_results = {}
+        for _pname in _all_profiles:
+            if _pname == scoring_profile:
+                # Reuse primary result
+                _profile_results[_pname] = resp.get("summary", {})
+            else:
+                _alt_profile = SCORING_PROFILES.get(_pname, {})
+                _alt_resp = detect_respiratory_events(
+                    flow_data    = apnea_flow,
+                    hypop_flow   = hypop_flow,
+                    sf_hypop     = sf_hypop,
+                    thorax_data  = thorax_data,
+                    abdomen_data = abdomen_data,
+                    spo2_data    = spo2_data,
+                    sf_flow      = sf_apnea,
+                    sf_spo2      = sf_spo2 or sf_flow or 1.0,
+                    hypno        = hypno,
+                    artifact_epochs = artifact_epochs,
+                    pos_data     = pos_data,
+                    sf_pos       = sf_pos,
+                    scoring_profile = _alt_profile,
+                    ecg_data     = ecg_data_resp,
+                    sf_ecg       = sf_ecg_resp,
+                )
+                _profile_results[_pname] = _alt_resp.get("summary", {})
+
+        def _severity(ahi):
+            if ahi < 5: return "normal"
+            if ahi < 15: return "mild"
+            if ahi < 30: return "moderate"
+            return "severe"
+
+        _ahi_strict    = _profile_results.get("strict", {}).get("ahi_total", 0)
+        _ahi_standard  = _profile_results.get("standard", {}).get("ahi_total", 0)
+        _ahi_sensitive = _profile_results.get("sensitive", {}).get("ahi_total", 0)
+
+        _sev_strict    = _severity(_ahi_strict)
+        _sev_standard  = _severity(_ahi_standard)
+        _sev_sensitive = _severity(_ahi_sensitive)
+
+        _sevs = [_sev_strict, _sev_standard, _sev_sensitive]
+        if _sevs[0] == _sevs[1] == _sevs[2]:
+            _robustness = "A"
+            _robustness_label = "Robust — all profiles concordant"
+        elif _sevs.count(max(set(_sevs), key=_sevs.count)) >= 2:
+            _robustness = "B"
+            _robustness_label = "Probable — 2/3 profiles concordant"
+        else:
+            _robustness = "C"
+            _robustness_label = "Uncertain — profiles discordant, manual review recommended"
+
+        _oahi_strict    = _profile_results.get("strict", {}).get("oahi", _ahi_strict)
+        _oahi_standard  = _profile_results.get("standard", {}).get("oahi", _ahi_standard)
+        _oahi_sensitive = _profile_results.get("sensitive", {}).get("oahi", _ahi_sensitive)
+
+        output["ahi_interval"] = {
+            "strict":    {"ahi": round(_ahi_strict, 1),    "oahi": round(_oahi_strict, 1),    "severity": _sev_strict},
+            "standard":  {"ahi": round(_ahi_standard, 1),  "oahi": round(_oahi_standard, 1),  "severity": _sev_standard},
+            "sensitive": {"ahi": round(_ahi_sensitive, 1), "oahi": round(_oahi_sensitive, 1), "severity": _sev_sensitive},
+            "interval":  [round(min(_ahi_strict, _ahi_standard, _ahi_sensitive), 1),
+                          round(max(_ahi_strict, _ahi_standard, _ahi_sensitive), 1)],
+            "robustness_grade": _robustness,
+            "robustness_label": _robustness_label,
+            "primary_profile":  scoring_profile,
+        }
+        # Backward compat: populate profile_comparison for PDF report
+        output["respiratory"]["profile_comparison"] = {
+            "strict":    {"oahi": round(_oahi_strict, 1)},
+            "standard":  {"oahi": round(_oahi_standard, 1)},
+            "sensitive": {"oahi": round(_oahi_sensitive, 1)},
+        }
+        logger.info("[pneumo] AHI interval: [%.1f – %.1f] (%s → %s → %s), robustness: %s",
+                     _ahi_strict, _ahi_sensitive, _sev_strict, _sev_standard,
+                     _sev_sensitive, _robustness)
+    except Exception as e:
+        logger.warning("AHI interval computation failed: %s", e)
+        output["ahi_interval"] = {"error": str(e)}
+
     # ── Step 1b (v0.8.16): Signal quality assessment ─────────────────────
     logger.info("[pneumo 1b/11] Signal quality assessment...")
     try:

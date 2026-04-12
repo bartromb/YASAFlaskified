@@ -1558,6 +1558,27 @@ def generate_pdf_report(results:dict, output_path:str,
         story.append(_prof_tbl)
         sp(0.12)
 
+        # v0.2.8: AHI Confidence Interval + Robustness Score
+        _ahi_intv = pneumo.get("ahi_interval", {})
+        _intv = _ahi_intv.get("interval")
+        _grade = _ahi_intv.get("robustness_grade", "")
+        if _intv and _grade:
+            _grade_colors = {"A": "#27ae60", "B": "#f39c12", "C": "#e74c3c"}
+            _gcol = _grade_colors.get(_grade, "#95a5a6")
+            _sev_strict = _ahi_intv.get("strict", {}).get("severity", "?")
+            _sev_std    = _ahi_intv.get("standard", {}).get("severity", "?")
+            _sev_sens   = _ahi_intv.get("sensitive", {}).get("severity", "?")
+            _interval_text = (
+                f'<b>AHI Interval: [{_intv[0]:.1f} – {_intv[1]:.1f}] /h</b>  '
+                f'<font color="{_gcol}"><b>Robustness: {_grade}</b></font>  '
+                f'({_sev_strict} → {_sev_std} → {_sev_sens})'
+            )
+            story.append(Paragraph(_interval_text, ParagraphStyle(
+                "AHI_interval", parent=styles["SM"], fontSize=7,
+                spaceAfter=2, spaceBefore=2,
+            )))
+            sp(0.1)
+
     # ── 8d. FLOW-REDUCTIE ZONDER CRITERIA (FRI) ──────────────
     rejected_hyps = resp.get("rejected_hypopneas", [])
     n_reinstated  = resp.get("rule1b_reinstated", 0) or 0

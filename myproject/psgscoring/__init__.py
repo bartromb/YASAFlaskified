@@ -27,6 +27,13 @@ pipeline     – MNE-facing master function (run_pneumo_analysis)
 # Public API
 from .pipeline import run_pneumo_analysis
 
+# Type definitions (for IDE autocomplete and mypy)
+from ._types import (
+    RespiratoryEvent, ClassifyDetail, ScoringSummary,
+    SpO2Summary, PLMSummary, PositionSummary, PneumoResults,
+    OAHIThresholds, ConfidenceBands,
+)
+
 from .respiratory import (
     detect_respiratory_events,
     reinstate_rule1b_hypopneas,
@@ -68,7 +75,7 @@ from .utils import (
     safe_r,
 )
 
-__version__ = "0.2.5"
+__version__ = "0.2.8"
 __all__ = [
     # Master
     "run_pneumo_analysis",
