@@ -62,7 +62,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from werkzeug.middleware.proxy_fix import ProxyFix
-from version import __version__ as APP_VERSION
+from version import __version__ as APP_VERSION, PSGSCORING_VERSION
 from flask import (
     Flask, request, jsonify, redirect, url_for,
     flash, session, send_from_directory, send_file,
@@ -629,6 +629,7 @@ def inject_i18n():
         "SUPPORTED_LANGS": SUPPORTED_LANGS,
         "current_site": _site,
         "APP_VERSION":  APP_VERSION,
+        "PSGSCORING_VERSION": PSGSCORING_VERSION,
     }
 
 
@@ -1126,6 +1127,12 @@ def admin_delete_site(site_id):
 def about():
     """Publieke landingspagina — geen login vereist."""
     return render_template("frontpage.html")
+
+
+@app.route("/disclaimer")
+def disclaimer_page():
+    """Medical & clinical disclaimer — publiek toegankelijk."""
+    return render_template("disclaimer.html")
 
 
 @app.route("/")

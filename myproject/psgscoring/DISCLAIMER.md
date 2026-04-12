@@ -74,11 +74,13 @@ It is **not** designed for:
 
 ## 5. Validation Status
 
-A formal validation study (AZORG-YASA-2026-001) comparing `psgscoring`
-output with manual expert scoring is in preparation. Until peer-reviewed
+External validation on the PSG-IPA dataset (PhysioNet, 5 recordings,
+47 independent scorer sessions) demonstrated mean |ΔAHI| = 1.9/h and
+severity concordance of 4/5 (80%). A formal single-centre validation
+study (AZORG-YASA-2026-001, n≥50) is in preparation. Until peer-reviewed
 validation results are published, all outputs should be treated as
-**preliminary and unvalidated**.
+**preliminary** and verified by a qualified clinician.
 
 ---
 
-*Last updated: April 2026 — psgscoring v0.2.4*
+*Last updated: April 2026 — psgscoring v0.2.8*
