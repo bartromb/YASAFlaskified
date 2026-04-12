@@ -85,9 +85,9 @@ See [github.com/bartromb/psgscoring](https://github.com/bartromb/psgscoring) for
 }
 ```
 
-## Regulatory disclaimer
+## Disclaimer
 
-YASAFlaskified is not CE-marked (MDR 2017/745) or FDA-cleared. All reports include an explicit disclaimer and require physician verification before clinical action. The platform is intended for research and clinical decision support, not autonomous diagnosis.
+**YASAFlaskified and psgscoring are research software — not medical devices.** Not CE-marked (MDR 2017/745) or FDA-cleared. All reports include an explicit disclaimer and require physician verification before clinical action. See **[DISCLAIMER.md](DISCLAIMER.md)** for the full text.
 
 ## License
 
