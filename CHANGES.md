@@ -4,6 +4,46 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 
 ---
 
+## [0.8.36] — April 2026
+
+### Added — PDF report Medatec parity + OSAS severity score
+- **Position × stage cross-table**: respiratory events by NREM/REM × supine/non-supine with sleep time, event count, mean duration, and AHI per cell; auto-detects supine-dominant and REM-dominant OSA
+- **Snoring cross-table**: snoring percentage by position × stage (NREM-rug, NREM-zij, REM-rug, REM-zij)
+- **Stage-specific sleep latencies**: N1, N2, N3, REM latency table in sleep architecture section
+- **SpO₂ saturation bands**: time in 95–100%, 90–95%, 80–90%, 70–80%, <70% ranges
+- **OSAS severity profile**: multi-dimensional O-S-A-S score (Oxygen deficit / Sleep disruption / Apnea frequency / Symptoms) with modifiers (p=positional, r=REM-dominant, c=central component). ESS input for symptom dimension.
+- **`pdf_report_additions.py`** (748 lines, 14 functions): standalone module, also usable outside PDF (`compute_osas_score()`, `compute_position_stage_crosstab()`, `compute_stage_latencies()`)
+- ~37 new i18n keys (NL/FR/EN/DE)
+
+### Changed
+- psgscoring bumped to v0.2.93
+- All version strings updated to v0.8.36
+
+## [0.8.35] — April 2026
+
+### Added — Hypoxic burden + post-processing
+- **Hypoxic burden** (Azarbarzin et al., AJRCCM 2019): per-event SpO₂ desaturation area, normalised %·min/h — displayed in PDF SpO₂ section
+- **CSR-aware central reclassification**: CSR-flagged obstructive/mixed events → reclassified as central (addresses cardiac pulsation artifact in heart failure)
+- **Mixed apnea decomposition**: central portion ≥10 s → reclassified as central; reports `cai_decomposed`
+- **Central instability index**: quantifies profile-dependent O/C uncertainty (0–1 scale)
+- **Bundled psgscoring v0.2.92** with 42 public exports (was 38)
+- **New postprocess.py module** in psgscoring (CSR reclassification + mixed decomposition + CII)
+
+### Changed
+- Pipeline: 11 steps (was 9) — added step 10 (hypoxic burden) and step 11 (post-processing)
+- PDF report: SpO₂ table now includes hypoxic burden row with clinical reference (<20 %·min/h)
+- PDF report: corrections table shows CSR reclassification and mixed decomposition counts
+- All version strings updated to v0.8.35 across all files
+
+## [0.8.34] — April 2026
+
+### Added — External validation + AHI confidence interval
+- **PSG-IPA validation**: bias +1.6/h, r=0.990, 60 scorer sessions
+- **iSLEEPS validation**: n=39 stroke patients, MAE 3.3/h normal/mild
+- **ECG-derived effort**: TECG method (Berry 2019) + spectral classifier
+- **Calibration module**: scorer-adaptive parameter optimisation (experimental)
+- Bundled psgscoring v0.2.91
+
 ## [0.8.33] — April 2026
 
 ### Fixed — FHIR export + PDF event plots

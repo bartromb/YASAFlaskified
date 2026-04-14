@@ -1,6 +1,6 @@
 # YASAFlaskified — Roadmap
 
-## Current: v0.8.23 (April 2026)
+## Current: v0.8.36 (April 2026)
 
 **Production-ready:**
 - AASM 2.6 respiratory scoring with 6 over-counting + 6 under-counting corrections
@@ -10,7 +10,7 @@
 - Optional LightGBM confidence calibration (framework ready, model pending)
 - 8 parallel RQ workers, multilingual reports (NL/FR/EN/DE)
 - Interactive EDF browser, manual scoring editor
-- psgscoring v0.2.4 (BSD-3, PyPI)
+- psgscoring v0.2.94 (BSD-3, PyPI)
 
 ---
 

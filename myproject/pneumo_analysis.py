@@ -1,5 +1,5 @@
 """
-pneumo_analysis.py — YASAFlaskified v0.8.33
+pneumo_analysis.py — YASAFlaskified v0.8.36
 ===========================================
 Backward-compatibility shim.
 
@@ -79,3 +79,10 @@ from psgscoring.ancillary import (                    # noqa: F401
 )
 from psgscoring.plm import analyze_plm                # noqa: F401
 from psgscoring.pipeline import run_pneumo_analysis   # noqa: F401
+from psgscoring.spo2 import compute_hypoxic_burden    # noqa: F401  v0.2.94
+from psgscoring.postprocess import (                  # noqa: F401  v0.2.94
+    postprocess_respiratory_events,
+    reclassify_csr_events,
+    decompose_mixed_apneas,
+    compute_central_instability_index,
+)

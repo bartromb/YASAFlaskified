@@ -68,6 +68,19 @@
           <label class="form-label small mb-0">{{ t("scorer_label") }}</label>
           <input type="text" class="form-control form-control-sm" id="pat_scorer">
         </div>
+        <div class="col-md-2">
+          <label class="form-label small mb-0">ESS (/24)</label>
+          <input type="number" min="0" max="24" class="form-control form-control-sm" id="pat_ess">
+        </div>
+        <div class="col-md-5">
+          <label class="form-label small mb-0">{{ t("indication") }}</label>
+          <input type="text" class="form-control form-control-sm" id="pat_indication"
+                 placeholder="{{ t('indication_placeholder') }}">
+        </div>
+        <div class="col-md-5">
+          <label class="form-label small mb-0">{{ t("referring_physician") }}</label>
+          <input type="text" class="form-control form-control-sm" id="pat_referring_physician">
+        </div>
       </div>
     </div>
   </div>
@@ -268,6 +281,9 @@ async function loadReport() {
     document.getElementById("pat_height").value = p.height_cm || "";
     document.getElementById("pat_institution").value = p.institution || "";
     document.getElementById("pat_scorer").value = p.scorer || "";
+    document.getElementById("pat_ess").value = p.ess || "";
+    document.getElementById("pat_indication").value = p.indication || "";
+    document.getElementById("pat_referring_physician").value = p.referring_physician || "";
     document.getElementById("commentsText").value = p.comments || "";
 
     // v0.8.10: Verificatie velden
@@ -332,6 +348,9 @@ async function saveReport() {
         height_cm:         document.getElementById("pat_height").value.trim(),
         institution:       document.getElementById("pat_institution").value.trim(),
         scorer:            document.getElementById("pat_scorer").value.trim(),
+        ess:               document.getElementById("pat_ess").value.trim() || null,
+        indication:        document.getElementById("pat_indication").value.trim(),
+        referring_physician: document.getElementById("pat_referring_physician").value.trim(),
         diagnosis:         document.getElementById("diagText").value.trim(),
         comments:          document.getElementById("commentsText").value.trim(),
         // v0.8.10: verificatie

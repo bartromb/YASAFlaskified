@@ -161,4 +161,4 @@ For questions, bug reports, or validation data:
 
 ---
 
-*Last updated: 2026 — YASAFlaskified v0.8.33*
+*Last updated: 2026 — YASAFlaskified v0.8.36*

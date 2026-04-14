@@ -83,4 +83,4 @@ validation results are published, all outputs should be treated as
 
 ---
 
-*Last updated: April 2026 — psgscoring v0.2.8*
+*Last updated: April 2026 — psgscoring v0.2.94*

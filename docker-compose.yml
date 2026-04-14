@@ -15,7 +15,7 @@
 # RAM gebruik: 8 × 2 GB = ~16 GB van 128 GB beschikbaar
 
 x-worker-base: &worker-base
-  image: yasaflaskified:${APP_VERSION:-0.8.33}
+  image: yasaflaskified:${APP_VERSION:-0.8.36}
   restart: unless-stopped
   command: rq worker --url redis://redis:6379 default
   env_file: .env
@@ -57,7 +57,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: yasaflaskified:${APP_VERSION:-0.8.33}
+    image: yasaflaskified:${APP_VERSION:-0.8.36}
     container_name: kliniek_app
     restart: unless-stopped
     ports:

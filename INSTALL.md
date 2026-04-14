@@ -1,4 +1,4 @@
-# YASAFlaskified v0.8.33 — Installatiegids
+# YASAFlaskified v0.8.36 — Installatiegids
 
 > **Screeningtool — niet CE-gekeurd of FDA-cleared voor klinische diagnose.**
 > Enkel voor onderzoek en screening.
@@ -10,13 +10,13 @@
 1. [Systeemvereisten](#1-systeemvereisten)
 2. [Snelle installatie (Docker)](#2-snelle-installatie-docker)
 3. [Stap-voor-stap: nieuwe server](#3-stap-voor-stap-nieuwe-server)
-4. [Update naar v0.8.33](#4-update-van-update-naar-v0832)
+4. [Update naar v0.8.36](#4-update-van-update-naar-v0835)
 5. [Nginx + SSL instellen](#5-nginx--ssl-instellen)
 6. [Configuratie](#6-configuratie)
 7. [Eerste login en gebruikersbeheer](#7-eerste-login-en-gebruikersbeheer)
 8. [Dagelijks beheer](#8-dagelijks-beheer)
 9. [Probleemoplossing](#9-probleemoplossing)
-10. [Wat er veranderd is in v0.8.33](#10-wat-er-veranderd-is-in-v0832)
+10. [Wat er veranderd is in v0.8.36](#10-wat-er-veranderd-is-in-v0835)
 
 ---
 
@@ -177,7 +177,7 @@ kliniek_worker   running
 
 ---
 
-## 4. Update naar v0.8.33
+## 4. Update naar v0.8.36
 
 **Geen database-migratie nodig.** De datastructuur is ongewijzigd.
 
@@ -406,7 +406,7 @@ Herstart: `docker compose restart app && sudo systemctl reload nginx`
 
 ---
 
-## 10. Wat er veranderd is in v0.8.33
+## 10. Wat er veranderd is in v0.8.36
 
 De monolithische `pneumo_analysis.py` (2 439 regels) is gesplitst in het
 modulaire `psgscoring`-pakket (`myproject/psgscoring/`):
@@ -450,5 +450,5 @@ du -sh /data/slaapkliniek/*/                  # schijfruimte
 
 ---
 
-*YASAFlaskified v0.8.33 — Bart Rombaut MD, Slaapkliniek AZORG, Aalst*
+*YASAFlaskified v0.8.36 — Bart Rombaut MD, Slaapkliniek AZORG, Aalst*
 *www.slaapkliniek.be — Niet CE-gekeurd. Enkel voor screening.*

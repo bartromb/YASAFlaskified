@@ -16,11 +16,12 @@ utils        – safe_r, hypno helpers, sleep mask, channel detection
 signal       – preprocessing: linearize, MMSD, bandpass, envelope, baselines
 breath       – breath segmentation, amplitude ratios, flattening index
 classify     – apnea-type classification (obstructive / central / mixed)
-spo2         – SpO2 coupling (Rule 1A) and full SpO2 analysis
+spo2         – SpO2 coupling (Rule 1A), full SpO2 analysis, hypoxic burden
 plm          – PLM detection (AASM 2.6)
 ancillary    – position, heart rate, snore, Cheyne-Stokes
 respiratory  – apnea/hypopnea detection, Rule 1B, summary statistics
 ecg_effort   – ECG-derived effort (TECG, spectral classifier) for central/obstructive differentiation
+postprocess  – CSR reclassification, mixed apnea decomposition, central instability index
 pipeline     – MNE-facing master function (run_pneumo_analysis)
 """
 
@@ -58,13 +59,19 @@ from .breath import (
 )
 from .classify import classify_apnea_type
 from .ecg_effort import ecg_effort_assessment, compute_tecg, compute_adaptive_cardiac_band
-from .spo2 import analyze_spo2, detect_desaturations, get_desaturation
+from .spo2 import analyze_spo2, compute_hypoxic_burden, detect_desaturations, get_desaturation
 from .plm import analyze_plm
 from .ancillary import (
     analyze_position,
     analyze_heart_rate,
     analyze_snore,
     detect_cheyne_stokes,
+)
+from .postprocess import (
+    postprocess_respiratory_events,
+    reclassify_csr_events,
+    decompose_mixed_apneas,
+    compute_central_instability_index,
 )
 from .utils import (
     detect_channels,
@@ -75,7 +82,7 @@ from .utils import (
     safe_r,
 )
 
-__version__ = "0.2.8"
+__version__ = "0.2.94"
 __all__ = [
     # Master
     "run_pneumo_analysis",
@@ -106,6 +113,7 @@ __all__ = [
     "compute_tecg",
     # SpO2
     "analyze_spo2",
+    "compute_hypoxic_burden",
     "detect_desaturations",
     "get_desaturation",
     # PLM
@@ -115,6 +123,11 @@ __all__ = [
     "analyze_heart_rate",
     "analyze_snore",
     "detect_cheyne_stokes",
+    # Post-processing
+    "postprocess_respiratory_events",
+    "reclassify_csr_events",
+    "decompose_mixed_apneas",
+    "compute_central_instability_index",
     # Utils
     "detect_channels",
     "channel_map_from_user",

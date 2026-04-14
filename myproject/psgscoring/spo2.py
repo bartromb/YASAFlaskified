@@ -82,6 +82,309 @@ def get_desaturation(
 
 
 # ---------------------------------------------------------------------------
+# Hypoxic burden  (Azarbarzin et al., Eur Heart J 2019; AJRCCM 2023)
+# ---------------------------------------------------------------------------
+
+def _ensemble_search_window(
+    spo2: np.ndarray,
+    sf_spo2: float,
+    resp_events: list,
+    pre_s: float = 60.0,
+    post_s: float = 60.0,
+) -> tuple:
+    """
+    Compute a subject-specific search window from the ensemble average
+    of time-aligned SpO2 curves (Azarbarzin et al. 2019, Fig. 1).
+
+    All SpO2 segments are synchronised at event termination ("time zero")
+    and averaged.  The two peaks flanking the nadir of the ensemble curve
+    define the search window: left peak → right peak.
+
+    Returns
+    -------
+    (left_offset_s, right_offset_s, ensemble_curve, time_axis)
+        Offsets are in seconds relative to event termination (negative =
+        before termination).  Returns (None, None, None, None) if fewer
+        than 3 events are available.
+    """
+    n_spo2 = len(spo2)
+    pre_samp = int(pre_s * sf_spo2)
+    post_samp = int(post_s * sf_spo2)
+    total_samp = pre_samp + post_samp
+
+    segments = []
+    for ev in resp_events:
+        onset_s = float(ev.get("onset_s", 0))
+        dur_s = float(ev.get("duration_s", 0))
+        if dur_s <= 0:
+            continue
+        # time zero = event termination
+        t0 = int((onset_s + dur_s) * sf_spo2)
+        seg_start = t0 - pre_samp
+        seg_end = t0 + post_samp
+        if seg_start < 0 or seg_end > n_spo2:
+            continue
+        seg = spo2[seg_start:seg_end].copy()
+        # skip if >50% NaN
+        if np.sum(np.isnan(seg)) > 0.5 * len(seg):
+            continue
+        # interpolate NaNs for averaging
+        nans = np.isnan(seg)
+        if np.any(nans) and not np.all(nans):
+            seg[nans] = np.interp(
+                np.flatnonzero(nans), np.flatnonzero(~nans), seg[~nans]
+            )
+        segments.append(seg)
+
+    if len(segments) < 3:
+        return None, None, None, None
+
+    ensemble = np.nanmean(np.array(segments), axis=0)
+    time_axis = np.arange(total_samp) / sf_spo2 - pre_s  # relative to t0
+
+    # Smooth lightly (3s moving average) to suppress noise
+    win = max(1, int(3 * sf_spo2))
+    if win > 1 and len(ensemble) > win:
+        kernel = np.ones(win) / win
+        ensemble_sm = np.convolve(ensemble, kernel, mode="same")
+    else:
+        ensemble_sm = ensemble
+
+    # Find nadir of ensemble
+    nadir_idx = int(np.nanargmin(ensemble_sm))
+
+    # Left peak: max of ensemble before nadir
+    left_region = ensemble_sm[:nadir_idx] if nadir_idx > 0 else ensemble_sm[:1]
+    left_peak_idx = int(np.nanargmax(left_region))
+
+    # Right peak: max of ensemble after nadir
+    right_region = ensemble_sm[nadir_idx:] if nadir_idx < len(ensemble_sm) else ensemble_sm[-1:]
+    right_peak_idx = nadir_idx + int(np.nanargmax(right_region))
+
+    # Convert to seconds relative to event termination
+    left_offset_s = time_axis[left_peak_idx]
+    right_offset_s = time_axis[min(right_peak_idx, len(time_axis) - 1)]
+
+    # Sanity: left must be before right, window must be reasonable
+    if left_offset_s >= right_offset_s or (right_offset_s - left_offset_s) < 5:
+        # Fallback: -30s to +30s around termination
+        left_offset_s = -30.0
+        right_offset_s = 30.0
+
+    return left_offset_s, right_offset_s, ensemble, time_axis
+
+
+def compute_hypoxic_burden(
+    spo2_data: np.ndarray,
+    sf_spo2: float,
+    resp_events: list,
+    hypno: list,
+    recovery_margin_pct: float = 1.0,
+    max_recovery_s: float = 120.0,
+    baseline_method: str = "percentile",
+) -> dict:
+    """
+    Compute the hypoxic burden: total area of SpO2 desaturation
+    associated with respiratory events, normalised per hour of sleep.
+
+    Parameters
+    ----------
+    spo2_data : array
+        Raw SpO2 signal.
+    sf_spo2 : float
+        Sampling frequency of the SpO2 signal (Hz).
+    resp_events : list[dict]
+        Respiratory events from detect_respiratory_events(), each with
+        'onset_s', 'duration_s', 'desaturation_pct'.
+    hypno : list
+        Epoch-level sleep staging.
+    recovery_margin_pct : float
+        SpO2 must recover to baseline - margin to end integration (default 1%).
+    max_recovery_s : float
+        Maximum seconds after event end to search for recovery (default 120 s).
+    baseline_method : str
+        Method for computing the per-event SpO2 baseline:
+
+        - ``"percentile"`` (default): 90th percentile of 120 s pre-event
+          window with global 95th-percentile fallback.  Simple, robust,
+          validated by He et al. (2023) as comparable to ensemble method.
+
+        - ``"ensemble"`` (Azarbarzin original): Subject-specific search
+          window derived from the ensemble average of all time-aligned
+          SpO2 curves.  The pre-event baseline is the SpO2 at the left
+          peak of the ensemble curve.  Area is integrated within the
+          ensemble-derived search window.
+
+    Returns
+    -------
+    dict with keys:
+        hypoxic_burden       – total burden in %·min / h of sleep
+        total_area_pct_s     – summed area in %·seconds (before normalisation)
+        n_events_with_burden – number of events contributing
+        mean_event_burden    – average burden per event (%·s)
+        unit                 – '%·min/h'
+        baseline_method      – which method was actually used
+        ensemble_window_s    – (ensemble only) [left, right] offsets in s
+
+    References
+    ----------
+    Azarbarzin A, et al. The hypoxic burden of sleep apnoea predicts
+    cardiovascular disease-related mortality. Eur Heart J. 2019;40(14):
+    1149-1157.
+
+    He S, Cistulli PA, de Chazal P. Comparison of oximetry event
+    desaturation transient area-based methods. IEEE EMBC 2024.
+    """
+    result = {
+        "hypoxic_burden": None,
+        "total_area_pct_s": 0.0,
+        "n_events_with_burden": 0,
+        "mean_event_burden": 0.0,
+        "unit": "%·min/h",
+        "baseline_method": baseline_method,
+    }
+
+    if spo2_data is None or len(resp_events) == 0 or sf_spo2 <= 0:
+        return result
+
+    try:
+        spo2 = spo2_data.astype(float)
+        spo2[(spo2 < 50) | (spo2 > 100)] = np.nan
+        n_spo2 = len(spo2)
+
+        # Total sleep time
+        sleep_mask = build_sleep_mask(hypno, sf_spo2, n_spo2)
+        tst_h = float(np.sum(sleep_mask)) / sf_spo2 / 3600
+        if tst_h < 0.1:
+            return result
+
+        # Global baseline (95th pct of sleep SpO2)
+        spo2_sleep = spo2[sleep_mask]
+        spo2_sleep = spo2_sleep[~np.isnan(spo2_sleep)]
+        if len(spo2_sleep) < 10:
+            return result
+        global_bl = float(np.percentile(spo2_sleep, 95))
+
+        # ── Ensemble method: compute search window ────────────────
+        use_ensemble = (baseline_method == "ensemble")
+        ens_left_s, ens_right_s = None, None
+        if use_ensemble:
+            ens_left_s, ens_right_s, _, _ = _ensemble_search_window(
+                spo2, sf_spo2, resp_events,
+                pre_s=60.0, post_s=60.0,
+            )
+            if ens_left_s is None:
+                # Not enough events for ensemble → fall back to percentile
+                use_ensemble = False
+                result["baseline_method"] = "percentile (ensemble fallback)"
+            else:
+                result["ensemble_window_s"] = [
+                    safe_r(ens_left_s, 1), safe_r(ens_right_s, 1)
+                ]
+
+        total_area = 0.0
+        n_burden = 0
+
+        _trapz = getattr(np, "trapezoid", getattr(np, "trapz", None))
+
+        for ev in resp_events:
+            onset_s = float(ev.get("onset_s", 0))
+            dur_s = float(ev.get("duration_s", 0))
+            if dur_s <= 0:
+                continue
+
+            event_end_s = onset_s + dur_s
+
+            if use_ensemble:
+                # ── Ensemble baseline + search window ─────────────
+                # Search window: [event_end + left_offset, event_end + right_offset]
+                win_start_s = event_end_s + ens_left_s
+                win_end_s = event_end_s + ens_right_s
+
+                win_start_idx = max(0, int(win_start_s * sf_spo2))
+                win_end_idx = min(n_spo2, int(win_end_s * sf_spo2))
+                if win_start_idx >= win_end_idx:
+                    continue
+
+                seg = spo2[win_start_idx:win_end_idx].copy()
+                seg_valid = ~np.isnan(seg)
+                if np.sum(seg_valid) < 2:
+                    continue
+
+                # Baseline: SpO2 at start of search window (first valid samples)
+                bl_region = seg[:max(1, int(3 * sf_spo2))]
+                bl_valid = bl_region[~np.isnan(bl_region)]
+                if len(bl_valid) > 0:
+                    baseline = float(np.max(bl_valid))
+                else:
+                    baseline = global_bl
+
+                # Area: integral of (baseline - SpO2) within search window
+                deficit = np.zeros(len(seg))
+                deficit[seg_valid] = np.maximum(0, baseline - seg[seg_valid])
+                area = float(_trapz(deficit, dx=1.0 / sf_spo2))
+
+            else:
+                # ── Percentile baseline + recovery window ─────────
+                # Pre-event baseline: 90th pct of 120 s before event
+                pre_start = max(0, int((onset_s - 120) * sf_spo2))
+                pre_end = max(0, int(onset_s * sf_spo2))
+                pre_seg = spo2[pre_start:pre_end]
+                pre_seg = pre_seg[(~np.isnan(pre_seg)) & (pre_seg >= 50)]
+                if len(pre_seg) > 3:
+                    local_bl = float(np.percentile(pre_seg, 90))
+                else:
+                    local_bl = global_bl
+                baseline = max(local_bl, global_bl)
+
+                # Integration window: event onset → recovery or max_recovery_s
+                int_start = int(onset_s * sf_spo2)
+                int_end_max = min(n_spo2, int((event_end_s + max_recovery_s) * sf_spo2))
+                if int_start >= int_end_max:
+                    continue
+
+                seg = spo2[int_start:int_end_max].copy()
+                seg_valid = ~np.isnan(seg)
+
+                # Find recovery point
+                event_end_idx = int(dur_s * sf_spo2)
+                recovery_idx = len(seg)
+                recovery_thresh = baseline - recovery_margin_pct
+                for k in range(min(event_end_idx, len(seg)), len(seg)):
+                    if seg_valid[k] and seg[k] >= recovery_thresh:
+                        recovery_idx = k + 1
+                        break
+
+                seg_area = seg[:recovery_idx].copy()
+                valid = ~np.isnan(seg_area)
+                if np.sum(valid) < 2:
+                    continue
+
+                deficit = np.zeros(len(seg_area))
+                deficit[valid] = np.maximum(0, baseline - seg_area[valid])
+                area = float(_trapz(deficit, dx=1.0 / sf_spo2))
+
+            if area > 0:
+                total_area += area
+                n_burden += 1
+
+        # Normalise: %·s → %·min/h
+        burden_pct_min_h = (total_area / 60.0) / tst_h if tst_h > 0 else 0.0
+
+        result["hypoxic_burden"] = safe_r(burden_pct_min_h, 2)
+        result["total_area_pct_s"] = safe_r(total_area, 1)
+        result["n_events_with_burden"] = n_burden
+        result["mean_event_burden"] = (
+            safe_r(total_area / n_burden, 1) if n_burden > 0 else 0.0
+        )
+
+    except Exception as e:
+        result["error"] = str(e)
+
+    return result
+
+
+# ---------------------------------------------------------------------------
 # Full SpO2 analysis
 # ---------------------------------------------------------------------------
 

@@ -1,5 +1,5 @@
 """
-tasks.py — RQ worker voor YASAFlaskified v0.8.33
+tasks.py — RQ worker voor YASAFlaskified v0.8.36
 Integreert: YASA slaapanalyse + pneumologische scoring + PSG-rapport
 
 Fixes t.o.v. v8.0:
@@ -544,6 +544,10 @@ def _extract_patient_info(raw, config_pat: dict,
         "comments":          config_pat.get("comments", ""),
         "scorer":            config_pat.get("scorer", ""),
         "institution":       config_pat.get("institution", ""),
+        # v0.8.36: klinische velden
+        "ess":               config_pat.get("ess") or None,
+        "indication":        config_pat.get("indication", ""),
+        "referring_physician": config_pat.get("referring_physician", ""),
     }
 
 
@@ -702,7 +706,7 @@ def _send_email_notification(job_id: str, results: dict):
         <a href="{report_url}"
            style="background:#1a3a8f;color:white;padding:8px 18px;
                   border-radius:4px;text-decoration:none">Bekijk rapport</a></p>
-        <p style="color:#999;font-size:12px">YASAFlaskified v0.8.33 · {site_url}<br>
+        <p style="color:#999;font-size:12px">YASAFlaskified v0.8.36 · {site_url}<br>
         Screening-tool — geen medische diagnose.</p>
         </body></html>"""
 
@@ -717,7 +721,7 @@ def _send_email_notification(job_id: str, results: dict):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# v0.8.33: Scoring profile comparison
+# v0.8.36: Scoring profile comparison
 # ═══════════════════════════════════════════════════════════════════════════
 
 def run_profile_comparison(edf_path: str, results_dir: str) -> dict:

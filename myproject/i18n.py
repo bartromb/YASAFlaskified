@@ -1,5 +1,5 @@
 """
-i18n.py — YASAFlaskified v0.8.33
+i18n.py — YASAFlaskified v0.8.36
 Volledig drietalig: NL / FR / EN  (gelijkwaardig, gebruiker kiest bij login)
 
 Gebruik:
@@ -868,7 +868,7 @@ def get_translation(key: str, lang: str = None) -> str:
 
 
 
-# v0.8.33: Additional multilingual keys for PDF report
+# v0.8.36: Additional multilingual keys for PDF report
 _PDF_KEYS = {
     "pdf_not_available": {"nl": "Niet beschikbaar", "fr": "Non disponible", "en": "Not available", "de": "Nicht verfügbar"},
     "pdf_overcounting_corrections": {"nl": "Overschatting-correctie", "fr": "Corrections de surestimation", "en": "Over-counting corrections", "de": "Überzählungskorrekturen"},
@@ -880,7 +880,7 @@ TRANSLATIONS.update(_PDF_KEYS)
 
 
 # ======================================================================
-# v0.8.33: German (DE) translations — auto-generated from EN
+# v0.8.36: German (DE) translations — auto-generated from EN
 # ======================================================================
 
 _DE_PATCH = {
@@ -1454,7 +1454,7 @@ for _k, _v in _DE_PATCH.items():
         TRANSLATIONS[_k]["de"] = _v
 
 
-# v0.8.33: Complete PDF report multilingual keys
+# v0.8.36: Complete PDF report multilingual keys
 _PDF_V027 = {
     "pdf_artifact_count": {
         "nl": "epochs als artefact",
@@ -1675,7 +1675,7 @@ _PDF_V027 = {
 }
 TRANSLATIONS.update(_PDF_V027)
 
-# v0.8.33: Final remaining PDF keys
+# v0.8.36: Final remaining PDF keys
 _PDF_V027b = {
     "pdf_artifact_of": {
         "nl": "van",
@@ -1710,7 +1710,7 @@ _PDF_V027b = {
 }
 TRANSLATIONS.update(_PDF_V027b)
 
-# ── v0.8.33: HR/ECG + SpO2/PLM i18n ─────────────────────────────────
+# ── v0.8.36: HR/ECG + SpO2/PLM i18n ─────────────────────────────────
 _PDF_V030 = {
     "pdf_mean_spo2":      {"nl": "Gemiddelde SpO<sub>2</sub>", "fr": "SpO<sub>2</sub> moyenne", "en": "Mean SpO<sub>2</sub>", "de": "Mittlere SpO<sub>2</sub>"},
     "pdf_baseline_spo2":  {"nl": "Baseline SpO<sub>2</sub>",   "fr": "SpO<sub>2</sub> de base", "en": "Baseline SpO<sub>2</sub>", "de": "Baseline SpO<sub>2</sub>"},
@@ -1727,6 +1727,120 @@ _PDF_V030 = {
     "pdf_transitions":    {"nl": "Stadiawissels", "fr": "Transitions", "en": "Stage transitions", "de": "Stadienwechsel"},
 }
 TRANSLATIONS.update(_PDF_V030)
+
+# ── v0.8.36: Medatec-parity PDF sections + OSAS score ────────────────
+_PDF_V036 = {
+    # Position × stage cross-table
+    "pdf_pos_stage_title": {
+        "nl": "Respiratoire events per slaapstadium en lichaamshouding",
+        "fr": "Événements respiratoires par stade de sommeil et position",
+        "en": "Respiratory events by sleep stage and body position",
+        "de": "Respiratorische Ereignisse nach Schlafstadium und Körperposition",
+    },
+    "NREM supine":      {"nl": "NREM ruglig",      "fr": "NREM dorsal",      "en": "NREM supine",      "de": "NREM Rückenlage"},
+    "NREM non-supine":  {"nl": "NREM niet-ruglig", "fr": "NREM non-dorsal",  "en": "NREM non-supine",  "de": "NREM Nicht-Rückenlage"},
+    "REM supine":       {"nl": "REM ruglig",       "fr": "REM dorsal",       "en": "REM supine",       "de": "REM Rückenlage"},
+    "REM non-supine":   {"nl": "REM niet-ruglig",  "fr": "REM non-dorsal",   "en": "REM non-supine",   "de": "REM Nicht-Rückenlage"},
+    "Sleep time (min)": {"nl": "Slaaptijd (min)",  "fr": "Temps de sommeil (min)", "en": "Sleep time (min)", "de": "Schlafzeit (min)"},
+    "Respiratory events":{"nl": "Respiratoire events", "fr": "Événements respiratoires", "en": "Respiratory events", "de": "Respiratorische Ereignisse"},
+    "Mean duration (s)":{"nl": "Gemiddelde duur (s)", "fr": "Durée moyenne (s)", "en": "Mean duration (s)", "de": "Mittlere Dauer (s)"},
+    "Supine-dominant OSA": {
+        "nl": "Ruglig-dominant OSAS",
+        "fr": "SAOS à prédominance dorsale",
+        "en": "Supine-dominant OSA",
+        "de": "Rückenlage-dominantes OSAS",
+    },
+    "REM-dominant OSA": {
+        "nl": "REM-dominant OSAS",
+        "fr": "SAOS à prédominance REM",
+        "en": "REM-dominant OSA",
+        "de": "REM-dominantes OSAS",
+    },
+    "supine AHI":       {"nl": "ruglig-AHI",       "fr": "IAH dorsal",       "en": "supine AHI",       "de": "Rückenlage-AHI"},
+    "non-supine AHI":   {"nl": "niet-ruglig-AHI",  "fr": "IAH non-dorsal",   "en": "non-supine AHI",   "de": "Nicht-Rückenlage-AHI"},
+    "Positional therapy may be considered.": {
+        "nl": "Positietherapie kan overwogen worden.",
+        "fr": "La thérapie positionnelle peut être envisagée.",
+        "en": "Positional therapy may be considered.",
+        "de": "Eine Lagetherapie kann erwogen werden.",
+    },
+    "min REM sleep":    {"nl": "min REM-slaap",    "fr": "min sommeil REM",  "en": "min REM sleep",    "de": "min REM-Schlaf"},
+    # Snoring cross-table
+    "Snoring by sleep stage and body position": {
+        "nl": "Snurken per slaapstadium en lichaamshouding",
+        "fr": "Ronflement par stade de sommeil et position",
+        "en": "Snoring by sleep stage and body position",
+        "de": "Schnarchen nach Schlafstadium und Körperposition",
+    },
+    "Supine":           {"nl": "Ruglig",           "fr": "Dorsal",           "en": "Supine",           "de": "Rückenlage"},
+    "Non-supine":       {"nl": "Niet-ruglig",      "fr": "Non-dorsal",      "en": "Non-supine",       "de": "Nicht-Rückenlage"},
+    # Stage latencies
+    "Sleep latencies":  {"nl": "Slaaplatentietijden", "fr": "Latences de sommeil", "en": "Sleep latencies", "de": "Schlaflatenzen"},
+    "Stage":            {"nl": "Stadium",           "fr": "Stade",            "en": "Stage",            "de": "Stadium"},
+    "Latency (min)":    {"nl": "Latentie (min)",   "fr": "Latence (min)",    "en": "Latency (min)",    "de": "Latenz (min)"},
+    # SpO2 bands
+    "Time in saturation bands": {
+        "nl": "Tijd in saturatiebanden",
+        "fr": "Temps par bande de saturation",
+        "en": "Time in saturation bands",
+        "de": "Zeit in Sättigungsbändern",
+    },
+    "SpO₂ range":      {"nl": "SpO₂-bereik",      "fr": "Plage SpO₂",      "en": "SpO₂ range",      "de": "SpO₂-Bereich"},
+    "Duration (min)":   {"nl": "Duur (min)",        "fr": "Durée (min)",      "en": "Duration (min)",   "de": "Dauer (min)"},
+    "% of recording":   {"nl": "% van opname",      "fr": "% de l'enregistrement", "en": "% of recording", "de": "% der Aufzeichnung"},
+    # ESS + OSAS score
+    "Symptom assessment and severity profile": {
+        "nl": "Symptoomanalyse en ernstprofiel",
+        "fr": "Évaluation des symptômes et profil de sévérité",
+        "en": "Symptom assessment and severity profile",
+        "de": "Symptomanalyse und Schweregradprofil",
+    },
+    "OSAS severity profile": {"nl": "OSAS-ernstprofiel", "fr": "Profil de sévérité SAOS", "en": "OSAS severity profile", "de": "OSAS-Schweregradprofil"},
+    "OSAS code":        {"nl": "OSAS-code",        "fr": "Code SAOS",        "en": "OSAS code",        "de": "OSAS-Code"},
+    "Dimension":        {"nl": "Dimensie",          "fr": "Dimension",        "en": "Dimension",        "de": "Dimension"},
+    "Metric":           {"nl": "Maat",              "fr": "Métrique",         "en": "Metric",           "de": "Metrik"},
+    "Value":            {"nl": "Waarde",            "fr": "Valeur",           "en": "Value",            "de": "Wert"},
+    "Grade (0-3)":      {"nl": "Graad (0-3)",       "fr": "Grade (0-3)",      "en": "Grade (0-3)",      "de": "Grad (0-3)"},
+    "Oxygen deficit":   {"nl": "Zuurstoftekort",    "fr": "Déficit en oxygène", "en": "Oxygen deficit",  "de": "Sauerstoffdefizit"},
+    "Sleep disruption": {"nl": "Slaapfragmentatie", "fr": "Fragmentation du sommeil", "en": "Sleep disruption", "de": "Schlaffragmentierung"},
+    "Apnea frequency":  {"nl": "Apneufrequentie",  "fr": "Fréquence des apnées", "en": "Apnea frequency", "de": "Apnoe-Frequenz"},
+    "Symptoms":         {"nl": "Symptomen",         "fr": "Symptômes",        "en": "Symptoms",         "de": "Symptome"},
+    "Hypoxic burden":   {"nl": "Hypoxische last",   "fr": "Charge hypoxique", "en": "Hypoxic burden",   "de": "Hypoxische Last"},
+    "Arousal index":    {"nl": "Arousal-index",     "fr": "Index d'éveils",   "en": "Arousal index",    "de": "Arousal-Index"},
+    "total":            {"nl": "totaal",            "fr": "total",            "en": "total",            "de": "gesamt"},
+    "not provided":     {"nl": "niet ingevuld",     "fr": "non renseigné",    "en": "not provided",     "de": "nicht angegeben"},
+    "normal":           {"nl": "normaal",           "fr": "normal",           "en": "normal",           "de": "normal"},
+    "mild sleepiness":  {"nl": "lichte slaperigheid", "fr": "somnolence légère", "en": "mild sleepiness", "de": "leichte Schläfrigkeit"},
+    "moderate sleepiness": {"nl": "matige slaperigheid", "fr": "somnolence modérée", "en": "moderate sleepiness", "de": "mäßige Schläfrigkeit"},
+    "severe sleepiness":{"nl": "ernstige slaperigheid", "fr": "somnolence sévère", "en": "severe sleepiness", "de": "schwere Schläfrigkeit"},
+    "positional":       {"nl": "positioneel",       "fr": "positionnel",      "en": "positional",       "de": "lageabhängig"},
+    "REM-dominant":     {"nl": "REM-dominant",      "fr": "à prédominance REM", "en": "REM-dominant",   "de": "REM-dominant"},
+    "central component":{"nl": "centraal component", "fr": "composante centrale", "en": "central component", "de": "zentrale Komponente"},
+    # Conclusion section
+    "Clinical assessment": {
+        "nl": "Klinische beoordeling",
+        "fr": "Évaluation clinique",
+        "en": "Clinical assessment",
+        "de": "Klinische Beurteilung",
+    },
+    "Overall assessment": {"nl": "Globale beoordeling", "fr": "Évaluation globale", "en": "Overall assessment", "de": "Gesamtbeurteilung"},
+    "Conclusion":       {"nl": "Besluit",           "fr": "Conclusion",       "en": "Conclusion",       "de": "Schlussfolgerung"},
+    "Recommendations":  {"nl": "Advies",            "fr": "Recommandations",  "en": "Recommendations",  "de": "Empfehlungen"},
+    "Physician signature": {"nl": "Handtekening arts", "fr": "Signature du médecin", "en": "Physician signature", "de": "Unterschrift Arzt"},
+    "Date":             {"nl": "Datum",             "fr": "Date",             "en": "Date",             "de": "Datum"},
+    # Clinical input fields (v0.8.36)
+    "indication":       {"nl": "Indicatie",          "fr": "Indication",       "en": "Indication",       "de": "Indikation"},
+    "indication_placeholder": {
+        "nl": "bv. slaapapneusyndroom",
+        "fr": "p.ex. syndrome d'apnées du sommeil",
+        "en": "e.g. sleep apnea syndrome",
+        "de": "z.B. Schlafapnoe-Syndrom",
+    },
+    "referring_physician": {"nl": "Aanvrager",       "fr": "Médecin référent", "en": "Referring physician", "de": "Überweisender Arzt"},
+    "pdf_indication":   {"nl": "Indicatie",          "fr": "Indication",       "en": "Indication",       "de": "Indikation"},
+    "pdf_referring":    {"nl": "Aanvrager",          "fr": "Référent",         "en": "Referring",        "de": "Überweiser"},
+}
+TRANSLATIONS.update(_PDF_V036)
 
 def t(key: str, lang: str = None) -> str:
     """Alias voor get_translation — handig in Python-code."""

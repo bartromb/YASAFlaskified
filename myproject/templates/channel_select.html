@@ -246,6 +246,23 @@
             <input type="number" name="height_cm" class="form-control form-control-sm">
           </div>
         </div>
+        <div class="row g-2 mb-2">
+          <div class="col-md-3">
+            <label class="form-label small mb-0">ESS (/24)</label>
+            <input type="number" min="0" max="24" name="ess" class="form-control form-control-sm"
+                   placeholder="0–24">
+          </div>
+          <div class="col-md-5">
+            <label class="form-label small mb-0">{{ t('indication') }}</label>
+            <input type="text" name="indication" class="form-control form-control-sm"
+                   placeholder="{{ t('indication_placeholder') }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small mb-0">{{ t('referring_physician') }}</label>
+            <input type="text" name="referring_physician" class="form-control form-control-sm"
+                   placeholder="{{ t('referring_physician') }}">
+          </div>
+        </div>
         <div class="row g-2">
           <div class="col-md-4">
             <label class="form-label small mb-0">{{ t('institution') }}</label>

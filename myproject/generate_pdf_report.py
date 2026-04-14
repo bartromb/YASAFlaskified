@@ -1,5 +1,5 @@
 """
-generate_pdf_report.py — YASAFlaskified v0.8.33
+generate_pdf_report.py — YASAFlaskified v0.8.36
 Site-config: via config.json["site"] of site_config parameter.
 """
 import json, os, io
@@ -20,6 +20,16 @@ from reportlab.lib.units import cm
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
     HRFlowable, PageBreak, KeepTogether, Image,
+)
+
+# v0.8.36: Medatec-parity PDF sections + OSAS score
+from pdf_report_additions import (
+    draw_position_stage_table,
+    draw_snoring_crosstab,
+    draw_stage_latencies,
+    draw_spo2_bands,
+    draw_ess_section,
+    draw_conclusion_section,
 )
 
 # ── Pagina ─────────────────────────────────────────────────────
@@ -553,7 +563,7 @@ def _plot_epoch_example(edf_path, channel_map, event, hypno=None,
         if "flow_pressure" not in [c[0] for c in ch_to_plot]:
             _det_ch_type = "flow"
 
-    # ── Blue marks: other scored events in window (v0.8.33) ─────
+    # ── Blue marks: other scored events in window (v0.8.36) ─────
     if all_events:
         for oe in all_events:
             oe_onset = float(oe.get("onset_s", -999))
@@ -592,7 +602,7 @@ def _plot_epoch_example(edf_path, channel_map, event, hypno=None,
             ax.axhline(90, color="#e74c3c", linewidth=0.4, linestyle="--", alpha=0.5)
         else:
             ax.plot(times, data, color=color, linewidth=lw)
-            # v0.8.33: Robust scaling with median ± 4*MAD (artefact-resistant)
+            # v0.8.36: Robust scaling with median ± 4*MAD (artefact-resistant)
             if len(data) > 10:
                 med = np.median(data)
                 mad = np.median(np.abs(data - med))
@@ -821,12 +831,17 @@ def generate_pdf_report(results:dict, output_path:str,
             ("BOTTOMPADDING",(0,0),(-1,-1),1.5),("LEFTPADDING",(0,0),(-1,-1),0)])); return t
 
     left_rows=[[t("pdf_name",lang),full],[t("pdf_dob",lang),dob],[t("pdf_age",lang),age_s],
-               [t("pdf_sex",lang),str(pat.get("sex","—") or "—")],[t("pdf_bmi",lang),str(pat.get("bmi","—") or "—")]]
+               [t("pdf_sex",lang),str(pat.get("sex","—") or "—")],[t("pdf_bmi",lang),str(pat.get("bmi","—") or "—")],
+               [t("pdf_indication",lang),str(pat.get("indication","—") or "—")]]
+    _ess_raw = pat.get("ess")
+    _ess_str = f"{_ess_raw}/24" if _ess_raw not in (None, "", "—") else "—"
     right_rows=[[t("pdf_patient_id",lang),str(pat.get("patient_id","—") or "—")],
                 [t("pdf_rec_date",lang),(meta.get("analysis_timestamp","—") or "—")[:10]],
                 [t("pdf_duration",lang),_v(meta,"duration_min",fmt="{:.0f}")+" min"],
                 [t("pdf_scorer",lang),str(pat.get("scorer","—") or "—")],
-                [t("pdf_institution",lang),str(pat.get("institution",site.get("name","")) or "")]]
+                [t("pdf_institution",lang),str(pat.get("institution",site.get("name","")) or "")],
+                ["ESS", _ess_str],
+                [t("pdf_referring",lang),str(pat.get("referring_physician","—") or "—")]]
 
     pt=Table([[_pm(left_rows),_pm(right_rows)]],colWidths=[CW/2,CW/2])
     pt.setStyle(TableStyle([("BOX",(0,0),(-1,-1),0.5,GRID),
@@ -1022,7 +1037,15 @@ def generate_pdf_report(results:dict, output_path:str,
         story.append(_hdr(t("rpt_sec1", lang))); sp(0.15)
         story.append(KeepTogether([_aasm_tbl(stats, lang=lang)])); sp(0.15)
 
-        # ── 1b. Stage transition matrix (v0.8.33) ────────────────────
+        # v0.8.36: Stage-specific sleep latencies
+        _hypno = results.get("hypnogram", results.get("hypno", []))
+        if _hypno and len(_hypno) > 10:
+            try:
+                draw_stage_latencies(story, hypno=_hypno, t=t)
+            except Exception:
+                pass
+
+        # ── 1b. Stage transition matrix (v0.8.36) ────────────────────
         if timeline and len(timeline) > 10:
             _stages_order = ["W", "N1", "N2", "N3", "R"]
             _trans = {s1: {s2: 0 for s2 in _stages_order} for s1 in _stages_order}
@@ -1446,6 +1469,20 @@ def generate_pdf_report(results:dict, output_path:str,
                     [t("pdf_ecg_fix_name",lang),
                      f"{n_ecg_reclass} {t('pdf_to_central',lang)}",
                      t("pdf_ecg_fix_desc",lang)])
+            # v0.8.36: postprocess — CSR reclassification + mixed decomposition
+            pp = pneumo.get("postprocess", {})
+            n_csr_recl = pp.get("n_csr_reclassified", 0) or 0
+            if n_csr_recl > 0:
+                corr_rows.append(
+                    ["CSR reclassification",
+                     f"{n_csr_recl} → central",
+                     "CSR-flagged obstr/mixed → central (cardiac artifact)"])
+            n_mix_decomp = pp.get("n_mixed_to_central", 0) or 0
+            if n_mix_decomp > 0:
+                corr_rows.append(
+                    ["Mixed decomposition",
+                     f"{n_mix_decomp} → central",
+                     "Central portion ≥10 s → reclassified as central"])
             story.append(KeepTogether([_tbl(
                 [t("pdf_correction",lang), t("pdf_impact",lang), t("pdf_explanation",lang)],
                 corr_rows, [4.0, 3.5, 9.5])]))
@@ -1462,6 +1499,20 @@ def generate_pdf_report(results:dict, output_path:str,
              [t("pdf_avg_apnea_dur", lang), f"{rsum.get('avg_apnea_dur_s','—')} s", ""],
              ["Max. apnea-duur",            f"{rsum.get('max_apnea_dur_s','—')} s", ""],
             ], [8, 4, 5])])); sp(0.1)
+
+        # v0.8.36: Position × stage cross-table
+        resp_events = resp.get("events", [])
+        position_data = pneumo.get("position", {})
+        _hypno = results.get("hypnogram", results.get("hypno", []))
+        if resp_events and _hypno and position_data:
+            try:
+                draw_position_stage_table(
+                    story, events=resp_events, hypno=_hypno,
+                    position_data=position_data, sf_pos=1,
+                    tst_hours=float(str(stats.get("TST", 0) or 0))/60, t=t)
+            except Exception:
+                pass
+        sp(0.1)
 
         # Arousal / RERA / RDI (v0.8.22: skip bij polygrafie)
         arous=pneumo.get("arousal",{}); asum=arous.get("summary",{})
@@ -1596,16 +1647,17 @@ def generate_pdf_report(results:dict, output_path:str,
             f"<i>{t('pdf_fri_note', lang)}</i>", styles["SM"])); sp(0.1)
 
     # ── 8e. Signaalvoorbeelden ────────────────────────────────
-    if not is_polygraphy:
-        epoch_imgs = _build_epoch_examples(results)
-        if epoch_imgs:
-            story.append(PageBreak())
-            story.append(_hdr(t("rpt_sec8e", lang), color=BLUE)); sp(0.1)
-            story.append(Paragraph(
-                t("pdf_epoch_intro", lang), styles["SM"])); sp(0.15)
-            for ev, img in epoch_imgs:
-                story.append(KeepTogether([img, Spacer(1, 0.15*cm)]))
-                sp(0.1)
+    # v0.8.36: tijdelijk uitgeschakeld — epoch alignment nog niet correct
+    # if not is_polygraphy:
+    #     epoch_imgs = _build_epoch_examples(results)
+    #     if epoch_imgs:
+    #         story.append(PageBreak())
+    #         story.append(_hdr(t("rpt_sec8e", lang), color=BLUE)); sp(0.1)
+    #         story.append(Paragraph(
+    #             t("pdf_epoch_intro", lang), styles["SM"])); sp(0.15)
+    #         for ev, img in epoch_imgs:
+    #             story.append(KeepTogether([img, Spacer(1, 0.15*cm)]))
+    #             sp(0.1)
 
     # ── 9. SpO2 ───────────────────────────────────────────────
     spo2=pneumo.get("spo2",{}); ss=spo2.get("summary",{})
@@ -1618,6 +1670,7 @@ def generate_pdf_report(results:dict, output_path:str,
             [t("pdf_time_below90",lang),       f"{ss.get('pct_below_90','—')} %","< 1%"],
             ["ODI 3%",           f"{ss.get('odi_3pct','—')} /u",    "< 5/u"],
             ["ODI 4%",           f"{ss.get('odi_4pct','—')} /u",    "< 5/u"],
+            ["Hypoxic burden",   f"{ss.get('hypoxic_burden','—')} %·min/h", "< 20"],
         ],[8,4.5,4.5]))
         ts=spo2.get("timeseries")
         if ts and len(ts)>10:
@@ -1627,6 +1680,14 @@ def generate_pdf_report(results:dict, output_path:str,
     else:
         story.append(Paragraph(f"SpO2: {spo2.get('error',t('pdf_no_channel',lang))}",styles["SM"]))
     sp(0.12)
+
+    # v0.8.36: Detailed saturation band breakdown
+    if spo2.get("success") and ss:
+        try:
+            tib_min = float(str(stats.get("TIB", 480) or 480))
+            draw_spo2_bands(story, spo2_summary=ss, tib_min=tib_min, t=t)
+        except Exception:
+            pass
 
     # ── 10. PLM ────────────────────────────────────────────────
     plm=pneumo.get("plm",{}); ps=plm.get("summary",{})
@@ -1656,13 +1717,23 @@ def generate_pdf_report(results:dict, output_path:str,
         story.append(Paragraph(
             f"<i>{t('pdf_snore_no_data', lang)}</i>", styles["SM"])); sp(0.1)
 
+    # v0.8.36: Snoring cross-table by position × stage
+    _hypno = results.get("hypnogram", results.get("hypno", []))
+    if snore.get("success") and _hypno:
+        try:
+            draw_snoring_crosstab(
+                story, snore_data=snore, hypno=_hypno,
+                position_data=pneumo.get("position", {}), t=t)
+        except Exception:
+            pass
+
     # Ensure arousal summary is available for diagnosis
     try:
         asum
     except NameError:
         asum = pneumo.get("arousal", {}).get("summary", {})
 
-    # ── 10c. HARTRITME / ECG (v0.8.33) ──────────────────────────
+    # ── 10c. HARTRITME / ECG (v0.8.36) ──────────────────────────
     _hr = pneumo.get("heart_rate", {})
     _hr_sum = _hr.get("summary", {})
     if _hr.get("success") and _hr_sum:
@@ -1730,6 +1801,18 @@ def generate_pdf_report(results:dict, output_path:str,
     sig.setStyle(TableStyle([("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6),
         ("BOX",(0,0),(-1,-1),0.4,GRID),("BACKGROUND",(0,0),(-1,-1),BGROW)]))
     story.append(sig); sp(0.15)
+
+    # ── v0.8.36: ESS + OSAS severity profile ─────────────────
+    ess_value = pat.get("ess")  # None if not provided by clinician
+    try:
+        ess_value = int(ess_value) if ess_value is not None else None
+    except (ValueError, TypeError):
+        ess_value = None
+    try:
+        draw_ess_section(story, results=pneumo, ess=ess_value, t=t)
+    except Exception:
+        pass
+    sp(0.15)
 
     # ── DISCLAIMER ─────────────────────────────────────────────
     story.append(HRFlowable(width="100%",thickness=0.3,color=GRID)); sp(0.1)

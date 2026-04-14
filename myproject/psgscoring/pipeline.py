@@ -37,7 +37,7 @@ from .signal import (
 from .respiratory import (
     detect_respiratory_events, reinstate_rule1b_hypopneas, _compute_summary,
 )
-from .spo2 import analyze_spo2
+from .spo2 import analyze_spo2, compute_hypoxic_burden
 from .ancillary import (
     analyze_position, analyze_heart_rate, analyze_snore, detect_cheyne_stokes,
 )
@@ -408,6 +408,51 @@ def run_pneumo_analysis(
         )
         n_flagged = sum(1 for e in events_flagged if e.get("csr_flagged"))
         logger.info("Fix3 (pipeline): %d events gemarkeerd als CSR-gerelateerd", n_flagged)
+
+    # ── Step 10: Hypoxic burden (Azarbarzin et al., AJRCCM 2019) ──────────
+    if spo2_data is not None and output["respiratory"].get("success"):
+        try:
+            resp_events = output["respiratory"].get("events", [])
+            hb = compute_hypoxic_burden(
+                spo2_data, sf_spo2, resp_events, hypno,
+            )
+            output["hypoxic_burden"] = hb
+            if output.get("spo2", {}).get("summary"):
+                output["spo2"]["summary"]["hypoxic_burden"] = hb.get("hypoxic_burden")
+                output["spo2"]["summary"]["hypoxic_burden_unit"] = hb.get("unit")
+            logger.info("[pneumo 10/10] Hypoxic burden: %.1f %%·min/h (%d events)",
+                        hb.get("hypoxic_burden") or 0, hb.get("n_events_with_burden", 0))
+        except Exception as e:
+            logger.warning("Hypoxic burden failed: %s", e)
+            output["hypoxic_burden"] = {"hypoxic_burden": None, "error": str(e)}
+    else:
+        output["hypoxic_burden"] = {"hypoxic_burden": None}
+
+    # ── Step 11: Post-processing — central/mixed refinement ───────────────
+    if output["respiratory"].get("success"):
+        try:
+            from .postprocess import postprocess_respiratory_events
+            pp = postprocess_respiratory_events(
+                events=output["respiratory"].get("events", []),
+                csr_info=output.get("cheyne_stokes"),
+                thorax_data=thorax_data,
+                abdomen_data=abdomen_data,
+                sf_effort=sf_apnea or sf_flow or 0,
+                ahi_interval=output["respiratory"].get("summary", {}).get("ahi_interval"),
+            )
+            output["respiratory"]["events"] = pp["events"]
+            output["postprocess"] = {
+                "n_csr_reclassified": pp["n_csr_reclassified"],
+                "n_mixed_decomposed": pp["n_mixed_decomposed"],
+                "n_mixed_to_central": pp["n_mixed_to_central"],
+                "central_instability": pp["central_instability"],
+                "cai_change": pp["cai_change"],
+            }
+            logger.info("[pneumo 11/11] Post-processing: CSR-recl=%d, mixed-decomp=%d",
+                        pp["n_csr_reclassified"], pp["n_mixed_to_central"])
+        except Exception as e:
+            logger.warning("Post-processing failed: %s", e)
+            output["postprocess"] = {"error": str(e)}
 
     logger.info("Pneumo analysis complete.")
     return output
