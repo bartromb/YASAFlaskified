@@ -1,5 +1,5 @@
 """
-fhir_export.py — YASAFlaskified v0.8.36
+fhir_export.py — YASAFlaskified v0.8.37
 ===================================
 Exporteert analyseresultaten als FHIR R4 DiagnosticReport (JSON).
 Conform: https://www.hl7.org/fhir/diagnosticreport.html
@@ -70,7 +70,7 @@ def results_to_fhir(results: dict, job_id: str,
     _obs("93830-8", "Sleep efficiency",           stats.get("SE"),    "%")
     _obs("93828-2", "Sleep onset latency",        stats.get("SOL"),   "min")
     _obs("93829-0", "Wake after sleep onset",     stats.get("WASO"),  "min")
-    # v0.8.36: convert stage durations (minutes) to % of TST
+    # v0.8.37: convert stage durations (minutes) to % of TST
     _tst = _to_float(stats.get("TST")) or 1
     _obs("93833-2", "N1 sleep %",   round((_to_float(stats.get("N1"))  or 0) / _tst * 100, 1), "%")
     _obs("93834-0", "N2 sleep %",   round((_to_float(stats.get("N2"))  or 0) / _tst * 100, 1), "%")

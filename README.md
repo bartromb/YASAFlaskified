@@ -69,7 +69,7 @@ Requirements: Docker, 4+ GB RAM. The platform runs on CPU only (Hetzner Ryzen 9 
 
 ## Stack
 
-Python 3.11 · Flask/Gunicorn · Redis 7 + RQ · MNE-Python · YASA 0.7 · psgscoring v0.2.94 · ReportLab · Docker Compose
+Python 3.11 · Flask/Gunicorn · Redis 7 + RQ · MNE-Python · YASA 0.7 · psgscoring v0.2.951 · ReportLab · Docker Compose
 
 ## Standalone library
 

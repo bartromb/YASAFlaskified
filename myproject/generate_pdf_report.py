@@ -1,5 +1,5 @@
 """
-generate_pdf_report.py — YASAFlaskified v0.8.36
+generate_pdf_report.py — YASAFlaskified v0.8.37
 Site-config: via config.json["site"] of site_config parameter.
 """
 import json, os, io
@@ -22,7 +22,7 @@ from reportlab.platypus import (
     HRFlowable, PageBreak, KeepTogether, Image,
 )
 
-# v0.8.36: Medatec-parity PDF sections + OSAS score
+# v0.8.37: Medatec-parity PDF sections + OSAS score
 from pdf_report_additions import (
     draw_position_stage_table,
     draw_snoring_crosstab,
@@ -563,7 +563,7 @@ def _plot_epoch_example(edf_path, channel_map, event, hypno=None,
         if "flow_pressure" not in [c[0] for c in ch_to_plot]:
             _det_ch_type = "flow"
 
-    # ── Blue marks: other scored events in window (v0.8.36) ─────
+    # ── Blue marks: other scored events in window (v0.8.37) ─────
     if all_events:
         for oe in all_events:
             oe_onset = float(oe.get("onset_s", -999))
@@ -602,7 +602,7 @@ def _plot_epoch_example(edf_path, channel_map, event, hypno=None,
             ax.axhline(90, color="#e74c3c", linewidth=0.4, linestyle="--", alpha=0.5)
         else:
             ax.plot(times, data, color=color, linewidth=lw)
-            # v0.8.36: Robust scaling with median ± 4*MAD (artefact-resistant)
+            # v0.8.37: Robust scaling with median ± 4*MAD (artefact-resistant)
             if len(data) > 10:
                 med = np.median(data)
                 mad = np.median(np.abs(data - med))
@@ -889,11 +889,37 @@ def generate_pdf_report(results:dict, output_path:str,
         _warn_style = ParagraphStyle("WarnBanner", fontName="Helvetica-Bold",
                                       fontSize=7.5, textColor=colors.white,
                                       backColor=colors.HexColor("#e74c3c"),
-                                      leading=11, spaceBefore=2, spaceAfter=2,
+                                      leading=10, spaceBefore=1, spaceAfter=0,
                                       leftIndent=4, rightIndent=4)
         for _w in _warnings:
             story.append(Paragraph(_w, _warn_style))
-        sp(0.1)
+
+    # ── v0.8.37: AHI robustness grade on page 1 (compact) ────
+    _ahi_iv = results.get("ahi_interval", {})
+    _rob_grade = _ahi_iv.get("robustness_grade")
+    if _rob_grade:
+        _rob_colors = {
+            "A": ("#166534", "#f0fdf4"),
+            "B": ("#92400e", "#fffbeb"),
+            "C": ("#991b1b", "#fef2f2"),
+        }
+        _rc_fg, _rc_bg = _rob_colors.get(_rob_grade, ("#475569", "#f8fafc"))
+        _strict_v = _ahi_iv.get("strict", {}).get("ahi", "—")
+        _std_v = _ahi_iv.get("standard", {}).get("ahi", "—")
+        _sens_v = _ahi_iv.get("sensitive", {}).get("ahi", "—")
+        _rob_text = (f"AHI Interval: [{_strict_v} – {_std_v} – {_sens_v}] /u  ·  "
+                     f"Robustness: {_rob_grade}")
+        story.append(Paragraph(_rob_text, ParagraphStyle(
+            "RobBanner", fontName="Helvetica-Bold",
+            fontSize=7, textColor=colors.HexColor(_rc_fg),
+            backColor=colors.HexColor(_rc_bg),
+            leading=9, spaceBefore=1, spaceAfter=0,
+            leftIndent=4, rightIndent=4,
+            borderWidth=0.5, borderColor=colors.HexColor(_rc_fg),
+            borderPadding=1)))
+
+    if _warnings or _rob_grade:
+        sp(0.08)
 
     # ══════════════════════════════════════════════════════════════
     # OVERZICHTSPAGINA (v0.8.22) — patiënt + kanalen + visueel
@@ -1037,7 +1063,7 @@ def generate_pdf_report(results:dict, output_path:str,
         story.append(_hdr(t("rpt_sec1", lang))); sp(0.15)
         story.append(KeepTogether([_aasm_tbl(stats, lang=lang)])); sp(0.15)
 
-        # v0.8.36: Stage-specific sleep latencies
+        # v0.8.37: Stage-specific sleep latencies
         _hypno = results.get("hypnogram", results.get("hypno", []))
         if _hypno and len(_hypno) > 10:
             try:
@@ -1045,7 +1071,7 @@ def generate_pdf_report(results:dict, output_path:str,
             except Exception:
                 pass
 
-        # ── 1b. Stage transition matrix (v0.8.36) ────────────────────
+        # ── 1b. Stage transition matrix (v0.8.37) ────────────────────
         if timeline and len(timeline) > 10:
             _stages_order = ["W", "N1", "N2", "N3", "R"]
             _trans = {s1: {s2: 0 for s2 in _stages_order} for s1 in _stages_order}
@@ -1469,7 +1495,7 @@ def generate_pdf_report(results:dict, output_path:str,
                     [t("pdf_ecg_fix_name",lang),
                      f"{n_ecg_reclass} {t('pdf_to_central',lang)}",
                      t("pdf_ecg_fix_desc",lang)])
-            # v0.8.36: postprocess — CSR reclassification + mixed decomposition
+            # v0.8.37: postprocess — CSR reclassification + mixed decomposition
             pp = pneumo.get("postprocess", {})
             n_csr_recl = pp.get("n_csr_reclassified", 0) or 0
             if n_csr_recl > 0:
@@ -1500,7 +1526,7 @@ def generate_pdf_report(results:dict, output_path:str,
              ["Max. apnea-duur",            f"{rsum.get('max_apnea_dur_s','—')} s", ""],
             ], [8, 4, 5])])); sp(0.1)
 
-        # v0.8.36: Position × stage cross-table
+        # v0.8.37: Position × stage cross-table
         resp_events = resp.get("events", [])
         position_data = pneumo.get("position", {})
         _hypno = results.get("hypnogram", results.get("hypno", []))
@@ -1647,7 +1673,7 @@ def generate_pdf_report(results:dict, output_path:str,
             f"<i>{t('pdf_fri_note', lang)}</i>", styles["SM"])); sp(0.1)
 
     # ── 8e. Signaalvoorbeelden ────────────────────────────────
-    # v0.8.36: tijdelijk uitgeschakeld — epoch alignment nog niet correct
+    # v0.8.37: tijdelijk uitgeschakeld — epoch alignment nog niet correct
     # if not is_polygraphy:
     #     epoch_imgs = _build_epoch_examples(results)
     #     if epoch_imgs:
@@ -1681,7 +1707,7 @@ def generate_pdf_report(results:dict, output_path:str,
         story.append(Paragraph(f"SpO2: {spo2.get('error',t('pdf_no_channel',lang))}",styles["SM"]))
     sp(0.12)
 
-    # v0.8.36: Detailed saturation band breakdown
+    # v0.8.37: Detailed saturation band breakdown
     if spo2.get("success") and ss:
         try:
             tib_min = float(str(stats.get("TIB", 480) or 480))
@@ -1717,7 +1743,7 @@ def generate_pdf_report(results:dict, output_path:str,
         story.append(Paragraph(
             f"<i>{t('pdf_snore_no_data', lang)}</i>", styles["SM"])); sp(0.1)
 
-    # v0.8.36: Snoring cross-table by position × stage
+    # v0.8.37: Snoring cross-table by position × stage
     _hypno = results.get("hypnogram", results.get("hypno", []))
     if snore.get("success") and _hypno:
         try:
@@ -1733,7 +1759,7 @@ def generate_pdf_report(results:dict, output_path:str,
     except NameError:
         asum = pneumo.get("arousal", {}).get("summary", {})
 
-    # ── 10c. HARTRITME / ECG (v0.8.36) ──────────────────────────
+    # ── 10c. HARTRITME / ECG (v0.8.37) ──────────────────────────
     _hr = pneumo.get("heart_rate", {})
     _hr_sum = _hr.get("summary", {})
     if _hr.get("success") and _hr_sum:
@@ -1802,7 +1828,7 @@ def generate_pdf_report(results:dict, output_path:str,
         ("BOX",(0,0),(-1,-1),0.4,GRID),("BACKGROUND",(0,0),(-1,-1),BGROW)]))
     story.append(sig); sp(0.15)
 
-    # ── v0.8.36: ESS + OSAS severity profile ─────────────────
+    # ── v0.8.37: ESS + OSAS severity profile ─────────────────
     ess_value = pat.get("ess")  # None if not provided by clinician
     try:
         ess_value = int(ess_value) if ess_value is not None else None

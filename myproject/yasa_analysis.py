@@ -1,5 +1,5 @@
 """
-yasa_analysis.py — Uitgebreide slaapanalyse module voor YASAFlaskified v0.8.36
+yasa_analysis.py — Uitgebreide slaapanalyse module voor YASAFlaskified v0.8.37
 Compatibel met YASA 0.7.x (Hypnogram object) EN 0.6.x (numpy array).
 
 Fixes t.o.v. v7.1:
@@ -742,7 +742,7 @@ def run_full_analysis(raw: mne.io.BaseRaw,
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# v0.8.36: U-Sleep integration stub (Perslev et al., npj Digital Med 2021)
+# v0.8.37: U-Sleep integration stub (Perslev et al., npj Digital Med 2021)
 # ═══════════════════════════════════════════════════════════════════════════
 
 def _run_usleep_staging(raw, eeg_ch: str, eog_ch: str = None) -> dict:

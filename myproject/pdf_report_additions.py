@@ -1,7 +1,7 @@
 """
 pdf_report_additions.py — New PDF sections for generate_pdf_report.py
 =====================================================================
-YASAFlaskified v0.8.36
+YASAFlaskified v0.8.37
 
 Adds 5 sections missing vs Medatec:
   1. Position × stage cross-table (sleep time + events + mean duration)
@@ -497,6 +497,7 @@ def compute_osas_score(results, ess=None):
         label += '-' + ','.join(modifiers)
 
     total = O + S_sleep + A + (S_symp if S_symp is not None else 0)
+    total = total if S_symp is not None else None
 
     return {
         'O': O, 'S_sleep': S_sleep, 'A': A, 'S_symp': S_symp,
@@ -581,9 +582,15 @@ def draw_ess_section(story, results, ess=None, t=None):
             for m in score['modifiers']
         )
 
+    # Score summary line — v0.8.37: N/A total when ESS missing
+    if score['total'] is not None:
+        _total_str = f"{score['total']}/12"
+    else:
+        _total_str = "N/A"
+
     story.append(Paragraph(
         f"<b>{tr('OSAS code')}: {score['label']}</b>  "
-        f"({tr('total')}: {score['total']}/12){mod_str}",
+        f"({tr('total')}: {_total_str}){mod_str}",
         _body_style()))
     story.append(Spacer(1, 3*mm))
 

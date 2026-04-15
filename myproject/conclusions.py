@@ -1,5 +1,5 @@
 """
-conclusions.py — YASAFlaskified v0.8.36
+conclusions.py — YASAFlaskified v0.8.37
 ======================================
 Centralized clinical conclusion logic.
 

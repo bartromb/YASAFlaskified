@@ -4,6 +4,17 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 
 ---
 
+## [0.8.37] — April 2026
+
+### Added — Page 1 robustness + OSAS score fix
+- **AHI Robustness grade on page 1**: compact coloured banner showing `AHI Interval: [strict – standard – sensitive] /u · Robustness: A/B/C` directly below the confidence warning. Green (A), amber (B), red (C). Clinician sees at a glance whether diagnosis is robust.
+- **OSAS code without ESS**: when ESS is not provided, the OSAS code now shows `O0S2A0S— (subtotaal: 2/9, ESS niet ingevuld)` instead of the misleading `(totaal: 2/12)`. New i18n key `ESS not provided` in NL/FR/EN/DE.
+- Epoch signal examples (section 8e) remain disabled pending alignment fix.
+
+### Changed
+- psgscoring bumped to v0.2.951
+- All version strings updated to v0.8.37
+
 ## [0.8.36] — April 2026
 
 ### Added — PDF report Medatec parity + OSAS severity score

@@ -1,5 +1,5 @@
 """
-pneumo_analysis.py — YASAFlaskified v0.8.36
+pneumo_analysis.py — YASAFlaskified v0.8.37
 ===========================================
 Backward-compatibility shim.
 

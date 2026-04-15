@@ -1,5 +1,5 @@
 """
-i18n.py — YASAFlaskified v0.8.36
+i18n.py — YASAFlaskified v0.8.37
 Volledig drietalig: NL / FR / EN  (gelijkwaardig, gebruiker kiest bij login)
 
 Gebruik:
@@ -868,7 +868,7 @@ def get_translation(key: str, lang: str = None) -> str:
 
 
 
-# v0.8.36: Additional multilingual keys for PDF report
+# v0.8.37: Additional multilingual keys for PDF report
 _PDF_KEYS = {
     "pdf_not_available": {"nl": "Niet beschikbaar", "fr": "Non disponible", "en": "Not available", "de": "Nicht verfügbar"},
     "pdf_overcounting_corrections": {"nl": "Overschatting-correctie", "fr": "Corrections de surestimation", "en": "Over-counting corrections", "de": "Überzählungskorrekturen"},
@@ -880,7 +880,7 @@ TRANSLATIONS.update(_PDF_KEYS)
 
 
 # ======================================================================
-# v0.8.36: German (DE) translations — auto-generated from EN
+# v0.8.37: German (DE) translations — auto-generated from EN
 # ======================================================================
 
 _DE_PATCH = {
@@ -1454,7 +1454,7 @@ for _k, _v in _DE_PATCH.items():
         TRANSLATIONS[_k]["de"] = _v
 
 
-# v0.8.36: Complete PDF report multilingual keys
+# v0.8.37: Complete PDF report multilingual keys
 _PDF_V027 = {
     "pdf_artifact_count": {
         "nl": "epochs als artefact",
@@ -1675,7 +1675,7 @@ _PDF_V027 = {
 }
 TRANSLATIONS.update(_PDF_V027)
 
-# v0.8.36: Final remaining PDF keys
+# v0.8.37: Final remaining PDF keys
 _PDF_V027b = {
     "pdf_artifact_of": {
         "nl": "van",
@@ -1710,7 +1710,7 @@ _PDF_V027b = {
 }
 TRANSLATIONS.update(_PDF_V027b)
 
-# ── v0.8.36: HR/ECG + SpO2/PLM i18n ─────────────────────────────────
+# ── v0.8.37: HR/ECG + SpO2/PLM i18n ─────────────────────────────────
 _PDF_V030 = {
     "pdf_mean_spo2":      {"nl": "Gemiddelde SpO<sub>2</sub>", "fr": "SpO<sub>2</sub> moyenne", "en": "Mean SpO<sub>2</sub>", "de": "Mittlere SpO<sub>2</sub>"},
     "pdf_baseline_spo2":  {"nl": "Baseline SpO<sub>2</sub>",   "fr": "SpO<sub>2</sub> de base", "en": "Baseline SpO<sub>2</sub>", "de": "Baseline SpO<sub>2</sub>"},
@@ -1728,7 +1728,7 @@ _PDF_V030 = {
 }
 TRANSLATIONS.update(_PDF_V030)
 
-# ── v0.8.36: Medatec-parity PDF sections + OSAS score ────────────────
+# ── v0.8.37: Medatec-parity PDF sections + OSAS score ────────────────
 _PDF_V036 = {
     # Position × stage cross-table
     "pdf_pos_stage_title": {
@@ -1809,6 +1809,7 @@ _PDF_V036 = {
     "Arousal index":    {"nl": "Arousal-index",     "fr": "Index d'éveils",   "en": "Arousal index",    "de": "Arousal-Index"},
     "total":            {"nl": "totaal",            "fr": "total",            "en": "total",            "de": "gesamt"},
     "not provided":     {"nl": "niet ingevuld",     "fr": "non renseigné",    "en": "not provided",     "de": "nicht angegeben"},
+    "ESS not provided": {"nl": "ESS niet ingevuld", "fr": "ESS non renseigné", "en": "ESS not provided", "de": "ESS nicht angegeben"},
     "normal":           {"nl": "normaal",           "fr": "normal",           "en": "normal",           "de": "normal"},
     "mild sleepiness":  {"nl": "lichte slaperigheid", "fr": "somnolence légère", "en": "mild sleepiness", "de": "leichte Schläfrigkeit"},
     "moderate sleepiness": {"nl": "matige slaperigheid", "fr": "somnolence modérée", "en": "moderate sleepiness", "de": "mäßige Schläfrigkeit"},
@@ -1828,7 +1829,7 @@ _PDF_V036 = {
     "Recommendations":  {"nl": "Advies",            "fr": "Recommandations",  "en": "Recommendations",  "de": "Empfehlungen"},
     "Physician signature": {"nl": "Handtekening arts", "fr": "Signature du médecin", "en": "Physician signature", "de": "Unterschrift Arzt"},
     "Date":             {"nl": "Datum",             "fr": "Date",             "en": "Date",             "de": "Datum"},
-    # Clinical input fields (v0.8.36)
+    # Clinical input fields (v0.8.37)
     "indication":       {"nl": "Indicatie",          "fr": "Indication",       "en": "Indication",       "de": "Indikation"},
     "indication_placeholder": {
         "nl": "bv. slaapapneusyndroom",

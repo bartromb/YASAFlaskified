@@ -1524,7 +1524,7 @@ def channel_select(job_id):
         if edf_pat.get("name"):
             parts = edf_pat["name"].split()
             if len(parts) >= 2:
-                # v0.8.36: Handle Belgian/Dutch compound surnames
+                # v0.8.37: Handle Belgian/Dutch compound surnames
                 # (Van, De, Van de, Van den, Van der, etc.)
                 _PREFIXES = {
                     "van", "de", "den", "der", "het", "ten", "ter",
@@ -1636,7 +1636,7 @@ def start_analysis():
         "comments":          request.form.get("comments",     "").strip(),
         "scorer":            request.form.get("scorer", "").strip() or current_user.username,
         "institution":       request.form.get("institution",  "").strip(),
-        # v0.8.36: klinische velden (Medatec-pariteit)
+        # v0.8.37: klinische velden (Medatec-pariteit)
         "ess":               request.form.get("ess",          "").strip() or None,
         "indication":        request.form.get("indication",   "").strip(),
         "referring_physician": request.form.get("referring_physician", "").strip(),
@@ -2279,7 +2279,7 @@ def api_save_report(job_id):
                      "verified_role", "verified_by", "verified_date",
                      "report_header_name", "report_header_address",
                      "report_header_phone",
-                     # v0.8.36: klinische velden
+                     # v0.8.37: klinische velden
                      "ess", "indication", "referring_physician"):
             if key in new_pat:
                 data["patient_info"][key] = new_pat[key]
