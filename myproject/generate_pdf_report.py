@@ -895,28 +895,30 @@ def generate_pdf_report(results:dict, output_path:str,
             story.append(Paragraph(_w, _warn_style))
 
     # ── v0.8.37: AHI robustness grade on page 1 (compact) ────
-    _ahi_iv = results.get("ahi_interval", {})
-    _rob_grade = _ahi_iv.get("robustness_grade")
-    if _rob_grade:
-        _rob_colors = {
-            "A": ("#166534", "#f0fdf4"),
-            "B": ("#92400e", "#fffbeb"),
-            "C": ("#991b1b", "#fef2f2"),
-        }
-        _rc_fg, _rc_bg = _rob_colors.get(_rob_grade, ("#475569", "#f8fafc"))
-        _strict_v = _ahi_iv.get("strict", {}).get("ahi", "—")
-        _std_v = _ahi_iv.get("standard", {}).get("ahi", "—")
-        _sens_v = _ahi_iv.get("sensitive", {}).get("ahi", "—")
-        _rob_text = (f"AHI Interval: [{_strict_v} – {_std_v} – {_sens_v}] /u  ·  "
-                     f"Robustness: {_rob_grade}")
-        story.append(Paragraph(_rob_text, ParagraphStyle(
-            "RobBanner", fontName="Helvetica-Bold",
-            fontSize=7, textColor=colors.HexColor(_rc_fg),
-            backColor=colors.HexColor(_rc_bg),
-            leading=9, spaceBefore=1, spaceAfter=0,
-            leftIndent=4, rightIndent=4,
-            borderWidth=0.5, borderColor=colors.HexColor(_rc_fg),
-            borderPadding=1)))
+    _rob_grade = None
+    try:
+        _ahi_iv = pneumo.get("ahi_interval", {})
+        _rob_grade = _ahi_iv.get("robustness_grade")
+        if _rob_grade:
+            _rob_colors = {
+                "A": ("#166534", "#f0fdf4"),
+                "B": ("#92400e", "#fffbeb"),
+                "C": ("#991b1b", "#fef2f2"),
+            }
+            _rc_fg, _rc_bg = _rob_colors.get(_rob_grade, ("#475569", "#f8fafc"))
+            _strict_v = _ahi_iv.get("strict", {}).get("ahi", "—")
+            _std_v = _ahi_iv.get("standard", {}).get("ahi", "—")
+            _sens_v = _ahi_iv.get("sensitive", {}).get("ahi", "—")
+            _rob_text = (f"AHI Interval: [{_strict_v} – {_std_v} – {_sens_v}] /u  ·  "
+                         f"Robustness: {_rob_grade}")
+            story.append(Paragraph(_rob_text, ParagraphStyle(
+                "RobBanner", fontName="Helvetica-Bold",
+                fontSize=7, textColor=colors.HexColor(_rc_fg),
+                backColor=colors.HexColor(_rc_bg),
+                leading=9, spaceBefore=1, spaceAfter=0,
+                leftIndent=4, rightIndent=4)))
+    except Exception:
+        pass  # never break PDF generation for a cosmetic banner
 
     if _warnings or _rob_grade:
         sp(0.08)
