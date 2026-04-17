@@ -10,7 +10,7 @@ AI-based sleep staging + AASM 2.6 respiratory scoring + multilingual clinical re
 
 ## Paper
 
-> Rombaut B, Rombaut B, Rombaut C, Vallat R. **YASAFlaskified & psgscoring: An Open-Source Platform for Automated Polysomnography Analysis Using AI-Based Sleep Staging and AASM 2.6-Compliant Respiratory Scoring.** Manuscript in preparation (JCSM), 2026.
+> Rombaut B, Rombaut B, Rombaut C, et al. **Automated Polysomnography Scoring for Clinical Sleep Medicine: An Open-Source Platform Validated Against 59 Independent Scorer Sessions on PSG-IPA.** Manuscript in preparation, 2026.
 
 Technical supplement: **[psgscoring Technical Reference](https://github.com/bartromb/psgscoring/wiki/Technical-Reference)**
 
@@ -20,7 +20,7 @@ Upload an anonymised EDF recording via browser → receive a complete PSG analys
 
 **Try it:** [slaapkliniek.be](https://slaapkliniek.be) — request a free account via the corresponding author.
 
-### Analysis pipeline (11 steps)
+### Analysis pipeline
 
 | Step | What | How |
 |------|------|-----|
@@ -29,32 +29,22 @@ Upload an anonymised EDF recording via browser → receive a complete PSG analys
 | 3 | Arousal detection | K-complex exclusion + CVR coupling |
 | 4 | PLM scoring | AASM 2.6 + WASM criteria |
 | 5 | SpO₂ analysis | ODI 3%/4%, baseline (P90), T90 |
-| 6 | Hypoxic burden | Azarbarzin 2019 — per-event desaturation area (%·min/h) |
-| 7 | Post-processing | CSR reclassification, mixed decomposition, CII |
-| 8 | Signal quality | Per-channel grading (flat-line, clipping, disconnect) |
-| 9 | OSAS severity score | Multi-dimensional O-S-A-S profile with modifiers |
-| 10 | Clinical reports | PDF, Excel, EDF+, FHIR R4 — NL/FR/EN/DE |
-| 11 | ECG-derived effort | TECG + spectral classifier for central/obstructive |
+| 6 | Signal quality | Per-channel grading (flat-line, clipping, disconnect) |
+| 7 | Clinical reports | PDF, Excel, EDF+, FHIR R4 — NL/FR/EN/DE |
 
 ### Key features
 
-- **Hypoxic burden** — per-event SpO₂ desaturation area with both percentile and ensemble-averaged baseline methods (Azarbarzin et al., Eur Heart J 2019)
-- **OSAS severity profile** — O(xygen)-S(leep)-A(pnea)-S(ymptoms) score (0–12) with -p/-r/-c modifiers
 - **AHI confidence interval** — every study scored at three stringency levels with robustness grade (A/B/C)
 - **12 bias corrections** — systematic over- and under-counting correction with per-fix event counters
 - **Configurable scoring profiles** — strict / standard / sensitive
-- **PDF report with Medatec parity** — position×stage cross-table, snoring cross-table, stage latencies, saturation bands, ESS input, conclusion section
 - **Interactive EDF browser** — event overlay with epoch navigation
 - **Multi-site access control** — data isolation per clinical centre
+- **Representative epoch examples** — signal snapshots in PDF report for clinical review
 
 ## Validation
 
-| Dataset | n | Key result | Status |
-|---------|---|-----------|--------|
-| PSG-IPA (PhysioNet) | 5 rec, 60 sessions | Bias +1.6/h, r=0.990 | Published |
-| iSLEEPS (stroke) | 96 patients | MAE 3.3/h (normal/mild) | Complete |
-| MESA (NSRR) | ~2,056 | DUA pending | Planned |
-| AZORG (prospective) | ≥50 | Bland-Altman, κ | Protocol v6.2 EC-ready |
+- **PSG-IPA** (PhysioNet): 5 recordings, 59 scorer sessions — mean |ΔAHI| = 2.0/h, concordance 4/5
+- **AZORG** (planned): n≥50, Bland-Altman, weighted κ — protocol AZORG-YASA-2026-001
 
 ## Self-hosting
 
@@ -69,7 +59,7 @@ Requirements: Docker, 4+ GB RAM. The platform runs on CPU only (Hetzner Ryzen 9 
 
 ## Stack
 
-Python 3.11 · Flask/Gunicorn · Redis 7 + RQ · MNE-Python · YASA 0.7 · psgscoring v0.2.951 · ReportLab · Docker Compose
+Python 3.11 · Flask/Gunicorn · Redis 7 + RQ · MNE-Python · YASA 0.7 · psgscoring · ReportLab · Docker Compose
 
 ## Standalone library
 
@@ -84,12 +74,11 @@ See [github.com/bartromb/psgscoring](https://github.com/bartromb/psgscoring) for
 ## Citation
 
 ```bibtex
-@article{rombaut2026yasaflaskified,
-  title     = {{YASAFlaskified} \& psgscoring: An Open-Source Platform for
-               Automated Polysomnography Analysis Using {AI}-Based Sleep
-               Staging and {AASM} 2.6-Compliant Respiratory Scoring},
-  author    = {Rombaut, Bart and Rombaut, Briek and Rombaut, Cedric
-               and Vallat, Rapha{\"e}l},
+@article{rombaut2026psgscoring,
+  title     = {Automated Polysomnography Scoring for Clinical Sleep Medicine:
+               An Open-Source Platform Validated Against 59 Independent
+               Scorer Sessions on {PSG-IPA}},
+  author    = {Rombaut, Bart and Rombaut, Briek and Rombaut, Cedric},
   year      = {2026},
   note      = {Manuscript in preparation}
 }
