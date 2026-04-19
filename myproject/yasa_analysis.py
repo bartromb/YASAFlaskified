@@ -31,7 +31,18 @@ def _hypno_str_to_int(hypno_str: list) -> np.ndarray:
 
     YASA 0.7 functies (spindles_detect, sw_detect, bandpower)
     verwachten integer-hypnogrammen bij include=(1,2) etc.
+
+    v0.8.40: Onbekende stadia (bv. 'ART', 'UNS', 'MVT') worden nog
+    steeds naar W (0) gemapt voor backward compatibility, maar er
+    wordt nu een warning gelogd zodat silent miscounts zichtbaar zijn.
     """
+    unknown = Counter(s for s in hypno_str if s not in _STAGE_TO_INT)
+    if unknown:
+        logger.warning(
+            "Hypnogram bevat %d onbekende stadia (gemapt naar W): %s",
+            sum(unknown.values()),
+            dict(unknown.most_common(5))
+        )
     return np.array([_STAGE_TO_INT.get(s, 0) for s in hypno_str])
 
 
@@ -428,11 +439,20 @@ def run_bandpower(raw: mne.io.BaseRaw, hypno: list,
         }
 
         avg = bp[list(BANDS.keys())].mean()
-        result["band_ratios"] = {
-            "delta_theta": safe_round(avg["delta"] / avg["theta"]) if avg["theta"] > 0 else None,
-            "theta_alpha": safe_round(avg["theta"] / avg["alpha"]) if avg["alpha"] > 0 else None,
-            "sigma_delta": safe_round(avg["sigma"] / avg["delta"]) if avg["delta"] > 0 else None,
-        }
+        # v0.8.40: Guard tegen KeyError bij lege/corrupte bandpower data
+        if avg.empty or avg.isna().all():
+            logger.warning("Bandpower: geen geldige epochs — band_ratios=None")
+            result["band_ratios"] = {
+                "delta_theta": None,
+                "theta_alpha": None,
+                "sigma_delta": None,
+            }
+        else:
+            result["band_ratios"] = {
+                "delta_theta": safe_round(avg["delta"] / avg["theta"]) if avg.get("theta", 0) > 0 else None,
+                "theta_alpha": safe_round(avg["theta"] / avg["alpha"]) if avg.get("alpha", 0) > 0 else None,
+                "sigma_delta": safe_round(avg["sigma"] / avg["delta"]) if avg.get("delta", 0) > 0 else None,
+            }
         result["per_epoch"] = bp.reset_index().to_dict(orient="records")[:500]
         result["success"]   = True
 
@@ -699,11 +719,21 @@ def run_full_analysis(raw: mne.io.BaseRaw,
         staging = run_sleep_staging(raw, eeg_ch, eog_ch, emg_ch)
         hypno   = staging.get("hypnogram", [])
         if not hypno or not any(s != "W" for s in hypno):
-            logger.warning("Staging mislukt — fallback N2")
+            logger.warning(
+                "Staging mislukt — fallback naar N2 hypnogram. "
+                "Alle downstream metrics (AHI, arousal index, PLM) "
+                "gebruiken een fictieve slaapstructuur; interpretatie "
+                "moet voorzichtig zijn."
+            )
             n_epochs = int(raw.times[-1] / 30)
             hypno    = ["N2"] * n_epochs
-            staging["hypnogram"] = hypno
-            staging["fallback"]  = True
+            staging["hypnogram"]      = hypno
+            staging["fallback"]       = True
+            staging["staging_failed"] = True   # v0.8.40: explicit flag
+            staging["warning"] = (
+                "Staging failed — N2 fallback used. "
+                "Clinical interpretation requires manual verification."
+            )
 
     output["staging"] = staging
 

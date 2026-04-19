@@ -18,6 +18,7 @@ Klinisch verband:
 import numpy as np
 from scipy import signal
 from scipy.ndimage import label
+from scipy.signal import find_peaks, butter, filtfilt  # v0.8.40: consolidated imports
 import traceback
 import logging
 
@@ -318,8 +319,18 @@ def detect_arousals(eeg_data: np.ndarray, sf: float,
                     anchors_y.append(bl)
 
             if len(anchors_x) < 2:
-                # Fallback naar globale basislijn
-                return np.full(n, _robust_baseline(power_arr, stage_mask))
+                # v0.8.40: Fallback naar globale basislijn, maar met
+                # noise-floor veiligheidsvloer om te voorkomen dat
+                # arousal-inflated globale basislijn de drempel opdrijft.
+                global_bl = _robust_baseline(power_arr, stage_mask)
+                positive = power_arr[power_arr > 0]
+                noise_floor = (float(np.percentile(positive, 5))
+                               if positive.size > 0 else 1e-9)
+                # Gebruik max van globale baseline en 2× noise floor:
+                # bij zware fragmentatie trekt noise floor de drempel
+                # realistisch omlaag.
+                safe_bl = max(global_bl, noise_floor * 2.0)
+                return np.full(n, safe_bl)
 
             baseline = np.interp(np.arange(n), anchors_x, anchors_y)
             return np.maximum(baseline, 1e-9)
@@ -347,15 +358,25 @@ def detect_arousals(eeg_data: np.ndarray, sf: float,
         EMG_MIN_DUR_S = 1.0
 
         if emg_data is not None and len(emg_data) >= n_samples:
-            from scipy.signal import filtfilt, butter
+            from scipy.signal import filtfilt, butter  # local import for backward compat
             try:
                 # v0.8.11 FIX: converteer EMG naar µV (zelfde issue als EEG/PLM)
                 emg_work = emg_data[:n_samples].copy()
                 if np.max(np.abs(emg_work)) < 0.01:
                     emg_work = emg_work * 1e6
                     logger.debug("Arousal EMG: V→µV conversie")
-                b, a = butter(4, [10, min(100, sf/2 - 1)], btype="band", fs=sf)
-                emg_filt = filtfilt(b, a, emg_work)
+                # v0.8.40: Guard tegen ongeldige bandpass bij lage sf
+                nyq = sf / 2.0
+                high = min(100.0, nyq - 1.0)
+                if nyq > 10.0 and high > 10.0:
+                    b, a = butter(4, [10, high], btype="band", fs=sf)
+                    emg_filt = filtfilt(b, a, emg_work)
+                else:
+                    logger.warning(
+                        "EMG: sample rate %.1f Hz te laag voor 10-100 Hz "
+                        "bandpass — ongefilterd gebruikt", sf
+                    )
+                    emg_filt = emg_work
             except Exception:
                 emg_filt = emg_data[:n_samples]
 
@@ -920,19 +941,26 @@ def _detect_flow_limitation(flow_norm: np.ndarray, sf: float) -> np.ndarray:
     smooth = np.convolve(flow_norm, np.ones(win)/win, mode="same")
 
     # Vind lokale maxima (inspiratoire pieken)
-    from scipy.signal import find_peaks
+    # (find_peaks geïmporteerd bovenaan module — v0.8.40)
     peaks, _ = find_peaks(smooth,
                           distance=min_cycle_samples,
                           height=0.40)  # minimale flow = 40% basislijn
 
     for pk in peaks:
         # Zoek het omringende inspiratoire segment (van dal naar dal)
+        # v0.8.40: Bounded search voorkomt oneindige lus bij
+        # monotoon stijgend/dalend signaal (slecht gekalibreerde sensor)
+        max_extend = int(2.0 * sf)  # max 2s aan elke kant zoeken
         left  = pk
         right = pk
-        while left > 0 and smooth[left-1] < smooth[left]:
+        steps = 0
+        while left > 0 and smooth[left-1] < smooth[left] and steps < max_extend:
             left -= 1
-        while right < len(smooth)-1 and smooth[right+1] < smooth[right]:
+            steps += 1
+        steps = 0
+        while right < len(smooth)-1 and smooth[right+1] < smooth[right] and steps < max_extend:
             right += 1
+            steps += 1
 
         seg_len = right - left
         if seg_len < min_cycle_samples or seg_len > max_cycle_samples:
