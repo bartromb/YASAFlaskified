@@ -1846,3 +1846,62 @@ TRANSLATIONS.update(_PDF_V036)
 def t(key: str, lang: str = None) -> str:
     """Alias voor get_translation — handig in Python-code."""
     return get_translation(key, lang)
+
+
+# ═══════════════════════════════════════════════════════════
+# v0.8.39: Dashboard Grade/ODI/PLMi columns
+# ═══════════════════════════════════════════════════════════
+_DASHBOARD_V0839 = {
+    "grade": {
+        "nl": "Gr.",
+        "fr": "Gr.",
+        "en": "Gr.",
+        "de": "Gr.",
+    },
+    "grade_tooltip": {
+        "nl": "AHI robustheidsgraad (A=robuust, B=waarschijnlijk, C=onzeker)",
+        "fr": "Niveau de robustesse AHI (A=robuste, B=probable, C=incertain)",
+        "en": "AHI robustness grade (A=robust, B=probable, C=uncertain)",
+        "de": "AHI-Robustheitsgrad (A=robust, B=wahrscheinlich, C=unsicher)",
+    },
+    "odi_tooltip": {
+        "nl": "Oxygen Desaturation Index (3%) \u2014 events/uur slaap",
+        "fr": "Index de d\u00e9saturation en oxyg\u00e8ne (3%) \u2014 \u00e9v\u00e9nements/h sommeil",
+        "en": "Oxygen Desaturation Index (3%) \u2014 events/hour sleep",
+        "de": "Oxygen Desaturation Index (3%) \u2014 Ereignisse/Stunde Schlaf",
+    },
+    "plmi_tooltip": {
+        "nl": "Periodic Limb Movement Index \u2014 beenbewegingen/uur slaap",
+        "fr": "Index des mouvements p\u00e9riodiques des membres \u2014 MPM/h sommeil",
+        "en": "Periodic Limb Movement Index \u2014 PLMs/hour sleep",
+        "de": "Periodischer Bein-Bewegungs-Index \u2014 PLM/Stunde Schlaf",
+    },
+}
+TRANSLATIONS.update(_DASHBOARD_V0839)
+
+
+# v0.8.39: Dashboard Grade/ODI/PLMi columns
+_DASHBOARD_V0839 = {
+    "grade": {
+        "nl": "Gr.", "fr": "Gr.", "en": "Gr.", "de": "Gr.",
+    },
+    "grade_tooltip": {
+        "nl": "AHI robustheidsgraad (A=robuust, B=waarschijnlijk, C=onzeker)",
+        "fr": "Niveau de robustesse AHI (A=robuste, B=probable, C=incertain)",
+        "en": "AHI robustness grade (A=robust, B=probable, C=uncertain)",
+        "de": "AHI-Robustheitsgrad (A=robust, B=wahrscheinlich, C=unsicher)",
+    },
+    "odi_tooltip": {
+        "nl": "Oxygen Desaturation Index (3%) — events/uur slaap",
+        "fr": "Index de désaturation en oxygène (3%) — événements/h sommeil",
+        "en": "Oxygen Desaturation Index (3%) — events/hour sleep",
+        "de": "Oxygen Desaturation Index (3%) — Ereignisse/Stunde Schlaf",
+    },
+    "plmi_tooltip": {
+        "nl": "Periodic Limb Movement Index — beenbewegingen/uur slaap",
+        "fr": "Index des mouvements périodiques des membres — MPM/h sommeil",
+        "en": "Periodic Limb Movement Index — PLMs/hour sleep",
+        "de": "Periodischer Bein-Bewegungs-Index — PLM/Stunde Schlaf",
+    },
+}
+TRANSLATIONS.update(_DASHBOARD_V0839)

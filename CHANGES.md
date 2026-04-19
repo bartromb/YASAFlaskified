@@ -1,5 +1,21 @@
 # Changelog — YASAFlaskified
 
+## v0.8.39 (2026-04-19)
+
+### Dashboard
+- Added 3 new columns after AHI in Patiëntenoverzicht:
+  - **Grade** (A/B/C): AHI robustness from confidence interval
+  - **ODI₃**: Oxygen Desaturation Index 3%
+  - **PLMi**: Periodic Limb Movement Index
+- FHD-compatible 12-column layout with compact padding
+- Backward compatible: shows "—" if backend data unavailable
+- Backend wiring for s.grade/s.odi/s.plmi: TBD separate commit
+
+### i18n
+- Added 4 new keys × 4 languages (NL/FR/EN/DE):
+  - grade, grade_tooltip, odi_tooltip, plmi_tooltip
+- Uses _DASHBOARD_V0839 sub-dict pattern consistent with _PDF_KEYS
+
 All notable changes documented per [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---

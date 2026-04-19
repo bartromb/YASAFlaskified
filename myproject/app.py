@@ -2402,6 +2402,53 @@ def api_results(job_id):
 # DASHBOARD  (v9.1)
 # ═══════════════════════════════════════════════════════════════
 
+
+# ─── v0.8.39: Dashboard severity helpers ──────────────────
+def _severity_class_ahi_odi(value):
+    """AASM-style severity class for AHI or ODI_3%."""
+    if value is None or value == '':
+        return 'secondary'
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return 'secondary'
+    if v < 5:   return 'success'
+    if v < 15:  return 'warning'
+    if v < 30:  return 'orange'
+    return 'danger'
+
+
+def _severity_class_plmi(value):
+    """PLMI severity class."""
+    if value is None or value == '':
+        return 'secondary'
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return 'secondary'
+    if v < 5:   return 'success'
+    if v < 15:  return 'warning'
+    if v < 50:  return 'orange'
+    return 'danger'
+
+
+def _compute_ahi_grade(data, ahi_standard=None):
+    """Extract pre-computed robustness grade from ahi_interval.
+
+    psgscoring computes this in pneumo.ahi_interval.robustness_grade.
+    Returns 'A' (robust, all profiles concordant),
+            'B' (probable), 'C' (uncertain), or None.
+    """
+    if not isinstance(data, dict):
+        return None
+    ai = data.get("pneumo", {}).get("ahi_interval", {})
+    if isinstance(ai, dict):
+        grade = ai.get("robustness_grade")
+        if grade in ("A", "B", "C"):
+            return grade
+    return None
+
+
 @app.route("/dashboard")
 @login_required
 def dashboard():
@@ -2422,6 +2469,8 @@ def dashboard():
             meta   = data.get("meta", {})
             stats  = data.get("sleep_statistics", {}).get("stats", {})
             rsum   = data.get("pneumo", {}).get("respiratory", {}).get("summary", {})
+            ssum   = data.get("pneumo", {}).get("spo2", {}).get("summary", {})
+            lsum   = data.get("pneumo", {}).get("plm", {}).get("summary", {})
             scorer = pat.get("scorer", "")
 
             ahi = rsum.get("ahi_total")
@@ -2432,6 +2481,26 @@ def dashboard():
                           "orange"  if ahi_f < 30 else "danger"
             except Exception:
                 ahi_f = None; sev_cls = "secondary"
+            # ── v0.8.39: Grade + ODI + PLMi ────────────────
+            grade = _compute_ahi_grade(data, ahi_f)
+
+            # ODI_3% (confirmed key: pneumo.spo2.summary.odi_3pct)
+            odi_val = ssum.get("odi_3pct")
+            try:
+                odi_f = float(odi_val) if odi_val is not None else None
+            except (TypeError, ValueError):
+                odi_f = None
+            odi_display = f"{odi_f:.1f}" if odi_f is not None else "—"
+            odi_cls = _severity_class_ahi_odi(odi_f)
+
+            # PLMi (confirmed key: pneumo.plm.summary.plm_index)
+            plmi_val = lsum.get("plm_index")
+            try:
+                plmi_f = float(plmi_val) if plmi_val is not None else None
+            except (TypeError, ValueError):
+                plmi_f = None
+            plmi_display = f"{plmi_f:.1f}" if plmi_f is not None else "—"
+            plmi_cls = _severity_class_plmi(plmi_f)
 
             from datetime import datetime as _dt
             analyse_date = _dt.fromtimestamp(os.path.getmtime(jf)).strftime("%d-%m-%Y %H:%M")
@@ -2455,6 +2524,12 @@ def dashboard():
                 "has_psg":     os.path.exists(os.path.join(upload_folder, f"{job_id}_rapport.pdf")),
                 "has_excel":   os.path.exists(os.path.join(upload_folder, f"{job_id}_rapport.xlsx")),
                 "has_edfplus": os.path.exists(os.path.join(upload_folder, f"{job_id}_scored.edf")),
+                # v0.8.39: Grade / ODI / PLMi
+                "grade":    grade,
+                "odi":      odi_display,
+                "odi_cls":  odi_cls,
+                "plmi":     plmi_display,
+                "plmi_cls": plmi_cls,
             })
         except Exception as e:
             logger.warning(f"Dashboard: {jf}: {e}")

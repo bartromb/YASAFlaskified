@@ -65,3 +65,13 @@ data/
 
 # Zip releases (keep source, not packages)
 *.zip
+
+# v0.8.39 deploy artifacts (should not be committed)
+myproject/app.py.bak
+myproject/app.py.before_fix
+myproject/*_before_fix.py
+myproject/*_v0.8.37_backup.*
+deploy_v0839_full.sh
+fix_v0839_final.sh
+patch_app_dashboard.sh
+rollback_v0839.sh

@@ -113,6 +113,9 @@
               <th>ID</th>
               <th>{{ t('date_of_birth') }}</th>
               <th class="text-center">AHI</th>
+              <th class="text-center" title="{{ t('grade_tooltip') }}">{{ t('grade') }}</th>
+              <th class="text-center" title="{{ t('odi_tooltip') }}">ODI₃</th>
+              <th class="text-center" title="{{ t('plmi_tooltip') }}">PLMi</th>
               <th class="text-center">TST</th>
               <th class="text-center">SE %</th>
               <th class="text-center">{{ t('status') }}</th>
@@ -152,6 +155,40 @@
                   {{ s.ahi }}
                 </span>
                 <div class="text-muted" style="font-size:.7rem">{{ s.ahi_sev }}</div>
+              </td>
+
+              {# Grade A/B/C (AHI confidence) #}
+              <td class="text-center">
+                {% if s.grade %}
+                  <span class="badge bg-{{ 'success' if s.grade=='A' else 'warning text-dark' if s.grade=='B' else 'danger' }} rounded-pill px-2"
+                        style="min-width:26px">
+                    {{ s.grade }}
+                  </span>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+
+              {# ODI 3% #}
+              <td class="text-center">
+                {% if s.odi is defined and s.odi not in [None, '—'] %}
+                  <span class="badge bg-{{ s.odi_cls|default('secondary') }} rounded-pill px-2">
+                    {{ s.odi }}
+                  </span>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+
+              {# PLMi #}
+              <td class="text-center">
+                {% if s.plmi is defined and s.plmi not in [None, '—'] %}
+                  <span class="badge bg-{{ s.plmi_cls|default('secondary') }} rounded-pill px-2">
+                    {{ s.plmi }}
+                  </span>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
               </td>
 
               {# TST #}
@@ -258,7 +295,7 @@
             </tr>
             {% else %}
             <tr>
-              <td colspan="9" class="text-center text-muted py-5">
+              <td colspan="12" class="text-center text-muted py-5">
                 <i class="bi bi-inbox fs-3 d-block mb-2"></i>
                 {{ t('no_analyses_yet') }}
                 <a href="{{ url_for('upload_file') }}" class="ms-1">{{ t('upload_to_start') }}</a>.
@@ -276,7 +313,12 @@
 <style>
   .badge.bg-orange { background-color: #e67e22 !important; }
   .table-hover tbody tr:hover { background-color: #f0f7ff; cursor: pointer; }
-  #dashTable th { font-size: .8rem; white-space: nowrap; }
+  #dashTable th { font-size: .78rem; white-space: nowrap; padding: 0.4rem 0.35rem; }
+  #dashTable td { font-size: .82rem; padding: 0.4rem 0.35rem; }
+  #dashTable .badge { font-size: .72rem; font-weight: 500; }
+  /* Compact action buttons for 12-column layout */
+  #dashTable td:last-child .btn { font-size: .65rem !important; padding: 0.1rem 0.25rem !important; }
+  #dashTable td:last-child .btn i { font-size: .8rem; }
 </style>
 
 <script>
