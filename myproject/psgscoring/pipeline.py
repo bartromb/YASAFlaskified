@@ -127,6 +127,35 @@ def run_pneumo_analysis(
     eeg_data, sf_eeg = _pick_eeg(raw, ch)
     emg_data         = _pick_emg(raw, ch)
 
+    # v0.3.001 BUG2 MARKER: RIP pair quality gate (moved BEFORE event detection)
+    # Detects failed thorax or abdomen RIP sensors before classification.
+    # Prevents false obstructive-default when one sensor fails
+    # (cf. Loos case, AZORG 2026).
+    logger.info("[pneumo 1b+] RIP pair quality assessment...")
+    try:
+        from .signal_quality import compare_rip_pair
+        if thorax_data is not None and abdomen_data is not None:
+            sf_rip = raw.info.get("sfreq", 256) if hasattr(raw, "info") else 256
+            output["signal_quality"] = compare_rip_pair(
+                thorax_data, abdomen_data, sf_rip
+            )
+            sq_mode = output["signal_quality"].get("recommended_mode")
+            sq_ratio = output["signal_quality"].get("energy_ratio", 1.0)
+            if sq_mode != "bilateral":
+                logger.warning(
+                    "[RIP quality] mode=%s, ratio=%.1fx, working=%s",
+                    sq_mode, sq_ratio,
+                    output["signal_quality"].get("working_channel"),
+                )
+                for w in output["signal_quality"].get("warnings", []):
+                    logger.warning("[RIP quality] %s", w)
+        else:
+            logger.info("[RIP quality] thorax or abdomen not available - skip")
+            output["signal_quality"] = None
+    except Exception as e:
+        logger.warning("RIP pair quality check failed: %s", e)
+        output["signal_quality"] = {"error": str(e)}
+
     # ── Step 1: Respiratory events ─────────────────────────────────────────
     logger.info("[pneumo 1/9] Apnea / hypopnea detection (AASM 2.6)...")
     # Extract ECG for effort-based apnea type classification (v0.8.23)
@@ -148,6 +177,7 @@ def run_pneumo_analysis(
             scoring_profile = profile,
             ecg_data     = ecg_data_resp,
             sf_ecg       = sf_ecg_resp,
+            signal_quality = output.get("signal_quality"),  # v0.3.001 BUG2
         )
     else:
         resp = {
@@ -185,6 +215,7 @@ def run_pneumo_analysis(
                     scoring_profile = _alt_profile,
                     ecg_data     = ecg_data_resp,
                     sf_ecg       = sf_ecg_resp,
+                    signal_quality = output.get("signal_quality"),  # v0.3.001 BUG2
                 )
                 _profile_results[_pname] = _alt_resp.get("summary", {})
 
@@ -257,34 +288,7 @@ def run_pneumo_analysis(
         logger.warning("Channel quality assessment failed: %s", e)
         output["channel_quality"] = {"overall_grade": "unknown", "error": str(e)}
 
-    # v0.8.41: RIP pair quality gate
-    # Detects failed thorax or abdomen RIP sensors before classification.
-    # Prevents false obstructive-default when one sensor fails
-    # (cf. Loos case, AZORG 2026).
-    logger.info("[pneumo 1b+] RIP pair quality assessment...")
-    try:
-        from .signal_quality import compare_rip_pair
-        if thorax_data is not None and abdomen_data is not None:
-            sf_rip = raw.info.get("sfreq", 256) if hasattr(raw, "info") else 256
-            output["signal_quality"] = compare_rip_pair(
-                thorax_data, abdomen_data, sf_rip
-            )
-            sq_mode = output["signal_quality"].get("recommended_mode")
-            sq_ratio = output["signal_quality"].get("energy_ratio", 1.0)
-            if sq_mode != "bilateral":
-                logger.warning(
-                    "[RIP quality] mode=%s, ratio=%.1fx, working=%s",
-                    sq_mode, sq_ratio,
-                    output["signal_quality"].get("working_channel"),
-                )
-                for w in output["signal_quality"].get("warnings", []):
-                    logger.warning("[RIP quality] %s", w)
-        else:
-            logger.info("[RIP quality] thorax or abdomen not available - skip")
-            output["signal_quality"] = None
-    except Exception as e:
-        logger.warning("RIP pair quality check failed: %s", e)
-        output["signal_quality"] = {"error": str(e)}
+
 
     # ── Step 1c (v0.8.11): Baseline Anchoring ─────────────────────────────
     if apnea_flow is not None:

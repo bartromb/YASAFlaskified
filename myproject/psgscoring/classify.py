@@ -114,6 +114,7 @@ def classify_apnea_type(
     sf: float,
     ecg_assessment: dict | None = None,
     flattening_index: float | None = None,
+    signal_quality: dict | None = None,
 ) -> tuple[str, float, dict]:
     """
     Classify an apnea event as ``"obstructive"``, ``"central"``, or
@@ -150,6 +151,73 @@ def classify_apnea_type(
     -------
     (type_str, confidence_0_to_1, detail_dict)
     """
+    # ── Rule -1 (v0.3.001 BUG2 MARKER): RIP pair quality gate ───────────
+    # Respects compare_rip_pair() output. Single-channel failures cannot
+    # be classified via bilateral effort analysis (Rules 0-6 all depend
+    # on trustworthy thorax+abdomen signals). Route to fallback BEFORE
+    # attempting the bilateral chain.
+    #
+    # Clinical motivation: Loos case (AZORG April 2026). Thorax RIP dead
+    # (energy ratio 6861x). Without this gate, classifier defaults to
+    # obstructive because bilateral analysis sees "no paradox" - but
+    # that's because the signal is absent, not because there was no
+    # paradoxical movement.
+    if signal_quality is not None:
+        _mode = signal_quality.get("recommended_mode")
+
+        if _mode == "single-channel":
+            from .signal_quality import single_channel_fallback_classify
+
+            _working = signal_quality.get("working_channel")
+            _working_raw = None
+            if _working == "thorax":
+                _working_raw = thorax_raw
+            elif _working == "abdomen":
+                _working_raw = abdomen_raw
+
+            if _working_raw is None:
+                return "uncertain", 0.3, {
+                    "classification_source": "single-channel-no-signal",
+                    "decision_reason": (
+                        f"gate={_mode} but working_channel={_working!r} "
+                        f"signal is None"
+                    ),
+                }
+
+            _start_s = onset_idx / max(sf, 1)
+            _end_s = end_idx / max(sf, 1)
+            _fallback_type = single_channel_fallback_classify(
+                apnea_start_s=_start_s,
+                apnea_end_s=_end_s,
+                effort_signal=_working_raw,
+                sf=sf,
+            )
+
+            if _fallback_type == "uncertain":
+                _conf = 0.4
+            elif _fallback_type == "central":
+                _conf = 0.65
+            else:
+                _conf = 0.55
+
+            return _fallback_type, _conf, {
+                "classification_source": "single-channel-fallback",
+                "working_channel": _working,
+                "energy_ratio": signal_quality.get("energy_ratio"),
+                "decision_reason": (
+                    f"rip_pair_gate=single-channel working={_working}"
+                ),
+            }
+
+        elif _mode == "unreliable":
+            return "uncertain", 0.2, {
+                "classification_source": "unreliable-rip-pair",
+                "decision_reason": "rip_pair_gate=unreliable",
+                "energy_ratio": signal_quality.get("energy_ratio"),
+            }
+
+        # mode == "bilateral" or unrecognised → fall through to Rules 0-6
+
     seg_len  = end_idx - onset_idx
     dur_s    = seg_len / max(sf, 1)
     if seg_len < 2:

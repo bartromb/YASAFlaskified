@@ -126,6 +126,18 @@ def assess_rip_channel(
             "reason": "Empty signal",
         }
 
+    # v0.2.963 SQUEEZE2D MARKER: MNE raw.get_data() returns shape (1, N).
+    # welch() on 2D produces 2D psd, breaking 1D boolean masking later.
+    signal = np.asarray(signal, dtype=float).squeeze()
+    if signal.ndim != 1:
+        return {
+            "mad": 0.0,
+            "breath_energy": 0.0,
+            "peak_freq": None,
+            "status": "failed",
+            "reason": f"Expected 1D signal, got {signal.ndim}D shape {signal.shape}",
+        }
+
     mad = float(np.median(np.abs(signal - np.median(signal))))
 
     # Welch PSD for breath-band energy

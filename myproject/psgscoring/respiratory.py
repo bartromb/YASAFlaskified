@@ -273,6 +273,7 @@ def detect_respiratory_events(
     scoring_profile:   dict | None = None,
     ecg_data:          np.ndarray | None = None,
     sf_ecg:            float | None = None,
+    signal_quality:    dict | None = None,
 ) -> dict:
     """
     Detect and classify apneas and hypopneas per AASM 2.6.
@@ -462,6 +463,7 @@ def detect_respiratory_events(
             ecg_data=ecg_data, tecg=_tecg, r_peaks=_r_peaks,
             sf_ecg=_sf_ecg_local,
             flow_filt=_flow_filt_snap,
+            signal_quality=signal_quality,  # v0.3.001 BUG2 gate
         )
 
         # ── Fix 1: Herbereken hypopnea-basislijn zonder post-apnea recovery ─
@@ -536,6 +538,7 @@ def detect_respiratory_events(
             sf_ecg=_sf_ecg_local,
             flow_filt=_flow_filt_snap,
             breaths=breaths,
+            signal_quality=signal_quality,  # v0.3.001 BUG2 gate
         )
         events = new_events
 
@@ -994,6 +997,7 @@ def _detect_apneas(
     max_dur_s: float = APNEA_MAX_DUR_S,
     ecg_data=None, tecg=None, r_peaks=None, sf_ecg=None,
     flow_filt: np.ndarray | None = None,
+    signal_quality: dict | None = None,
 ) -> list[dict]:
     """Detecteer apnea-events: ≥90% flow-reductie gedurende ≥10s (AASM 2.6)."""
     events: list[dict] = []
@@ -1037,6 +1041,7 @@ def _detect_apneas(
                     ecg_data, tecg, r_peaks, thorax_raw, abdomen_raw,
                     sf_flow, sf_ecg or sf_flow, sub_idx[0], sub_idx[-1] + 1
                 ) if tecg is not None else None,
+                signal_quality=signal_quality,  # v0.3.001 BUG2 gate
             )
             desat, min_spo2 = get_desaturation(
                 spo2_data, onset_s, sub_dur, sf_spo2, global_spo2_bl
@@ -1071,6 +1076,7 @@ def _detect_hypopneas(
     ecg_data=None, tecg=None, r_peaks=None, sf_ecg=None,
     flow_filt: np.ndarray | None = None,
     breaths: list | None = None,
+    signal_quality: dict | None = None,
 ) -> tuple[list[dict], list[dict]]:
     """Return (all_events_including_new_hypopneas, rejected_candidates)."""
     # Build apnea exclusion mask (±5 s around each confirmed apnea)
@@ -1180,6 +1186,7 @@ def _detect_hypopneas(
                     sf_flow, sf_ecg or sf_flow, hy_oi, hy_ei
                 ) if tecg is not None else None,
                 flattening_index=_ev_flat,
+                signal_quality=signal_quality,  # v0.3.001 BUG2 gate
             )
             hy_label = f"hypopnea_{hy_sub}" if hy_sub != "obstructive" else "hypopnea"
             flow_red_ratio = safe_r(
