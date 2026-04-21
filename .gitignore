@@ -75,3 +75,6 @@ deploy_v0839_full.sh
 fix_v0839_final.sh
 patch_app_dashboard.sh
 rollback_v0839.sh
+apply_v0843_csas_label.sh
+apply_v0843_csas_label_v2.sh
+step4_yasaflaskified_bundle_v0.3.1.sh

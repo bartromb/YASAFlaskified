@@ -124,6 +124,89 @@ def _sev_clr(ahi):
         if v<t: return c
     return RED
 
+
+# v0.8.43: Dynamische OSAS/CSAS/MSAS labeling op basis van apnoe-type
+def _apnea_syndrome(rsum, lang="nl"):
+    """
+    Bepaal SAS-type op basis van dominante apnoe-type (>50%).
+    Returnt vertaald syndroom-label: OSAS/CSAS/gemengde SAS/SAS.
+
+    Klinische rationale: een AHI kan hoog zijn door obstructieve of centrale
+    events. Het label 'OSA' hardcoden is misleidend bij CSAS-patronen
+    (hartfalen met Cheyne-Stokes, post-stroke, opioid-geinduceerd).
+    """
+    n_o = (rsum or {}).get("n_obstructive", 0) or 0
+    n_c = (rsum or {}).get("n_central", 0) or 0
+    n_m = (rsum or {}).get("n_mixed", 0) or 0
+    total = n_o + n_c + n_m
+    if total == 0:
+        return {"nl":"SAS","fr":"SAS","en":"SAS","de":"SAS"}.get(lang, "SAS")
+    pct_c = n_c / total
+    pct_o = n_o / total
+    if pct_c > 0.5:
+        return {"nl":"CSAS","fr":"SACS","en":"CSAS","de":"ZSAS"}.get(lang, "CSAS")
+    if pct_o > 0.5:
+        return {"nl":"OSAS","fr":"SAOS","en":"OSAS","de":"OSAS"}.get(lang, "OSAS")
+    return {"nl":"gemengde SAS","fr":"SAS mixte","en":"mixed SAS","de":"gemischte SAS"}.get(lang, "mixed SAS")
+
+def _sev_with_syndrome(ahi, rsum, lang="nl"):
+    """
+    Severity-label gecombineerd met dynamisch syndroom-type.
+    Alleen voor AHI, NIET voor OAHI (OAHI is per definitie obstructief).
+
+    Voorbeelden:
+      - Loos: AHI 51.1, 94% centraal -> 'Ernstig CSAS'
+      - Standaard OSA: AHI 28, 95% obstructief -> 'Matig OSAS'
+      - Normale AHI: geen syndroom-label, gewoon 'Normaal'
+    """
+    try:
+        v = float(ahi)
+    except Exception:
+        return "--"
+    generic_labels = {
+        "Normal":   {"nl":"Normaal",  "fr":"Normal",  "en":"Normal",   "de":"Normal"},
+        "Mild":     {"nl":"Mild",     "fr":"Leger",   "en":"Mild",     "de":"Leicht"},
+        "Moderate": {"nl":"Matig",    "fr":"Modere",  "en":"Moderate", "de":"Mittel"},
+        "Severe":   {"nl":"Ernstig",  "fr":"Severe",  "en":"Severe",   "de":"Schwer"},
+    }
+    if v < 5:    sev_key = "Normal"
+    elif v < 15: sev_key = "Mild"
+    elif v < 30: sev_key = "Moderate"
+    else:        sev_key = "Severe"
+    sev_text = generic_labels[sev_key].get(lang, generic_labels[sev_key]["en"])
+    if sev_key == "Normal":
+        return sev_text
+    syndrome = _apnea_syndrome(rsum, lang)
+    return sev_text + " " + syndrome
+
+def _apnea_breakdown_line(rsum, lang="nl"):
+    """
+    Compacte breakdown-regel voor pagina 1:
+    'Apnoe-type: obstructief 16 (6%) . centraal 223 (94%) . gemengd 0 (0%)'
+
+    Returnt None bij totaal=0 (dan niks tonen).
+    """
+    n_o = (rsum or {}).get("n_obstructive", 0) or 0
+    n_c = (rsum or {}).get("n_central", 0) or 0
+    n_m = (rsum or {}).get("n_mixed", 0) or 0
+    total = n_o + n_c + n_m
+    if total == 0:
+        return None
+    pct_o = round(100 * n_o / total)
+    pct_c = round(100 * n_c / total)
+    pct_m = round(100 * n_m / total)
+    labels = {
+        "nl": ("Apnoe-type", "obstructief", "centraal", "gemengd"),
+        "fr": ("Type d'apnee", "obstructif", "central", "mixte"),
+        "en": ("Apnea type", "obstructive", "central", "mixed"),
+        "de": ("Apnoe-Typ", "obstruktiv", "zentral", "gemischt"),
+    }
+    lab, lab_o, lab_c, lab_m = labels.get(lang, labels["en"])
+    return (lab + ": " + lab_o + " " + str(n_o) + " (" + str(pct_o) + "%) · "
+            + lab_c + " " + str(n_c) + " (" + str(pct_c) + "%) · "
+            + lab_m + " " + str(n_m) + " (" + str(pct_m) + "%)")
+
+
 # ── Componenten ────────────────────────────────────────────────
 def _hdr(title,color=None):
     bg=color or NAVY
@@ -853,12 +936,14 @@ def generate_pdf_report(results:dict, output_path:str,
     # ── KPI-BALK ───────────────────────────────────────────────
     ahi_v=_f(rsum,"ahi_total"); ahi_s=f"{ahi_v:.1f}" if ahi_v is not None else "—"
     # v0.8.22: Label afhankelijk van studietype
+    # v0.8.43: syndroom-label dynamisch op basis van apnoe-type distributie
+    _rsum_for_sev = (results.get("respiratory") or {}).get("summary") or {}
     if is_polygraphy:
-        ahi_label = f"REI  ({_sev(ahi_v, lang)})"
+        ahi_label = f"REI  ({_sev_with_syndrome(ahi_v, _rsum_for_sev, lang)})"
     elif is_titration:
-        ahi_label = f"{t('pdf_residual',lang)} AHI  ({_sev(ahi_v, lang)})"
+        ahi_label = f"{t('pdf_residual',lang)} AHI  ({_sev_with_syndrome(ahi_v, _rsum_for_sev, lang)})"
     else:
-        ahi_label = f"AHI  ({_sev(ahi_v, lang)})"
+        ahi_label = f"AHI  ({_sev_with_syndrome(ahi_v, _rsum_for_sev, lang)})"
     story.append(_kpi([
         (ahi_s, ahi_label, "/u", _sev_clr(ahi_v) if ahi_v else GR),
         (_v(stats,"TST",fmt="{:.0f}"),  "TST", "min", NAVY),
@@ -866,6 +951,21 @@ def generate_pdf_report(results:dict, output_path:str,
         (_v(stats,"SOL",fmt="{:.0f}"),  t("pdf_sol",lang),    "min", NAVY),
         (_v(stats,"WASO",fmt="{:.0f}"), "WASO",                   "min", NAVY),
     ])); sp(0.15)
+
+    # v0.8.43: Apnoe-type breakdown regel (dominante type + percentages)
+    from reportlab.lib.styles import ParagraphStyle as _PS_v0843
+    _apnea_line = _apnea_breakdown_line(_rsum_for_sev, lang)
+    if _apnea_line:
+        _apnea_style = _PS_v0843(
+            "ApneaBreakdown_v0843",
+            fontName="Helvetica",
+            fontSize=8,
+            textColor=colors.HexColor("#6b7a99"),
+            alignment=1,
+            spaceAfter=2,
+        )
+        story.append(Paragraph(_apnea_line, _apnea_style))
+        sp(0.1)
 
     # ── v0.8.22: Prominente waarschuwing bij slechte signaalkwaliteit ──
     sig_q = results.get("signal_quality", {})
@@ -1276,7 +1376,8 @@ def generate_pdf_report(results:dict, output_path:str,
         oahi  = _f(rsum, "oahi")      or 0
         oahi60 = _f(rsum, "oahi_conf60") or oahi
         oahi_all = _f(rsum, "oahi_all") or oahi
-        sev   = _sev(ahi, lang);  osev = _sev(oahi, lang);  clr = _sev_clr(ahi)
+        # v0.8.43: AHI krijgt dynamisch syndroom-label; OAHI blijft 'OSA' (per definitie obstructief)
+        sev   = _sev_with_syndrome(ahi, rsum, lang);  osev = _sev(oahi, lang);  clr = _sev_clr(ahi)
         # v0.8.22: Labels per studietype
         _ahi_lbl = "REI" if is_polygraphy else (f"{t('pdf_residual',lang)} AHI" if is_titration else "AHI")
         _oahi_lbl = "REI" if is_polygraphy else (f"{t('pdf_residual',lang)} OAHI" if is_titration else "OAHI")
