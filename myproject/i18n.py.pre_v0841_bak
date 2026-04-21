@@ -1905,30 +1905,3 @@ _DASHBOARD_V0839 = {
     },
 }
 TRANSLATIONS.update(_DASHBOARD_V0839)
-
-
-# ═══════════════════════════════════════════════════════════
-# v0.8.41: Dashboard Signal Quality column (Sig)
-# ═══════════════════════════════════════════════════════════
-_DASHBOARD_V0841 = {
-    "sq": {
-        "nl": "Sig",
-        "fr": "Sig",
-        "en": "Sig",
-        "de": "Sig",
-    },
-    "sq_tooltip_header": {
-        "nl": "Signaalkwaliteit (thorax + abdomen RIP sensors)",
-        "fr": "Qualité du signal (capteurs RIP thorax + abdomen)",
-        "en": "Signal quality (thorax + abdomen RIP sensors)",
-        "de": "Signalqualität (Thorax + Abdomen RIP Sensoren)",
-    },
-    "sq_filter_warning": {
-        "nl": "Alleen waarschuwingen",
-        "fr": "Avertissements seulement",
-        "en": "Warnings only",
-        "de": "Nur Warnungen",
-    },
-}
-TRANSLATIONS.update(_DASHBOARD_V0841)
-

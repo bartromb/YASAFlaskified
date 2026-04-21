@@ -243,17 +243,48 @@ def run_pneumo_analysis(
     # ── Step 1b (v0.8.16): Signal quality assessment ─────────────────────
     logger.info("[pneumo 1b/11] Signal quality assessment...")
     try:
-        from .signal_quality import assess_signal_quality
-        output["signal_quality"] = assess_signal_quality(raw, ch, hypno)
-        sq = output["signal_quality"]
-        if sq.get("montage_warnings"):
-            for w in sq["montage_warnings"]:
+        from .signal_quality_channels import assess_signal_quality
+        # v0.8.41: renamed output key signal_quality -> channel_quality
+        # to avoid naming conflict with new RIP pair quality module.
+        output["channel_quality"] = assess_signal_quality(raw, ch, hypno)
+        cq = output["channel_quality"]
+        if cq.get("montage_warnings"):
+            for w in cq["montage_warnings"]:
                 logger.warning("[quality] MONTAGE: %s", w)
-        if sq.get("overall_grade") == "poor":
+        if cq.get("overall_grade") == "poor":
             logger.warning("[quality] Overall signal quality: POOR")
     except Exception as e:
-        logger.warning("Signal quality assessment failed: %s", e)
-        output["signal_quality"] = {"overall_grade": "unknown", "error": str(e)}
+        logger.warning("Channel quality assessment failed: %s", e)
+        output["channel_quality"] = {"overall_grade": "unknown", "error": str(e)}
+
+    # v0.8.41: RIP pair quality gate
+    # Detects failed thorax or abdomen RIP sensors before classification.
+    # Prevents false obstructive-default when one sensor fails
+    # (cf. Loos case, AZORG 2026).
+    logger.info("[pneumo 1b+] RIP pair quality assessment...")
+    try:
+        from .signal_quality import compare_rip_pair
+        if thorax_data is not None and abdomen_data is not None:
+            sf_rip = raw.info.get("sfreq", 256) if hasattr(raw, "info") else 256
+            output["signal_quality"] = compare_rip_pair(
+                thorax_data, abdomen_data, sf_rip
+            )
+            sq_mode = output["signal_quality"].get("recommended_mode")
+            sq_ratio = output["signal_quality"].get("energy_ratio", 1.0)
+            if sq_mode != "bilateral":
+                logger.warning(
+                    "[RIP quality] mode=%s, ratio=%.1fx, working=%s",
+                    sq_mode, sq_ratio,
+                    output["signal_quality"].get("working_channel"),
+                )
+                for w in output["signal_quality"].get("warnings", []):
+                    logger.warning("[RIP quality] %s", w)
+        else:
+            logger.info("[RIP quality] thorax or abdomen not available - skip")
+            output["signal_quality"] = None
+    except Exception as e:
+        logger.warning("RIP pair quality check failed: %s", e)
+        output["signal_quality"] = {"error": str(e)}
 
     # ── Step 1c (v0.8.11): Baseline Anchoring ─────────────────────────────
     if apnea_flow is not None:

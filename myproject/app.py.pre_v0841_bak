@@ -2404,40 +2404,6 @@ def api_results(job_id):
 
 
 # ─── v0.8.39: Dashboard severity helpers ──────────────────
-def _extract_signal_quality(data: dict) -> dict:
-    """
-    v0.8.41: Extract signal quality badge info from psgscoring output.
-
-    Returns dict with:
-      - level:   'ok' | 'warning' | 'danger' | 'unknown'
-      - label:   short label for badge ('OK', 'Abdomen-only', 'Failed', etc.)
-      - tooltip: detailed clinical explanation
-
-    Fallback to {'level': 'unknown', 'label': '—'} if signal_quality absent
-    (older analyses before v0.2.96 bundled psgscoring).
-    """
-    sq = data.get("pneumo", {}).get("signal_quality")
-    if sq is None:
-        return {"level": "unknown", "label": "—", "tooltip": ""}
-
-    mode     = sq.get("recommended_mode", "bilateral")
-    reliable = sq.get("classification_reliable", True)
-    working  = sq.get("working_channel")
-    warnings = sq.get("warnings", [])
-    tooltip  = warnings[0] if warnings else ""
-
-    if reliable and mode == "bilateral":
-        return {"level": "ok", "label": "OK",
-                "tooltip": "RIP channels functioning normally"}
-    elif mode == "bilateral":
-        return {"level": "warning", "label": "Weak", "tooltip": tooltip}
-    elif mode == "single-channel":
-        label = f"{working.capitalize()}-only" if working else "Single-ch"
-        return {"level": "warning", "label": label, "tooltip": tooltip}
-    else:  # unreliable
-        return {"level": "danger", "label": "Failed", "tooltip": tooltip}
-
-
 def _severity_class_ahi_odi(value):
     """AASM-style severity class for AHI or ODI_3%."""
     if value is None or value == '':
@@ -2536,12 +2502,6 @@ def dashboard():
             plmi_display = f"{plmi_f:.1f}" if plmi_f is not None else "—"
             plmi_cls = _severity_class_plmi(plmi_f)
 
-            # ── v0.8.41: Signal quality badge ──────────────
-            sq_info    = _extract_signal_quality(data)
-            sq_level   = sq_info["level"]
-            sq_label   = sq_info["label"]
-            sq_tooltip = sq_info["tooltip"]
-
             from datetime import datetime as _dt
             analyse_date = _dt.fromtimestamp(os.path.getmtime(jf)).strftime("%d-%m-%Y %H:%M")
 
@@ -2570,10 +2530,6 @@ def dashboard():
                 "odi_cls":  odi_cls,
                 "plmi":     plmi_display,
                 "plmi_cls": plmi_cls,
-                # v0.8.41: Signal quality badge
-                "sq_level":   sq_level,
-                "sq_label":   sq_label,
-                "sq_tooltip": sq_tooltip,
             })
         except Exception as e:
             logger.warning(f"Dashboard: {jf}: {e}")

@@ -116,7 +116,6 @@
               <th class="text-center" title="{{ t('grade_tooltip') }}">{{ t('grade') }}</th>
               <th class="text-center" title="{{ t('odi_tooltip') }}">ODI₃</th>
               <th class="text-center" title="{{ t('plmi_tooltip') }}">PLMi</th>
-              <th class="text-center" title="{{ t('sq_tooltip_header') }}">{{ t('sq') }}</th>
               <th class="text-center">TST</th>
               <th class="text-center">SE %</th>
               <th class="text-center">{{ t('status') }}</th>
@@ -186,21 +185,6 @@
                 {% if s.plmi is defined and s.plmi not in [None, '—'] %}
                   <span class="badge bg-{{ s.plmi_cls|default('secondary') }} rounded-pill px-2">
                     {{ s.plmi }}
-                  </span>
-                {% else %}
-                  <span class="text-muted">—</span>
-                {% endif %}
-              </td>
-
-              {# v0.8.41: Signal quality badge #}
-              <td class="text-center">
-                {% if s.sq_level is defined and s.sq_level != 'unknown' %}
-                  <span class="badge bg-{{ 'success' if s.sq_level=='ok' else 'warning text-dark' if s.sq_level=='warning' else 'danger' }} rounded-pill px-2"
-                        {% if s.sq_tooltip %}
-                        data-bs-toggle="tooltip" data-bs-placement="top"
-                        title="{{ s.sq_tooltip }}"
-                        {% endif %}>
-                    {{ s.sq_label }}
                   </span>
                 {% else %}
                   <span class="text-muted">—</span>

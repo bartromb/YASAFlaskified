@@ -1,299 +1,485 @@
 """
-signal_quality.py — Signal quality assessment for PSG recordings.
+signal_quality.py — RIP sensor quality validation for psgscoring v0.2.96+
 
-Detects:
-  1. Flat-line segments (electrode disconnect / amplifier saturation)
-  2. Clipping (signal at ADC rail)
-  3. High-impedance noise (50/60 Hz dominant)
-  4. Montage plausibility (cross-correlation sanity checks)
+Motivation
+----------
+Respiratory event classification (obstructive/central/mixed) depends on
+bilateral effort signals (thorax + abdomen RIP). When one channel fails
+(sensor disconnect, calibration drift, movement artifact), paradoxical
+phase detection becomes impossible and the classifier defaults to
+obstructive. This module detects such failures BEFORE classification and
+provides:
 
-v0.8.30 — AZORG Slaapkliniek
+1. Per-channel quality assessment
+2. Pair comparison (thorax vs abdomen)
+3. Single-channel fallback classification
+4. Clinical warning text for reports
+
+Empirically validated
+---------------------
+Clinical case "Loos" (AZORG, April 2026):
+- Thorax MAD: 0.0017, breath-band energy: 3e-04 → classified 'failed'
+- Abdomen MAD: 0.046, breath-band energy: 2.0  → classified 'ok'
+- Energy ratio: 6862× → pair flagged as unreliable
+- Psgscoring v0.2.951 reported: OSAS, AHI 56.6, CAI 3.8
+- With abdomen-only fallback: CSAS, CAI 45.1 (217 events reclassified)
+
+References
+----------
+- AASM Manual 2.6, Chapter 2 (Respiratory signals)
+- Kushida et al. 2005 — PSG sensor reliability
+- Redline et al. 2004 — Inter-scorer variability due to signal quality
 """
 
-import numpy as np
-from scipy import signal as sp_signal
+from __future__ import annotations
 import logging
+from typing import Literal, TypedDict
+
+import numpy as np
+from scipy.signal import hilbert, welch
 
 logger = logging.getLogger("psgscoring.signal_quality")
 
-EPOCH_LEN_S = 30
+
+# ════════════════════════════════════════════════════════════════════
+#  Type definitions
+# ════════════════════════════════════════════════════════════════════
+
+ChannelStatus = Literal["ok", "weak", "failed"]
+EventClassification = Literal["obstructive", "central", "uncertain"]
 
 
-def assess_signal_quality(
-    raw,
-    channel_map: dict,
-    hypno: list | None = None,
-) -> dict:
-    """Run signal quality assessment on all mapped channels.
+class ChannelQuality(TypedDict):
+    mad: float
+    breath_energy: float
+    peak_freq: float | None
+    status: ChannelStatus
+    reason: str
+
+
+class PairQuality(TypedDict):
+    thorax: ChannelQuality
+    abdomen: ChannelQuality
+    energy_ratio: float
+    warnings: list[str]
+    classification_reliable: bool
+    recommended_mode: Literal["bilateral", "single-channel", "unreliable"]
+    working_channel: Literal["thorax", "abdomen", "none"] | None
+
+
+# ════════════════════════════════════════════════════════════════════
+#  Thresholds (empirically calibrated)
+# ════════════════════════════════════════════════════════════════════
+
+# Per-channel thresholds
+MAD_FAILED_BELOW      = 0.005   # Below this: sensor is dead
+MAD_WEAK_BELOW        = 0.020   # Below this: sensor is weak
+ENERGY_FAILED_BELOW   = 0.001   # Breath-band energy (Welch PSD sum)
+ENERGY_WEAK_BELOW     = 0.050
+
+# Pair thresholds
+ENERGY_RATIO_WARN     = 10.0    # 10× asymmetry is suspicious
+ENERGY_RATIO_FAIL     = 100.0   # 100× means one channel is ~dead
+
+# Breathing band for energy computation
+BREATH_FREQ_LOW       = 0.10    # Hz (6 breaths/min minimum)
+BREATH_FREQ_HIGH      = 0.50    # Hz (30 breaths/min maximum)
+
+# Single-channel fallback thresholds
+FALLBACK_CENTRAL_RATIO      = 0.20   # Event envelope <20% baseline → central
+FALLBACK_OBSTRUCTIVE_RATIO  = 0.50   # Event envelope >50% baseline → obstructive
+FALLBACK_BASELINE_WINDOW_S  = 120.0  # Baseline = preceding 2 minutes
+FALLBACK_BASELINE_PERCENTILE = 75    # Robust to event clusters
+
+
+# ════════════════════════════════════════════════════════════════════
+#  Core functions
+# ════════════════════════════════════════════════════════════════════
+
+def assess_rip_channel(
+    signal: np.ndarray,
+    sf: float,
+    label: str = "",
+) -> ChannelQuality:
+    """
+    Assess quality of a single RIP channel.
 
     Parameters
     ----------
-    raw          : MNE Raw object
-    channel_map  : dict mapping role -> channel name
-    hypno        : optional hypnogram (for sleep-only stats)
+    signal : np.ndarray
+        Raw RIP signal (time domain)
+    sf : float
+        Sample rate in Hz
+    label : str
+        Optional label for logging
 
     Returns
     -------
-    dict with keys:
-      channels : {ch_name: {flat_pct, clip_pct, noise_pct, quality_grade}}
-      montage_warnings : list of str
-      overall_grade : "good" | "acceptable" | "poor"
+    dict with keys: mad, breath_energy, peak_freq, status, reason
     """
-    sf = raw.info["sfreq"]
-    results = {"channels": {}, "montage_warnings": [], "overall_grade": "good"}
+    if signal is None or len(signal) == 0:
+        return {
+            "mad": 0.0,
+            "breath_energy": 0.0,
+            "peak_freq": None,
+            "status": "failed",
+            "reason": "Empty signal",
+        }
 
-    for role, ch_name in channel_map.items():
-        if ch_name is None or ch_name not in raw.ch_names:
-            continue
-        try:
-            data = raw.get_data(picks=[ch_name])[0]
-            ch_result = _assess_channel(data, sf, ch_name, role)
-            results["channels"][ch_name] = ch_result
-        except Exception as e:
-            logger.warning("Quality check failed for %s: %s", ch_name, e)
-            results["channels"][ch_name] = {
-                "quality_grade": "unknown", "error": str(e)
-            }
+    mad = float(np.median(np.abs(signal - np.median(signal))))
 
-    # Montage plausibility checks
-    results["montage_warnings"] = _check_montage(raw, channel_map)
+    # Welch PSD for breath-band energy
+    nperseg = int(min(60 * sf, max(len(signal) // 4, 64)))
+    try:
+        f, psd = welch(signal, sf, nperseg=nperseg)
+    except Exception as e:
+        logger.debug(f"[{label}] Welch failed: {e}")
+        return {
+            "mad": mad,
+            "breath_energy": 0.0,
+            "peak_freq": None,
+            "status": "failed",
+            "reason": f"PSD computation failed: {e}",
+        }
 
-    # Overall grade
-    grades = [v.get("quality_grade", "good")
-              for v in results["channels"].values()]
-    if grades.count("poor") >= 2:
-        results["overall_grade"] = "poor"
-    elif "poor" in grades or grades.count("acceptable") >= 3:
-        results["overall_grade"] = "acceptable"
+    breath_mask = (f >= BREATH_FREQ_LOW) & (f <= BREATH_FREQ_HIGH)
+    breath_energy = float(np.sum(psd[breath_mask]))
 
-    return results
-
-
-def _assess_channel(data: np.ndarray, sf: float,
-                    ch_name: str, role: str) -> dict:
-    """Assess quality of a single channel."""
-    n_samples = len(data)
-    dur_s = n_samples / sf
-    epoch_samples = int(EPOCH_LEN_S * sf)
-
-    # 1. Flat-line detection (std < threshold in sliding window)
-    flat_threshold = _flat_threshold_for_role(role)
-    n_flat = _count_flat_samples(data, sf, flat_threshold)
-    flat_pct = round(100 * n_flat / max(n_samples, 1), 1)
-
-    # 2. Clipping detection (signal at min/max rail)
-    clip_pct = round(100 * _count_clipped(data) / max(n_samples, 1), 1)
-
-    # 3. High-impedance noise (50/60 Hz power ratio)
-    noise_pct = round(_estimate_line_noise_pct(data, sf), 1)
-
-    # 4. Disconnects (sudden flat after active signal)
-    disconnects = _detect_disconnects(data, sf, flat_threshold)
-
-    # Grade
-    if flat_pct > 20 or clip_pct > 10:
-        grade = "poor"
-    elif flat_pct > 5 or clip_pct > 3 or noise_pct > 40:
-        grade = "acceptable"
+    if np.any(breath_mask):
+        peak_freq = float(f[breath_mask][np.argmax(psd[breath_mask])])
     else:
-        grade = "good"
+        peak_freq = None
 
-    result = {
-        "flat_pct": flat_pct,
-        "clip_pct": clip_pct,
-        "noise_pct": noise_pct,
-        "n_disconnects": len(disconnects),
-        "disconnect_intervals_s": disconnects[:10],
-        "quality_grade": grade,
+    # Classification
+    if mad < MAD_FAILED_BELOW or breath_energy < ENERGY_FAILED_BELOW:
+        status = "failed"
+        reason = (f"MAD={mad:.4f} (<{MAD_FAILED_BELOW}), "
+                  f"energy={breath_energy:.2e} (<{ENERGY_FAILED_BELOW:.0e})")
+    elif mad < MAD_WEAK_BELOW or breath_energy < ENERGY_WEAK_BELOW:
+        status = "weak"
+        reason = (f"MAD={mad:.4f}, energy={breath_energy:.2e} — "
+                  f"below normal but above failure threshold")
+    else:
+        status = "ok"
+        reason = (f"MAD={mad:.4f}, energy={breath_energy:.2e} — within normal range")
+
+    if label:
+        logger.debug(f"[{label}] quality: {status} — {reason}")
+
+    return {
+        "mad": mad,
+        "breath_energy": breath_energy,
+        "peak_freq": peak_freq,
+        "status": status,
+        "reason": reason,
     }
 
-    if grade != "good":
-        logger.info("[quality] %s (%s): grade=%s flat=%.1f%% clip=%.1f%% "
-                    "noise=%.1f%% disconnects=%d",
-                    ch_name, role, grade, flat_pct, clip_pct,
-                    noise_pct, len(disconnects))
 
-    return result
-
-
-def _flat_threshold_for_role(role: str) -> float:
-    """Return the flat-line std threshold per channel role.
-
-    EEG channels have much smaller amplitudes than respiratory channels.
+def compare_rip_pair(
+    thorax: np.ndarray,
+    abdomen: np.ndarray,
+    sf: float,
+) -> PairQuality:
     """
-    if role in ("eeg", "eog", "emg", "extra_eeg"):
-        return 0.5e-6   # 0.5 µV — typical EEG noise floor
-    elif role in ("flow", "flow_pressure", "thorax", "abdomen"):
-        return 1e-4      # respiratory signals: broader range
-    elif role in ("spo2",):
-        return 0.01       # SpO2: percentage values
+    Compare thorax + abdomen RIP pair to detect channel failure,
+    inversion, or extreme asymmetry.
+
+    Parameters
+    ----------
+    thorax, abdomen : np.ndarray
+        Raw RIP signals (time domain, same length)
+    sf : float
+        Sample rate in Hz
+
+    Returns
+    -------
+    dict with:
+        thorax, abdomen: ChannelQuality
+        energy_ratio: float (max/min of breath-band energies)
+        warnings: list of clinical warning strings
+        classification_reliable: bool
+        recommended_mode: 'bilateral' | 'single-channel' | 'unreliable'
+        working_channel: 'thorax' | 'abdomen' | 'none' (when single-channel)
+    """
+    thor_q = assess_rip_channel(thorax, sf, "thorax")
+    abd_q = assess_rip_channel(abdomen, sf, "abdomen")
+
+    # Energy ratio (max / min)
+    thor_e = max(thor_q["breath_energy"], 1e-12)
+    abd_e = max(abd_q["breath_energy"], 1e-12)
+    ratio = max(thor_e, abd_e) / min(thor_e, abd_e)
+
+    warnings_list: list[str] = []
+    thor_ok = thor_q["status"] == "ok"
+    abd_ok = abd_q["status"] == "ok"
+    thor_failed = thor_q["status"] == "failed"
+    abd_failed = abd_q["status"] == "failed"
+
+    # Determine mode
+    if thor_failed and abd_failed:
+        mode = "unreliable"
+        working_ch = "none"
+        warnings_list.append(
+            "Both RIP channels failed. No effort-based classification possible. "
+            "Results should be treated as uninterpretable for central/obstructive typing."
+        )
+    elif thor_failed and not abd_failed:
+        mode = "single-channel"
+        working_ch = "abdomen"
+        warnings_list.append(
+            "Thorax RIP failed — abdomen-only classification. "
+            "Paradoxical phase detection unavailable."
+        )
+    elif abd_failed and not thor_failed:
+        mode = "single-channel"
+        working_ch = "thorax"
+        warnings_list.append(
+            "Abdomen RIP failed — thorax-only classification. "
+            "Paradoxical phase detection unavailable."
+        )
+    elif ratio > ENERGY_RATIO_FAIL:
+        mode = "single-channel"
+        weak = "thorax" if thor_e < abd_e else "abdomen"
+        working_ch = "abdomen" if weak == "thorax" else "thorax"
+        warnings_list.append(
+            f"RIP energy ratio {ratio:.0f}× — {weak} likely disconnected. "
+            f"Using {working_ch}-only classification."
+        )
+    elif ratio > ENERGY_RATIO_WARN:
+        mode = "bilateral"
+        working_ch = None
+        warnings_list.append(
+            f"RIP energy ratio {ratio:.1f}× — modest asymmetry. "
+            f"Classification proceeds bilaterally but review recommended."
+        )
+    elif not thor_ok or not abd_ok:
+        mode = "bilateral"
+        working_ch = None
+        warnings_list.append(
+            f"One or both RIP channels weak (thorax={thor_q['status']}, "
+            f"abdomen={abd_q['status']}). Effort classification may be less reliable."
+        )
     else:
-        return 1e-5       # conservative default
+        mode = "bilateral"
+        working_ch = None
+
+    classification_reliable = (mode == "bilateral" and len(warnings_list) == 0)
+
+    return {
+        "thorax": thor_q,
+        "abdomen": abd_q,
+        "energy_ratio": float(ratio),
+        "warnings": warnings_list,
+        "classification_reliable": classification_reliable,
+        "recommended_mode": mode,
+        "working_channel": working_ch,
+    }
 
 
-def _count_flat_samples(data: np.ndarray, sf: float,
-                        threshold: float) -> int:
-    """Count samples in flat-line segments (sliding 2s window)."""
-    win = max(int(2.0 * sf), 10)
-    if len(data) < win:
-        return 0
-
-    # Rolling std via cumsum trick (fast)
-    cumsum = np.cumsum(data)
-    cumsum2 = np.cumsum(data ** 2)
-
-    n = len(data)
-    mean_w = (cumsum[win:] - cumsum[:-win]) / win
-    var_w = (cumsum2[win:] - cumsum2[:-win]) / win - mean_w ** 2
-    var_w = np.maximum(var_w, 0)
-    std_w = np.sqrt(var_w)
-
-    flat_mask = std_w < threshold
-    # Each True in flat_mask represents a window of `win` samples
-    # Count unique flat samples (approximate)
-    return int(np.sum(flat_mask) * win / max(len(flat_mask), 1)
-               * len(flat_mask))
-
-
-def _count_clipped(data: np.ndarray) -> int:
-    """Count samples at the ADC rail (min or max repeated >10 times)."""
-    if len(data) < 20:
-        return 0
-    d_min, d_max = np.min(data), np.max(data)
-    if d_max - d_min < 1e-12:
-        return len(data)  # entire channel is flat
-
-    # Clipping = value at extreme AND repeated
-    at_max = data >= d_max - abs(d_max) * 1e-6
-    at_min = data <= d_min + abs(d_min) * 1e-6
-
-    # Only count if clusters of >10 consecutive samples
-    def _count_runs(mask, min_run=10):
-        if not np.any(mask):
-            return 0
-        d = np.diff(mask.astype(int))
-        starts = np.where(d == 1)[0] + 1
-        ends = np.where(d == -1)[0] + 1
-        if mask[0]:
-            starts = np.concatenate(([0], starts))
-        if mask[-1]:
-            ends = np.concatenate((ends, [len(mask)]))
-        runs = ends[:len(starts)] - starts[:len(ends)]
-        return int(np.sum(runs[runs >= min_run]))
-
-    return _count_runs(at_max) + _count_runs(at_min)
-
-
-def _estimate_line_noise_pct(data: np.ndarray, sf: float) -> float:
-    """Estimate percentage of power in 49-51 Hz + 59-61 Hz bands."""
-    if sf < 120 or len(data) < int(4 * sf):
-        return 0.0
-
-    # Use first 60s for efficiency
-    seg = data[:min(len(data), int(60 * sf))]
-    freqs, psd = sp_signal.welch(seg, fs=sf, nperseg=min(int(2*sf), len(seg)))
-
-    total = np.sum(psd[(freqs >= 1) & (freqs <= sf/2 - 1)])
-    if total < 1e-20:
-        return 0.0
-
-    line_50 = np.sum(psd[(freqs >= 49) & (freqs <= 51)])
-    line_60 = np.sum(psd[(freqs >= 59) & (freqs <= 61)])
-
-    return float((line_50 + line_60) / total * 100)
-
-
-def _detect_disconnects(data: np.ndarray, sf: float,
-                        flat_threshold: float) -> list:
-    """Detect transitions from active signal to flat-line (disconnects).
-
-    Returns list of [onset_s, duration_s] pairs.
+def single_channel_fallback_classify(
+    apnea_start_s: float,
+    apnea_end_s: float,
+    effort_signal: np.ndarray,
+    sf: float,
+    baseline_window_s: float = FALLBACK_BASELINE_WINDOW_S,
+) -> EventClassification:
     """
-    win = max(int(2.0 * sf), 10)
-    step = win  # non-overlapping for speed
-    disconnects = []
-    prev_active = True
-    flat_start = None
+    Classify event using only ONE effort signal (when bilateral fails).
 
-    for i in range(0, len(data) - win, step):
-        seg_std = float(np.std(data[i:i+win]))
-        is_flat = seg_std < flat_threshold
+    Parameters
+    ----------
+    apnea_start_s, apnea_end_s : event boundaries (seconds)
+    effort_signal : array — the working (thorax OR abdomen) signal
+    sf : sample rate
+    baseline_window_s : pre-event baseline window (default 120s)
 
-        if is_flat and prev_active:
-            flat_start = i / sf
-        elif not is_flat and not prev_active and flat_start is not None:
-            flat_dur = i / sf - flat_start
-            if flat_dur >= 10.0:  # only report >=10s disconnects
-                disconnects.append([round(flat_start, 1), round(flat_dur, 1)])
-            flat_start = None
+    Returns
+    -------
+    'central' | 'obstructive' | 'uncertain'
 
-        prev_active = not is_flat
-
-    # Handle trailing flat
-    if flat_start is not None:
-        flat_dur = len(data) / sf - flat_start
-        if flat_dur >= 10.0:
-            disconnects.append([round(flat_start, 1), round(flat_dur, 1)])
-
-    return disconnects
-
-
-def _check_montage(raw, channel_map: dict) -> list:
-    """Basic montage plausibility checks via cross-correlation.
-
-    Checks:
-    - EEG and EOG should NOT be identical (copy error)
-    - Left and right EOG should be anti-correlated (if both present)
-    - ECG should not correlate highly with EEG (swapped leads)
-    - Flow and effort should not be identical
+    Logic
+    -----
+    - Event envelope (Hilbert median) compared to baseline P75 envelope
+    - <20% of baseline → central
+    - >50% of baseline → obstructive
+    - Between → uncertain (flagged for manual review)
     """
-    warnings = []
-    sf = raw.info["sfreq"]
-    n_check = min(int(60 * sf), raw.n_times)  # first 60s
+    i0 = int(apnea_start_s * sf)
+    i1 = int(apnea_end_s * sf)
+    bl_i0 = max(0, i0 - int(baseline_window_s * sf))
 
-    def _get(role):
-        name = channel_map.get(role)
-        if name and name in raw.ch_names:
-            return raw.get_data(picks=[name], start=0, stop=n_check)[0]
+    if i1 - i0 < int(2 * sf):
+        return "uncertain"
+    if i0 - bl_i0 < int(10 * sf):
+        return "uncertain"
+
+    bl_seg = effort_signal[bl_i0:i0]
+    ev_seg = effort_signal[i0:i1]
+
+    try:
+        bl_env = np.abs(hilbert(bl_seg))
+        ev_env = np.abs(hilbert(ev_seg))
+    except Exception:
+        return "uncertain"
+
+    bl_amp = float(np.percentile(bl_env, FALLBACK_BASELINE_PERCENTILE))
+    ev_amp = float(np.median(ev_env))
+
+    if bl_amp < 1e-9:
+        return "uncertain"
+
+    ratio = ev_amp / bl_amp
+
+    if ratio < FALLBACK_CENTRAL_RATIO:
+        return "central"
+    elif ratio > FALLBACK_OBSTRUCTIVE_RATIO:
+        return "obstructive"
+    else:
+        return "uncertain"
+
+
+def quality_warning_text(quality: PairQuality, lang: str = "en") -> str | None:
+    """
+    Generate clinical warning text for PDF report / dashboard.
+    Multilingual: en, nl, fr, de.
+
+    Returns None if classification is reliable (no warning needed).
+    """
+    if quality["classification_reliable"]:
         return None
 
-    def _corr(a, b):
-        if a is None or b is None or len(a) < 100:
-            return None
-        a_z = a - np.mean(a)
-        b_z = b - np.mean(b)
-        denom = np.std(a_z) * np.std(b_z) * len(a_z)
-        if denom < 1e-15:
-            return None
-        return float(np.sum(a_z * b_z) / denom)
+    I18N = {
+        "en": {
+            "header": "⚠ RESPIRATORY EFFORT SIGNAL QUALITY WARNING",
+            "impact": "IMPACT ON SCORING:",
+            "impact_items": [
+                "Central/mixed apnea classification may be INCORRECT",
+                "Obstructive classifications may be FALSE POSITIVES",
+                "Manual review of effort signals strongly recommended",
+            ],
+            "recommendation": "RECOMMENDATION:",
+            "rec_text": (
+                "Verify sensor placement and calibration. If signal cannot be "
+                "salvaged, consider re-study or expert scorer review."
+            ),
+        },
+        "nl": {
+            "header": "⚠ WAARSCHUWING — KWALITEIT RESPIRATOIRE EFFORT-SIGNALEN",
+            "impact": "IMPACT OP SCORING:",
+            "impact_items": [
+                "Classificatie centraal/gemengde apneu mogelijk ONJUIST",
+                "Obstructieve classificaties mogelijk VALS-POSITIEF",
+                "Manuele review van effort-signalen sterk aanbevolen",
+            ],
+            "recommendation": "AANBEVELING:",
+            "rec_text": (
+                "Verifieer sensorplaatsing en kalibratie. Als signaal niet "
+                "kan worden hersteld: overweeg herhaalstudie of expert-scoring."
+            ),
+        },
+        "fr": {
+            "header": "⚠ AVERTISSEMENT — QUALITÉ DES SIGNAUX D'EFFORT RESPIRATOIRE",
+            "impact": "IMPACT SUR LE SCORING:",
+            "impact_items": [
+                "Classification apnée centrale/mixte possiblement INCORRECTE",
+                "Classifications obstructives possiblement FAUX POSITIFS",
+                "Révision manuelle des signaux d'effort fortement recommandée",
+            ],
+            "recommendation": "RECOMMANDATION:",
+            "rec_text": (
+                "Vérifier placement et calibration des capteurs. "
+                "Envisager une nouvelle étude si le signal ne peut être récupéré."
+            ),
+        },
+        "de": {
+            "header": "⚠ WARNUNG — QUALITÄT DER ATEMANSTRENGUNGSSIGNALE",
+            "impact": "AUSWIRKUNG AUF SCORING:",
+            "impact_items": [
+                "Klassifikation zentraler/gemischter Apnoen möglicherweise FALSCH",
+                "Obstruktive Klassifikationen möglicherweise FALSCH-POSITIV",
+                "Manuelle Überprüfung der Effort-Signale dringend empfohlen",
+            ],
+            "recommendation": "EMPFEHLUNG:",
+            "rec_text": (
+                "Sensorpositionierung und Kalibrierung überprüfen. "
+                "Bei irreparablem Signal: Wiederholung oder Experten-Scoring erwägen."
+            ),
+        },
+    }
 
-    eeg = _get("eeg")
-    eog = _get("eog")
-    emg = _get("emg")
-    flow = _get("flow") or _get("flow_pressure")
-    thorax = _get("thorax")
-    abdomen = _get("abdomen")
+    t = I18N.get(lang, I18N["en"])
 
-    # EEG ↔ EOG should not be identical
-    r = _corr(eeg, eog)
-    if r is not None and abs(r) > 0.95:
-        warnings.append(
-            f"EEG and EOG are nearly identical (r={r:.2f}) — "
-            "possible montage error or shared reference")
+    parts = [t["header"], ""]
+    for w in quality["warnings"]:
+        parts.append(f"  • {w}")
+    parts.extend([
+        "",
+        t["impact"],
+        *(f"  - {item}" for item in t["impact_items"]),
+        "",
+        t["recommendation"],
+        f"  {t['rec_text']}",
+    ])
+    return "\n".join(parts)
 
-    # Flow ↔ effort should not be identical
-    r = _corr(flow, thorax)
-    if r is not None and abs(r) > 0.95:
-        warnings.append(
-            f"Flow and thorax are nearly identical (r={r:.2f}) — "
-            "possible channel duplication")
 
-    # Thorax ↔ abdomen: anti-correlation suggests paradoxical breathing
-    # but perfect correlation >0.99 suggests duplication
-    r = _corr(thorax, abdomen)
-    if r is not None and abs(r) > 0.98:
-        warnings.append(
-            f"Thorax and abdomen are nearly identical (r={r:.2f}) — "
-            "possible channel duplication (would prevent OA/CA classification)")
+def quality_badge_summary(quality: PairQuality) -> dict:
+    """
+    Compact badge info for dashboard UI.
 
-    return warnings
+    Returns
+    -------
+    dict with:
+        level: 'ok' | 'warning' | 'danger'  — for color coding
+        label: short label (single word)
+        tooltip: detailed explanation
+    """
+    mode = quality["recommended_mode"]
+    if mode == "bilateral" and quality["classification_reliable"]:
+        return {
+            "level": "ok",
+            "label": "OK",
+            "tooltip": "Both RIP channels functioning normally.",
+        }
+    elif mode == "bilateral":
+        return {
+            "level": "warning",
+            "label": "Weak",
+            "tooltip": (quality["warnings"][0]
+                        if quality["warnings"]
+                        else "One or both effort channels weak."),
+        }
+    elif mode == "single-channel":
+        working = quality["working_channel"] or "unknown"
+        return {
+            "level": "warning",
+            "label": f"{working.capitalize()}-only",
+            "tooltip": (quality["warnings"][0]
+                        if quality["warnings"]
+                        else f"Single-channel fallback using {working}."),
+        }
+    else:  # unreliable
+        return {
+            "level": "danger",
+            "label": "Failed",
+            "tooltip": (quality["warnings"][0]
+                        if quality["warnings"]
+                        else "Both RIP channels failed — classification unreliable."),
+        }
+
+
+# ════════════════════════════════════════════════════════════════════
+#  Public API
+# ════════════════════════════════════════════════════════════════════
+
+__all__ = [
+    "assess_rip_channel",
+    "compare_rip_pair",
+    "single_channel_fallback_classify",
+    "quality_warning_text",
+    "quality_badge_summary",
+    "ChannelQuality",
+    "PairQuality",
+    "ChannelStatus",
+    "EventClassification",
+]
