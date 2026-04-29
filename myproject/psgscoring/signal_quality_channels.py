@@ -270,7 +270,9 @@ def _check_montage(raw, channel_map: dict) -> list:
     eeg = _get("eeg")
     eog = _get("eog")
     emg = _get("emg")
-    flow = _get("flow") or _get("flow_pressure")
+    flow = _get("flow")
+    if flow is None:
+        flow = _get("flow_pressure")
     thorax = _get("thorax")
     abdomen = _get("abdomen")
 

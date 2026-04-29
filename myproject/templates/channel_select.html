@@ -303,9 +303,27 @@
       <div class="card-body">
         <h6 class="card-title mb-3">⚙️ &nbsp; {{ t('scoring_profile_title') }}</h6>
         <select name="scoring_profile" class="form-select" id="scoringProfile">
-          <option value="strict">{{ t('profile_strict') }}</option>
-          <option value="standard" selected>{{ t('profile_standard') }}</option>
-          <option value="sensitive">{{ t('profile_sensitive') }}</option>
+          {% if available_profiles %}
+            <optgroup label="AASM v3 (2023, current)">
+              {% for name, display_name, aasm_ver in available_profiles if 'v3' in aasm_ver %}
+                <option value="{{ name }}"{% if name == 'aasm_v3_rec' %} selected{% endif %}>{{ display_name }}</option>
+              {% endfor %}
+            </optgroup>
+            <optgroup label="Historical AASM versions">
+              {% for name, display_name, aasm_ver in available_profiles if 'v2' in aasm_ver or 'v1' in aasm_ver %}
+                <option value="{{ name }}">{{ display_name }}</option>
+              {% endfor %}
+            </optgroup>
+            <optgroup label="Dataset-specific">
+              {% for name, display_name, aasm_ver in available_profiles if 'v3' not in aasm_ver and 'v2' not in aasm_ver and 'v1' not in aasm_ver %}
+                <option value="{{ name }}">{{ display_name }}</option>
+              {% endfor %}
+            </optgroup>
+          {% else %}
+            <option value="strict">{{ t('profile_strict') }}</option>
+            <option value="standard" selected>{{ t('profile_standard') }}</option>
+            <option value="sensitive">{{ t('profile_sensitive') }}</option>
+          {% endif %}
         </select>
         <div class="form-text mt-2">{{ t('scoring_profile_hint') }}</div>
       </div>

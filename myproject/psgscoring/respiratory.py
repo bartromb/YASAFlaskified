@@ -308,6 +308,8 @@ def detect_respiratory_events(
                     "n_gap_excluded": 0, "n_posthyperpnea_recovery_s": 30}
     try:
         # ── v0.8.15: Scoring profile → lokale drempels ────────────────────
+        # v0.4.1: STABILITY_FILTER_CV + PEAK_MIN_CONSECUTIVE_BREATHS toegevoegd
+        # voor monotonieherstel (zie SESSION_2026-04-26_summary.md)
         sp = scoring_profile or {}
         _HYPOP_THRESH  = sp.get("HYPOPNEA_THRESHOLD", HYPOPNEA_THRESHOLD)
         _DESAT_PCT     = sp.get("DESATURATION_DROP_PCT", DESATURATION_DROP_PCT)
@@ -318,6 +320,9 @@ def detect_respiratory_events(
         _USE_SNAP      = sp.get("USE_BREATH_SNAP", False)  # v0.8.30: off by default
         _APNEA_MAX     = sp.get("APNEA_MAX_DUR_S", APNEA_MAX_DUR_S)
         _HYPOP_MAX     = sp.get("HYPOPNEA_MAX_DUR_S", HYPOPNEA_MAX_DUR_S)
+        # v0.4.1: monotonie-herstel parameters
+        _STABILITY_CV  = sp.get("STABILITY_FILTER_CV", 0.45)
+        _PEAK_MIN_BR   = sp.get("PEAK_MIN_CONSECUTIVE_BREATHS", 3)
         result["scoring_thresholds"] = {
             "hypopnea_threshold": _HYPOP_THRESH,
             "desaturation_pct":   _DESAT_PCT,
@@ -325,6 +330,8 @@ def detect_respiratory_events(
             "smooth_s":           _SMOOTH_S,
             "cross_contam_win_s": _CONTAM_WIN,
             "use_peak_detection": _USE_PEAK,
+            "stability_filter_cv": _STABILITY_CV,
+            "peak_min_consecutive_breaths": _PEAK_MIN_BR,
         }
 
         # ── Fix 5: Artefact-flanken — post-gap exclusiemasker ─────────────
@@ -538,11 +545,14 @@ def detect_respiratory_events(
             sf_ecg=_sf_ecg_local,
             flow_filt=_flow_filt_snap,
             breaths=breaths,
-            signal_quality=signal_quality,  # v0.3.001 BUG2 gate
+            signal_quality=signal_quality,  # v0.3.001 BUG2 gate,
+            local_bl_cv_threshold=sp.get("LOCAL_BL_CV_THRESHOLD", 0.30),
+            local_bl_strict_reduction=sp.get("LOCAL_BL_STRICT_RED", 30.0),
         )
         events = new_events
 
         # v0.2.8: Breath-amplitude stability filter
+        # v0.4.1: STABILITY_FILTER_CV is nu profielafhankelijk (was hardcoded 0.45)
         # Bij stabiele ademhaling (lage CV van per-breath amplitudes)
         # worden hypopneeën afgewezen die normale variatie vertegenwoordigen.
         # Dit lost het over-counting probleem op bij normale patiënten (SN2, SN4).
@@ -561,20 +571,21 @@ def detect_respiratory_events(
                 local_amps = breath_amps[win_mask]
                 if len(local_amps) >= 10:
                     local_cv = float(np.std(local_amps) / np.mean(local_amps)) if np.mean(local_amps) > 1e-9 else 1.0
-                    if local_cv < 0.45:
+                    if local_cv < _STABILITY_CV:
                         # Stabiele ademhaling: dit is waarschijnlijk normale variatie
                         n_stable_rejected += 1
                         rejected.append({
                             "onset_s": ev["onset_s"],
                             "duration_s": ev["duration_s"],
-                            "reject_reason": f"stable_breathing_cv_{local_cv:.2f}<0.45",
+                            "reject_reason": f"stable_breathing_cv_{local_cv:.2f}<{_STABILITY_CV:.2f}",
                         })
                         continue
                 stable_events.append(ev)
             events = stable_events
             if n_stable_rejected:
                 logger.info("v0.2.8: %d hypopneeën afgewezen door stabiele-ademhaling filter "
-                            "(breath-amplitude CV < 0.45)", n_stable_rejected)
+                            "(breath-amplitude CV < %.2f, profile-dependent)",
+                            n_stable_rejected, _STABILITY_CV)
             result["n_stable_breathing_rejected"] = n_stable_rejected
 
         # v0.8.22: log lokale basislijn-rejecties
@@ -1077,6 +1088,8 @@ def _detect_hypopneas(
     flow_filt: np.ndarray | None = None,
     breaths: list | None = None,
     signal_quality: dict | None = None,
+    local_bl_cv_threshold: float = 0.30,        # v0.4.2: profile-aware
+    local_bl_strict_reduction: float = 30.0,    # v0.4.2: profile-aware
 ) -> tuple[list[dict], list[dict]]:
     """Return (all_events_including_new_hypopneas, rejected_candidates)."""
     # Build apnea exclusion mask (±5 s around each confirmed apnea)
@@ -1121,7 +1134,10 @@ def _detect_hypopneas(
             # pre-event ademhaling. Voorkomt false positives door opgeblazen
             # rollende basislijn (post-apnea recovery hyperpnea).
             local_valid, local_red = _validate_local_reduction(
-                hypop_env, sub_idx[0], sub_idx[-1] + 1, sf_hy)
+                hypop_env, sub_idx[0], sub_idx[-1] + 1, sf_hy,
+                stability_cv_threshold=local_bl_cv_threshold,
+                stability_strict_reduction=local_bl_strict_reduction,
+            )
             if not local_valid:
                 rejected.append({
                     "onset_s":    safe_r(onset_s),
@@ -1239,6 +1255,8 @@ def _validate_local_reduction(
     sf: float,
     min_reduction_pct: float = 20.0,
     pre_win_s: float = 30.0,
+    stability_cv_threshold: float = 0.30,    # v0.4.2: profile-aware
+    stability_strict_reduction: float = 30.0,  # v0.4.2: profile-aware
 ) -> tuple[bool, float]:
     """v0.8.22/v0.2.8: Valideer dat een event een echte flow-reductie toont
     t.o.v. de directe pre-event ademhaling.
@@ -1293,10 +1311,11 @@ def _validate_local_reduction(
 
     if len(stab_seg) > int(10 * sf) and np.mean(stab_seg) > 1e-9:
         local_cv = float(np.std(stab_seg) / np.mean(stab_seg))
-        # Stabiele ademhaling: CV < 0.30 → verhoog drempel naar 30%
-        # Instabiele ademhaling: CV ≥ 0.30 → standaard drempel (20%)
-        if local_cv < 0.30:
-            min_reduction_pct = max(min_reduction_pct, 30.0)
+        # v0.4.2: Profile-aware stabiliteits-bewuste drempel.
+        # Strict profile gebruikt strengere reductie-eis bij stabiele ademhaling;
+        # sensitive profile gebruikt geen extra strengheid (cv_threshold lager).
+        if local_cv < stability_cv_threshold:
+            min_reduction_pct = max(min_reduction_pct, stability_strict_reduction)
 
     return local_reduction >= min_reduction_pct, safe_r(local_reduction)
 
@@ -1382,6 +1401,33 @@ def _compute_summary(
         hy = [e for e in hypopneas if (e.get("confidence") or 0) >= threshold]
         return idx(len(ob) + len(hy), total_sleep_h)
 
+    # v0.4.1: 3-punt klinisch gekalibreerde confidence sweep
+    # Kalibratie op PSG-IPA: gemiddelde breedte ~3.9/h (matches AASM
+    # inter-scorer variabiliteit ~10-20%). De vorige 4-punt sweep
+    # [0.0, 0.40, 0.60, 0.85] gaf ~9.3/h breedte (te breed voor
+    # klinische interpretatie).
+    #
+    # Drempels (smal gekalibreerd rond officiële AASM 0.60):
+    #   lenient  (c≥0.55): inclusief net-borderline events
+    #   primary  (c≥0.60): officiële AASM drempel
+    #   strict   (c≥0.70): conservatief, hoger dan officieel
+    # Smal venster bevordert grade A voor evidente cases (concordantie van scoringsstrengheid).
+    oahi_sweep_3pt = {
+        "lenient": _oahi_at(0.55),
+        "primary": _oahi_at(0.60),
+        "strict":  _oahi_at(0.70),
+    }
+    sweep_width = oahi_sweep_3pt["lenient"] - oahi_sweep_3pt["strict"]
+
+    # Robustness grade A/B/C op basis van sweep width
+    if sweep_width < 5.0:
+        robustness_grade = "A"  # robuust: diagnose stabiel
+    elif sweep_width < 10.0:
+        robustness_grade = "B"  # waarschijnlijk: klinische correlatie aanbevolen
+    else:
+        robustness_grade = "C"  # onzeker: manuele review aanbevolen
+
+    # Backward-compat: behoud 4-punt dict voor bestaande consumers
     oahi_thresholds = {
         "0.85": _oahi_at(0.85),   # alleen hoge zekerheid
         "0.60": oahi_conf60,       # officieel (matige + hoge zekerheid)
@@ -1404,7 +1450,11 @@ def _compute_summary(
         "oahi":            oahi_all,      # officieel: ALLE obstructief + hypopneas (AASM-conform)
         "oahi_conf60":     oahi_conf60,   # supplementair: enkel conf > 0.60 (informatief)
         "oahi_all":        oahi_all,      # alias voor backward compat
-        "oahi_thresholds": oahi_thresholds,  # {"0.85":x, "0.60":x, "0.40":x, "0.00":x}
+        "oahi_thresholds": oahi_thresholds,  # {"0.85":x, "0.60":x, "0.40":x, "0.00":x} (legacy 4-punt)
+        # v0.4.1: 3-punt klinisch gekalibreerde sweep + robustness grade
+        "oahi_sweep":         oahi_sweep_3pt,    # {"lenient":x, "primary":x, "strict":x}
+        "oahi_sweep_width":   sweep_width,       # /h
+        "robustness_grade":   robustness_grade,  # "A" | "B" | "C"
         "ahi_rem":         idx(len([e for e in events if is_rem(e["stage"])]),  rem_h),
         "ahi_nrem":        idx(len([e for e in events if is_nrem(e["stage"])]), nrem_h),
         "obstructive_index": idx(len(obstr),   total_sleep_h),

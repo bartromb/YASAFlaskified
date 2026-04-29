@@ -1,5 +1,32 @@
 # Changelog — YASAFlaskified
 
+## v0.9.1 — 2026-04-29
+
+### Fixed
+- **Blank page in PDF** between "Visueel overzicht" and "1. Slaaparchitectuur"
+  caused by an explicit `PageBreak()` after the position legend. With short
+  recordings (e.g., PSG-IPA SN3 ~6h) section 1 fits on the visual overview
+  page, and the explicit page break forced an empty intermediate page.
+  Replaced with `sp(0.3)` to let ReportLab handle pagination naturally.
+
+### Changed
+- Bundled psgscoring 0.3.1 → 0.4.2 (profile-aware local baseline validation)
+- Removed confidence-sweep card from results page (clinically misleading)
+- Removed confidence-sweep table from PDF report
+
+### Notes
+- AHI Interval banner on page 1 retained (profile-comparison sweep)
+- PSG-IPA aggregate validation: r=0.994, κ=0.800, F1 SN3=0.860
+
+## v0.9.0 — April 2026 (transitional)
+
+### Added
+- **3-point confidence-sweep card** on results page (DEPRECATED in v0.9.1):
+  showed clinically misleading discrete values for borderline patients.
+- Bundled psgscoring 0.3.1 → 0.4.1 (parameter integration fix)
+
+# Changelog — YASAFlaskified
+
 ## v0.8.39 (2026-04-19)
 
 ### Dashboard

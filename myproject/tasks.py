@@ -740,8 +740,14 @@ def run_profile_comparison(edf_path: str, results_dir: str) -> dict:
     staging = run_sleep_staging(raw)
     hypno = staging.get("hypnogram", [])
 
+    # v0.9.0: comparison over alle 8 historische profielen
+    try:
+        from psgscoring.profiles import PROFILES as _PSG_PROFILES
+        _profile_names = list(_PSG_PROFILES.keys())
+    except Exception:
+        _profile_names = ["strict", "standard", "sensitive"]
     comparison = {}
-    for profile in ("strict", "standard", "sensitive"):
+    for profile in _profile_names:
         pneumo = run_pneumo_analysis(raw, hypno, scoring_profile=profile)
         rsum = pneumo.get("respiratory", {}).get("summary", {})
         comparison[profile] = {

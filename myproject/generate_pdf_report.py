@@ -1150,9 +1150,7 @@ def generate_pdf_report(results:dict, output_path:str,
         '<font size="6" color="#95a5a6">■</font><font size="6" color="#6b7a99"> STA (staand/rechtop)</font>',
     ]
     story.append(Paragraph("  ".join(pos_leg), styles["SM"]))
-    sp(0.1)
-
-    story.append(PageBreak())
+    sp(0.3)  # v0.9.1: vervangen PageBreak door spacer (voorkomt blanco pagina bij korte recordings)
 
     # ── 1. AASM SLAAPARCHITECTUUR ──────────────────────────────
     if is_polygraphy:
@@ -1471,42 +1469,57 @@ def generate_pdf_report(results:dict, output_path:str,
         story.append(KeepTogether([_tbl(hdr_conf, conf_rows, [5.0,1.2,1.5,1.5,1.8,1.8,1.5])]))
         sp(0.12)
 
-        # ── OAHI drempelgevoeligheidstabel ───────────────────────────────
-        story.append(_hdr("OAHI — drempelgevoeligheid", color=BLUE)); sp(0.1)
+        # ── v0.9.0: OAHI confidence sweep (3-punt) + robustness grade ────
+        sweep = rsum.get("oahi_sweep") or {}
+        sweep_width = rsum.get("oahi_sweep_width", 0) or 0
+        grade = rsum.get("robustness_grade", "?") or "?"
+        story.append(_hdr("OAHI — Klinische onzekerheidsmarge", color=BLUE)); sp(0.1)
+
+        # Robustness label
+        if grade == "A":
+            grade_text = "Robuust — diagnose stabiel ongeacht scoringsstrengheid"
+        elif grade == "B":
+            grade_text = "Waarschijnlijk — klinische correlatie aanbevolen"
+        elif grade == "C":
+            grade_text = "Onzeker — manuele review aanbevolen"
+        else:
+            grade_text = "—"
+
         story.append(Paragraph(
             f"Gem. confidence apneas: <b>{avg_s}</b>  |  "
-            f"Alle events: OAHI = {oahi_all:.1f}/u",
+            f"Alle events (officieel): OAHI = {oahi_all:.1f}/u  |  "
+            f"<b>Robustness: {grade}</b> ({grade_text})",
             styles["SM"])); sp(0.1)
 
-        oahi_rows = [
-            ["≥ 0.85 (hoge zekerheid)",
-             f"{thr.get('0.85', '—'):.1f}" if isinstance(thr.get('0.85'), float) else "—",
-             _sev(thr.get('0.85') or 0, lang),
-             f"{cb.get('high',0)} events"],
-            ["≥ 0.60 (matig + hoog)",
-             f"{oahi60:.1f}",
-             _sev(oahi60, lang),
-             f"{cb.get('high',0) + cb.get('moderate',0)} events"],
-            ["≥ 0.40 (incl. grensgebied)",
-             f"{thr.get('0.40', '—'):.1f}" if isinstance(thr.get('0.40'), float) else "—",
-             _sev(thr.get('0.40') or 0, lang),
-             f"{cb.get('high',0)+cb.get('moderate',0)+cb.get('borderline',0)} events"],
-            ["Alle events  ← officiële OAHI",
-             f"{oahi:.1f}",
-             _sev(oahi, lang),
-             f"{rsum.get('n_obstructive',0)+rsum.get('n_hypopnea',0)} events"],
-        ]
-        story.append(KeepTogether([_tbl(
-            ["Drempel", "OAHI (/u)", "Ernst", "Basis"],
-            oahi_rows,
-            [6.5, 2.5, 3.5, 4.0])]))
-        sp(0.15)
-        story.append(Paragraph(
-            "<i>★★★ Hoge zekerheid (≥0.85): duidelijk patroon  "
-            "★★ Matige zekerheid (0.60–0.84): waarschijnlijk correct  "
-            "~ Grensgebied (0.40–0.59): borderline default  "
-            "? Lage zekerheid (<0.40): signaalruis / ontbrekende effort</i>",
-            styles["SM"])); sp(0.1)
+        if sweep:
+            sweep_rows = [
+                ["Soepel (c ≥ 0.55)",
+                 f"{sweep.get('lenient', 0):.1f}",
+                 _sev(sweep.get('lenient') or 0, lang),
+                 "Inclusief net-borderline events"],
+                ["Primair (c ≥ 0.60)  ← officiële AASM",
+                 f"{sweep.get('primary', 0):.1f}",
+                 _sev(sweep.get('primary') or 0, lang),
+                 "AASM 2.6 standaard cutoff"],
+                ["Strikt (c ≥ 0.70)",
+                 f"{sweep.get('strict', 0):.1f}",
+                 _sev(sweep.get('strict') or 0, lang),
+                 "Conservatief, hoge zekerheid"],
+                ["Spreiding (lenient − strict)",
+                 f"{sweep_width:.1f}/u", "",
+                 "<5/u: Grade A · 5–10/u: Grade B · ≥10/u: Grade C"],
+            ]
+            story.append(KeepTogether([_tbl(
+                ["Drempel", "OAHI (/u)", "Ernst", "Toelichting"],
+                sweep_rows,
+                [6.5, 2.5, 3.0, 4.0])]))
+            sp(0.15)
+        else:
+            # Fallback voor oude psgscoring zonder oahi_sweep
+            story.append(Paragraph(
+                "<i>3-punt sweep niet beschikbaar (oude psgscoring versie). "
+                f"Officiële OAHI: {oahi_all:.1f}/u</i>",
+                styles["SM"])); sp(0.1)
 
         # ── v0.8.22: RERA, RDI, REM/NREM AHI ──────────────────────────
         rera_n   = rsum.get("n_rera", 0) or 0

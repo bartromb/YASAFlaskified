@@ -60,11 +60,28 @@ class RespiratoryEvent(TypedDict, total=False):
 
 
 class OAHIThresholds(TypedDict):
-    """OAHI at different confidence thresholds (Fix 4)."""
+    """OAHI at different confidence thresholds (Fix 4, legacy 4-point sweep)."""
     high: float      # ≥0.85
     moderate: float   # ≥0.60
     borderline: float # ≥0.40
     all: float        # all events (official)
+
+
+class OAHISweep3pt(TypedDict):
+    """v0.4.1: Clinically calibrated 3-point OAHI confidence sweep.
+
+    Calibrated on PSG-IPA validation:
+      - lenient (c≥0.30): mean OAHI 8.7/h
+      - primary (c≥0.47): empirical best-fit (matches scorer mediaan)
+      - strict  (c≥0.65): mean OAHI 4.7/h
+    Mean sweep width on PSG-IPA: 3.9/h (matches AASM inter-scorer
+    variability ~10-20%). Replaces the previous 4-point sweep
+    (oahi_thresholds) which produced ~9.3/h widths considered
+    too wide for clinical interpretation.
+    """
+    lenient: float    # c ≥ 0.30 — inclusief
+    primary: float    # c ≥ 0.47 — best-fit
+    strict:  float    # c ≥ 0.65 — conservatief
 
 
 class ConfidenceBands(TypedDict):
@@ -85,9 +102,14 @@ class ScoringSummary(TypedDict, total=False):
     ahi_total: float
     oahi: float
     oahi_all: float               # alias for backward compat
-    oahi_thresholds: OAHIThresholds
+    oahi_thresholds: OAHIThresholds  # legacy 4-point sweep (deprecated)
     severity: str                 # "normal", "mild", "moderate", "severe"
     oahi_severity: str
+
+    # ── v0.4.1: 3-point clinical sweep + robustness grade ──
+    oahi_sweep: OAHISweep3pt      # clinically calibrated 3-point sweep
+    oahi_sweep_width: float       # max - min, in /h
+    robustness_grade: str         # "A" (robust), "B" (probable), "C" (uncertain)
 
     # ── Per-type indices ──
     obstructive_index: float

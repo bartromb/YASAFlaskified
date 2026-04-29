@@ -1449,6 +1449,20 @@ def channel_select(job_id):
     Toont zowel EEG/EOG/EMG-selectie als respiratoire kanaalkeuze
     en een formulier voor patiëntgegevens.
     """
+    # v0.9.0: laad alle 8 historische profielen voor dropdown
+    try:
+        from psgscoring.profiles import PROFILES as _PSG_PROFILES
+        available_profiles = [
+            (name, p.display_name, p.aasm_version)
+            for name, p in _PSG_PROFILES.items()
+        ]
+    except Exception:
+        available_profiles = [
+            ("strict", "AASM v3 — Strict", "v3"),
+            ("standard", "AASM v3 — Standard", "v3"),
+            ("sensitive", "AASM v3 — Sensitive", "v3"),
+        ]
+
     filepath_bytes = redis_conn.get(f"{job_id}_filepath")
     if not filepath_bytes:
         flash(get_translation("session_expired", session.get("lang","nl")), "danger")
@@ -1590,6 +1604,7 @@ def channel_select(job_id):
         filename         = filename,
         recording_start  = recording_start,
         patient_prefill  = patient_prefill,  # EDF-header patiëntdata
+        available_profiles = available_profiles,  # v0.9.0: 8 historische profielen
     )
 
 

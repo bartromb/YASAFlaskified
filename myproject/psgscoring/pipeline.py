@@ -58,7 +58,7 @@ def run_pneumo_analysis(
     hypno: list,
     channel_map: dict | None = None,
     artifact_epochs: list | None = None,
-    scoring_profile: str = "standard",
+    scoring_profile: str = "aasm_v3_rec",
 ) -> dict:
     """
     Run the full pneumological analysis on a single PSG recording.
@@ -69,16 +69,34 @@ def run_pneumo_analysis(
     hypno           : string hypnogram list ['W','N1','N2','N3','R',...]
     channel_map     : optional manual channel overrides (UI selection)
     artifact_epochs : list of epoch indices with artefacts (from YASA)
-    scoring_profile : 'strict', 'standard', or 'sensitive'
+    scoring_profile : Profile name. New canonical names (v0.4.0+):
+                        - 'aasm_v3_rec'       (default, AASM 2023 Rule 1A)
+                        - 'aasm_v3_strict', 'aasm_v3_sensitive'
+                        - 'aasm_v2_rec', 'aasm_v1_rec'
+                        - 'cms_medicare', 'mesa_shhs', 'chicago_1999'
+                      Legacy names (deprecated, still work):
+                        - 'strict', 'standard', 'sensitive'
 
     Returns
     -------
     Nested dict with keys: meta, channel_availability, respiratory, spo2,
     position, heart_rate, snore, plm, arousal, cheyne_stokes.
     """
+    # v0.4.0: resolve legacy aliases (strict/standard/sensitive) with
+    # DeprecationWarning. New names pass through unchanged.
+    from .profiles import resolve_profile_name
+    resolved_name = resolve_profile_name(scoring_profile)
+
     from .constants import SCORING_PROFILES
-    profile = SCORING_PROFILES.get(scoring_profile, SCORING_PROFILES["standard"])
-    logger.info("[pneumo] Scoring profile: %s (%s)", scoring_profile, profile["label"])
+    profile = SCORING_PROFILES.get(
+        resolved_name,
+        SCORING_PROFILES["aasm_v3_rec"],
+    )
+    logger.info(
+        "[pneumo] Scoring profile: %s (%s)",
+        resolved_name,
+        profile["label"],
+    )
 
     ch = channel_map_from_user(channel_map, raw.ch_names)
 
@@ -88,8 +106,9 @@ def run_pneumo_analysis(
             "all_channels":  raw.ch_names,
             "sfreq":         raw.info["sfreq"],
             "duration_min":  round(raw.times[-1] / 60, 1),
-            "scoring_profile": scoring_profile,
+            "scoring_profile": resolved_name,
             "scoring_label":   profile["label"],
+            "scoring_input_name": scoring_profile,  # ← what user actually passed (may be legacy)
             "patient_info":  _parse_edf_patient_info(raw),
         },
         "channel_availability": {k: (v in raw.ch_names) for k, v in ch.items()},
