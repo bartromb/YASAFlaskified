@@ -33,8 +33,9 @@
 
 **Python wordt NIET lokaal vereist** — alles draait in Docker-containers.
 
-De `psgscoring library (v0.2.4) is meegeleverd in de zip als
-`myproject/psgscoring/` en vereist geen aparte `pip install`.
+De `psgscoring`-library wordt geïnstalleerd vanaf PyPI (zie
+`requirements.txt`, `psgscoring==0.4.2`). Geen handmatige stappen
+nodig — `pip install` gebeurt automatisch in de Docker-build.
 
 ---
 
@@ -364,15 +365,13 @@ docker compose logs app --tail=50
 docker compose exec app python3 -c \
   "import psgscoring; print(psgscoring.__version__)"
 
-# Controleer PYTHONPATH
-docker compose exec app env | grep PYTHONPATH
-
-# Controleer of de map aanwezig is
-docker compose exec app ls myproject/psgscoring/
+# Controleer of het pip-package geïnstalleerd is
+docker compose exec app pip show psgscoring
 ```
 
-De waarde `PYTHONPATH=/data/slaapkliniek/myproject` moet aanwezig zijn.
-Zo niet: herbouw het image met `docker compose build`.
+Verwachte output: `psgscoring 0.4.2`. Zo niet:
+herbouw het image met `docker compose build` zodat
+`pip install -r requirements.txt` opnieuw draait.
 
 ### Worker verwerkt geen jobs
 
@@ -428,10 +427,9 @@ __init__.py  (110)   publieke API (33 symbolen)
 **Backward compatibel:** alle bestaande `from pneumo_analysis import ...`
 werken ongewijzigd. Geen database-migratie. Geen wijziging in analyses.
 
-**psgscoring is geen pip-package** (nog niet gepubliceerd). De library
-is gebundeld in `myproject/psgscoring/` en beschikbaar via
-`PYTHONPATH=/data/slaapkliniek/myproject` (ingesteld in Dockerfile,
-docker-compose.yml, wsgi.py en worker.py).
+**psgscoring** wordt geïnstalleerd vanaf PyPI (`pip install psgscoring==0.4.2`,
+zie `requirements.txt`). De broncode staat op
+[github.com/bartromb/psgscoring](https://github.com/bartromb/psgscoring).
 
 ---
 
