@@ -24,6 +24,7 @@ config.json
 instance/
 .env
 .env.*
+!.env.example
 *.secret
 
 # Patient data — never commit

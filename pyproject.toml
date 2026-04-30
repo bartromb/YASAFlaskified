@@ -1,0 +1,28 @@
+# YASAFlaskified is deployed as a Docker image, not a published Python package.
+# This file holds tooling configuration only (ruff, pytest).
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = [
+    "myproject/templates",
+    "myproject/static",
+    "*.bak",
+    "*.pre_*",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = [
+    "E501",  # line length handled by formatter
+    "B008",  # function calls in argument defaults (Flask idiom)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"myproject/i18n.py" = ["E501"]  # translation strings
+"myproject/tests/*" = ["B011"]
+
+[tool.pytest.ini_options]
+testpaths = ["myproject/tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"
