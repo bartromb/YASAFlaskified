@@ -24,13 +24,16 @@ Integration:
 """
 
 from reportlab.lib import colors
-from reportlab.lib.units import mm, cm
-from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import mm
 from reportlab.platypus import (
-    Table, TableStyle, Paragraph, Spacer, KeepTogether,
+    KeepTogether,
+    Paragraph,
+    Spacer,
+    Table,
+    TableStyle,
 )
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-
 
 # ═══════════════════════════════════════════════════════════════
 # Shared styles (adapt to match existing generate_pdf_report.py)

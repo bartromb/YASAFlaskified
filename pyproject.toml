@@ -1,0 +1,35 @@
+# YASAFlaskified is deployed as a Docker image, not a published Python package.
+# This file holds tooling configuration only (ruff, pytest).
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = [
+    "myproject/templates",
+    "myproject/static",
+    "*.bak",
+    "*.pre_*",
+]
+
+[tool.ruff.lint]
+# Pragmatic ruleset for an established clinical Flask app: catches real
+# Python errors (F), whitespace (W), and import sorting (I) only.
+# pycodestyle (E), bugbear (B), and pyupgrade (UP) are intentionally
+# out: existing dense scientific-code style would generate hundreds of
+# advisory warnings without bug content.
+select = ["F", "W", "I"]
+ignore = [
+    "F841",  # unused local vars — common in stats/scientific code
+]
+
+[tool.ruff.lint.per-file-ignores]
+# TODO(i18n): 27 duplicate keys silently shadow earlier translations.
+# Deduplicate carefully (translations may differ); see CHANGELOG.
+"myproject/i18n.py" = ["F601"]
+"myproject/tests/*" = []
+
+[tool.pytest.ini_options]
+testpaths = ["myproject/tests"]
+python_files = ["test_*.py"]
+pythonpath = ["myproject"]
+addopts = "-v --tb=short"

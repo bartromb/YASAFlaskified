@@ -8,9 +8,9 @@ Gebruik:
     from fhir_export import results_to_fhir
     fhir_json = results_to_fhir(results, job_id, site_config)
 """
-import json
-from version import __version__ as _APP_VERSION
 from datetime import datetime, timezone
+
+from version import __version__ as _APP_VERSION
 
 
 def results_to_fhir(results: dict, job_id: str,

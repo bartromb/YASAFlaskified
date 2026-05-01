@@ -13,26 +13,29 @@ Gebruik:
     generate_psg_report(results, pneumo, patient_info, output_path)
 """
 
-from version import __version__ as _APP_VERSION
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import cm, mm
-from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
-from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
-    HRFlowable, PageBreak, KeepTogether, Image
-)
-from reportlab.graphics.shapes import Drawing, Rect, String, Line
-from reportlab.graphics import renderPDF
 import matplotlib
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import cm
+from reportlab.platypus import (
+    Image,
+    PageBreak,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
+from version import __version__ as _APP_VERSION
+
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-import numpy as np
 import io
 import os
-from datetime import datetime
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 # ── Kleuren conform referentierapport ──
 BLAUW      = colors.HexColor("#1a3a8f")
@@ -303,7 +306,6 @@ def generate_psg_report(
     styles = _styles()
 
     # v0.8.11: taal vroeg bepalen zodat alle subfuncties hem kunnen gebruiken
-    from i18n import t as _t_func
     _site_for_lang = institution or {}
     lang = (
         (patient_info or {}).get("lang")
@@ -412,7 +414,7 @@ def generate_psg_report(
         [pat_tbl, "", bmi_tbl],
         [7.5*cm, 0.3*cm, 5.5*cm])
     patient_block = Table([
-        [Paragraph(f"<b>Patient Data</b>",
+        [Paragraph("<b>Patient Data</b>",
                    ParagraphStyle("_pth", fontName="Helvetica-Bold",
                                   fontSize=8, textColor=WIT,
                                   backColor=BLAUW))],
@@ -982,7 +984,7 @@ def generate_psg_report(
 
     # v0.8.11: taal uit site of patient_info
     from i18n import t
-    lang = (patient_info.get("lang") or site.get("language", "nl"))
+    lang = (patient_info.get("lang") or (institution or {}).get("language", "nl"))
 
     from conclusions import generate_conclusions
     spo2_nadir_f = None
@@ -998,7 +1000,7 @@ def generate_psg_report(
     concl_parts = generate_conclusions(
         ahi=ahi, oahi=oahi, plmi=plmi, se=se, tst=tst, ai=ai,
         bmi=bmi, spo2_nadir=spo2_nadir_f, spo2_pct_below90=spo2_pct_f,
-        csr_info=pneumo.get("cheyne_stokes", {}), lang=lang,
+        csr_info=pneumo_results.get("cheyne_stokes", {}), lang=lang,
     )
     for part in concl_parts:
         conclusion_lines.append(f"<b>{part['title']}</b>")

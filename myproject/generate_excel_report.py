@@ -4,12 +4,9 @@ Gebruik: xlsx_path = generate_excel_report(results_dict, output_path)
 """
 
 from openpyxl import Workbook
-from openpyxl.styles import (
-    Font, PatternFill, Alignment, Border, Side, numbers
-)
+from openpyxl.chart import RadarChart, Reference
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
-from openpyxl.chart import BarChart, RadarChart, Reference
-from openpyxl.chart.series import SeriesLabel
 
 # ── Kleuren (hex zonder #) ──
 BG_BLAUW   = "1A3A5C"

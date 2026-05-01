@@ -2,34 +2,42 @@
 generate_pdf_report.py — YASAFlaskified v0.8.37
 Site-config: via config.json["site"] of site_config parameter.
 """
-import json, os, io
-from datetime import datetime, date
+import io
+import json
+import os
+from datetime import date
+
+import matplotlib
 from i18n import t
 from version import __version__ as _APP_VERSION
 
-import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import cm
-from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
-    HRFlowable, PageBreak, KeepTogether, Image,
-)
-
 # v0.8.37: Medatec-parity PDF sections + OSAS score
 from pdf_report_additions import (
+    draw_ess_section,
     draw_position_stage_table,
     draw_snoring_crosstab,
-    draw_stage_latencies,
     draw_spo2_bands,
-    draw_ess_section,
-    draw_conclusion_section,
+    draw_stage_latencies,
+)
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import cm
+from reportlab.platypus import (
+    HRFlowable,
+    Image,
+    KeepTogether,
+    PageBreak,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
 )
 
 # ── Pagina ─────────────────────────────────────────────────────
@@ -113,15 +121,15 @@ def _rnd(v,dec=2):
 def _sev(ahi, lang="nl"):
     try: v=float(ahi)
     except: return "—"
-    for t,_,l in AHI_SEV:
-        if v<t: return _SEV_LABELS.get(l, {}).get(lang, l)
+    for thr,_,l in AHI_SEV:
+        if v<thr: return _SEV_LABELS.get(l, {}).get(lang, l)
     return _SEV_LABELS.get("Severe OSA", {}).get(lang, "Severe OSA")
 
 def _sev_clr(ahi):
     try: v=float(ahi)
     except: return GR
-    for t,c,_ in AHI_SEV:
-        if v<t: return c
+    for thr,c,_ in AHI_SEV:
+        if v<thr: return c
     return RED
 
 

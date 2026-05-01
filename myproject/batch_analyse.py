@@ -40,11 +40,10 @@ logger = logging.getLogger("batch")
 def _analyse_single(edf_path: str, output_dir: str, profile: str) -> dict:
     """Analyse a single EDF file. Runs in a subprocess."""
     import mne
-    import numpy as np
     mne.set_log_level("ERROR")
 
+    from pneumo_analysis import detect_channels, run_pneumo_analysis
     from yasa_analysis import run_sleep_staging
-    from pneumo_analysis import run_pneumo_analysis, detect_channels
 
     result = {
         "file": os.path.basename(edf_path),

@@ -14,8 +14,9 @@ Gebruik:
     report = check_signal_quality(raw, channel_types)
 """
 
-import numpy as np
 import logging
+
+import numpy as np
 
 logger = logging.getLogger("yasaflaskified.quality")
 

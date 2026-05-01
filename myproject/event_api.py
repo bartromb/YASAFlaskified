@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 event_api.py — YASAFlaskified v0.8.37
 ===================================
@@ -21,12 +22,11 @@ Events worden opgeslagen in {job_id}_events.json.
 Bij opslaan wordt AHI/OAHI automatisch herberekend.
 """
 
-import os
 import json
-import uuid
 import logging
+import os
+import uuid
 from datetime import datetime, timezone
-from typing import Optional
 
 logger = logging.getLogger("yasaflaskified.event_api")
 

@@ -23,7 +23,9 @@ Version: 0.8.37
 """
 
 from __future__ import annotations
+
 import argparse
+
 import numpy as np
 
 DEMO_SF = 256       # Hz
