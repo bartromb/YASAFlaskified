@@ -8,14 +8,11 @@ Run:
 Or standalone:
     python3 tests/test_v0840_fixes.py
 """
-import sys
-import os
 import logging
-from collections import Counter
+import sys
 
 import numpy as np
 from scipy.signal import butter, filtfilt
-
 
 # ══════════════════════════════════════════════════════════════
 #  Test 1: _hypno_str_to_int logs unknown stages

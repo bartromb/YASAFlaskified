@@ -24,8 +24,9 @@ Gebruik:
     generate_edfplus(edf_path, results, output_path)
 """
 
-import os
 import logging
+import os
+
 import numpy as np
 
 logger = logging.getLogger("yasaflaskified.edfplus")

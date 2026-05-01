@@ -204,7 +204,7 @@ docker compose exec app python3 -c \
   "import psgscoring; print('psgscoring', psgscoring.__version__, 'OK')"
 ```
 
-Verwachte output: `psgscoring 0.2.4 OK`
+Verwachte output: `psgscoring 0.4.2 OK` (of nieuwer; zie `requirements.txt` voor de actieve pin).
 
 Uw `config.json`, `.env`, en alle data in `uploads/`, `processed/` en
 `instance/` (database) blijven volledig intact bij een update.

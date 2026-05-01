@@ -13,8 +13,9 @@ Metrics:
   - Bland-Altman voor AHI
 """
 
-import numpy as np
 from collections import Counter
+
+import numpy as np
 
 STAGES = ["W", "N1", "N2", "N3", "R"]
 

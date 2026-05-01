@@ -6,6 +6,7 @@ Used by Gunicorn to serve the Flask application
 import os
 import sys
 import time
+
 # Ensure myproject/ directory is on sys.path so that psgscoring and other
 # sibling modules are importable regardless of the working directory.
 _myproject_dir = os.path.dirname(os.path.abspath(__file__))
@@ -27,16 +28,16 @@ os.makedirs(instance_dir, exist_ok=True)
 # or for traditional deployment where DB is created on first run
 if not os.path.exists(db_path) or os.path.getsize(db_path) == 0:
     lock_file = os.path.join(instance_dir, '.db_init.lock')
-    
+
     # Try to create lock file atomically
     try:
         # Use exclusive creation to avoid race condition
         fd = os.open(lock_file, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
         os.close(fd)
-        
+
         # This worker won the race - it initializes the database
         print(f"[Worker {os.getpid()}] Initializing database...")
-        
+
         from app import initialize_database
         try:
             initialize_database()
@@ -51,13 +52,13 @@ if not os.path.exists(db_path) or os.path.getsize(db_path) == 0:
                 except:
                     pass
                 raise
-        
+
         # Clean up lock file after successful init
         try:
             os.remove(lock_file)
         except:
             pass
-            
+
     except FileExistsError:
         # Another worker is initializing - wait for it to finish
         print(f"[Worker {os.getpid()}] Waiting for database initialization...")

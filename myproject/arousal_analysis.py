@@ -15,12 +15,12 @@ Klinisch verband:
   → cardiovasculaire stress (nachtelijke bloeddrukpieken)
 """
 
-import numpy as np
-from scipy import signal
-from scipy.ndimage import label
-from scipy.signal import find_peaks, butter, filtfilt  # v0.8.40: consolidated imports
-import traceback
 import logging
+import traceback
+
+import numpy as np
+from scipy.ndimage import label
+from scipy.signal import find_peaks  # v0.8.40: consolidated imports
 
 logger = logging.getLogger("yasaflaskified.arousal")
 
@@ -358,7 +358,7 @@ def detect_arousals(eeg_data: np.ndarray, sf: float,
         EMG_MIN_DUR_S = 1.0
 
         if emg_data is not None and len(emg_data) >= n_samples:
-            from scipy.signal import filtfilt, butter  # local import for backward compat
+            from scipy.signal import butter, filtfilt  # local import for backward compat
             try:
                 # v0.8.11 FIX: converteer EMG naar µV (zelfde issue als EEG/PLM)
                 emg_work = emg_data[:n_samples].copy()

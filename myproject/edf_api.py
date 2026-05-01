@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 edf_api.py — YASAFlaskified v0.8.37
 ================================
@@ -15,9 +16,10 @@ Routes (geregistreerd in app.py via register_edf_api(app)):
       → meerdere epochs in één request (max 10)
 """
 
-import os
 import json
 import logging
+import os
+
 import numpy as np
 
 logger = logging.getLogger("yasaflaskified.edf_api")
@@ -91,7 +93,6 @@ def _edf_path_for_job(job_id: str, upload_folder: str) -> str | None:
 
 
 # ── Cache (LRU, max 3 EDF-bestanden per worker) ──────────────────────────────
-from functools import lru_cache
 from collections import OrderedDict
 
 _MAX_CACHE = 3   # max RAM ~1.5 GB bij 3 × 500 MB PSG

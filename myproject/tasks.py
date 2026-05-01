@@ -13,25 +13,27 @@ Fixes t.o.v. v8.0:
 """
 
 import matplotlib
+
 matplotlib.use("Agg")
 
-import os
 import json
 import logging
+import os
 import traceback
-from datetime import datetime
 from collections import Counter
+from datetime import datetime
 
 import mne
 import numpy as np
 import pandas as pd
 
-from yasa_analysis import run_sleep_staging, run_full_analysis
-from pneumo_analysis import run_pneumo_analysis, detect_channels as pneumo_detect_channels
-from generate_pdf_report import generate_pdf_report
-from generate_excel_report import generate_excel_report
 # from generate_psg_report import generate_psg_report  # PSG = PDF (portrait)
 from generate_edfplus import generate_edfplus
+from generate_excel_report import generate_excel_report
+from generate_pdf_report import generate_pdf_report
+from pneumo_analysis import detect_channels as pneumo_detect_channels
+from pneumo_analysis import run_pneumo_analysis
+from yasa_analysis import run_full_analysis, run_sleep_staging
 
 logger = logging.getLogger("yasaflaskified.worker")
 logging.basicConfig(
@@ -48,6 +50,7 @@ UPLOAD_FOLDER = os.environ.get(
 
 # ── Redis voortgang ──────────────────────────────────────────
 import redis as _redis
+
 _progress_redis = None
 
 def _get_progress_redis():
@@ -595,7 +598,7 @@ def regenerate_with_corrections(job_id: str) -> dict:
 
     _set_progress(job_id, 2, 6, "Slaapstatistieken herberekenen...")
 
-    import yasa, numpy as np
+    import yasa
     try:
         hypno_int = yasa.hypno_str_to_int(hypno_str)
         sf_hyp    = 1 / 30
@@ -669,8 +672,8 @@ def _send_email_notification(job_id: str, results: dict):
     """
     try:
         import smtplib
-        from email.mime.text      import MIMEText
         from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
 
         cfg_path = os.path.join(os.path.dirname(__file__), "..", "config.json")
         if not os.path.exists(cfg_path):
@@ -733,8 +736,8 @@ def run_profile_comparison(edf_path: str, results_dir: str) -> dict:
     import mne
     mne.set_log_level("ERROR")
 
-    from yasa_analysis import run_sleep_staging
     from pneumo_analysis import run_pneumo_analysis
+    from yasa_analysis import run_sleep_staging
 
     raw = mne.io.read_raw_edf(edf_path, preload=True, verbose=False)
     staging = run_sleep_staging(raw)
@@ -776,7 +779,8 @@ def run_profile_comparison(edf_path: str, results_dir: str) -> dict:
             data["severity"] = "Severe"
 
     # Save comparison JSON
-    import json, os
+    import json
+    import os
     json_path = os.path.join(results_dir, "profile_comparison.json")
     with open(json_path, "w") as f:
         json.dump(comparison, f, indent=2, default=str)

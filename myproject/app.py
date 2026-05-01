@@ -13,8 +13,8 @@ Domeinen: sleepai.be / sleepai.eu
 
 # ── matplotlib config-map VOOR alle andere imports ──────────────
 import os
-import time
 import re
+import time
 from pathlib import Path
 
 
@@ -45,47 +45,60 @@ _MPLCONFIGDIR = _init_mplconfigdir()
 
 # ── Standaard imports ────────────────────────────────────────────
 import logging
+
 logger = logging.getLogger('yasaflaskified')
 import json
+import traceback
 import uuid
 import warnings
-import traceback
 from datetime import datetime, timedelta
 from logging.handlers import RotatingFileHandler
 
-import mne
-import yasa
-import pandas as pd
-import numpy as np
 import matplotlib
+import mne
+import numpy as np
+import pandas as pd
+import yasa
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-
-from werkzeug.middleware.proxy_fix import ProxyFix
-from version import __version__ as APP_VERSION, PSGSCORING_VERSION
 from flask import (
-    Flask, request, jsonify, redirect, url_for,
-    flash, session, send_from_directory, send_file,
-    render_template, abort,
+    Flask,
+    abort,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    send_file,
+    send_from_directory,
+    session,
+    url_for,
 )
-from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash, check_password_hash
-from werkzeug.utils import secure_filename
-from werkzeug.exceptions import HTTPException
-from flask_login import (
-    LoginManager, UserMixin,
-    login_user, login_required, logout_user, current_user,
-)
-from flask_wtf.csrf import CSRFProtect, CSRFError
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_login import (
+    LoginManager,
+    UserMixin,
+    current_user,
+    login_required,
+    login_user,
+    logout_user,
+)
+from flask_sqlalchemy import SQLAlchemy
+from flask_wtf.csrf import CSRFError, CSRFProtect
+
+# Pneumo-analyse (nieuw v7.1)
+from pneumo_analysis import detect_channels as pneumo_detect_channels
 from redis import Redis
 from rq import Queue
 from rq.job import Job, NoSuchJobError
 from sqlalchemy import text
-
-# Pneumo-analyse (nieuw v7.1)
-from pneumo_analysis import detect_channels as pneumo_detect_channels
+from version import PSGSCORING_VERSION
+from version import __version__ as APP_VERSION
+from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.utils import secure_filename
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -570,10 +583,9 @@ def duration_fmt(minutes):
 app.jinja_env.globals["now"] = datetime.utcnow
 
 # ── i18n (meertalig NL/FR/EN) ──
-from i18n import (get_translation, TRANSLATIONS, DEFAULT_LANG,
-                  LANG_NAMES, LANG_FLAGS, SUPPORTED_LANGS)
-
 from functools import wraps
+
+from i18n import DEFAULT_LANG, LANG_FLAGS, LANG_NAMES, SUPPORTED_LANGS, get_translation
 
 
 def requires_role(*roles):
@@ -2667,7 +2679,7 @@ def score_v12(job_id):
             active_hypno = json.load(f).get("hypnogram", hypno)
 
     try:
-        from event_api import load_events, _calc_stats, _get_tst_hours
+        from event_api import _calc_stats, _get_tst_hours, load_events
         events    = load_events(job_id, app.config["UPLOAD_FOLDER"])
         tst_h     = _get_tst_hours(job_id, app.config["UPLOAD_FOLDER"])
         ev_stats  = _calc_stats(events, tst_h)
@@ -2832,7 +2844,7 @@ def api_edf_events_epoch(job_id, epoch_idx):
 def api_edf_events_all(job_id):
     _require_job_access(job_id)
     try:
-        from event_api import load_events, _calc_stats, _get_tst_hours, EVENT_TYPES
+        from event_api import EVENT_TYPES, _calc_stats, _get_tst_hours, load_events
         events = load_events(job_id, app.config["UPLOAD_FOLDER"])
         tst_h  = _get_tst_hours(job_id, app.config["UPLOAD_FOLDER"])
         stats  = _calc_stats(events, tst_h)
@@ -2849,7 +2861,8 @@ def api_edf_events_all(job_id):
 def api_edf_events_toggle(job_id):
     _require_job_access(job_id)
     try:
-        from event_api import toggle_event_at, EVENT_TYPES as EV_TYPES
+        from event_api import EVENT_TYPES as EV_TYPES
+        from event_api import toggle_event_at
         payload  = request.get_json(force=True)
         ev_type  = payload.get("type", "OA")
         t_click  = float(payload.get("t_click", 0))

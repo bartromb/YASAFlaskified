@@ -9,14 +9,14 @@ Fixes t.o.v. v7.1:
   - predict_proba() deprecated in 0.7 → probeer hypno.proba
 """
 
-import numpy as np
-import pandas as pd
-import yasa
-import mne
-import traceback
 import logging
-from datetime import datetime, timedelta
+import traceback
 from collections import Counter
+from datetime import datetime, timedelta
+
+import mne
+import numpy as np
+import yasa
 
 logger = logging.getLogger("yasaflaskified")
 
