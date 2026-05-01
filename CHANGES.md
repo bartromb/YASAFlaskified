@@ -1,5 +1,61 @@
 # Changelog — YASAFlaskified
 
+## v0.9.3 — 2026-05-01
+
+### Changed
+- Bumped `psgscoring` pin from `0.4.2` (bundled patch) to `0.4.3` from PyPI.
+  No public-API changes; psgscoring v0.4.3 ships the paper-faithful
+  `validate_psgipa.py` rewrite and a reproducibility regression test.
+- `version.py` updated to `0.9.3` and `PSGSCORING_VERSION = "0.4.3"`
+  (was missed in the v0.9.2 and earlier v0.9.3 git tags; v0.9.3 tag
+  re-pointed at this commit).
+
+### Notes
+- INSTALL.md: 4 references to `psgscoring 0.4.2` updated to `0.4.3`.
+- Production deployed to Hetzner on 2026-05-01.
+
+---
+
+## v0.9.2 — 2026-05-01
+
+### Removed
+- **Bundled `myproject/psgscoring/`** (8.1k LOC, 20 files). psgscoring
+  is now installed from PyPI via `requirements.txt`. Bumps to newer
+  psgscoring releases are now a one-line change.
+
+### Fixed
+- **CI on `main` was red since 2026-04-12** because ruff flagged 429
+  issues in `myproject/`. Three were real bugs:
+  - `generate_psg_report.py:985,1001` — undefined `site` and `pneumo`
+    should be `institution` and `pneumo_results`; would crash code
+    paths that hit them
+  - `generate_pdf_report.py:116,123` — loop variable `t` shadowed the
+    imported translation function `t` in `_sev` and `_sev_clr`,
+    silently breaking translations in those branches
+- The remaining 426 issues were stylistic / import-sort / whitespace;
+  ruff `--fix` handled 90, the rest are now suppressed by a pragmatic
+  ruff config (`select = ["F", "W", "I"]`, ignoring opinionated
+  pycodestyle / bugbear / pyupgrade rules on this established
+  scientific-Flask codebase).
+
+### Added
+- New smoke test `myproject/tests/test_psgscoring_from_pypi.py` that
+  asserts `import psgscoring` does not resolve under `myproject/psgscoring/`
+  and that the loaded version meets the requirements.txt minimum.
+- CI workflow (`.github/workflows/ci.yml`): ruff lint + pytest +
+  Docker build smoke.
+- Repo hygiene: `.env.example`, `Makefile`, `pyproject.toml` with
+  ruff/pytest config.
+- `pythonpath = ["myproject"]` in pytest config so top-level imports
+  resolve when pytest runs from the repo root.
+
+### Deferred
+- 27 duplicate translation keys (F601) in `myproject/i18n.py` silently
+  shadow earlier values; deferred with per-file ignore + TODO comment.
+  Deduplication needs care to preserve the right variant.
+
+---
+
 ## v0.9.1 — 2026-04-29
 
 ### Fixed

@@ -1,126 +1,146 @@
 # Hetzner Current State
 
-**Last updated:** 2026-04-20
+**Last updated:** 2026-05-01
 **Server:** dedodedodo.be / 65.108.230.243 (Ryzen 9 5950X, 128 GB RAM)
-**Container:** kliniek_app (Docker Compose, 8 RQ workers + Redis + Gunicorn)
+**Container set:** `kliniek_app` (Flask/Gunicorn) + `kliniek_worker[1-8]` (RQ workers) + `kliniek_redis` + host `pneumo-web` (Nginx)
+**Public endpoint:** https://slaapkliniek.be
+**Project root on host:** `/data/slaapkliniek/` (file-copy deployment, not a git checkout)
 
 ## Current versions in production
 
-| Component | Version | Released | Notes |
-|-----------|---------|----------|-------|
-| YASAFlaskified | v0.8.41 | 2026-04-19 | pipeline channel_quality split integrated |
-| psgscoring | v0.2.963 | 2026-04-20 | SQUEEZE2D fix on top of RIP pair quality gate |
-| YASA (dependency) | 0.7.x | upstream | Vallat & Walker 2021 |
+| Component | Version | Source |
+|---|---|---|
+| YASAFlaskified | **v0.9.3** | `version.py` on disk; Docker image actually tagged `0.8.39` because of stale `APP_VERSION` in `.env` (cosmetic, image content correct) |
+| psgscoring | **v0.4.3** | Installed from PyPI via `requirements.txt` (`psgscoring==0.4.3`); previously bundled under `myproject/psgscoring/`, removed in v0.9.2 |
+| Python | 3.11 | `python:3.11-slim` base image |
+| YASA | 0.7.x | Vallat & Walker 2021 (transitive dep of psgscoring) |
+| Redis | 7-alpine | Queue backend |
 
-## Release history (current fix lineage)
+## Architecture summary
 
-### v0.2.962 — RIP pair quality gate (2026-04-19, 23:11 CET)
-
-Introduced `compare_rip_pair()` in `psgscoring/signal_quality.py` to
-detect asymmetric failures between thorax and abdomen RIP sensors.
-Pipeline renamed output key from `signal_quality` (flatline/clipping
-detection) to `channel_quality`, freeing `signal_quality` for the new
-RIP pair check.
-
-**Motivation:** Loos case (AZORG, April 2026) — thorax RIP sensor
-dead, abdomen OK. Energy ratio 6862×. Without the gate, psgscoring
-defaulted to obstructive classification, producing a misleading
-OSAS diagnosis (AHI 56.6, CAI 3.8) instead of the correct CSAS
-(CAI 45.1, 217 events reclassified).
-
-**Commits:** `7c8fe0c` (fix) + `8d9f18c` (version bump).
-
-### v0.2.963 — SQUEEZE2D fix (2026-04-20)
-
-Fixes a silent 2D-shape handling bug in `assess_rip_channel()` that
-rendered the v0.2.962 RIP pair gate ineffective in the real
-deployment pipeline.
-
-**Root cause:** MNE's `raw.get_data(picks=[ch])` returns shape
-`(1, N)` even for single-channel picks. The `welch()` PSD produced a
-2D output, breaking 1D boolean masking in breath-band energy
-calculation downstream. The result was that `assess_rip_channel()`
-silently returned invalid data, which `compare_rip_pair()` then
-consumed without protest.
-
-**Fix:** Defensive `np.asarray(signal, dtype=float).squeeze()` at top
-of `assess_rip_channel()` with `ndim != 1` fallback to 'failed'
-status for higher-dimensional input.
-
-**Deployment path:**
-1. Applied directly to Hetzner via base64 patch earlier on 2026-04-20
-2. Committed to `bartromb/psgscoring` as v0.2.963
-3. Uploaded to PyPI as v0.2.963
-4. YASAFlaskified bundled psgscoring updated to match
-
-**Validation:** 5 regression tests in `tests/test_signal_quality_2d.py`
-covering 1D baseline, 2D MNE-shape input, higher-dim defensive
-rejection, `compare_rip_pair` end-to-end, and Loos-like single-sensor
-scenario. All passing.
-
-## Clinical impact summary
-
-The Loos case (AZORG PSG, April 2026) is the empirical validation
-anchor for this fix lineage. The scenario is clinically significant:
-
-- Patient presented with sleep-disordered breathing
-- Thorax RIP sensor recorded essentially zero breath-band energy
-  (MAD 0.0017, ratio 6862× below abdomen)
-- Without signal quality gate: classified as severe OSAS (AHI 56.6)
-- With gate (v0.2.963 live): correctly classified as CSAS (CAI 45.1)
-- Dashboard now shows yellow 'Abdomen-only' Sig badge for this case
-
-The fix addresses a patient-safety-relevant failure mode: a dead
-sensor silently producing the wrong diagnosis category, which would
-route the patient to inappropriate therapy (CPAP instead of ASV or
-other central-apnea-appropriate treatment).
-
-## Infrastructure
-
-| Item | Value |
-|------|-------|
-| SSH | `ssh root@dedodedodo.be` |
-| Project root | `/data/slaapkliniek/` |
-| App directory | `/data/slaapkliniek/myproject/` |
-| Docker Compose | `/data/slaapkliniek/docker-compose.yml` |
-| Container name | `kliniek_app` |
-| Web endpoint | https://slaapkliniek.be |
-| Nginx Proxy Manager | https://panel.dedodedodo.be |
+- 8 RQ workers + 1 Gunicorn app, all on the same Docker network
+- Host Nginx terminates TLS (Let's Encrypt) and reverse-proxies to the
+  app on `127.0.0.1:8071`
+- Persistent volumes on the host: `/data/slaapkliniek/{uploads,processed,logs,instance}`
+- Secrets in `/data/slaapkliniek/.env` (never committed)
 
 ## Deployment verification
 
-To verify the current live state matches this document:
+To confirm the live state matches this document:
 
 ```bash
-ssh root@dedodedodo.be "docker exec kliniek_app python3 -c '
-from psgscoring import __version__ as psg_ver
-from version import __version__ as yas_ver
-print(f\"psgscoring: {psg_ver}\")
-print(f\"YASAFlaskified: {yas_ver}\")
-from psgscoring.signal_quality import compare_rip_pair, assess_rip_channel
-import inspect
-src = inspect.getsource(assess_rip_channel)
-assert \"SQUEEZE2D MARKER\" in src, \"SQUEEZE2D fix missing\"
-print(\"SQUEEZE2D fix: present\")
-'"
+ssh root@dedodedodo.be 'docker exec kliniek_app python3 -c "
+from version import __version__, PSGSCORING_VERSION
+import psgscoring
+print(f\"YASAFlaskified: {__version__}\")
+print(f\"PSGSCORING_VERSION constant: {PSGSCORING_VERSION}\")
+print(f\"psgscoring runtime: {psgscoring.__version__}\")
+print(f\"psgscoring source: {psgscoring.__file__}\")
+"'
 ```
 
-Expected output:
+Expected output (as of 2026-05-01):
 
 ```
-psgscoring: 0.2.963
-YASAFlaskified: 0.8.41
-SQUEEZE2D fix: present
+YASAFlaskified: 0.9.3
+PSGSCORING_VERSION constant: 0.4.3
+psgscoring runtime: 0.4.3
+psgscoring source: /usr/local/lib/python3.11/site-packages/psgscoring/__init__.py
 ```
 
-## Previous state documents (superseded)
+The `site-packages` path confirms the de-vendor: psgscoring is no longer
+loaded from a bundled `myproject/psgscoring/` copy.
 
-Any earlier `HETZNER_CURRENT_STATE.md` referencing the SQUEEZE2D fix
-as a pending change, or describing the fix as a separate code path
-outside v0.2.962/v0.2.963, is superseded by this document.
+## Update procedure
 
----
+Standard update from a clean local checkout of `bartromb/YASAFlaskified`:
 
-*This document is maintained alongside `CHANGELOG.md` in the
-psgscoring repository and duplicated in YASAFlaskified for
-operational visibility.*
+```bash
+# 1. (Optional) Backup the current state — excludes data dirs
+ssh root@dedodedodo.be 'cd /data && tar \
+  --exclude="slaapkliniek/uploads" \
+  --exclude="slaapkliniek/processed" \
+  --exclude="slaapkliniek/logs" \
+  --exclude="slaapkliniek/instance" \
+  -czf slaapkliniek.bak.$(date +%Y%m%d).tgz slaapkliniek/'
+
+# 2. Rsync source (preserves .env, instance/, uploads/, processed/, logs/)
+rsync -avz \
+  --exclude='.git/' --exclude='.venv/' --exclude='__pycache__/' --exclude='*.pyc' \
+  --exclude='.pytest_cache/' --exclude='.ruff_cache/' \
+  --exclude='/uploads/' --exclude='/processed/' --exclude='/logs/' \
+  --exclude='/instance/' --exclude='.env' \
+  --exclude='*.bak*' --exclude='*.pre_*' --exclude='*.OLD*' \
+  ./ root@dedodedodo.be:/data/slaapkliniek/
+
+# 3. (If applicable) Bump APP_VERSION in /data/slaapkliniek/.env so the
+#    Docker image gets tagged with the new version
+ssh root@dedodedodo.be 'sed -i "s/^APP_VERSION=.*/APP_VERSION=0.9.3/" /data/slaapkliniek/.env'
+
+# 4. Build and recreate
+ssh root@dedodedodo.be 'cd /data/slaapkliniek && docker compose build && docker compose up -d'
+```
+
+Recreating all containers takes ~30-60 s; deploy when the RQ queue is
+empty to avoid killing in-flight analyses:
+
+```bash
+ssh root@dedodedodo.be 'docker exec kliniek_app python3 -c "
+import redis
+from rq import Queue
+r = redis.Redis(host=\"redis\", port=6379)
+q = Queue(\"default\", connection=r)
+print(f\"Queued: {len(q)}, Started: {q.started_job_registry.count}\")
+"'
+```
+
+## Recent migration history
+
+### 2026-05-01 — v0.9.1 → v0.9.3 (de-vendor + paper-faithful validation)
+
+- **De-vendored psgscoring** from `myproject/psgscoring/` to PyPI
+  (`psgscoring==0.4.3`, was a manually-patched 0.4.2 bundled copy)
+- **psgscoring v0.4.3** ships the paper-faithful `validate_psgipa.py`
+  rewrite (single-source-of-truth scorer-1 file from `Resp_events/`,
+  no cross-subtree `meas_date` alignment) and a regression test
+  guarding paper v31 metrics
+- **Three real bugs fixed** in `myproject/`:
+  - `generate_psg_report.py` — undefined `site` and `pneumo` (should be
+    `institution` and `pneumo_results`); would crash for affected
+    code paths
+  - `generate_pdf_report.py` — loop variable `t` shadowed the imported
+    translation function `t` in `_sev` and `_sev_clr`, silently
+    breaking translations in those branches
+- **CI restored to green** on `main` (had been red since 2026-04-12 due
+  to ruff failures on the bundled psgscoring code which is no longer
+  in the repo)
+- **Backup tarball:** `/data/slaapkliniek.bak.20260501.tgz` (35 MB)
+
+### Earlier (pre-2026-05-01) fix lineage
+
+The Loos case (AZORG, April 2026) — a clinically significant
+single-RIP-sensor failure that defaulted to misleading severe-OSAS
+classification — drove a series of psgscoring fixes that culminated
+in v0.2.963: `compare_rip_pair()` for asymmetric RIP failure
+detection plus the `assess_rip_channel()` SQUEEZE2D defensive
+1D-coercion. Both fixes are present in the current production
+psgscoring v0.4.3 install (carried forward through every release).
+See the psgscoring `CHANGELOG.md` for the full per-version detail.
+
+## Outstanding follow-ups
+
+1. **`APP_VERSION` in `/data/slaapkliniek/.env` is stale** (`0.8.39`).
+   Until updated, future Docker image rebuilds will tag as
+   `yasaflaskified:0.8.39` regardless of `version.py`. Image content
+   is unaffected; this is purely cosmetic on `docker images`. Fix
+   with `sed -i 's/^APP_VERSION=.*/APP_VERSION=0.9.3/' /data/slaapkliniek/.env`
+   on the next deploy.
+
+2. **`requirements.txt` and `version.py` may drift again** if the next
+   psgscoring release ships without updating the YASAFlaskified pin
+   simultaneously. Keep the two in lockstep; the `test_psgscoring_from_pypi`
+   smoke test catches divergence at the `(major, minor)` level.
+
+3. **OIDC trusted publisher** for psgscoring on PyPI was set up
+   2026-05-01 (one-time configuration); GitHub Releases on the
+   psgscoring repo now auto-publish to PyPI without manual `twine`.
