@@ -1,5 +1,21 @@
 # Changelog — YASAFlaskified
 
+## v0.9.4 — 2026-05-03
+
+Bumped `psgscoring` pin from 0.4.3 to **0.5.1**. The 0.5.x series adds
+profile-tunable thresholds and metadata corrections to the `mesa_shhs`
+profile (paper v34 §S5.6 + research-driven additions); see the
+`psgscoring` CHANGELOG for details. PSG-IPA reproducibility 10/10 pass
+on both versions; clinical AHI for routine recordings is unchanged
+because clinical profiles (`aasm_v3_*`, `aasm_v2_rec`, `aasm_v1_rec`,
+`cms_medicare`, `chicago_1999`) keep their released defaults.
+
+### Changed
+- `requirements.txt` — `psgscoring==0.4.3` → `psgscoring==0.5.1`
+- `myproject/version.py` — `__version__` 0.9.3 → 0.9.4;
+  `PSGSCORING_VERSION` 0.4.3 → 0.5.1
+- `INSTALL.md`, `HETZNER_CURRENT_STATE.md` — version references updated
+
 ## v0.9.3 — 2026-05-01
 
 ### Changed

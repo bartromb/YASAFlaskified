@@ -10,8 +10,8 @@
 
 | Component | Version | Source |
 |---|---|---|
-| YASAFlaskified | **v0.9.3** | `version.py` on disk; Docker image actually tagged `0.8.39` because of stale `APP_VERSION` in `.env` (cosmetic, image content correct) |
-| psgscoring | **v0.4.3** | Installed from PyPI via `requirements.txt` (`psgscoring==0.4.3`); previously bundled under `myproject/psgscoring/`, removed in v0.9.2 |
+| YASAFlaskified | **v0.9.4** | `version.py` on disk; Docker image actually tagged `0.8.39` because of stale `APP_VERSION` in `.env` (cosmetic, image content correct) |
+| psgscoring | **v0.5.1** | Installed from PyPI via `requirements.txt` (`psgscoring==0.5.1`); previously bundled under `myproject/psgscoring/`, removed in v0.9.2 |
 | Python | 3.11 | `python:3.11-slim` base image |
 | YASA | 0.7.x | Vallat & Walker 2021 (transitive dep of psgscoring) |
 | Redis | 7-alpine | Queue backend |
@@ -39,12 +39,12 @@ print(f\"psgscoring source: {psgscoring.__file__}\")
 "'
 ```
 
-Expected output (as of 2026-05-01):
+Expected output (as of 2026-05-03):
 
 ```
-YASAFlaskified: 0.9.3
-PSGSCORING_VERSION constant: 0.4.3
-psgscoring runtime: 0.4.3
+YASAFlaskified: 0.9.4
+PSGSCORING_VERSION constant: 0.5.1
+psgscoring runtime: 0.5.1
 psgscoring source: /usr/local/lib/python3.11/site-packages/psgscoring/__init__.py
 ```
 
