@@ -1,5 +1,21 @@
 # Changelog — YASAFlaskified
 
+## v0.9.6 — 2026-05-05
+
+UI annotation for ML-augmented profiles. The scoring-profile
+dropdown on the channel-select page now appends a "🤖 ML" suffix to
+profile labels whose `post_processing.ml_classifier_path` is set,
+making it visible at a glance which profiles run the
+`psgscoring`~v0.6.0 candidate-level LightGBM re-classifier (default
+only `mesa_shhs`). A short legend below the dropdown explains the
+marker. No changes to scoring behaviour or routine clinical output.
+
+### Changed
+- `myproject/app.py` — appends `🤖 ML` to `display_name` for profiles
+  with an ML classifier configured.
+- `myproject/templates/channel_select.html` — added one-line legend
+  beneath the profile select.
+
 ## v0.9.5 — 2026-05-05
 
 Bumped `psgscoring` pin from 0.5.1 to **0.6.0** with the new `[ml]`

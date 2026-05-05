@@ -1461,13 +1461,19 @@ def channel_select(job_id):
     Toont zowel EEG/EOG/EMG-selectie als respiratoire kanaalkeuze
     en een formulier voor patiëntgegevens.
     """
-    # v0.9.0: laad alle 8 historische profielen voor dropdown
+    # v0.9.0: laad alle 8 historische profielen voor dropdown.
+    # v0.9.5: annoteer profielen met LightGBM-classifier via een
+    # "🤖 ML" suffix zodat de gebruiker direct ziet welke profielen
+    # de v0.6.0 candidate-level re-classifier toepassen (default
+    # alleen mesa_shhs).
     try:
         from psgscoring.profiles import PROFILES as _PSG_PROFILES
-        available_profiles = [
-            (name, p.display_name, p.aasm_version)
-            for name, p in _PSG_PROFILES.items()
-        ]
+        available_profiles = []
+        for name, p in _PSG_PROFILES.items():
+            label = p.display_name
+            if getattr(p.post_processing, "ml_classifier_path", None):
+                label = f"{label} 🤖 ML"
+            available_profiles.append((name, label, p.aasm_version))
     except Exception:
         available_profiles = [
             ("strict", "AASM v3 — Strict", "v3"),
