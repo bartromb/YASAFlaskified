@@ -1,5 +1,20 @@
 # Changelog — YASAFlaskified
 
+## v0.9.5 — 2026-05-05
+
+Bumped `psgscoring` pin from 0.5.1 to **0.6.0** with the new `[ml]`
+extra (installs `lightgbm>=3.0`). The 0.6.0 release adds an optional
+LightGBM candidate-level re-classifier that ships in the package and
+is consumed by the `mesa_shhs` profile by default; clinical profiles
+(used by every routine YASAFlaskified analysis) leave the
+classifier disabled and remain bit-identical to v0.5.x output.
+
+### Changed
+- `requirements.txt` — `psgscoring==0.5.1` → `psgscoring[ml]==0.6.0`
+- `myproject/version.py` — `__version__` 0.9.4 → 0.9.5;
+  `PSGSCORING_VERSION` 0.5.1 → 0.6.0
+- `INSTALL.md`, `HETZNER_CURRENT_STATE.md` — version references updated
+
 ## v0.9.4 — 2026-05-03
 
 Bumped `psgscoring` pin from 0.4.3 to **0.5.1**. The 0.5.x series adds

@@ -34,7 +34,7 @@
 **Python wordt NIET lokaal vereist** — alles draait in Docker-containers.
 
 De `psgscoring`-library wordt geïnstalleerd vanaf PyPI (zie
-`requirements.txt`, `psgscoring==0.5.1`). Geen handmatige stappen
+`requirements.txt`, `psgscoring==0.6.0`). Geen handmatige stappen
 nodig — `pip install` gebeurt automatisch in de Docker-build.
 
 ---
@@ -204,7 +204,7 @@ docker compose exec app python3 -c \
   "import psgscoring; print('psgscoring', psgscoring.__version__, 'OK')"
 ```
 
-Verwachte output: `psgscoring 0.5.1 OK` (of nieuwer; zie `requirements.txt` voor de actieve pin).
+Verwachte output: `psgscoring 0.6.0 OK` (of nieuwer; zie `requirements.txt` voor de actieve pin).
 
 Uw `config.json`, `.env`, en alle data in `uploads/`, `processed/` en
 `instance/` (database) blijven volledig intact bij een update.
@@ -369,7 +369,7 @@ docker compose exec app python3 -c \
 docker compose exec app pip show psgscoring
 ```
 
-Verwachte output: `psgscoring 0.5.1`. Zo niet:
+Verwachte output: `psgscoring 0.6.0`. Zo niet:
 herbouw het image met `docker compose build` zodat
 `pip install -r requirements.txt` opnieuw draait.
 
@@ -427,7 +427,7 @@ __init__.py  (110)   publieke API (33 symbolen)
 **Backward compatibel:** alle bestaande `from pneumo_analysis import ...`
 werken ongewijzigd. Geen database-migratie. Geen wijziging in analyses.
 
-**psgscoring** wordt geïnstalleerd vanaf PyPI (`pip install psgscoring==0.5.1`,
+**psgscoring** wordt geïnstalleerd vanaf PyPI (`pip install psgscoring==0.6.0`,
 zie `requirements.txt`). De broncode staat op
 [github.com/bartromb/psgscoring](https://github.com/bartromb/psgscoring).
 
