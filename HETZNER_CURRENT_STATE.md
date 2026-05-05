@@ -10,8 +10,8 @@
 
 | Component | Version | Source |
 |---|---|---|
-| YASAFlaskified | **v0.9.5** | `version.py` on disk; Docker image actually tagged `0.8.39` because of stale `APP_VERSION` in `.env` (cosmetic, image content correct) |
-| psgscoring | **v0.6.0** | Installed from PyPI via `requirements.txt` (`psgscoring==0.6.0`); previously bundled under `myproject/psgscoring/`, removed in v0.9.2 |
+| YASAFlaskified | **v0.9.6** | `version.py` + `APP_VERSION` in `.env` both updated; Docker image tagged `yasaflaskified:0.9.6` |
+| psgscoring | **v0.6.0** | Installed from PyPI via `requirements.txt` (`psgscoring[ml]==0.6.0` — `[ml]` extra installs `lightgbm` for the v0.6 candidate-classifier on `mesa_shhs`); previously bundled under `myproject/psgscoring/`, removed in v0.9.2 |
 | Python | 3.11 | `python:3.11-slim` base image |
 | YASA | 0.7.x | Vallat & Walker 2021 (transitive dep of psgscoring) |
 | Redis | 7-alpine | Queue backend |
@@ -75,7 +75,7 @@ rsync -avz \
 
 # 3. (If applicable) Bump APP_VERSION in /data/slaapkliniek/.env so the
 #    Docker image gets tagged with the new version
-ssh root@dedodedodo.be 'sed -i "s/^APP_VERSION=.*/APP_VERSION=0.9.3/" /data/slaapkliniek/.env'
+ssh root@dedodedodo.be 'sed -i "s/^APP_VERSION=.*/APP_VERSION=0.9.6/" /data/slaapkliniek/.env'
 
 # 4. Build and recreate
 ssh root@dedodedodo.be 'cd /data/slaapkliniek && docker compose build && docker compose up -d'
@@ -124,23 +124,23 @@ classification — drove a series of psgscoring fixes that culminated
 in v0.2.963: `compare_rip_pair()` for asymmetric RIP failure
 detection plus the `assess_rip_channel()` SQUEEZE2D defensive
 1D-coercion. Both fixes are present in the current production
-psgscoring v0.4.3 install (carried forward through every release).
-See the psgscoring `CHANGELOG.md` for the full per-version detail.
+psgscoring install (carried forward through every release;
+currently v0.6.0 in production). See the psgscoring `CHANGELOG.md`
+for the full per-version detail.
 
 ## Outstanding follow-ups
 
-1. **`APP_VERSION` in `/data/slaapkliniek/.env` is stale** (`0.8.39`).
-   Until updated, future Docker image rebuilds will tag as
-   `yasaflaskified:0.8.39` regardless of `version.py`. Image content
-   is unaffected; this is purely cosmetic on `docker images`. Fix
-   with `sed -i 's/^APP_VERSION=.*/APP_VERSION=0.9.3/' /data/slaapkliniek/.env`
-   on the next deploy.
-
-2. **`requirements.txt` and `version.py` may drift again** if the next
+1. **`requirements.txt` and `version.py` may drift again** if the next
    psgscoring release ships without updating the YASAFlaskified pin
    simultaneously. Keep the two in lockstep; the `test_psgscoring_from_pypi`
    smoke test catches divergence at the `(major, minor)` level.
 
-3. **OIDC trusted publisher** for psgscoring on PyPI was set up
+2. **OIDC trusted publisher** for psgscoring on PyPI was set up
    2026-05-01 (one-time configuration); GitHub Releases on the
    psgscoring repo now auto-publish to PyPI without manual `twine`.
+
+## Resolved follow-ups (historical)
+
+- **`APP_VERSION` stale at `0.8.39` in `/data/slaapkliniek/.env`** —
+  resolved 2026-05-03 onward; each release now bumps APP_VERSION as
+  part of the deploy procedure (see step 3 above).

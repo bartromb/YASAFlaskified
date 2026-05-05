@@ -1,5 +1,27 @@
 # Changelog — YASAFlaskified
 
+## v0.9.7 — 2026-05-05
+
+i18n strings updated to reflect the v0.6.0 architecture: the
+`analysis_description` and `pdf_disc_auto` keys (NL/FR/EN/DE) now
+distinguish between YASA AI sleep staging (the historical
+"LightGBM, ~85% epoch agreement" credit, attributed to
+Vallat \& Walker 2021) and the new v0.6.0 LightGBM
+candidate-classifier on `mesa_shhs` (psgscoring v0.6, paper v35).
+The fixed `5–10 min` analysis-duration claim was relaxed to
+`3–10 min` since the actual time depends on profile choice.
+HETZNER_CURRENT_STATE.md cleaned of stale `APP_VERSION=0.8.39`
+follow-up (resolved since 2026-05-03 deploys) and updated to
+reflect `psgscoring[ml]==0.6.0` pin.
+
+### Changed
+- `myproject/i18n.py` — NL/FR/EN/DE for `analysis_description`,
+  `analysis_duration`, `pdf_disc_auto`. Header version banner
+  updated to v0.9.6 → v0.9.7.
+- `HETZNER_CURRENT_STATE.md` — current-state table cleanup,
+  stale APP_VERSION follow-up moved to Resolved section,
+  example deploy commands updated to v0.9.6+.
+
 ## v0.9.6 — 2026-05-05
 
 UI annotation for ML-augmented profiles. The scoring-profile
