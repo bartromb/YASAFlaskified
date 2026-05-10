@@ -149,14 +149,14 @@ TRANSLATIONS = {
     "analysis_running":     {"nl":"Analyse wordt uitgevoerd",
                              "fr":"Analyse en cours",
                              "en":"Analysis in progress"},
-    "analysis_description": {"nl":"De analyse combineert YASA AI-slaapstaging met regel-gebaseerde respiratoire scoring "
-                                   "(AASM 2.6 Rule 1A/1B). Op het mesa_shhs profiel wordt daarbovenop een "
+    "analysis_description": {"nl":"De analyse combineert YASA AI-slaapstaging met regel-gebaseerde respiratoire scoring. "
+                                   "Op het mesa_shhs profiel wordt daarbovenop een "
                                    "LightGBM candidate-classifier toegepast (psgscoring v0.6).",
-                             "fr":"L'analyse combine le staging IA YASA avec un scoring respiratoire à base de règles "
-                                   "(AASM 2.6 Rule 1A/1B). Sur le profil mesa_shhs s'y ajoute un "
+                             "fr":"L'analyse combine le staging IA YASA avec un scoring respiratoire à base de règles. "
+                                   "Sur le profil mesa_shhs s'y ajoute un "
                                    "classificateur de candidats LightGBM (psgscoring v0.6).",
-                             "en":"The analysis combines YASA AI sleep staging with rule-based respiratory scoring "
-                                   "(AASM 2.6 Rule 1A/1B). On the mesa_shhs profile a LightGBM candidate "
+                             "en":"The analysis combines YASA AI sleep staging with rule-based respiratory scoring. "
+                                   "On the mesa_shhs profile a LightGBM candidate "
                                    "classifier is applied on top (psgscoring v0.6)."},
     "analysis_duration":    {"nl":"De analyse-duur hangt af van de opnameduur en welk profiel u kiest "
                                    "(typisch 3–10 min per recording).",
@@ -404,6 +404,31 @@ TRANSLATIONS = {
     "profile_standard": {'nl': 'Standaard (AASM 2.6) — aanbevolen', 'fr': 'Standard (AASM 2.6) — recommandé', 'en': 'Standard (AASM 2.6) — recommended'},
     "profile_sensitive": {'nl': 'Sensitief (RPSGT) — dichter bij menselijke scoring', 'fr': 'Sensible (RPSGT) — plus proche du scoring humain', 'en': 'Sensitive (RPSGT) — closer to human scoring'},
     "scoring_profile_hint": {'nl': 'Bepaalt drempels voor hypopnea-detectie, SpO2-koppeling en signaal-smoothing.', 'fr': 'Détermine les seuils de détection des hypopnées, le couplage SpO2 et le lissage du signal.', 'en': 'Controls thresholds for hypopnea detection, SpO2 coupling, and signal smoothing.'},
+    "arousal_lgbm_label": {'nl': 'ML arousal re-classifier gebruiken (preview)', 'fr': 'Utiliser le re-classificateur ML d’arousals (aperçu)', 'en': 'Use ML arousal re-classifier (preview)', 'de': 'ML-Arousal-Re-Klassifikator verwenden (Vorschau)'},
+    "kbd_shortcuts_title": {'nl': 'Toetsenbord-shortcuts', 'fr': 'Raccourcis clavier', 'en': 'Keyboard shortcuts', 'de': 'Tastenkürzel'},
+    "kbd_new_analysis":    {'nl': 'Nieuwe analyse',           'fr': 'Nouvelle analyse',         'en': 'New analysis',             'de': 'Neue Analyse'},
+    "kbd_dashboard":       {'nl': 'Naar dashboard',           'fr': 'Aller au tableau de bord', 'en': 'Go to dashboard',          'de': 'Zum Dashboard'},
+    "kbd_history":         {'nl': 'Naar historiek',           'fr': 'Aller à l’historique',     'en': 'Go to history',            'de': 'Zum Verlauf'},
+    "kbd_search":          {'nl': 'Zoekveld activeren',       'fr': 'Activer la recherche',     'en': 'Focus search',             'de': 'Suche fokussieren'},
+    "kbd_row_nav":         {'nl': 'Volgende / vorige rij',    'fr': 'Ligne suivante/précéd.',   'en': 'Next / previous row',      'de': 'Nächste / vorh. Zeile'},
+    "kbd_open_row":        {'nl': 'Selectie openen',          'fr': 'Ouvrir la sélection',      'en': 'Open selected',            'de': 'Auswahl öffnen'},
+    "kbd_presentation":    {'nl': 'Presentatiemodus aan/uit', 'fr': 'Mode présentation',        'en': 'Toggle presentation mode', 'de': 'Präsentationsmodus'},
+    "kbd_help":            {'nl': 'Toon deze help',           'fr': 'Afficher cette aide',      'en': 'Show this help',           'de': 'Diese Hilfe zeigen'},
+    "kbd_close":           {'nl': 'Sluiten',                  'fr': 'Fermer',                   'en': 'Close',                    'de': 'Schließen'},
+    "kbd_hint":            {'nl': 'Shortcuts negeren invoervelden. Druk ? op een lijstpagina.', 'fr': 'Les raccourcis ignorent les champs de saisie. Appuyez sur ? sur une page liste.', 'en': 'Shortcuts ignore input fields. Press ? from any list page.', 'de': 'Kürzel ignorieren Eingabefelder. Drücken Sie ? auf einer Listenseite.'},
+    "autodetected_channels": {'nl': 'Auto-gedetecteerde kanalen', 'fr': 'Canaux auto-détectés', 'en': 'Auto-detected channels', 'de': 'Automatisch erkannte Kanäle'},
+    "override_selection":   {'nl': 'Handmatig overrulen', 'fr': 'Forcer manuellement', 'en': 'Override manually', 'de': 'Manuell überschreiben'},
+    "channel_eeg_primary": {'nl': 'EEG primair', 'fr': 'EEG primaire', 'en': 'EEG primary', 'de': 'EEG primär'},
+    "channel_eog":          {'nl': 'EOG',  'fr': 'EOG',  'en': 'EOG',  'de': 'EOG'},
+    "channel_emg_chin":     {'nl': 'EMG kin',     'fr': 'EMG menton',  'en': 'EMG chin',     'de': 'EMG Kinn'},
+    "channel_flow":         {'nl': 'Luchtstroom', 'fr': 'Débit aérien','en': 'Airflow',      'de': 'Atemstrom'},
+    "channel_thoracic":     {'nl': 'Thoracale RIP','fr':'RIP thoracique','en':'Thoracic RIP','de':'Thorakal RIP'},
+    "channel_abdominal":    {'nl': 'Abdominale RIP','fr':'RIP abdominal','en':'Abdominal RIP','de':'Abdominal RIP'},
+    "channel_spo2":         {'nl': 'SpO₂',         'fr': 'SpO₂',        'en': 'SpO₂',         'de': 'SpO₂'},
+    "channel_not_detected": {'nl': 'Niet gevonden','fr': 'Non détecté', 'en': 'Not detected', 'de': 'Nicht erkannt'},
+    "total_studies": {'nl': 'Totaal studies', 'fr': 'Total études', 'en': 'Total studies', 'de': 'Studien gesamt'},
+    "osa_detected":  {'nl': 'OSA gedetecteerd', 'fr': 'SAOS détecté', 'en': 'OSA detected', 'de': 'OSA erkannt'},
+    "arousal_lgbm_hint": {'nl': 'Hybride: rule-based kandidaten + LightGBM filter (drempel 0,60). Getraind op MESA q∈{5,6}, gevalideerd op q=7 holdout en cross-cohort op PSG-IPA. Niet aan voor klinische scoring; alleen voor onderzoeks-runs of vergelijkende validatie.', 'fr': 'Hybride : candidats règle-base + filtre LightGBM (seuil 0,60). Entraîné sur MESA q∈{5,6}, validé sur q=7 holdout et cross-cohorte sur PSG-IPA. Pas pour le scoring clinique ; uniquement pour les analyses de recherche.', 'en': 'Hybrid: rule-based candidates + LightGBM filter (threshold 0.60). Trained on MESA q∈{5,6}, validated on q=7 holdout and cross-cohort on PSG-IPA. Not for clinical scoring; research and comparative validation only.', 'de': 'Hybrid: regelbasierte Kandidaten + LightGBM-Filter (Schwellenwert 0,60). Trainiert auf MESA q∈{5,6}, validiert am q=7-Holdout und über Kohorten hinweg auf PSG-IPA. Nicht für klinisches Scoring; nur für Forschungs- und Vergleichsläufe.'},
     "parameter": {'nl': 'Parameter', 'fr': 'Paramètre', 'en': 'Parameter'},
     "password_requirements": {'nl': 'Min. 8 tekens, 1 hoofdletter, 1 kleine letter, 1 cijfer.', 'fr': 'Min. 8 caractères, 1 majuscule, 1 minuscule, 1 chiffre.', 'en': 'Min. 8 chars, 1 uppercase, 1 lowercase, 1 digit.'},
     "patient": {'nl': 'Patiënt', 'fr': 'Patient', 'en': 'Patient'},
@@ -911,7 +936,7 @@ _DE_PATCH = {
     "analyses_ready": "Analyses ready",
     "analysis": "Analyse",
     "analysis_complete": "Analyse complete!",
-    "analysis_description": "Die Analyse kombiniert YASA AI-Schlafstaging mit regelbasiertem respiratorischem Scoring (AASM 2.6 Rule 1A/1B). Auf dem mesa_shhs-Profil wird zusätzlich ein LightGBM-Kandidatenklassifikator angewendet (psgscoring v0.6).",
+    "analysis_description": "Die Analyse kombiniert YASA AI-Schlafstaging mit regelbasiertem respiratorischem Scoring. Auf dem mesa_shhs-Profil wird zusätzlich ein LightGBM-Kandidatenklassifikator angewendet (psgscoring v0.6).",
     "analysis_duration": "Die Analysedauer hängt von der Aufzeichnungslänge und vom gewählten Profil ab (typischerweise 3–10 Min pro Aufzeichnung).",
     "analysis_failed": "Analyse failed",
     "analysis_history": "Analyse history",

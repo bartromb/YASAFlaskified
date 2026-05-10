@@ -1,0 +1,314 @@
+/* ─────────────────────────────────────────────────────────────────
+   YASAFlaskified v0.10.0 — typographic + density layer.
+   Loaded from base.html AFTER bootstrap.min.css, so its declarations
+   take precedence on the small surface area that we re-style.
+   Design notes in /home/bart/CODE/docs (UI proposal 2026-05-10).
+   ───────────────────────────────────────────────────────────────── */
+
+/* ── 1. Fonts ──────────────────────────────────────────────────── */
+:root {
+  --display-font:  "Newsreader", "Source Serif 4", Georgia, serif;
+  --body-font:     "IBM Plex Sans", "Helvetica Neue", system-ui, sans-serif;
+  --mono-font:     "IBM Plex Mono", "JetBrains Mono", "SF Mono", Menlo, monospace;
+
+  /* ── 2. Palette ──────────────────────────────────────────────── */
+  --accent-navy:    #1a3a5c;   /* primary */
+  --accent-ochre:   #b97a1f;   /* scoring profile / warmth */
+  --accent-claret:  #8c2929;   /* run / commit */
+  --accent-teal:    #2e6e6a;   /* secondary */
+
+  --rule-thin:      rgba(26, 58, 92, 0.14);
+
+  /* AASM severity bands (matches figure1_5patients.pdf) */
+  --sev-normal:    #d4edda;
+  --sev-mild:      #fff3cd;
+  --sev-moderate:  #ffe5b4;
+  --sev-severe:    #f8d7da;
+  --sev-normal-edge:   #6aab83;
+  --sev-mild-edge:     #c6a443;
+  --sev-moderate-edge: #d38842;
+  --sev-severe-edge:   #c45656;
+
+  --focus-ring:    0 0 0 2px rgba(26, 58, 92, 0.85);
+}
+
+/* ── 3. Body & typography ──────────────────────────────────────── */
+body {
+  font-family: var(--body-font);
+  font-feature-settings: "ss01", "cv11";  /* IBM Plex Sans alternates */
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6,
+.display-font {
+  font-family: var(--display-font);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+/* Numeric columns use tabular figures so digits align in tables. */
+.numeric, td.numeric, th.numeric {
+  font-family: var(--mono-font);
+  font-feature-settings: "tnum", "zero";  /* tabular nums + slashed zero */
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-weight: 500;
+}
+
+/* ── 4. Monogram letter (replaces emoji in card headers) ───────── */
+.mono-letter {
+  display: inline-block;
+  width: 1.6em;
+  height: 1.6em;
+  line-height: 1.55em;
+  text-align: center;
+  border: 1px solid currentColor;
+  font-family: var(--display-font);
+  font-weight: 600;
+  font-size: 0.85em;
+  margin-right: 0.5em;
+  color: var(--accent-navy);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.mono-letter--ochre  { color: var(--accent-ochre); }
+.mono-letter--claret { color: var(--accent-claret); }
+.mono-letter--teal   { color: var(--accent-teal); }
+
+/* Quiet card variant: hairline border, no shadow, left accent rule. */
+.card.card-quiet {
+  border: 1px solid var(--rule-thin);
+  box-shadow: none;
+  border-radius: 4px;
+  border-left: 2px solid var(--accent-navy);
+}
+.card.card-quiet .card-header {
+  background: transparent;
+  border-bottom: 1px solid var(--rule-thin);
+  font-family: var(--display-font);
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--accent-navy);
+}
+.card.card-quiet--ochre  { border-left-color: var(--accent-ochre); }
+.card.card-quiet--ochre  .card-header { color: var(--accent-ochre); }
+.card.card-quiet--claret { border-left-color: var(--accent-claret); }
+.card.card-quiet--claret .card-header { color: var(--accent-claret); }
+.card.card-quiet--teal   { border-left-color: var(--accent-teal); }
+.card.card-quiet--teal   .card-header { color: var(--accent-teal); }
+
+/* ── 5. Severity strip (dashboard + results numeric cells) ─────── */
+.sev-strip {
+  display: inline-grid;
+  grid-template-columns: 64px auto;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 110px;
+}
+.sev-strip__bar {
+  position: relative;
+  height: 6px;
+  width: 64px;
+  border-radius: 1px;
+  background: linear-gradient(
+    to right,
+    var(--sev-normal)   0%, var(--sev-normal)    var(--p5,  31.25%),
+    var(--sev-mild)     var(--p5,  31.25%), var(--sev-mild)     var(--p15, 62.5%),
+    var(--sev-moderate) var(--p15, 62.5%),  var(--sev-moderate) var(--p30, 87.5%),
+    var(--sev-severe)   var(--p30, 87.5%),  var(--sev-severe)   100%
+  );
+  border: 0.5px solid rgba(0, 0, 0, 0.12);
+}
+.sev-strip__bar::before {
+  /* AASM cut-off ticks */
+  content: "";
+  position: absolute;
+  top: -2px; bottom: -2px;
+  left: var(--p5, 31.25%);
+  border-left: 1px dotted rgba(0, 0, 0, 0.35);
+  width: 1px;
+}
+.sev-strip__bar::after {
+  content: "";
+  position: absolute;
+  top: -2px; bottom: -2px;
+  left: var(--p15, 62.5%);
+  border-left: 1px dotted rgba(0, 0, 0, 0.35);
+  width: 1px;
+}
+.sev-strip__marker {
+  position: absolute;
+  top: 7px;
+  width: 0; height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 6px solid var(--accent-navy);
+  transform: translateX(-4px);
+}
+.sev-strip__marker[data-sev="severe"]   { border-top-color: var(--sev-severe-edge); }
+.sev-strip__marker[data-sev="moderate"] { border-top-color: var(--sev-moderate-edge); }
+.sev-strip__marker[data-sev="mild"]     { border-top-color: var(--sev-mild-edge); }
+.sev-strip__marker[data-sev="normal"]   { border-top-color: var(--sev-normal-edge); }
+
+.sev-strip__value {
+  font-family: var(--mono-font);
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+.sev-strip__value--severe   { color: var(--sev-severe-edge);   font-weight: 600; }
+.sev-strip__value--moderate { color: var(--sev-moderate-edge); font-weight: 600; }
+.sev-strip__value--mild     { color: var(--sev-mild-edge);     font-weight: 500; }
+.sev-strip__value--normal   { color: var(--sev-normal-edge);   font-weight: 500; }
+
+/* ── 6. Auto-detected summary block (channel_select) ───────────── */
+.autodetect-table {
+  border: 1px solid var(--rule-thin);
+  border-radius: 4px;
+  background: #fbfbf9;
+}
+.autodetect-table__row {
+  display: grid;
+  grid-template-columns: 12em auto 2em;
+  align-items: center;
+  padding: 0.55rem 1rem;
+  border-bottom: 1px solid var(--rule-thin);
+  font-family: var(--body-font);
+  font-size: 0.95rem;
+}
+.autodetect-table__row:last-child { border-bottom: none; }
+.autodetect-table__label {
+  color: var(--accent-navy);
+  font-weight: 500;
+}
+.autodetect-table__value {
+  font-family: var(--mono-font);
+  font-size: 0.92em;
+  color: #333;
+}
+.autodetect-table__check {
+  text-align: right;
+  color: var(--sev-normal-edge);
+  font-weight: 600;
+}
+.autodetect-toggle {
+  margin-top: 1rem;
+  font-size: 0.92rem;
+  color: var(--accent-navy);
+  text-decoration: none;
+  cursor: pointer;
+}
+.autodetect-toggle:hover { text-decoration: underline; }
+
+/* ── 7. Visual focus ring (a11y) ───────────────────────────────── */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: 3px;
+}
+
+/* ── 8. Keyboard shortcut help overlay ─────────────────────────── */
+#kbd-help-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 25, 40, 0.55);
+  z-index: 10000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+#kbd-help-overlay[aria-hidden="false"] { display: flex; }
+#kbd-help-overlay .kbd-card {
+  background: #fff;
+  border-radius: 6px;
+  padding: 1.5rem 2rem;
+  max-width: 480px;
+  width: 90%;
+  font-family: var(--body-font);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+#kbd-help-overlay h3 {
+  font-family: var(--display-font);
+  margin: 0 0 1rem 0;
+  font-size: 1.25rem;
+  color: var(--accent-navy);
+}
+#kbd-help-overlay dl {
+  display: grid;
+  grid-template-columns: 5em 1fr;
+  gap: 0.4rem 1rem;
+  font-size: 0.95rem;
+  margin: 0;
+}
+#kbd-help-overlay dt {
+  font-family: var(--mono-font);
+  font-weight: 600;
+  color: var(--accent-claret);
+}
+#kbd-help-overlay dd { margin: 0; }
+#kbd-help-overlay .kbd-hint {
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  color: #6c757d;
+}
+
+/* ── 9. Print stylesheet ───────────────────────────────────────── */
+@media print {
+  @page { size: A4; margin: 1.5cm; }
+  body { background: #fff !important; font-size: 11pt; }
+  nav.navbar, footer, .no-print, .btn, .form-control, .form-select,
+  #inactivity-warn, .navbar-toggler { display: none !important; }
+  main { padding: 0 !important; }
+  .container, .container-fluid { max-width: 100% !important; padding: 0 !important; }
+  .card, .card-quiet {
+    border: 1px solid #999 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }
+  .card-header { background: #f0f0f0 !important; color: #000 !important; }
+  .badge { border: 1px solid #888; color: #000 !important; background: #fff !important; }
+  .sev-strip__value--severe::before   { content: "[SEV] "; }
+  .sev-strip__value--moderate::before { content: "[MOD] "; }
+  .sev-strip__value--mild::before     { content: "[MILD] "; }
+  .sev-strip__value--normal::before   { content: "[N] "; }
+  .sev-strip__bar, .sev-strip__marker { display: none; }
+  .print-only { display: block !important; }
+  table { font-size: 10pt; }
+  thead { background: #e0e0e0 !important; -webkit-print-color-adjust: exact; }
+  a { color: #000 !important; text-decoration: none !important; }
+}
+.print-only { display: none; }
+
+/* ── 10. Presentation mode (toggle in navbar) ──────────────────── */
+body.presentation-mode {
+  font-size: 1.1rem;
+}
+body.presentation-mode .container,
+body.presentation-mode .container-fluid {
+  max-width: 1400px;
+}
+body.presentation-mode h1, body.presentation-mode h2,
+body.presentation-mode h3, body.presentation-mode h4 {
+  letter-spacing: 0;
+  font-weight: 700;
+}
+body.presentation-mode .sev-strip__value { font-size: 1.15rem; }
+body.presentation-mode .numeric          { font-size: 1.05em; }
+body.presentation-mode .navbar-brand,
+body.presentation-mode .navbar-nav .nav-item:not(.presentation-toggle-item),
+body.presentation-mode footer .container > a:not([href="/disclaimer"]),
+body.presentation-mode footer .container > small {
+  /* keep navbar but hide secondary admin items */
+}
+body.presentation-mode .table { font-size: 1.05rem; }
+body.presentation-mode .text-muted { color: #555 !important; }
+
+/* ── 11. Severity badge a11y (sr-only labels) ──────────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}

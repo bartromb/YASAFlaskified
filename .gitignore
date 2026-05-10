@@ -50,8 +50,10 @@ htmlcov/
 .AppleDouble
 .LSOverride
 
-# Docker volumes (local bind mounts)
+# Docker volumes (local bind mounts) — but NOT the bundled myproject/data
 data/
+!myproject/data/
+!myproject/data/**
 
 # Numba / matplotlib cache
 .numba_cache/

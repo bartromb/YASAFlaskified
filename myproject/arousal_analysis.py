@@ -16,13 +16,292 @@ Klinisch verband:
 """
 
 import logging
+import os
 import traceback
+from pathlib import Path
 
 import numpy as np
 from scipy.ndimage import label
 from scipy.signal import find_peaks  # v0.8.40: consolidated imports
 
 logger = logging.getLogger("yasaflaskified.arousal")
+
+
+# ═══════════════════════════════════════════════════════════════
+# v0.9.8: LightGBM candidate-level re-classifier
+# Enabled per request via env var YASAFLASKIFIED_AROUSAL_LGBM=1.
+# When enabled, detect_arousals runs with permissive thresholds
+# (ratio=1.2, abrupt=1.0) to maximise candidate recall, then
+# filters surviving candidates with a LightGBM model trained on
+# MESA q∈{5,6} (n_subj=653, ~562k candidates) at probability
+# threshold AROUSAL_LGBM_THRESHOLD (default 0.60).
+# Backward-compat: when the env var is absent or "0", behaviour is
+# bit-identical to the v0.8.40 rule-based detector.
+# ═══════════════════════════════════════════════════════════════
+
+AROUSAL_LGBM_MODEL_PATH = str(
+    Path(__file__).with_name("data") / "arousal_classifier_v3.txt"
+)
+AROUSAL_LGBM_THRESHOLD = float(
+    os.environ.get("YASAFLASKIFIED_AROUSAL_LGBM_THRESHOLD", "0.60")
+)
+# Permissive candidate-stage thresholds used only in hybrid mode.
+AROUSAL_LGBM_CAND_RATIO  = 1.2
+AROUSAL_LGBM_CAND_ABRUPT = 1.0
+
+# Feature column order — must match arousal_classifier_v3_report.json
+# feature_names list. Changing this list invalidates the bundled model.
+_AROUSAL_LGBM_FEATURE_ORDER: list[str] = [
+    "duration_s", "stage_code", "stage_n1", "stage_n2", "stage_n3",
+    "stage_rem", "dom_band_code", "alpha_ratio", "beta_ratio",
+    "onset_ratio", "emg_confirmed", "cvr_boost",
+    "bp_pre_delta", "bp_pre_theta", "bp_pre_alpha", "bp_pre_sigma", "bp_pre_beta",
+    "bp_cand_delta", "bp_cand_theta", "bp_cand_alpha", "bp_cand_sigma", "bp_cand_beta",
+    "bp_post_delta", "bp_post_theta", "bp_post_alpha", "bp_post_sigma", "bp_post_beta",
+    "ratio_alpha_to_sigma", "ratio_beta_to_sigma", "ratio_arousal_to_sigma",
+    "delta_alpha_pre_cand", "delta_beta_pre_cand", "delta_total_pre_cand",
+    "hj_pre_act", "hj_pre_mob", "hj_pre_comp",
+    "hj_cand_act", "hj_cand_mob", "hj_cand_comp",
+    "hj_post_act", "hj_post_mob", "hj_post_comp",
+    "spec_edge_95", "spec_edge_50",
+    "td_cand_var", "td_cand_kurt", "td_cand_zcr",
+    "emg_var_ratio", "hr_shift_rel", "pos_in_night",
+]
+_AROUSAL_LGBM_BOOSTER = None  # cached after first use
+
+
+def _is_arousal_lgbm_enabled() -> bool:
+    return os.environ.get("YASAFLASKIFIED_AROUSAL_LGBM", "0") == "1"
+
+
+def _load_arousal_lgbm_booster():
+    global _AROUSAL_LGBM_BOOSTER
+    if _AROUSAL_LGBM_BOOSTER is not None:
+        return _AROUSAL_LGBM_BOOSTER
+    if not Path(AROUSAL_LGBM_MODEL_PATH).exists():
+        raise FileNotFoundError(
+            f"Arousal LGBM model not found at {AROUSAL_LGBM_MODEL_PATH}; "
+            "ship arousal_classifier_v3.txt into myproject/data/."
+        )
+    import lightgbm as lgb  # noqa: WPS433
+    _AROUSAL_LGBM_BOOSTER = lgb.Booster(model_file=AROUSAL_LGBM_MODEL_PATH)
+    return _AROUSAL_LGBM_BOOSTER
+
+
+def _bandpower_window(seg: np.ndarray, sf: float, lo: float, hi: float) -> float:
+    """Welch-free FFT bandpower estimate over `seg` (µV)."""
+    if seg.size < int(sf):
+        return 0.0
+    n = seg.size
+    win = np.hanning(n)
+    fx = np.fft.rfft(seg * win)
+    f = np.fft.rfftfreq(n, 1.0 / sf)
+    psd = (np.abs(fx) ** 2) / (sf * np.sum(win ** 2))
+    if n % 2:
+        psd[1:] *= 2
+    else:
+        psd[1:-1] *= 2
+    band = (f >= lo) & (f < hi)
+    if not np.any(band):
+        return 0.0
+    integrate = getattr(np, "trapezoid", None) or getattr(np, "trapz")
+    return float(integrate(psd[band], f[band]))
+
+
+def _hjorth_window(seg: np.ndarray) -> tuple[float, float, float]:
+    if seg.size < 3:
+        return (0.0, 0.0, 0.0)
+    var0 = float(np.var(seg))
+    if var0 <= 0:
+        return (0.0, 0.0, 0.0)
+    d1 = np.diff(seg)
+    var1 = float(np.var(d1))
+    mob = float(np.sqrt(var1 / var0)) if var1 > 0 else 0.0
+    if d1.size < 3 or mob <= 0:
+        return (var0, mob, 0.0)
+    d2 = np.diff(d1)
+    var2 = float(np.var(d2))
+    mob1 = float(np.sqrt(var2 / var1)) if var1 > 0 else 0.0
+    return (var0, mob, mob1 / mob if mob > 0 else 0.0)
+
+
+def _spectral_edge_window(seg: np.ndarray, sf: float, edge_pct: float) -> float:
+    if seg.size < int(sf):
+        return 0.0
+    n = seg.size
+    win = np.hanning(n)
+    fx = np.fft.rfft(seg * win)
+    f = np.fft.rfftfreq(n, 1.0 / sf)
+    psd = (np.abs(fx) ** 2)
+    if n % 2:
+        psd[1:] *= 2
+    else:
+        psd[1:-1] *= 2
+    band = (f >= 0.5) & (f <= 30.0)
+    if not np.any(band):
+        return 0.0
+    p = psd[band]
+    fb = f[band]
+    cum = np.cumsum(p)
+    if cum[-1] <= 0:
+        return 0.0
+    idx = int(np.searchsorted(cum, edge_pct * cum[-1]))
+    return float(fb[min(idx, fb.size - 1)])
+
+
+def _arousal_lgbm_features(
+    cand: dict,
+    eeg_uv: np.ndarray, sf: float,
+    emg_uv: np.ndarray | None,
+    n_epochs: int,
+) -> dict:
+    """Build the 50-feature vector for one candidate. Mirrors exactly
+    the layout in build_arousal_dataset.py used to train v3."""
+    onset_s = float(cand["onset_s"])
+    end_s   = float(cand["end_s"])
+    onset_i = int(onset_s * sf)
+    end_i   = int(end_s * sf)
+    pre_i   = max(0, onset_i - int(5.0 * sf))
+    post_i  = min(eeg_uv.size, end_i + int(5.0 * sf))
+
+    pre  = eeg_uv[pre_i:onset_i]
+    cand_seg = eeg_uv[onset_i:end_i]
+    post = eeg_uv[end_i:post_i]
+
+    stage = cand.get("stage", "W")
+    stage_codes = {"W": 0, "N1": 1, "N2": 2, "N3": 3, "R": 4}
+    band_codes  = {"alpha": 0, "theta": 1, "beta": 2}
+    ep_idx = int(cand.get("epoch", int(onset_s // 30)))
+
+    eps = 1e-12
+    out: dict[str, float] = {
+        "duration_s":     float(cand.get("duration_s", end_s - onset_s)),
+        "stage_code":     float(stage_codes.get(stage, 0)),
+        "stage_n1":       float(stage == "N1"),
+        "stage_n2":       float(stage == "N2"),
+        "stage_n3":       float(stage == "N3"),
+        "stage_rem":      float(stage == "R"),
+        "dom_band_code":  float(band_codes.get(cand.get("dominant_band", "alpha"), 0)),
+        "alpha_ratio":    float(cand.get("alpha_ratio", 0.0)),
+        "beta_ratio":     float(cand.get("beta_ratio", 0.0)),
+        "onset_ratio":    float(cand.get("onset_ratio", 0.0)),
+        "emg_confirmed":  float(bool(cand.get("emg_confirmed", False))),
+        "cvr_boost":      float(cand.get("cvr_boost", 0.0)),
+    }
+
+    for label_, seg in (("pre", pre), ("cand", cand_seg), ("post", post)):
+        if seg.size < int(sf):
+            for b in ("delta", "theta", "alpha", "sigma", "beta"):
+                out[f"bp_{label_}_{b}"] = 0.0
+            continue
+        out[f"bp_{label_}_delta"] = _bandpower_window(seg, sf, 0.5, 4.0)
+        out[f"bp_{label_}_theta"] = _bandpower_window(seg, sf, 4.0, 8.0)
+        out[f"bp_{label_}_alpha"] = _bandpower_window(seg, sf, 8.0, 11.0)
+        out[f"bp_{label_}_sigma"] = _bandpower_window(seg, sf, 12.0, 15.0)
+        out[f"bp_{label_}_beta"]  = _bandpower_window(seg, sf, 16.0, 30.0)
+
+    out["ratio_alpha_to_sigma"]   = out["bp_cand_alpha"] / (out["bp_cand_sigma"] + eps)
+    out["ratio_beta_to_sigma"]    = out["bp_cand_beta"]  / (out["bp_cand_sigma"] + eps)
+    out["ratio_arousal_to_sigma"] = (out["bp_cand_alpha"] + out["bp_cand_theta"]
+                                     + out["bp_cand_beta"]) / (out["bp_cand_sigma"] + eps)
+    out["delta_alpha_pre_cand"]   = (out["bp_cand_alpha"] - out["bp_pre_alpha"]) \
+                                    / (out["bp_pre_alpha"] + eps)
+    out["delta_beta_pre_cand"]    = (out["bp_cand_beta"]  - out["bp_pre_beta"]) \
+                                    / (out["bp_pre_beta"]  + eps)
+    out["delta_total_pre_cand"]   = ((out["bp_cand_alpha"] + out["bp_cand_theta"]
+                                      + out["bp_cand_beta"])
+                                     - (out["bp_pre_alpha"] + out["bp_pre_theta"]
+                                        + out["bp_pre_beta"])) \
+                                    / (out["bp_pre_alpha"] + out["bp_pre_theta"]
+                                       + out["bp_pre_beta"] + eps)
+
+    for label_, seg in (("pre", pre), ("cand", cand_seg), ("post", post)):
+        a, m, c = _hjorth_window(seg)
+        out[f"hj_{label_}_act"]  = a
+        out[f"hj_{label_}_mob"]  = m
+        out[f"hj_{label_}_comp"] = c
+
+    out["spec_edge_95"] = _spectral_edge_window(cand_seg, sf, 0.95)
+    out["spec_edge_50"] = _spectral_edge_window(cand_seg, sf, 0.50)
+
+    if cand_seg.size >= 3:
+        out["td_cand_var"] = float(np.var(cand_seg))
+        m_  = float(np.mean(cand_seg))
+        sd_ = float(np.std(cand_seg))
+        out["td_cand_kurt"] = float(np.mean(((cand_seg - m_) / (sd_ + eps)) ** 4) - 3) if sd_ > 0 else 0.0
+        out["td_cand_zcr"]  = float(np.mean(np.diff(np.signbit(cand_seg)) != 0))
+    else:
+        out["td_cand_var"]  = 0.0
+        out["td_cand_kurt"] = 0.0
+        out["td_cand_zcr"]  = 0.0
+
+    if emg_uv is not None and emg_uv.size >= eeg_uv.size:
+        emg_pre  = emg_uv[pre_i:onset_i]
+        emg_cand = emg_uv[onset_i:end_i]
+        v_pre  = float(np.var(emg_pre))  if emg_pre.size  >= 3 else 0.0
+        v_cand = float(np.var(emg_cand)) if emg_cand.size >= 3 else 0.0
+        out["emg_var_ratio"] = v_cand / (v_pre + eps)
+    else:
+        out["emg_var_ratio"] = 0.0
+
+    out["hr_shift_rel"] = 0.0  # v3 trained without HR feature populated
+    out["pos_in_night"] = ep_idx / max(1, n_epochs - 1)
+
+    return out
+
+
+def _filter_candidates_with_lgbm(
+    events: list[dict],
+    eeg_uv: np.ndarray, sf: float,
+    emg_uv: np.ndarray | None,
+    n_epochs: int,
+    threshold: float = AROUSAL_LGBM_THRESHOLD,
+) -> tuple[list[dict], list[float]]:
+    """Score each candidate with the LGBM model and return the events
+    with `proba >= threshold`, plus the per-candidate probabilities."""
+    if not events:
+        return [], []
+    booster = _load_arousal_lgbm_booster()
+    feat_rows = [_arousal_lgbm_features(c, eeg_uv, sf, emg_uv, n_epochs) for c in events]
+    X = np.array([[r[c] for c in _AROUSAL_LGBM_FEATURE_ORDER] for r in feat_rows],
+                 dtype=float)
+    proba = booster.predict(X)
+    kept = []
+    for ev, p in zip(events, proba):
+        if p >= threshold:
+            ev = dict(ev)
+            ev["lgbm_proba"] = round(float(p), 4)
+            kept.append(ev)
+    return kept, [float(p) for p in proba]
+
+
+def _recompute_arousal_summary(
+    arousals: list[dict], hypno: list, artifact_set: set,
+) -> dict:
+    """Rebuild the summary fields after LGBM filtering."""
+    total_sleep_s = sum(EPOCH_LEN_S for i, s in enumerate(hypno)
+                        if _is_sleep(s) and i not in artifact_set)
+    total_sleep_h = max(total_sleep_s / 3600, 0.001)
+    rem_h  = max(sum(EPOCH_LEN_S for i, s in enumerate(hypno)
+                     if _is_rem(s) and i not in artifact_set) / 3600, 0.001)
+    nrem_h = max(sum(EPOCH_LEN_S for i, s in enumerate(hypno)
+                     if _is_nrem(s) and i not in artifact_set) / 3600, 0.001)
+    nrem_ar = [a for a in arousals if _is_nrem(a.get("stage", "W"))]
+    rem_ar  = [a for a in arousals if _is_rem(a.get("stage", "W"))]
+    ai = len(arousals) / total_sleep_h
+    return {
+        "n_arousals":         len(arousals),
+        "arousal_index":      _safe(ai),
+        "nrem_arousal_index": _safe(len(nrem_ar) / nrem_h),
+        "rem_arousal_index":  _safe(len(rem_ar)  / rem_h),
+        "avg_duration_s":     _safe(float(np.mean([a["duration_s"]
+                                       for a in arousals]))) if arousals else None,
+        "severity":           _classify_arousal_index(ai),
+        "n_theta_dominant":   sum(1 for a in arousals if a.get("dominant_band") == "theta"),
+        "n_alpha_dominant":   sum(1 for a in arousals if a.get("dominant_band") == "alpha"),
+        "n_beta_dominant":    sum(1 for a in arousals if a.get("dominant_band") == "beta"),
+        "n_emg_confirmed":    sum(1 for a in arousals if a.get("emg_confirmed")),
+    }
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -242,7 +521,31 @@ def detect_arousals(eeg_data: np.ndarray, sf: float,
     gedurende ≥3s, met ≥10s stabiele slaap voorafgaand."
 
     In REM: + EMG toename ≥1s.
+
+    v0.9.8: when YASAFLASKIFIED_AROUSAL_LGBM=1 is set, the candidate
+    stage runs with permissive thresholds (ratio=1.2, abrupt=1.0) and
+    surviving candidates are filtered post-hoc by a LightGBM
+    re-classifier at threshold AROUSAL_LGBM_THRESHOLD (default 0.60).
+    Backward-compat: with the env var unset the function is
+    bit-identical to the rule-based v0.8.40 detector.
     """
+    # v0.9.8: hybrid mode dispatch — swap the candidate thresholds in
+    # the module globals while the rule-based body runs, then filter
+    # via LGBM after the function completes. The swap is restored in a
+    # try/finally below so concurrent callers see the original values.
+    _hybrid = _is_arousal_lgbm_enabled()
+    global AROUSAL_RATIO_THRESH, ABRUPT_RATIO_THRESH
+    _saved_ratio  = AROUSAL_RATIO_THRESH
+    _saved_abrupt = ABRUPT_RATIO_THRESH
+    if _hybrid:
+        AROUSAL_RATIO_THRESH = AROUSAL_LGBM_CAND_RATIO
+        ABRUPT_RATIO_THRESH  = AROUSAL_LGBM_CAND_ABRUPT
+        logger.info(
+            "[arousal] LGBM hybrid mode enabled "
+            "(candidate ratio=%.2f, abrupt=%.2f, threshold=%.2f)",
+            AROUSAL_RATIO_THRESH, ABRUPT_RATIO_THRESH, AROUSAL_LGBM_THRESHOLD,
+        )
+
     result = {"success": False, "events": [], "summary": {}, "error": None}
     try:
         n_samples = len(eeg_data)
@@ -559,9 +862,52 @@ def detect_arousals(eeg_data: np.ndarray, sf: float,
         }
         result["success"] = True
 
+        # v0.9.8: LGBM filter applied after the rule-based body has
+        # populated result["events"] / result["summary"]. We post-filter
+        # with the model and recompute the summary; the rule-based output
+        # is still available under result["pre_lgbm_n_arousals"] for
+        # diagnostics.
+        if _hybrid and result.get("events"):
+            try:
+                eeg_uv_for_lgbm = eeg_data.copy()
+                if np.max(np.abs(eeg_uv_for_lgbm)) < 0.01:
+                    eeg_uv_for_lgbm = eeg_uv_for_lgbm * 1e6
+                emg_uv_for_lgbm = None
+                if emg_data is not None:
+                    emg_uv_for_lgbm = emg_data[:n_samples].copy()
+                    if np.max(np.abs(emg_uv_for_lgbm)) < 0.01:
+                        emg_uv_for_lgbm = emg_uv_for_lgbm * 1e6
+                kept, proba = _filter_candidates_with_lgbm(
+                    result["events"], eeg_uv_for_lgbm, sf,
+                    emg_uv_for_lgbm, len(hypno),
+                    threshold=AROUSAL_LGBM_THRESHOLD,
+                )
+                n_pre = len(result["events"])
+                result["pre_lgbm_n_arousals"] = n_pre
+                result["events"] = kept
+                result["summary"] = _recompute_arousal_summary(
+                    kept, hypno, set(artifact_epochs or []),
+                )
+                result["summary"]["lgbm_threshold"] = AROUSAL_LGBM_THRESHOLD
+                result["summary"]["lgbm_n_pre"]     = n_pre
+                result["summary"]["lgbm_n_post"]    = len(kept)
+                logger.info(
+                    "[arousal] LGBM filter: %d candidates → %d kept "
+                    "(threshold %.2f)", n_pre, len(kept), AROUSAL_LGBM_THRESHOLD,
+                )
+            except Exception as e:  # noqa: BLE001
+                logger.warning("[arousal] LGBM filter failed: %s; "
+                               "falling back to rule-based output", e)
+                result["lgbm_error"] = str(e)
+
     except Exception as e:
         result["error"]     = str(e)
         result["traceback"] = traceback.format_exc()
+    finally:
+        # Always restore the module globals so concurrent / subsequent
+        # callers see the original rule-based values.
+        AROUSAL_RATIO_THRESH = _saved_ratio
+        ABRUPT_RATIO_THRESH  = _saved_abrupt
     return result
 
 

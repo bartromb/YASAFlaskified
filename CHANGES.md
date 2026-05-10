@@ -1,5 +1,118 @@
 # Changelog — YASAFlaskified
 
+## v0.10.0 — 2026-05-10  *(UI overhaul)*
+
+End-to-end visual / interaction refresh aimed at clinical density.
+Five interlocking changes; backward-compatible with all v0.9.x routes
+and JSON contracts. Backup of pre-v0.10.0 source tree:
+`/home/bart/CODE/YASAFlaskified.backup-pre-v010-…`.
+
+### Added
+- `myproject/static/styles_v010.css` — typographic + density layer
+  loaded on top of Bootstrap 5. Defines:
+  * Display font Newsreader (serif), body IBM Plex Sans, mono IBM Plex
+    Mono for tabular numerics.
+  * `card-quiet` variant: hairline border + 2 px accent rule, no
+    shadow, in navy / ochre / claret / teal.
+  * `mono-letter` chip used in card headers in place of emoji.
+  * `sev-strip` component: 64 px AASM severity strip (Normal / Mild /
+    Moderate / Severe) with cut-off ticks at 5 / 15 / 30 /h and a
+    triangular marker on the patient value.
+  * Auto-detect summary table (channel-select page).
+  * Visual focus ring (a11y).
+  * `@media print` stylesheet for clinical paper print-out.
+  * `.presentation-mode` body class for projected meetings.
+
+### Changed
+- `myproject/templates/base.html` — Newsreader / Plex Sans / Plex Mono
+  font imports; navbar emoji 🌐 replaced by `bi-globe2`; new
+  presentation-toggle button (`bi-display`) + keyboard-help button
+  (`bi-question-circle`) in the navbar; global keyboard handler
+  (`n`, `g d`, `g h`, `/`, `j` / `k`, `Enter`, `p`, `?`, `Esc`);
+  full-screen kbd-help overlay.
+- `myproject/templates/dashboard.html` — header gets a monogram
+  letter `D`; stat-cards collapsed from 4 to 3 quiet cards with
+  monogram letters; AHI / ODI / PLMi pills replaced by `sev_strip`
+  macro (severity bar + tabular-numeric value); table tagged
+  `kbd-nav-table` for j / k navigation.
+- `myproject/templates/channel_select.html` — auto-detected channel
+  summary added at the top; existing EEG / EOG / EMG / Extra-EEG /
+  Pneumo cards collapsed under a single "Override manually" toggle;
+  card-headers use `mono-letter` instead of emoji; `card-quiet`
+  variants in navy / ochre / claret / teal; submit button uses
+  `bi-play-fill`.
+- `myproject/i18n.py` — keys for the keyboard-help overlay
+  (NL / FR / EN / DE), the auto-detect summary labels, and the
+  dashboard stat-card labels.
+- `myproject/version.py` — `__version__ = "0.10.0"`.
+
+### Visual deltas a clinical user notices
+1. Numerics in the dashboard table are now monospaced and aligned —
+   AHI 8.1 vs 53.98 line up correctly.
+2. Each AHI / ODI / PLMi cell is a coloured strip with the value
+   marker at the patient's position; severity is visible at-a-glance
+   without reading any pill.
+3. Channel-select shows one auto-detected summary instead of four
+   colourful cards; one click on "Override manually" opens the old
+   per-channel layout when needed.
+4. `Ctrl/Cmd-P` (browser print) now produces a clinical-dossier
+   layout (no nav, A4 margins, B/W badges, severity prefixes).
+5. `?` from any list page shows the shortcut help; `j`/`k` navigates
+   table rows, `Enter` opens the selected study.
+
+## v0.9.9 — 2026-05-10
+
+UI exposure of the ML arousal re-classifier shipped in v0.9.8.
+
+### Added
+- Checkbox "Use ML arousal re-classifier (preview)" on the
+  channel-select page (NL/FR/EN/DE), right under the scoring
+  profile dropdown. Decoupled from the scoring profile because
+  arousal detection is a separate concern from respiratory event
+  scoring.
+
+### Changed
+- `myproject/templates/channel_select.html` — added the checkbox
+  block + i18n hint string.
+- `myproject/i18n.py` — `arousal_lgbm_label` and
+  `arousal_lgbm_hint` keys (NL/FR/EN/DE).
+- `myproject/app.py` — channel-select POST handler stores
+  `arousal_lgbm` boolean in the per-job config.
+- `myproject/tasks.py` — RQ worker reads `cfg["arousal_lgbm"]`
+  and sets the `YASAFLASKIFIED_AROUSAL_LGBM` env var around the
+  `run_pneumo_analysis` call (with try/finally restore so the
+  flag does not leak across jobs in the same worker process).
+- `myproject/version.py` — `__version__ = "0.9.9"`.
+
+## v0.9.8 — 2026-05-10
+
+Optional candidate-level LightGBM EEG-arousal re-classifier shipped
+behind the `YASAFLASKIFIED_AROUSAL_LGBM` env-var feature flag. With
+the flag unset the detector behaves bit-identically to v0.8.40
+rule-based; with the flag set to `1` the candidate stage runs at
+permissive thresholds (ratio=1.2, abrupt=1.0) and surviving
+candidates are filtered by a LightGBM model trained on MESA
+q∈{5,6} (n_subj=653, n_candidates=562k) at probability threshold
+`AROUSAL_LGBM_THRESHOLD` (default `0.60`). On the q=7 honest
+holdout the hybrid achieves Pearson r 0.66 between automatic and
+NSRR-scored arousal-indices (vs 0.08 rule-based) and reduces
+|Δn_arousals| from 71 to 45. Cross-cohort validation on PSG-IPA
+(no retraining) gives Pearson r 0.84 between algorithmic and
+scorer-mean AI across 60 (recording, scorer) cells. See paper v37
+§5.5 + Online Supplement §S7.5 for full results.
+
+### Changed
+- `myproject/arousal_analysis.py` — added LGBM helper block,
+  feature extraction (50 features per candidate), filter wrapper,
+  summary recomputation, and dispatch in `detect_arousals`.
+  Backward-compat preserved: env var unset = bit-identical to
+  v0.8.40 rule-based output.
+- `myproject/version.py` — `__version__ = "0.9.8"`.
+
+### Added
+- `myproject/data/arousal_classifier_v3.txt` — bundled MESA-trained
+  LightGBM model (1.7 MB).
+
 ## v0.9.7 — 2026-05-05
 
 i18n strings updated to reflect the v0.6.0 architecture: the

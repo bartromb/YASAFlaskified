@@ -16,6 +16,15 @@
   <link rel="stylesheet"
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
+  {# v0.10.0 typography — Newsreader (display) + IBM Plex Sans (body) + Mono (numerics) #}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600;6..72,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+  {# v0.10.0 typographic + density layer #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles_v010.css') }}">
+
   <style>
     :root {
       --sleep-blue:  #1a3a5c;
@@ -24,7 +33,7 @@
 
     body {
       background: #f8f9fa;
-      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      /* font-family handled by styles_v010.css */
     }
 
     .navbar-brand { font-weight: 700; letter-spacing: -.3px; }
@@ -87,10 +96,26 @@
           </li>
         </ul>
         <ul class="navbar-nav ms-auto">
+          {# v0.10.0 presentation-mode toggle (Voorstel 4) #}
+          <li class="nav-item presentation-toggle-item">
+            <a class="nav-link" href="#" id="presentationToggle"
+               role="button" aria-pressed="false"
+               title="Toggle presentation mode (P)">
+              <i class="bi bi-display"></i>
+            </a>
+          </li>
+          {# Keyboard help (Voorstel 5) #}
+          <li class="nav-item">
+            <a class="nav-link" href="#" id="kbdHelpBtn"
+               role="button"
+               title="Keyboard shortcuts (?)">
+              <i class="bi bi-question-circle"></i>
+            </a>
+          </li>
           {# Taalkeuze #}
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-              🌐 {% set cl = current_lang %}{{ LANGS.get(cl, 'NL') }}
+              <i class="bi bi-globe2 me-1"></i>{% set cl = current_lang %}{{ LANGS.get(cl, 'NL') }}
             </a>
             <ul class="dropdown-menu dropdown-menu-end">
               {% for code, name in LANGS.items() %}
@@ -167,9 +192,9 @@
       <a href="https://pypi.org/project/psgscoring/" target="_blank">psgscoring</a>
       <small>(Rombaut, 2026)</small>
       &nbsp;·&nbsp;
-      AASM 2.6 <small>(Berry et al., 2020)</small>
+      AASM <small>(Berry et al., 2020)</small>
       &nbsp;·&nbsp;
-      &copy; 2024–2026 Bart Rombaut
+      &copy; 2023–2026 Bart Rombaut
       &nbsp;·&nbsp;
       <a href="/disclaimer">Disclaimer</a>
     </div>
@@ -209,6 +234,118 @@
     {% else %}Sessie verloopt binnenkort — beweeg de muis om ingelogd te blijven{% endif %}
   </div>
   {% endif %}
+
+  {# v0.10.0 keyboard shortcuts + presentation toggle (Voorstel 4 + 5) #}
+  <div id="kbd-help-overlay" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="kbd-card">
+      <h3>{{ t('kbd_shortcuts_title') }}</h3>
+      <dl>
+        <dt>n</dt>      <dd>{{ t('kbd_new_analysis') }}</dd>
+        <dt>g d</dt>    <dd>{{ t('kbd_dashboard')    }}</dd>
+        <dt>g h</dt>    <dd>{{ t('kbd_history')      }}</dd>
+        <dt>/</dt>      <dd>{{ t('kbd_search')       }}</dd>
+        <dt>j / k</dt>  <dd>{{ t('kbd_row_nav')      }}</dd>
+        <dt>Enter</dt>  <dd>{{ t('kbd_open_row')     }}</dd>
+        <dt>p</dt>      <dd>{{ t('kbd_presentation') }}</dd>
+        <dt>?</dt>      <dd>{{ t('kbd_help')         }}</dd>
+        <dt>Esc</dt>    <dd>{{ t('kbd_close')        }}</dd>
+      </dl>
+      <p class="kbd-hint">{{ t('kbd_hint') }}</p>
+    </div>
+  </div>
+  <script>
+  (function() {
+    'use strict';
+    const overlay = document.getElementById('kbd-help-overlay');
+    function showHelp() { overlay.setAttribute('aria-hidden', 'false'); }
+    function hideHelp() { overlay.setAttribute('aria-hidden', 'true'); }
+    overlay.addEventListener('click', function(e) {
+      if (e.target === overlay) hideHelp();
+    });
+    document.getElementById('kbdHelpBtn').addEventListener('click', function(e) {
+      e.preventDefault(); showHelp();
+    });
+
+    // Presentation mode (persisted in localStorage)
+    const PRES_KEY = 'yfl_presentation_mode';
+    function setPresentation(on) {
+      document.body.classList.toggle('presentation-mode', !!on);
+      const btn = document.getElementById('presentationToggle');
+      if (btn) btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      try { localStorage.setItem(PRES_KEY, on ? '1' : '0'); } catch(_){}
+    }
+    try {
+      if (localStorage.getItem(PRES_KEY) === '1') setPresentation(true);
+    } catch(_){}
+    document.getElementById('presentationToggle').addEventListener('click', function(e) {
+      e.preventDefault();
+      setPresentation(!document.body.classList.contains('presentation-mode'));
+    });
+
+    // Row navigation helpers (j/k/Enter on tables tagged with .kbd-nav-table)
+    function rows() { return Array.from(document.querySelectorAll('.kbd-nav-table tbody tr:not([style*="display: none"])')); }
+    let cursor = -1;
+    function highlight(i) {
+      const rs = rows();
+      rs.forEach(function(r, idx) { r.classList.toggle('kbd-row-active', idx === i); });
+      if (i >= 0 && i < rs.length) {
+        rs[i].scrollIntoView({block: 'nearest', behavior: 'smooth'});
+      }
+    }
+    function move(d) {
+      const rs = rows();
+      if (!rs.length) return;
+      cursor = Math.max(0, Math.min(rs.length - 1, (cursor < 0 ? 0 : cursor + d)));
+      highlight(cursor);
+    }
+    function activate() {
+      const rs = rows();
+      if (cursor < 0 || cursor >= rs.length) return;
+      const link = rs[cursor].querySelector('a[href]');
+      if (link) window.location.href = link.href;
+    }
+
+    // Global key handler
+    let pendingPrefix = null;
+    document.addEventListener('keydown', function(e) {
+      const tag = (document.activeElement || {}).tagName;
+      const isText = ['INPUT','TEXTAREA','SELECT'].includes(tag) ||
+                     (document.activeElement && document.activeElement.isContentEditable);
+      if (e.key === 'Escape') {
+        if (overlay.getAttribute('aria-hidden') === 'false') { hideHelp(); return; }
+      }
+      if (isText && e.key !== 'Escape') return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      // Two-key prefixes: g d, g h
+      if (pendingPrefix === 'g') {
+        pendingPrefix = null;
+        if (e.key === 'd') { window.location.href = '{{ url_for("dashboard") if current_user.is_authenticated else "/" }}'; e.preventDefault(); return; }
+        if (e.key === 'h') { window.location.href = '/results'; e.preventDefault(); return; }
+        return;
+      }
+
+      switch (e.key) {
+        case 'g': pendingPrefix = 'g'; setTimeout(function(){ pendingPrefix = null; }, 1000); break;
+        case 'n': window.location.href = '/'; e.preventDefault(); break;
+        case '/': {
+          const s = document.getElementById('searchInput');
+          if (s) { s.focus(); e.preventDefault(); }
+          break;
+        }
+        case 'j': move(+1); e.preventDefault(); break;
+        case 'k': move(-1); e.preventDefault(); break;
+        case 'Enter': if (cursor >= 0) { activate(); e.preventDefault(); } break;
+        case 'p': setPresentation(!document.body.classList.contains('presentation-mode')); e.preventDefault(); break;
+        case '?': showHelp(); e.preventDefault(); break;
+      }
+    });
+  })();
+  </script>
+  <style>
+    /* Active row highlight for j/k navigation */
+    .kbd-row-active { background: rgba(26, 58, 92, 0.07) !important; box-shadow: inset 3px 0 0 var(--accent-navy, #1a3a5c); }
+  </style>
 
   {% block extra_js %}{% endblock %}
 </body>

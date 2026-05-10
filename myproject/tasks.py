@@ -274,13 +274,31 @@ def run_analysis_job(job_id: str) -> dict:
 
     logger.info("Artefact-epochs voor pneumo exclusie: %d", len(art_epochs))
 
-    pneumo_results = run_pneumo_analysis(
-        raw              = raw_pneumo,
-        hypno            = hypno,
-        channel_map      = pneumo_channels,
-        artifact_epochs  = art_epochs,
-        scoring_profile  = cfg.get("scoring_profile", "standard"),
-    )
+    # v0.9.8: per-job toggle for the ML arousal re-classifier. The
+    # YASAFlaskified arousal_analysis module reads the env var once at
+    # the top of detect_arousals(), so we set it right before the
+    # psgscoring pipeline call (which transitively invokes
+    # run_arousal_respiratory_analysis) and restore it afterwards so
+    # that subsequent jobs in the same RQ worker process are not
+    # affected.
+    _arousal_lgbm = bool(cfg.get("arousal_lgbm", False))
+    _saved_lgbm_env = os.environ.get("YASAFLASKIFIED_AROUSAL_LGBM")
+    if _arousal_lgbm:
+        os.environ["YASAFLASKIFIED_AROUSAL_LGBM"] = "1"
+        logger.info("[task] Arousal LGBM re-classifier ENABLED for this job")
+    try:
+        pneumo_results = run_pneumo_analysis(
+            raw              = raw_pneumo,
+            hypno            = hypno,
+            channel_map      = pneumo_channels,
+            artifact_epochs  = art_epochs,
+            scoring_profile  = cfg.get("scoring_profile", "standard"),
+        )
+    finally:
+        if _saved_lgbm_env is None:
+            os.environ.pop("YASAFLASKIFIED_AROUSAL_LGBM", None)
+        else:
+            os.environ["YASAFLASKIFIED_AROUSAL_LGBM"] = _saved_lgbm_env
 
     # ── Stap 7: Confidence review + signaal kwaliteit ────────
     _set_progress(job_id, 8, 10, "Kwaliteitscontrole...")

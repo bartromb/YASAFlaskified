@@ -1707,6 +1707,9 @@ def start_analysis():
         # v0.8.22: scoring profiel
         "scoring_profile":  request.form.get("scoring_profile", "standard"),
         "study_type":       request.form.get("study_type", "diagnostic_psg"),
+        # v0.9.8: optional ML arousal re-classifier (preview).
+        # Checkbox value is "on" if checked, absent otherwise.
+        "arousal_lgbm":     bool(request.form.get("arousal_lgbm")),
     }
     cfg_path = os.path.join(app.config["UPLOAD_FOLDER"], f"{job_id}_config.json")
     with open(cfg_path, "w") as f:

@@ -1,14 +1,45 @@
 {% extends "base.html" %}
 {% block title %}Dashboard — {{ t('patient_overview') }}{% endblock %}
 
+{# v0.10.0 severity-strip macro — see static/styles_v010.css. #}
+{% macro sev_strip(value, severity, scale_max=60) %}
+  {% if value in [None, '—', ''] %}
+    <span class="text-muted">—</span>
+  {% else %}
+    {% set v = (value | float(default=0)) %}
+    {% set p_clamped = (v / scale_max) * 100 %}
+    {% if p_clamped > 100 %}{% set p_clamped = 100 %}{% endif %}
+    {% set sev_lower = (severity or '') | lower %}
+    {% if 'severe' in sev_lower or 'ernstig' in sev_lower or 'sévère' in sev_lower or 'schwer' in sev_lower %}
+      {% set sev_key = 'severe' %}
+    {% elif 'moderate' in sev_lower or 'matig' in sev_lower or 'modér' in sev_lower or 'mittel' in sev_lower %}
+      {% set sev_key = 'moderate' %}
+    {% elif 'mild' in sev_lower %}
+      {% set sev_key = 'mild' %}
+    {% else %}
+      {% set sev_key = 'normal' %}
+    {% endif %}
+    <span class="sev-strip" role="img"
+          aria-label="{{ value }} ({{ severity or 'normal' }})">
+      <span class="sev-strip__bar"
+            style="--p5:{{ (5/scale_max*100)|round(2) }}%; --p15:{{ (15/scale_max*100)|round(2) }}%; --p30:{{ (30/scale_max*100)|round(2) }}%">
+        <span class="sev-strip__marker" data-sev="{{ sev_key }}"
+              style="left:{{ p_clamped|round(2) }}%"></span>
+      </span>
+      <span class="sev-strip__value sev-strip__value--{{ sev_key }}">{{ value }}</span>
+    </span>
+    <span class="sr-only">{{ severity or '' }}</span>
+  {% endif %}
+{% endmacro %}
+
 {% block content %}
 <div class="container-fluid px-4 py-3">
 
-  {# ── Header ─────────────────────────────────────────── #}
+  {# ── Header (v0.10.0 — monogram letter, display font) ─────── #}
   <div class="d-flex align-items-center justify-content-between mb-3">
     <div>
-      <h4 class="mb-0 fw-bold text-primary">
-        <i class="bi bi-grid-3x3-gap-fill me-2"></i>{{ t('patient_overview') }}
+      <h4 class="mb-0 display-font" style="color:var(--accent-navy)">
+        <span class="mono-letter">D</span>{{ t('patient_overview') }}
       </h4>
       <small class="text-muted">{{ total }} {{ t('studies_found') }}</small>
     </div>
@@ -24,8 +55,8 @@
     </div>
   </div>
 
-  {# ── Zoek & Filter balk ──────────────────────────────── #}
-  <div class="card shadow-sm border-0 mb-3 bg-light">
+  {# ── Zoek & Filter balk (v0.10.0 quiet card) ────────── #}
+  <div class="card card-quiet mb-3">
     <div class="card-body py-2 px-3">
       <div class="row g-2 align-items-center">
         <div class="col-md-4">
@@ -58,55 +89,36 @@
     </div>
   </div>
 
-  {# ── Statistieken balk ───────────────────────────────── #}
+  {# ── Statistieken balk (v0.10.0 — compact stripe) ────── #}
   {% set n_klaar = studies | selectattr("status","equalto","klaar") | list | length %}
   {% set n_osa   = studies | selectattr("sev_cls","in",["warning","orange","danger"]) | list | length %}
-  <div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
-      <div class="card text-center border-0 shadow-sm h-100">
-        <div class="card-body py-3">
-          <div class="fs-2 fw-bold text-primary">{{ total }}</div>
-          <div class="text-muted small">Totaal studies</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="card text-center border-0 shadow-sm h-100">
-        <div class="card-body py-3">
-          <div class="fs-2 fw-bold text-success">{{ n_klaar }}</div>
-          <div class="text-muted small">{{ t("analysis") }}</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="card text-center border-0 shadow-sm h-100">
-        <div class="card-body py-3">
-          <div class="fs-2 fw-bold text-warning">{{ n_osa }}</div>
-          <div class="text-muted small">OSA gedetecteerd</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="card text-center border-0 shadow-sm h-100">
-        <div class="card-body py-3">
-          <div class="fs-2 fw-bold text-info">
-            {% if studies and studies|selectattr("se")|list %}
-              {% set se_vals = studies | selectattr("se") | map(attribute="se")
-                               | select("string") | list %}
-              —
-            {% else %}—{% endif %}
+  <div class="row g-2 mb-4">
+    {% set stats = [
+      ('T', total,    t('total_studies'), 'navy'),
+      ('A', n_klaar,  t('analysis'),      'teal'),
+      ('O', n_osa,    t('osa_detected'),  'claret'),
+    ] %}
+    {% for letter, value, label, hue in stats %}
+    <div class="col-6 col-md-4">
+      <div class="card card-quiet card-quiet--{{ hue if hue != 'navy' else '' }} h-100">
+        <div class="card-body py-2 d-flex align-items-center gap-3">
+          <span class="mono-letter mono-letter--{{ hue if hue != 'navy' else '' }}"
+                style="font-size:1.05rem">{{ letter }}</span>
+          <div>
+            <div class="numeric" style="font-size:1.6rem; line-height:1.1">{{ value }}</div>
+            <div class="text-muted small text-uppercase" style="letter-spacing:0.04em">{{ label }}</div>
           </div>
-          <div class="text-muted small">Gem. SE %</div>
         </div>
       </div>
     </div>
+    {% endfor %}
   </div>
 
   {# ── Tabel ───────────────────────────────────────────── #}
-  <div class="card shadow-sm border-0">
+  <div class="card card-quiet">
     <div class="card-body p-0">
       <div class="table-responsive">
-        <table class="table table-hover table-sm align-middle mb-0" id="dashTable">
+        <table class="table table-hover table-sm align-middle mb-0 kbd-nav-table" id="dashTable">
           <thead class="table-dark">
             <tr>
               <th class="ps-3">{{ t('patient') }}</th>
@@ -150,19 +162,17 @@
               {# Geboortedatum #}
               <td class="small">{{ s.dob }}</td>
 
-              {# AHI #}
+              {# AHI — severity strip (v0.10.0) #}
               <td class="text-center">
-                <span class="badge bg-{{ s.sev_cls }} rounded-pill px-2">
-                  {{ s.ahi }}
-                </span>
-                <div class="text-muted" style="font-size:.7rem">{{ s.ahi_sev }}</div>
+                {{ sev_strip(s.ahi, s.ahi_sev) }}
               </td>
 
               {# Grade A/B/C (AHI confidence) #}
-              <td class="text-center">
+              <td class="text-center numeric">
                 {% if s.grade %}
                   <span class="badge bg-{{ 'success' if s.grade=='A' else 'warning text-dark' if s.grade=='B' else 'danger' }} rounded-pill px-2"
-                        style="min-width:26px">
+                        style="min-width:26px"
+                        aria-label="Grade {{ s.grade }}">
                     {{ s.grade }}
                   </span>
                 {% else %}
@@ -170,26 +180,22 @@
                 {% endif %}
               </td>
 
-              {# ODI 3% #}
+              {# ODI 3% — severity strip (scale_max 40 since ODI tops earlier than AHI) #}
               <td class="text-center">
-                {% if s.odi is defined and s.odi not in [None, '—'] %}
-                  <span class="badge bg-{{ s.odi_cls|default('secondary') }} rounded-pill px-2">
-                    {{ s.odi }}
-                  </span>
-                {% else %}
-                  <span class="text-muted">—</span>
-                {% endif %}
+                {% set odi_sev = 'severe' if (s.odi|float(default=0)) >= 30
+                              else 'moderate' if (s.odi|float(default=0)) >= 15
+                              else 'mild'     if (s.odi|float(default=0)) >= 5
+                              else 'normal' %}
+                {{ sev_strip(s.odi, odi_sev, scale_max=40) }}
               </td>
 
-              {# PLMi #}
+              {# PLMi — severity strip (scale_max 50; AASM threshold ≥15) #}
               <td class="text-center">
-                {% if s.plmi is defined and s.plmi not in [None, '—'] %}
-                  <span class="badge bg-{{ s.plmi_cls|default('secondary') }} rounded-pill px-2">
-                    {{ s.plmi }}
-                  </span>
-                {% else %}
-                  <span class="text-muted">—</span>
-                {% endif %}
+                {% set plmi_sev = 'severe' if (s.plmi|float(default=0)) >= 50
+                               else 'moderate' if (s.plmi|float(default=0)) >= 30
+                               else 'mild'     if (s.plmi|float(default=0)) >= 15
+                               else 'normal' %}
+                {{ sev_strip(s.plmi, plmi_sev, scale_max=50) }}
               </td>
 
               {# v0.8.41: Signal quality badge #}
@@ -208,7 +214,7 @@
               </td>
 
               {# TST #}
-              <td class="text-center small">{{ s.tst|string + ' min' if s.tst != '—' else '—' }}</td>
+              <td class="text-center numeric small">{{ s.tst|string + ' min' if s.tst != '—' else '—' }}</td>
 
               {# SE #}
               <td class="text-center">
@@ -218,7 +224,7 @@
                     <div class="progress-bar bg-{{ 'success' if se_v >= 85 else 'warning' }}"
                          style="width:{{ [se_v, 100]|min }}%"></div>
                   </div>
-                  <small class="text-muted">{{ s.se }}%</small>
+                  <small class="text-muted numeric">{{ s.se }}%</small>
                 {% else %}
                   <span class="text-muted">—</span>
                 {% endif %}

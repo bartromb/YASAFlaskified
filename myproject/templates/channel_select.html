@@ -7,13 +7,15 @@
 {% block content %}
 <div class="container py-5" style="max-width:720px">
 
-  <div class="text-center mb-4">
-    <span class="fs-1">🧠</span>
-    <h2 class="mt-2">{{ t('channel_select') }}</h2>
-    <p class="text-muted">
+  <div class="mb-4">
+    <h2 class="display-font" style="color:var(--accent-navy)">
+      <span class="mono-letter">C</span>{{ t('channel_select') }}
+    </h2>
+    <p class="text-muted small mb-0">
       {{ t("file") }}: <strong>{{ filename }}</strong> &nbsp;·&nbsp;
-      {{ channels | length }} {{ t("channels_found") }} &nbsp;·&nbsp;
-      {{ duration_min }} min &nbsp;·&nbsp; {{ sfreq }} Hz
+      <span class="numeric">{{ channels | length }}</span> {{ t("channels_found") }} &nbsp;·&nbsp;
+      <span class="numeric">{{ duration_min }}</span> min &nbsp;·&nbsp;
+      <span class="numeric">{{ sfreq }}</span> Hz
     </p>
   </div>
 
@@ -21,11 +23,76 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="job_id" value="{{ job_id }}">
 
+    {# ── v0.10.0 (Voorstel 3): auto-detected channel summary ── #}
+    {% set _ns = namespace(eog=none, emg=none) %}
+    {% for ch in channels %}
+      {% set _u = ch | upper %}
+      {% if not _ns.eog and ('EOG' in _u or 'LOC' in _u or 'ROC' in _u) %}{% set _ns.eog = ch %}{% endif %}
+      {% if not _ns.emg and ('EMG' in _u or 'CHIN' in _u) %}{% set _ns.emg = ch %}{% endif %}
+    {% endfor %}
+    {% set _eog_auto = _ns.eog %}
+    {% set _emg_auto = _ns.emg %}
+    <div class="card card-quiet mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><span class="mono-letter">A</span>{{ t('autodetected_channels') }}</span>
+        <small class="text-muted">{{ t('fields_prefilled') }}</small>
+      </div>
+      <div class="card-body p-0">
+        <div class="autodetect-table">
+          <div class="autodetect-table__row">
+            <span class="autodetect-table__label">{{ t('channel_eeg_primary') }} <span class="text-warning" title="required">*</span></span>
+            <span class="autodetect-table__value">{{ best_eeg or t('channel_not_detected') }}</span>
+            <span class="autodetect-table__check">{% if best_eeg %}✓{% else %}<span class="text-warning">!</span>{% endif %}</span>
+          </div>
+          <div class="autodetect-table__row">
+            <span class="autodetect-table__label">{{ t('channel_eog') }}</span>
+            <span class="autodetect-table__value">{{ _eog_auto or t('channel_not_detected') }}</span>
+            <span class="autodetect-table__check">{% if _eog_auto %}✓{% else %}—{% endif %}</span>
+          </div>
+          <div class="autodetect-table__row">
+            <span class="autodetect-table__label">{{ t('channel_emg_chin') }}</span>
+            <span class="autodetect-table__value">{{ _emg_auto or t('channel_not_detected') }}</span>
+            <span class="autodetect-table__check">{% if _emg_auto %}✓{% else %}—{% endif %}</span>
+          </div>
+          <div class="autodetect-table__row">
+            <span class="autodetect-table__label">{{ t('channel_flow') }}</span>
+            <span class="autodetect-table__value">{{ pneumo_auto.get('flow') or t('channel_not_detected') }}</span>
+            <span class="autodetect-table__check">{% if pneumo_auto.get('flow') %}✓{% else %}—{% endif %}</span>
+          </div>
+          <div class="autodetect-table__row">
+            <span class="autodetect-table__label">{{ t('channel_thoracic') }}</span>
+            <span class="autodetect-table__value">{{ pneumo_auto.get('thorax') or t('channel_not_detected') }}</span>
+            <span class="autodetect-table__check">{% if pneumo_auto.get('thorax') %}✓{% else %}—{% endif %}</span>
+          </div>
+          <div class="autodetect-table__row">
+            <span class="autodetect-table__label">{{ t('channel_abdominal') }}</span>
+            <span class="autodetect-table__value">{{ pneumo_auto.get('abdomen') or t('channel_not_detected') }}</span>
+            <span class="autodetect-table__check">{% if pneumo_auto.get('abdomen') %}✓{% else %}—{% endif %}</span>
+          </div>
+          <div class="autodetect-table__row">
+            <span class="autodetect-table__label">{{ t('channel_spo2') }}</span>
+            <span class="autodetect-table__value">{{ pneumo_auto.get('spo2') or t('channel_not_detected') }}</span>
+            <span class="autodetect-table__check">{% if pneumo_auto.get('spo2') %}✓{% else %}—{% endif %}</span>
+          </div>
+        </div>
+        <div class="px-3 pt-2 pb-1">
+          <a class="autodetect-toggle" data-bs-toggle="collapse"
+             href="#manualOverride" role="button" aria-expanded="false"
+             aria-controls="manualOverride">
+            ▾ {{ t('override_selection') }}
+          </a>
+        </div>
+      </div>
+    </div>
+
+    {# ── Override block: existing channel cards collapsed under a toggle ── #}
+    <div class="collapse" id="manualOverride">
+
     {# ── EEG primair kanaal ── #}
-    <div class="card shadow-sm mb-3">
-      <div class="card-header bg-primary text-white fw-bold">
-        🧠 {{ t('eeg_primary') }} <span class="text-warning">*</span>
-        <small class="fw-normal ms-2">{{ t('eeg_primary_desc') }}</small>
+    <div class="card card-quiet mb-3">
+      <div class="card-header">
+        <span class="mono-letter">E</span>{{ t('eeg_primary') }} <span class="text-warning">*</span>
+        <small class="text-muted ms-2">{{ t('eeg_primary_desc') }}</small>
       </div>
       <div class="card-body">
         <div class="row row-cols-2 row-cols-md-3 g-2">
@@ -47,10 +114,10 @@
     </div>
 
     {# ── EOG kanaal ── #}
-    <div class="card shadow-sm mb-3">
-      <div class="card-header bg-warning text-dark fw-bold">
-        👁️ {{ t('eog_channel') }}
-        <small class="fw-normal ms-2">{{ t('eog_desc') }} ({{ t('optional') }})</small>
+    <div class="card card-quiet card-quiet--ochre mb-3">
+      <div class="card-header">
+        <span class="mono-letter mono-letter--ochre">O</span>{{ t('eog_channel') }}
+        <small class="text-muted ms-2">{{ t('eog_desc') }} ({{ t('optional') }})</small>
       </div>
       <div class="card-body">
         <div class="mb-2">
@@ -75,10 +142,10 @@
     </div>
 
     {# ── EMG kanaal ── #}
-    <div class="card shadow-sm mb-3">
-      <div class="card-header bg-danger text-white fw-bold">
-        💪 {{ t('emg_channel') }}
-        <small class="fw-normal ms-2">{{ t('emg_desc') }} ({{ t('optional') }})</small>
+    <div class="card card-quiet card-quiet--claret mb-3">
+      <div class="card-header">
+        <span class="mono-letter mono-letter--claret">M</span>{{ t('emg_channel') }}
+        <small class="text-muted ms-2">{{ t('emg_desc') }} ({{ t('optional') }})</small>
       </div>
       <div class="card-body">
         <div class="mb-2">
@@ -103,10 +170,10 @@
     </div>
 
     {# ── Extra EEG-kanalen voor spindle/SW/bandpower ── #}
-    <div class="card shadow-sm mb-4">
-      <div class="card-header bg-success text-white fw-bold">
-        📡 {{ t("extra_eeg_channels") }}
-        <small class="fw-normal ms-2">{{ t('extra_eeg_desc') }}</small>
+    <div class="card card-quiet card-quiet--teal mb-4">
+      <div class="card-header">
+        <span class="mono-letter mono-letter--teal">+</span>{{ t("extra_eeg_channels") }}
+        <small class="text-muted ms-2">{{ t('extra_eeg_desc') }}</small>
       </div>
       <div class="card-body">
         <div class="d-flex gap-2 mb-3">
@@ -129,10 +196,10 @@
     </div>
 
     {# ── Respiratoire & PLM kanalen (v0.8.10) ── #}
-    <div class="card shadow-sm mb-3">
-      <div class="card-header bg-dark text-white fw-bold">
-        🫁 {{ t('pneumo_channels') }}
-        <small class="fw-normal ms-2">{{ t('pneumo_channels_desc') }}</small>
+    <div class="card card-quiet mb-3">
+      <div class="card-header">
+        <span class="mono-letter">P</span>{{ t('pneumo_channels') }}
+        <small class="text-muted ms-2">{{ t('pneumo_channels_desc') }}</small>
       </div>
       <div class="card-body py-2">
         <div class="row g-2">
@@ -173,10 +240,13 @@
       </div>
     </div>
 
+    </div>{# /collapse manualOverride — voorstel 3 #}
+
     {# ── Opnametijdstip (optioneel) ── #}
-    <div class="card shadow-sm mb-3">
-      <div class="card-header bg-secondary text-white fw-bold">
-        🕐 {{ t('recording_time_label') }} <small class="fw-normal">({{ t('optional') }} — {{ t('recording_time') }})</small>
+    <div class="card card-quiet mb-3">
+      <div class="card-header">
+        <span class="mono-letter">T</span>{{ t('recording_time_label') }}
+        <small class="text-muted">({{ t('optional') }} — {{ t('recording_time') }})</small>
       </div>
       <div class="card-body">
         <input type="datetime-local" name="recording_start" class="form-control"
@@ -187,9 +257,10 @@
     </div>
 
     {# ── Patiëntgegevens (optioneel) ── #}
-    <div class="card shadow-sm mb-4">
-      <div class="card-header bg-info text-white fw-bold">
-        👤 {{ t('patient_data') }} <small class="fw-normal">({{ t('optional') }} — {{ t('appears_on_reports') }})</small>
+    <div class="card card-quiet card-quiet--teal mb-4">
+      <div class="card-header">
+        <span class="mono-letter mono-letter--teal">Q</span>{{ t('patient_data') }}
+        <small class="text-muted">({{ t('optional') }} — {{ t('appears_on_reports') }})</small>
       </div>
       <div class="card-body">
         <div class="row g-2 mb-2">
@@ -285,9 +356,11 @@
     </div>
 
     {# ── Studietype (v0.8.19) ── #}
-    <div class="card shadow-sm mb-4">
+    <div class="card card-quiet mb-4">
       <div class="card-body">
-        <h6 class="card-title mb-3">🏥 &nbsp; {{ t('study_type_title') }}</h6>
+        <h6 class="card-title mb-3 display-font" style="color:var(--accent-navy)">
+          <span class="mono-letter">S</span>{{ t('study_type_title') }}
+        </h6>
         <select name="study_type" class="form-select" id="studyType">
           <option value="diagnostic_psg" selected>{{ t('study_diagnostic_psg') }}</option>
           <option value="titration_psg_cpap">{{ t('study_titration_psg_cpap') }}</option>
@@ -299,9 +372,11 @@
     </div>
 
     {# ── Scoring profiel ── #}
-    <div class="card shadow-sm mb-4">
+    <div class="card card-quiet card-quiet--ochre mb-4">
       <div class="card-body">
-        <h6 class="card-title mb-3">⚙️ &nbsp; {{ t('scoring_profile_title') }}</h6>
+        <h6 class="card-title mb-3 display-font" style="color:var(--accent-ochre)">
+          <span class="mono-letter mono-letter--ochre">P</span>{{ t('scoring_profile_title') }}
+        </h6>
         <select name="scoring_profile" class="form-select" id="scoringProfile">
           {% if available_profiles %}
             <optgroup label="AASM v3 (2023, current)">
@@ -330,13 +405,26 @@
           🤖 ML = profiel past de LightGBM v0.6 candidate-classifier toe
           (paper v35 §3.6.1; standaard alleen op mesa_shhs).
         </div>
+
+        {# v0.9.8: optional ML arousal re-classifier #}
+        <hr class="my-3">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox"
+                 id="arousalLgbm" name="arousal_lgbm">
+          <label class="form-check-label" for="arousalLgbm">
+            {{ t('arousal_lgbm_label') }}
+          </label>
+          <div class="form-text small text-muted">
+            {{ t('arousal_lgbm_hint') }}
+          </div>
+        </div>
       </div>
     </div>
 
     {# ── Indienknop ── #}
     <div class="d-grid gap-2">
       <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
-        🚀 &nbsp; {{ t('start_analysis') }}
+        <i class="bi bi-play-fill me-1"></i>{{ t('start_analysis') }}
       </button>
       <a href="/" class="btn btn-outline-secondary">← {{ t('other_file') }}</a>
     </div>
