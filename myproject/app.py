@@ -108,10 +108,30 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 # ═══════════════════════════════════════════════════════════════
 
 config = {}
-try:
-    with open("config.json", "r") as _f:
-        config = json.load(_f)
-except FileNotFoundError:
+# Resolution order:
+#   1. /data/slaapkliniek/instance/config.json  (deploy.sh writes here
+#      with real SECRET_KEY and ADMIN_PASSWORD; mounted into the
+#      container as a volume — survives image rebuilds)
+#   2. instance/config.json                     (same file, relative,
+#      for local dev where CWD is the repo root)
+#   3. config.json                              (the baked-in template
+#      copy from Dockerfile; only contains VERANDER_DIT_* placeholders)
+_CONFIG_CANDIDATES = (
+    "/data/slaapkliniek/instance/config.json",
+    "instance/config.json",
+    "config.json",
+)
+for _candidate in _CONFIG_CANDIDATES:
+    try:
+        with open(_candidate, "r") as _f:
+            config = json.load(_f)
+        break
+    except FileNotFoundError:
+        continue
+# If the only file we found is the template (placeholders still in
+# place), discard it — falling back to env vars / safe defaults is
+# preferable to using literal VERANDER_DIT_* as a password.
+if config.get("ADMIN_PASSWORD", "").startswith("VERANDER_DIT"):
     config = {}
 
 app = Flask(__name__)
