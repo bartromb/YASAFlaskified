@@ -129,7 +129,11 @@ step "3/10  Installing Nginx + Certbot"
 
 apt-get install -y -qq nginx certbot python3-certbot-nginx
 systemctl enable nginx
-log "Nginx installed and enabled"
+# Ensure nginx is actually running — `enable` only queues for boot.
+# Without this, the reload at step 7 would fail with
+# "nginx.service is not active, cannot reload".
+systemctl start nginx
+log "Nginx installed and started"
 
 # ══════════════════════════════════════════════════════════════
 step "4/10  Creating directory structure"
@@ -154,9 +158,15 @@ if [ -f "${APP_DIR}/docker-compose.yml" ]; then
         fi
     fi
 else
-    # Check if we're running from inside the repo
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    if [ -f "${SCRIPT_DIR}/docker-compose.yml" ] && [ -f "${SCRIPT_DIR}/Dockerfile" ]; then
+    # Check if we're running from inside the repo. BASH_SOURCE is
+    # unset when the script is piped from stdin (curl | sudo bash),
+    # so guard against set -u with :- and fall through to git clone.
+    if [ -n "${BASH_SOURCE[0]:-}" ]; then
+        SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    else
+        SCRIPT_DIR=""
+    fi
+    if [ -n "${SCRIPT_DIR}" ] && [ -f "${SCRIPT_DIR}/docker-compose.yml" ] && [ -f "${SCRIPT_DIR}/Dockerfile" ]; then
         log "Copying from local source: ${SCRIPT_DIR}"
         cp -r "${SCRIPT_DIR}/"* "${APP_DIR}/"
         cp -r "${SCRIPT_DIR}/".[!.]* "${APP_DIR}/" 2>/dev/null || true
@@ -279,7 +289,14 @@ rm -f /etc/nginx/sites-enabled/default
 if ! nginx -t; then
     err "Nginx config test failed — refusing to reload. Inspect: nginx -t"
 fi
-systemctl reload nginx
+# Reload if nginx is already running, otherwise start it. This avoids
+# the "nginx.service is not active, cannot reload" failure on fresh
+# installs where step 3 enabled but did not start nginx.
+if systemctl is-active --quiet nginx; then
+    systemctl reload nginx
+else
+    systemctl start nginx
+fi
 log "Nginx configured → http://$(hostname -I | awk '{print $1}'):80"
 
 # ══════════════════════════════════════════════════════════════
