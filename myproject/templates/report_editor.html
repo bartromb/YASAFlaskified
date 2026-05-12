@@ -119,29 +119,28 @@
   {# ── Verificatie (v0.8.10) ── #}
   <div class="card shadow-sm mb-3 border-primary">
     <div class="card-header py-2 bg-primary text-white">
-      <i class="bi bi-shield-check"></i> Verificatie rapport
+      <i class="bi bi-shield-check"></i> {{ t("verif_card_title") }}
     </div>
     <div class="card-body py-2">
       <p class="text-muted small mb-2">
-        Geef aan of dit rapport geverifieerd werd door een slaaptechnicus of arts.
-        Dit wordt vermeld in de disclaimer onderaan het PDF-rapport.
+        {{ t("verif_card_intro") }}
       </p>
       <div class="row g-2">
         <div class="col-md-4">
           <label class="form-label small mb-0">{{ t("verified_by") }}</label>
           <select class="form-select form-select-sm" id="verified_role">
-            <option value="">— niet geverifieerd —</option>
-            <option value="technicus">Slaaptechnicus</option>
-            <option value="arts">Arts</option>
+            <option value="">— {{ t("verif_not_verified") }} —</option>
+            <option value="technicus">{{ t("verif_role_tech") }}</option>
+            <option value="arts">{{ t("verif_role_phys") }}</option>
           </select>
         </div>
         <div class="col-md-4">
-          <label class="form-label small mb-0">Naam verificateur</label>
+          <label class="form-label small mb-0">{{ t("verif_name_label") }}</label>
           <input type="text" class="form-control form-control-sm" id="verified_by"
-                 placeholder="Naam technicus of arts">
+                 placeholder="{{ t('verif_name_ph') }}">
         </div>
         <div class="col-md-4">
-          <label class="form-label small mb-0">Datum verificatie</label>
+          <label class="form-label small mb-0">{{ t("verif_date_label") }}</label>
           <input type="date" class="form-control form-control-sm" id="verified_date">
         </div>
       </div>
@@ -153,11 +152,11 @@
     <div class="card-header py-2"><i class="bi bi-building"></i> {{ t("report_header") }}</div>
     <div class="card-body py-2">
       <p class="text-muted small mb-2">
-        Pas de naam en het logo in de header van het PDF-rapport aan (bijv. ziekenhuis, kliniek).
+        {{ t("rh_intro") }}
       </p>
       <div class="row g-2 align-items-end">
         <div class="col-md-5">
-          <label class="form-label small mb-0">Naam instelling (header)</label>
+          <label class="form-label small mb-0">{{ t("rh_inst_label") }}</label>
           <input type="text" class="form-control form-control-sm" id="header_name"
                  placeholder="Slaapkliniek AZORG">
         </div>
@@ -172,15 +171,15 @@
                  placeholder="053 76 41 11">
         </div>
         <div class="col-md-5">
-          <label class="form-label small mb-0">Logo uploaden (PNG/JPG, max 500KB)</label>
+          <label class="form-label small mb-0">{{ t("rh_logo_upload") }}</label>
           <input type="file" class="form-control form-control-sm" id="logoFile"
                  accept="image/png,image/jpeg">
         </div>
         <div class="col-md-4" id="logoPreviewWrap" style="display:none">
-          <label class="form-label small mb-0">Huidig logo <span class="text-muted">(standaard: AZORG)</span></label>
+          <label class="form-label small mb-0">{{ t("rh_current_logo") }} <span class="text-muted">({{ t("rh_default_azorg") }})</span></label>
           <div>
             <img id="logoPreview" style="max-height:40px;border:1px solid #ccc;border-radius:4px" alt="logo">
-            <button class="btn btn-outline-danger btn-sm ms-2 py-0" onclick="removeLogo()" title="Gebruik ander logo">✕</button>
+            <button class="btn btn-outline-danger btn-sm ms-2 py-0" onclick="removeLogo()" title="{{ t('rh_use_other_logo') }}">✕</button>
           </div>
         </div>
       </div>
@@ -236,9 +235,9 @@ async function loadReport() {
     // Quick-add knoppen voor aanbevolen diagnoses
     const qb = document.getElementById("diagQuickBtns");
     const labels = {
-      normal: "Normaal", mild_osas: "Licht OSAS", moderate_osas: "Matig OSAS",
-      severe_osas: "Ernstig OSAS", plms: "PLMS", insomnia: "Insomnie",
-      weight_loss: "Gewichtsreductie", csa: "Centraal SA", csr: "Cheyne-Stokes"
+      normal: "{{ t('dx_normal') }}", mild_osas: "{{ t('dx_mild_osas') }}", moderate_osas: "{{ t('dx_moderate_osas') }}",
+      severe_osas: "{{ t('dx_severe_osas') }}", plms: "{{ t('dx_plms') }}", insomnia: "{{ t('dx_insomnia') }}",
+      weight_loss: "{{ t('dx_weight_loss') }}", csa: "{{ t('dx_csa') }}", csr: "{{ t('dx_csr') }}"
     };
     for (const key of (cData.applicable || [])) {
       const btn = document.createElement("button");
@@ -333,7 +332,7 @@ function resetDiag() {
 async function saveReport() {
   const btn = document.getElementById("btnSave");
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Opslaan…';
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> {{ t("saving_ellipsis") }}';
 
   try {
     const payload = {
@@ -369,7 +368,7 @@ async function saveReport() {
     if (logoInput.files && logoInput.files[0]) {
       const file = logoInput.files[0];
       if (file.size > 512000) {
-        showAlert("warning", "Logo te groot (max 500KB)");
+        showAlert("warning", "{{ t('logo_too_large') }}");
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-floppy"></i> {{ t("save_and_regenerate") }}';
         return;
@@ -392,14 +391,14 @@ async function saveReport() {
     const result = await resp.json();
     if (result.status === "ok") {
       let msg = "{{ t('report_saved') }}";
-      if (result.pdf_regenerated) msg += " — PDF vernieuwd";
-      if (result.edfplus_regenerated) msg += " — EDF+ vernieuwd";
+      if (result.pdf_regenerated) msg += " — {{ t('pdf_regenerated') }}";
+      if (result.edfplus_regenerated) msg += " — {{ t('edfplus_regenerated') }}";
       showAlert("success", msg);
       // Update PDF link timestamp to force refresh
       document.getElementById("btnPdf").href =
         `/results/${JOB_ID}/pdf?t=${Date.now()}`;
     } else {
-      showAlert("warning", "Opgeslagen maar: " + (result.error || "onbekende fout"));
+      showAlert("warning", "{{ t('saved_but') }} " + (result.error || "{{ t('unknown_error') }}"));
     }
   } catch (e) {
     showAlert("danger", "{{ t("error") }}: " + e.message);

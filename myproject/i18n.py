@@ -2532,3 +2532,54 @@ _V0103_ANALYSIS = {
 }
 TRANSLATIONS.update(_V0103_ANALYSIS)
 
+
+# ═══════════════════════════════════════════════════════════
+# v0.10.4: report_editor.html — verification card, header card,
+#          JS strings, diagnosis quick-add labels
+# ═══════════════════════════════════════════════════════════
+_V0104_EDITOR = {
+    # Verification card
+    "verif_card_title":   {"nl": "Verificatie rapport",                 "fr": "Vérification du rapport",                 "en": "Report verification",                "de": "Berichtverifizierung"},
+    "verif_card_intro":   {"nl": "Geef aan of dit rapport geverifieerd werd door een slaaptechnicus of arts. Dit wordt vermeld in de disclaimer onderaan het PDF-rapport.",
+                           "fr": "Indiquez si ce rapport a été vérifié par un technicien du sommeil ou un médecin. L'information est ajoutée à la clause de non-responsabilité au bas du rapport PDF.",
+                           "en": "Indicate whether this report has been verified by a sleep technician or physician. This is shown in the disclaimer at the bottom of the PDF report.",
+                           "de": "Geben Sie an, ob dieser Bericht von einer schlafmedizinischen Fachkraft oder einer Ärztin/einem Arzt überprüft wurde. Dies wird im Haftungsausschluss am Ende des PDF-Berichts vermerkt."},
+    "verif_not_verified": {"nl": "niet geverifieerd",   "fr": "non vérifié",          "en": "not verified",            "de": "nicht überprüft"},
+    "verif_role_tech":    {"nl": "Slaaptechnicus",      "fr": "Technicien du sommeil","en": "Sleep technician",        "de": "Schlafmedizinische Fachkraft"},
+    "verif_role_phys":    {"nl": "Arts",                "fr": "Médecin",              "en": "Physician",               "de": "Ärztin/Arzt"},
+    "verif_name_label":   {"nl": "Naam verificateur",   "fr": "Nom du vérificateur",  "en": "Verifier name",           "de": "Name der prüfenden Person"},
+    "verif_name_ph":      {"nl": "Naam technicus of arts","fr": "Nom du technicien ou du médecin","en": "Technician or physician name","de": "Name der Fachkraft oder Ärztin/Arzt"},
+    "verif_date_label":   {"nl": "Datum verificatie",   "fr": "Date de vérification", "en": "Verification date",       "de": "Verifizierungsdatum"},
+
+    # Report header / logo card
+    "rh_intro":           {"nl": "Pas de naam en het logo in de header van het PDF-rapport aan (bijv. ziekenhuis, kliniek).",
+                           "fr": "Modifiez le nom et le logo dans l'en-tête du rapport PDF (ex. hôpital, clinique).",
+                           "en": "Customize the name and logo in the header of the PDF report (e.g. hospital, clinic).",
+                           "de": "Passen Sie den Namen und das Logo in der Kopfzeile des PDF-Berichts an (z. B. Krankenhaus, Klinik)."},
+    "rh_inst_label":      {"nl": "Naam instelling (header)", "fr": "Nom de l'établissement (en-tête)", "en": "Institution name (header)", "de": "Name der Einrichtung (Kopfzeile)"},
+    "rh_logo_upload":     {"nl": "Logo uploaden (PNG/JPG, max 500KB)", "fr": "Téléverser un logo (PNG/JPG, max. 500 Ko)", "en": "Upload logo (PNG/JPG, max 500 KB)", "de": "Logo hochladen (PNG/JPG, max. 500 KB)"},
+    "rh_current_logo":    {"nl": "Huidig logo",         "fr": "Logo actuel",         "en": "Current logo",         "de": "Aktuelles Logo"},
+    "rh_default_azorg":   {"nl": "standaard: AZORG",    "fr": "par défaut : AZORG",  "en": "default: AZORG",       "de": "Standard: AZORG"},
+    "rh_use_other_logo":  {"nl": "Gebruik ander logo",  "fr": "Utiliser un autre logo","en": "Use a different logo","de": "Anderes Logo verwenden"},
+
+    # Diagnosis quick-add button labels (short forms used as ＋ buttons)
+    "dx_normal":          {"nl": "Normaal",         "fr": "Normal",         "en": "Normal",          "de": "Normal"},
+    "dx_mild_osas":       {"nl": "Licht OSAS",      "fr": "SAOS léger",     "en": "Mild OSAS",       "de": "Leichtes OSAS"},
+    "dx_moderate_osas":   {"nl": "Matig OSAS",      "fr": "SAOS modéré",    "en": "Moderate OSAS",   "de": "Mittelschweres OSAS"},
+    "dx_severe_osas":     {"nl": "Ernstig OSAS",    "fr": "SAOS sévère",    "en": "Severe OSAS",     "de": "Schweres OSAS"},
+    "dx_plms":            {"nl": "PLMS",            "fr": "MPJS",           "en": "PLMS",            "de": "PLMS"},
+    "dx_insomnia":        {"nl": "Insomnie",        "fr": "Insomnie",       "en": "Insomnia",        "de": "Insomnie"},
+    "dx_weight_loss":     {"nl": "Gewichtsreductie","fr": "Perte de poids", "en": "Weight loss",     "de": "Gewichtsabnahme"},
+    "dx_csa":             {"nl": "Centraal SA",     "fr": "SA central",     "en": "Central SA",      "de": "Zentrale SA"},
+    "dx_csr":             {"nl": "Cheyne-Stokes",   "fr": "Cheyne-Stokes",  "en": "Cheyne-Stokes",   "de": "Cheyne-Stokes"},
+
+    # Save flow JS strings
+    "saving_ellipsis":    {"nl": "Opslaan…",         "fr": "Enregistrement…", "en": "Saving…",        "de": "Speichern…"},
+    "logo_too_large":     {"nl": "Logo te groot (max 500KB)", "fr": "Logo trop volumineux (max. 500 Ko)", "en": "Logo too large (max 500 KB)", "de": "Logo zu groß (max. 500 KB)"},
+    "pdf_regenerated":    {"nl": "PDF vernieuwd",    "fr": "PDF régénéré",   "en": "PDF refreshed",   "de": "PDF erneuert"},
+    "edfplus_regenerated":{"nl": "EDF+ vernieuwd",   "fr": "EDF+ régénéré",  "en": "EDF+ refreshed",  "de": "EDF+ erneuert"},
+    "saved_but":          {"nl": "Opgeslagen maar:", "fr": "Enregistré mais :", "en": "Saved but:",   "de": "Gespeichert, aber:"},
+    "unknown_error":      {"nl": "onbekende fout",   "fr": "erreur inconnue", "en": "unknown error",  "de": "unbekannter Fehler"},
+}
+TRANSLATIONS.update(_V0104_EDITOR)
+
