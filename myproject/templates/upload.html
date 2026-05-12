@@ -487,7 +487,7 @@ function setFile(file) {
   if (!file) return;
 
   if (!file.name.toLowerCase().endsWith('.edf')) {
-    log('⚠️ Alleen .edf bestanden zijn toegestaan.', 'log-warn');
+    log('{{ t("upload_only_edf") }}', 'log-warn');
     return;
   }
 
@@ -571,7 +571,7 @@ async function startUpload() {
   const totalChunks  = Math.ceil(file.size / CHUNK_SIZE);
 
   log(`Upload gestart — ${totalChunks} chunk${totalChunks > 1 ? 's' : ''}`);
-  setProgress(0, 'Chunks uploaden...');
+  setProgress(0, '{{ t("upload_chunks_uploading") }}');
 
   // ── STAP 1: Chunks uploaden ──────────────────────────
   for (let i = 0; i < totalChunks; i++) {
@@ -627,7 +627,7 @@ async function startUpload() {
     resetUpload(); return;
   }
 
-  setProgress(85, 'Kanalen gedetecteerd...');
+  setProgress(85, '{{ t("upload_channels_detected") }}');
   log(`✓ ${parseData.all.length} {{ t('upload_channels_found') }}: `
     + `EEG=${parseData.eeg.length}, EOG=${parseData.eog.length}, EMG=${parseData.emg.length}`, 'log-ok');
 
@@ -639,8 +639,8 @@ async function startUpload() {
   edfMeta.classList.add('visible');
 
   // ── STAP 3: Redirect naar kanaalkeuze ───────────────
-  setProgress(100, 'Doorgaan naar kanaalkeuze...');
-  btnText.textContent = 'Kanaalkeuze laden...';
+  setProgress(100, '{{ t("upload_next_channel_sel") }}');
+  btnText.textContent = '{{ t("upload_channel_sel_load") }}';
   log(`✓ Doorsturen naar kanaalkeuze (job: ${parseData.job_id.slice(0,8)}...)`, 'log-ok');
 
   await new Promise(r => setTimeout(r, 500));   // korte pauze voor visuele feedback
