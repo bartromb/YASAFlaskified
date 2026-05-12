@@ -2,11 +2,20 @@
 
 **Open-source web platform for automated polysomnography analysis.**
 
-AI-based sleep staging + AASM 2.6 respiratory scoring + multilingual clinical reports.
+AI-based sleep staging + AASM-compliant respiratory scoring + multilingual clinical reports (NL/FR/EN/DE).
 
 [![Live](https://img.shields.io/badge/live-slaapkliniek.be-blue)](https://slaapkliniek.be)
 [![psgscoring](https://img.shields.io/pypi/v/psgscoring?label=psgscoring)](https://pypi.org/project/psgscoring/)
 [![License](https://img.shields.io/badge/license-BSD--3-green)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/bartromb/YASAFlaskified)](https://github.com/bartromb/YASAFlaskified/releases/latest)
+
+## Demo
+
+~90-second walkthrough of the full pipeline: landing → sign in → EDF upload → channel auto-selection → analysis start → dashboard → results → report editor.
+
+https://github.com/bartromb/YASAFlaskified/releases/download/v0.11.2/en.mp4
+
+Also available in **[🇧🇪 Dutch](https://github.com/bartromb/YASAFlaskified/releases/download/v0.11.2/nl.mp4)** · **[🇫🇷 French](https://github.com/bartromb/YASAFlaskified/releases/download/v0.11.2/fr.mp4)** · **[🇩🇪 German](https://github.com/bartromb/YASAFlaskified/releases/download/v0.11.2/de.mp4)**.
 
 ## Paper
 
@@ -25,9 +34,9 @@ Upload an anonymised EDF recording via browser → receive a complete PSG analys
 | Step | What | How |
 |------|------|-----|
 | 1 | Sleep staging | YASA LightGBM (Vallat & Walker, *eLife* 2021) |
-| 2 | Respiratory scoring | psgscoring — AASM 2.6 with 12 bias corrections |
+| 2 | Respiratory scoring | psgscoring — AASM Manual rules with 12 bias corrections |
 | 3 | Arousal detection | K-complex exclusion + CVR coupling |
-| 4 | PLM scoring | AASM 2.6 + WASM criteria |
+| 4 | PLM scoring | AASM rules + WASM criteria |
 | 5 | SpO₂ analysis | ODI 3%/4%, baseline (P90), T90 |
 | 6 | Signal quality | Per-channel grading (flat-line, clipping, disconnect) |
 | 7 | Clinical reports | PDF, Excel, EDF+, FHIR R4 — NL/FR/EN/DE |
