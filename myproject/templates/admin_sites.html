@@ -23,11 +23,11 @@
         <thead class="table-dark">
           <tr>
             <th class="ps-3">#</th>
-            <th>Naam</th>
-            <th>Taal</th>
-            <th>E-mail</th>
+            <th>{{ t('col_name') }}</th>
+            <th>{{ t('col_language') }}</th>
+            <th>{{ t('site_email') }}</th>
             <th>{{ t('users') }}</th>
-            <th class="text-center">Acties</th>
+            <th class="text-center">{{ t('col_actions') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -40,7 +40,7 @@
             </td>
             <td>
               <span class="badge bg-secondary">
-                {{ {'nl':'🇧🇪 NL','fr':'🇫🇷 FR','en':'🇬🇧 EN'}.get(site.language, site.language) }}
+                {{ {'nl':'🇧🇪 NL','fr':'🇫🇷 FR','en':'🇬🇧 EN','de':'🇩🇪 DE'}.get(site.language, site.language) }}
               </span>
             </td>
             <td class="small">{{ site.email or '—' }}</td>
@@ -57,7 +57,7 @@
               {# {{ t("delete") }} #}
               <form method="POST" action="{{ url_for('admin_delete_site', site_id=site.id) }}"
                     class="d-inline"
-                    onsubmit="return confirm('Site {{ site.name }} verwijderen?')">
+                    onsubmit="return confirm('{{ t('delete') }}: {{ site.name }}?')">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="btn btn-outline-danger btn-sm py-0 px-2">
                   <i class="bi bi-trash"></i>
@@ -73,7 +73,7 @@
                 <div class="row g-2">
                   <div class="col-md-4">
                     <input type="text" name="name" class="form-control form-control-sm"
-                           value="{{ site.name }}" placeholder="Naam" required>
+                           value="{{ site.name }}" placeholder="{{ t('col_name') }}" required>
                   </div>
                   <div class="col-md-4">
                     <input type="text" name="address" class="form-control form-control-sm"
@@ -88,17 +88,16 @@
                       <option value="nl" {{ 'selected' if site.language=='nl' }}>🇧🇪 NL</option>
                       <option value="fr" {{ 'selected' if site.language=='fr' }}>🇫🇷 FR</option>
                       <option value="en" {{ 'selected' if site.language=='en' }}>🇬🇧 EN</option>
-                      <option value="de">🇩🇪 DE</option>
                       <option value="de" {{ 'selected' if site.language=='de' }}>🇩🇪 DE</option>
                     </select>
                   </div>
                   <div class="col-md-4">
                     <input type="email" name="email" class="form-control form-control-sm"
-                           value="{{ site.email }}" placeholder="E-mail">
+                           value="{{ site.email }}" placeholder="{{ t('site_email') }}">
                   </div>
                   <div class="col-md-4">
                     <input type="text" name="logo_path" class="form-control form-control-sm"
-                           value="{{ site.logo_path }}" placeholder="Logo-pad (optioneel)">
+                           value="{{ site.logo_path }}" placeholder="{{ t('logo_path_optional') }}">
                   </div>
                   <div class="col-md-3">
                     <input type="url" name="url" class="form-control form-control-sm"
@@ -115,7 +114,7 @@
           </tr>
           {% else %}
           <tr>
-            <td colspan="6" class="text-center text-muted py-4">Nog geen sites aangemaakt.</td>
+            <td colspan="6" class="text-center text-muted py-4">{{ t('no_sites_yet') }}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -126,7 +125,7 @@
   {# ── {{ t("new_site") }} ─────────────────────────────────────────── #}
   <div class="card shadow-sm border-0">
     <div class="card-header bg-primary text-white py-2">
-      <i class="bi bi-plus-circle me-2"></i>{{ t("new_site") }} toevoegen
+      <i class="bi bi-plus-circle me-2"></i>{{ t("new_site") }}
     </div>
     <div class="card-body">
       <form method="POST" action="{{ url_for('admin_add_site') }}">
@@ -142,23 +141,23 @@
           </div>
           <div class="col-md-2">
             <input type="text" name="phone" class="form-control form-control-sm"
-                   placeholder="Tel.">
+                   placeholder="{{ t('phone') }}">
           </div>
           <div class="col-md-2">
             <select name="language" class="form-select form-select-sm">
               <option value="nl">🇧🇪 NL</option>
               <option value="fr">🇫🇷 FR</option>
               <option value="en">🇬🇧 EN</option>
-                      <option value="de">🇩🇪 DE</option>
+              <option value="de">🇩🇪 DE</option>
             </select>
           </div>
           <div class="col-md-4">
             <input type="email" name="email" class="form-control form-control-sm"
-                   placeholder="E-mail">
+                   placeholder="{{ t('site_email') }}">
           </div>
           <div class="col-md-4">
             <input type="text" name="logo_path" class="form-control form-control-sm"
-                   placeholder="Logo-pad (optioneel)">
+                   placeholder="{{ t('logo_path_optional') }}">
           </div>
           <div class="col-md-3">
             <input type="url" name="url" class="form-control form-control-sm"

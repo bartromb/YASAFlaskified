@@ -356,7 +356,7 @@ def run_analysis_job(job_id: str) -> dict:
     _set_progress(job_id, 9, 10, "PDF & Excel rapporten genereren...")
     try:
         pdf_path = os.path.join(UPLOAD_FOLDER, f"{job_id}_rapport.pdf")
-        _lang = cfg.get("language") or patient_info.get("lang") or "nl"
+        _lang = cfg.get("language") or patient_info.get("lang") or "en"
         generate_pdf_report(combined, pdf_path, lang=_lang)
         logger.info("PDF opgeslagen (%s)", _lang)
     except Exception as e:
@@ -649,7 +649,7 @@ def regenerate_with_corrections(job_id: str) -> dict:
     try:
         pdf_path = os.path.join(UPLOAD_FOLDER, f"{job_id}_rapport.pdf")
         from generate_pdf_report import generate_pdf_report
-        _lang = results.get("patient_info", {}).get("lang") or "nl"
+        _lang = results.get("patient_info", {}).get("lang") or "en"
         generate_pdf_report(results, pdf_path, lang=_lang)
         logger.info("PDF hergenereert (%s)", _lang)
     except Exception as e:

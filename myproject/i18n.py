@@ -25,7 +25,8 @@ TRANSLATIONS = {
                              "en":"Authorized healthcare professionals only"},
     "disc_header":          {"nl":"Dit is onderzoekssoftware — geen medisch hulpmiddel. Geen CE-markering, geen FDA-goedkeuring. Alle resultaten vereisen verificatie door een arts.",
                              "fr":"Logiciel de recherche — pas un dispositif médical. Pas de marquage CE, pas d'autorisation FDA. Tous les résultats nécessitent une vérification par un médecin.",
-                             "en":"This is research software — not a medical device. No CE mark, no FDA clearance. All results require physician verification."},
+                             "en":"This is research software — not a medical device. No CE mark, no FDA clearance. All results require physician verification.",
+                             "de":"Dies ist Forschungssoftware — kein Medizinprodukt. Keine CE-Kennzeichnung, keine FDA-Zulassung. Alle Ergebnisse müssen von einem Arzt überprüft werden."},
     "settings":             {"nl":"Instellingen",    "fr":"Paramètres",       "en":"Settings"},
     "admin_panel":          {"nl":"Beheercentrum",   "fr":"Panneau d'admin",  "en":"Admin panel"},
     "user_management":      {"nl":"Gebruikersbeheer","fr":"Gestion des utilisateurs","en":"User management"},
@@ -879,7 +880,7 @@ TRANSLATIONS = {
     "composition":          {"nl": "Samenstelling", "fr": "Composition", "en": "Composition"},
 }
 
-DEFAULT_LANG = "nl"
+DEFAULT_LANG = "en"
 SUPPORTED_LANGS = ("nl", "fr", "en", "de")
 LANG_NAMES = {"nl": "Nederlands", "fr": "Français", "en": "English", "de": "Deutsch"}
 LANG_FLAGS = {"nl": "🇧🇪", "fr": "🇫🇷", "en": "🇬🇧", "de": "🇩🇪"}
@@ -1962,4 +1963,490 @@ _DASHBOARD_V0841 = {
     },
 }
 TRANSLATIONS.update(_DASHBOARD_V0841)
+
+
+# ═══════════════════════════════════════════════════════════
+# v0.10.2: Hardcoded UI strings audit fix
+#   Adds keys that were previously hardcoded in templates / app.py
+#   Coverage: error pages, admin_sites, dashboard buttons, channel_select,
+#   base.html footer + session warning, flash messages.
+#   See user message 2026-05-12: "yasaflaskified : volledig vertaald in de 4 talen?"
+# ═══════════════════════════════════════════════════════════
+_V0102_UI = {
+    # Error pages
+    "error_404_short": {"nl": "Niet gevonden", "fr": "Introuvable", "en": "Not found", "de": "Nicht gefunden"},
+    "error_404_title": {"nl": "Pagina niet gevonden", "fr": "Page introuvable", "en": "Page not found", "de": "Seite nicht gefunden"},
+    "error_404_body":  {"nl": "De gevraagde pagina bestaat niet.", "fr": "La page demandée n'existe pas.", "en": "The requested page does not exist.", "de": "Die angeforderte Seite existiert nicht."},
+    "error_500_short": {"nl": "Serverfout", "fr": "Erreur serveur", "en": "Server error", "de": "Serverfehler"},
+    "error_500_title": {"nl": "Interne serverfout", "fr": "Erreur interne du serveur", "en": "Internal server error", "de": "Interner Serverfehler"},
+    "error_500_body":  {"nl": "Er is een onverwachte fout opgetreden. Probeer opnieuw.", "fr": "Une erreur inattendue est survenue. Veuillez réessayer.", "en": "An unexpected error occurred. Please try again.", "de": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut."},
+    "back_home":       {"nl": "Terug naar home", "fr": "Retour à l'accueil", "en": "Back to home", "de": "Zurück zur Startseite"},
+
+    # admin_sites.html column headers (Naam, Taal, E-mail, Acties already partly covered: e-mail/site_email exists)
+    "col_name":     {"nl": "Naam", "fr": "Nom", "en": "Name", "de": "Name"},
+    "col_language": {"nl": "Taal", "fr": "Langue", "en": "Language", "de": "Sprache"},
+    "col_actions":  {"nl": "Acties", "fr": "Actions", "en": "Actions", "de": "Aktionen"},
+    "no_sites_yet": {"nl": "Nog geen sites aangemaakt.", "fr": "Aucun site créé pour l'instant.", "en": "No sites created yet.", "de": "Noch keine Standorte angelegt."},
+    "add":          {"nl": "Toevoegen", "fr": "Ajouter", "en": "Add", "de": "Hinzufügen"},
+
+    # dashboard.html
+    "clear": {"nl": "Wissen", "fr": "Effacer", "en": "Clear", "de": "Löschen"},
+
+    # channel_select.html
+    "not_detected": {"nl": "niet gedetecteerd", "fr": "non détecté", "en": "not detected", "de": "nicht erkannt"},
+    "ml_help": {
+        "nl": "🤖 ML = profiel past de LightGBM v0.6 candidate-classifier toe (paper v35 §3.6.1; standaard alleen op mesa_shhs).",
+        "fr": "🤖 ML = le profil applique le classificateur de candidats LightGBM v0.6 (article v35 §3.6.1 ; activé par défaut uniquement sur mesa_shhs).",
+        "en": "🤖 ML = the profile applies the LightGBM v0.6 candidate classifier (paper v35 §3.6.1; enabled by default only on mesa_shhs).",
+        "de": "🤖 ML = das Profil wendet den LightGBM-v0.6-Kandidaten-Klassifikator an (Paper v35 §3.6.1; standardmäßig nur bei mesa_shhs aktiv).",
+    },
+
+    # base.html footer
+    "footer_powered_by":   {"nl": "Mogelijk gemaakt door", "fr": "Propulsé par", "en": "Powered by", "de": "Bereitgestellt von"},
+    "footer_disclaimer":   {"nl": "Disclaimer", "fr": "Avertissement", "en": "Disclaimer", "de": "Haftungsausschluss"},
+    "session_expiring":    {
+        "nl": "Sessie verloopt binnenkort — beweeg de muis om ingelogd te blijven",
+        "fr": "Session expire bientôt — bougez la souris pour rester connecté",
+        "en": "Session expiring soon — move mouse to stay logged in",
+        "de": "Sitzung läuft bald ab — bewegen Sie die Maus, um angemeldet zu bleiben",
+    },
+
+    # app.py flash messages
+    "file_too_large": {
+        "nl": "Bestand te groot. Maximum is {max_mb} MB.",
+        "fr": "Fichier trop volumineux. Maximum : {max_mb} Mo.",
+        "en": "File too large. Maximum is {max_mb} MB.",
+        "de": "Datei zu groß. Maximum: {max_mb} MB.",
+    },
+    "files_word":  {"nl": "bestanden", "fr": "fichiers", "en": "files", "de": "Dateien"},
+    "errors_word": {"nl": "fouten",    "fr": "erreurs",  "en": "errors", "de": "Fehler"},
+
+    # admin_sites placeholders
+    "logo_path_optional": {"nl": "Logo-pad (optioneel)", "fr": "Chemin du logo (facultatif)", "en": "Logo path (optional)", "de": "Logo-Pfad (optional)"},
+}
+TRANSLATIONS.update(_V0102_UI)
+
+
+# ═══════════════════════════════════════════════════════════
+# v0.10.2: disclaimer.html — all sections
+# ═══════════════════════════════════════════════════════════
+_V0102_DISC = {
+    "disc_page_title": {
+        "nl": "Medische & klinische disclaimer",
+        "fr": "Avertissement médical et clinique",
+        "en": "Medical & Clinical Disclaimer",
+        "de": "Medizinischer & klinischer Haftungsausschluss",
+    },
+    "disc_s1_title": {
+        "nl": "1. Onderzoekssoftware — geen medisch hulpmiddel",
+        "fr": "1. Logiciel de recherche — pas un dispositif médical",
+        "en": "1. Research Software — Not a Medical Device",
+        "de": "1. Forschungssoftware — kein Medizinprodukt",
+    },
+    "disc_s1_p1": {
+        "nl": "YASAFlaskified en <code>psgscoring</code> zijn <strong>onderzoekssoftware</strong>, uitsluitend bedoeld voor gebruik door gekwalificeerde professionals (artsen, onderzoekers, geregistreerde polysomnografisch technologen) in een onderzoek- of klinisch-onderzoekscontext.",
+        "fr": "YASAFlaskified et <code>psgscoring</code> sont des <strong>logiciels de recherche</strong>, destinés exclusivement à un usage par des professionnels qualifiés (médecins, chercheurs, technologues en polysomnographie agréés) dans un cadre de recherche ou de recherche clinique.",
+        "en": "YASAFlaskified and <code>psgscoring</code> are <strong>research software</strong>, intended exclusively for use by qualified professionals (physicians, researchers, registered polysomnographic technologists) in a research or clinical research context.",
+        "de": "YASAFlaskified und <code>psgscoring</code> sind <strong>Forschungssoftware</strong>, ausschließlich bestimmt zur Nutzung durch qualifizierte Fachkräfte (Ärzte, Forschende, registrierte Polysomnographie-Technologen) in einem Forschungs- oder klinischen Forschungskontext.",
+    },
+    "disc_s1_p2": {
+        "nl": "Deze software is <strong>niet</strong> geëvalueerd, vrijgegeven of goedgekeurd door enige regelgevende autoriteit als medisch hulpmiddel, waaronder:",
+        "fr": "Ce logiciel n'a <strong>pas</strong> été évalué, autorisé ni approuvé par une autorité réglementaire en tant que dispositif médical, notamment :",
+        "en": "This software has <strong>not</strong> been evaluated, cleared, or approved by any regulatory authority as a medical device, including:",
+        "de": "Diese Software wurde von keiner Aufsichtsbehörde als Medizinprodukt <strong>bewertet, freigegeben oder zugelassen</strong>, einschließlich:",
+    },
+    "disc_s1_l1": {
+        "nl": "Verordening (EU) 2017/745 betreffende medische hulpmiddelen (MDR) — <strong>geen CE-markering</strong>",
+        "fr": "Règlement (UE) 2017/745 relatif aux dispositifs médicaux (MDR) — <strong>pas de marquage CE</strong>",
+        "en": "European Union Medical Device Regulation (EU MDR 2017/745) — <strong>no CE mark</strong>",
+        "de": "EU-Verordnung über Medizinprodukte (EU MDR 2017/745) — <strong>keine CE-Kennzeichnung</strong>",
+    },
+    "disc_s1_l2": {
+        "nl": "U.S. Food and Drug Administration (FDA 21 CFR Part 820 / 510(k)) — <strong>geen FDA-goedkeuring</strong>",
+        "fr": "U.S. Food and Drug Administration (FDA 21 CFR Part 820 / 510(k)) — <strong>pas d'autorisation FDA</strong>",
+        "en": "U.S. Food and Drug Administration (FDA 21 CFR Part 820 / 510(k)) — <strong>no FDA clearance</strong>",
+        "de": "U.S. Food and Drug Administration (FDA 21 CFR Part 820 / 510(k)) — <strong>keine FDA-Zulassung</strong>",
+    },
+    "disc_s1_l3": {
+        "nl": "Elk gelijkwaardig nationaal of regionaal kader voor medische hulpmiddelen",
+        "fr": "Tout cadre national ou régional équivalent pour les dispositifs médicaux",
+        "en": "Any equivalent national or regional medical device framework",
+        "de": "Jeder gleichwertige nationale oder regionale Rechtsrahmen für Medizinprodukte",
+    },
+    "disc_s2_title": {
+        "nl": "2. Geen vervanging van klinisch oordeel",
+        "fr": "2. Ne remplace pas le jugement clinique",
+        "en": "2. Not a Substitute for Clinical Judgement",
+        "de": "2. Kein Ersatz für klinisches Urteilsvermögen",
+    },
+    "disc_s2_p1": {
+        "nl": "Alle berekende indices — waaronder AHI, OAHI, ODI, PLMI, arousal-index en RDI — zijn <strong>onderzoeksindices</strong>. Deze moeten:",
+        "fr": "Tous les indices calculés — y compris l'IAH, l'OAHI, l'ODI, le PLMI, l'index d'éveils et le RDI — sont des <strong>estimations à visée de recherche</strong>. Ils doivent :",
+        "en": "All computed indices — including AHI, OAHI, ODI, PLMI, arousal index, and RDI — are <strong>research-grade estimates</strong>. They must be:",
+        "de": "Alle berechneten Indizes — einschließlich AHI, OAHI, ODI, PLMI, Arousal-Index und RDI — sind <strong>Schätzwerte für Forschungszwecke</strong>. Sie müssen:",
+    },
+    "disc_s2_l1": {
+        "nl": "Beoordeeld worden door een gekwalificeerde, erkende clinicus vóór elke diagnostische of therapeutische beslissing",
+        "fr": "Être examinés par un clinicien qualifié et agréé avant toute décision diagnostique ou thérapeutique",
+        "en": "Reviewed by a qualified, licensed clinician before any diagnostic or therapeutic decision",
+        "de": "Von einer qualifizierten, zugelassenen Klinikerin oder einem Kliniker vor jeder diagnostischen oder therapeutischen Entscheidung überprüft werden",
+    },
+    "disc_s2_l2": {
+        "nl": "Gevalideerd worden tegen manuele scoring door een geregistreerd polysomnografisch technoloog (RPSGT)",
+        "fr": "Être validés par scoring manuel effectué par un technologue en polysomnographie agréé (RPSGT)",
+        "en": "Validated against manual scoring by a registered polysomnographic technologist (RPSGT)",
+        "de": "Gegen manuelles Scoring durch einen registrierten Polysomnographie-Technologen (RPSGT) validiert werden",
+    },
+    "disc_s2_l3": {
+        "nl": "Geïnterpreteerd worden binnen de volledige klinische context en patiëntgeschiedenis",
+        "fr": "Être interprétés dans le contexte clinique global et l'histoire du patient",
+        "en": "Interpreted in the context of the full clinical picture and patient history",
+        "de": "Im Kontext des gesamten klinischen Bildes und der Patientengeschichte interpretiert werden",
+    },
+    "disc_s3_title": {
+        "nl": "3. Beoogd gebruik",
+        "fr": "3. Usage prévu",
+        "en": "3. Intended Use",
+        "de": "3. Bestimmungsgemäße Verwendung",
+    },
+    "disc_s3_designed_for": {
+        "nl": "Bestemd voor:",
+        "fr": "Conçu pour :",
+        "en": "Designed for:",
+        "de": "Vorgesehen für:",
+    },
+    "disc_s3_not_for": {
+        "nl": "NIET bestemd voor:",
+        "fr": "PAS conçu pour :",
+        "en": "NOT designed for:",
+        "de": "NICHT vorgesehen für:",
+    },
+    "disc_s3_for_1": {"nl": "Academisch slaaponderzoek", "fr": "Recherche académique sur le sommeil", "en": "Academic sleep research", "de": "Akademische Schlafforschung"},
+    "disc_s3_for_2": {"nl": "Algoritme-ontwikkeling en benchmarking", "fr": "Développement et benchmarking d'algorithmes", "en": "Algorithm development and benchmarking", "de": "Algorithmen-Entwicklung und Benchmarking"},
+    "disc_s3_for_3": {"nl": "Klinisch onderzoek onder goedkeuring van een ethisch comité", "fr": "Recherche clinique avec approbation d'un comité d'éthique", "en": "Clinical research under ethics committee approval", "de": "Klinische Forschung unter Genehmigung einer Ethikkommission"},
+    "disc_s3_for_4": {"nl": "Onderwijsdoeleinden in slaapgeneeskunde", "fr": "Objectifs pédagogiques en médecine du sommeil", "en": "Educational purposes in sleep medicine", "de": "Lehrzwecke in der Schlafmedizin"},
+    "disc_s3_for_5": {"nl": "Tweede mening en screening", "fr": "Second avis et dépistage", "en": "Second opinion and screening", "de": "Zweitmeinung und Screening"},
+    "disc_s3_not_1": {"nl": "Stand-alone klinische diagnose zonder expertbeoordeling", "fr": "Diagnostic clinique autonome sans revue par un expert", "en": "Standalone clinical diagnosis without expert review", "de": "Eigenständige klinische Diagnose ohne Expertenüberprüfung"},
+    "disc_s3_not_2": {"nl": "Geautomatiseerde behandelbeslissingen", "fr": "Décisions thérapeutiques automatisées", "en": "Automated treatment decisions", "de": "Automatisierte Therapieentscheidungen"},
+    "disc_s3_not_3": {"nl": "Onbegeleide patiënten-screeningprogramma's", "fr": "Programmes de dépistage non supervisés", "en": "Unsupervised patient screening programmes", "de": "Unbeaufsichtigte Patienten-Screening-Programme"},
+    "disc_s3_not_4": {"nl": "Elke setting waar de output rechtstreeks de patiëntenzorg bepaalt", "fr": "Tout contexte où la sortie détermine directement la prise en charge du patient", "en": "Any setting where output directly determines patient care", "de": "Jeder Kontext, in dem die Ausgabe direkt die Patientenversorgung bestimmt"},
+    "disc_s4_title": {
+        "nl": "4. Validatiestatus",
+        "fr": "4. État de la validation",
+        "en": "4. Validation Status",
+        "de": "4. Validierungsstatus",
+    },
+    "disc_s4_p1": {
+        "nl": "Externe validatie op de PSG-IPA-dataset (PhysioNet, 5 opnames, 47 onafhankelijke scoorder-sessies) toonde gemiddeld |ΔAHI| = 1,9/u en ernst-concordantie van 4/5 (80%).",
+        "fr": "La validation externe sur l'ensemble de données PSG-IPA (PhysioNet, 5 enregistrements, 47 sessions de scoring indépendantes) a montré un |ΔIAH| moyen = 1,9/h et une concordance de sévérité de 4/5 (80 %).",
+        "en": "External validation on the PSG-IPA dataset (PhysioNet, 5 recordings, 47 independent scorer sessions) demonstrated mean |ΔAHI| = 1.9/h and severity concordance of 4/5 (80%).",
+        "de": "Externe Validierung auf dem PSG-IPA-Datensatz (PhysioNet, 5 Aufzeichnungen, 47 unabhängige Scoring-Sitzungen) ergab einen mittleren |ΔAHI| = 1,9/h und eine Schweregrad-Konkordanz von 4/5 (80 %).",
+    },
+    "disc_s4_p2": {
+        "nl": "Een formele monocentrische validatiestudie (AZORG-YASA-2026-001, n≥50) is in voorbereiding. Tot peer-reviewed resultaten gepubliceerd zijn, moeten alle uitkomsten als <strong>voorlopig</strong> worden beschouwd en door een gekwalificeerde clinicus worden geverifieerd.",
+        "fr": "Une étude de validation monocentrique formelle (AZORG-YASA-2026-001, n≥50) est en préparation. Jusqu'à publication de résultats évalués par les pairs, toutes les sorties doivent être considérées comme <strong>préliminaires</strong> et vérifiées par un clinicien qualifié.",
+        "en": "A formal single-centre validation study (AZORG-YASA-2026-001, n≥50) is in preparation. Until peer-reviewed results are published, all outputs should be treated as <strong>preliminary</strong> and verified by a qualified clinician.",
+        "de": "Eine formelle monozentrische Validierungsstudie (AZORG-YASA-2026-001, n≥50) ist in Vorbereitung. Bis zur Veröffentlichung peer-reviewter Ergebnisse sind alle Ausgaben als <strong>vorläufig</strong> zu betrachten und von einer qualifizierten Klinikerin oder einem Kliniker zu verifizieren.",
+    },
+    "disc_s5_title": {
+        "nl": "5. Geen garantie",
+        "fr": "5. Aucune garantie",
+        "en": "5. No Warranty",
+        "de": "5. Keine Gewährleistung",
+    },
+    "disc_s5_p1": {
+        "nl": "DEZE SOFTWARE WORDT GELEVERD \"ZOALS HIJ IS\", ZONDER ENIGE GARANTIE, EXPLICIET OF IMPLICIET, INCLUSIEF MAAR NIET BEPERKT TOT GARANTIES VAN VERKOOPBAARHEID, GESCHIKTHEID VOOR EEN BEPAALD DOEL EN NIET-INBREUK. IN GEEN GEVAL ZIJN DE AUTEURS AANSPRAKELIJK VOOR ENIGE CLAIM, SCHADE OF ANDERE AANSPRAKELIJKHEID.",
+        "fr": "CE LOGICIEL EST FOURNI « EN L'ÉTAT », SANS GARANTIE D'AUCUNE SORTE, EXPLICITE OU IMPLICITE, Y COMPRIS, MAIS SANS S'Y LIMITER, LES GARANTIES DE QUALITÉ MARCHANDE, D'ADÉQUATION À UN USAGE PARTICULIER ET D'ABSENCE DE CONTREFAÇON. EN AUCUN CAS LES AUTEURS NE POURRONT ÊTRE TENUS RESPONSABLES D'UNE QUELCONQUE RÉCLAMATION, DOMMAGE OU AUTRE RESPONSABILITÉ.",
+        "en": "THIS SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY.",
+        "de": "DIESE SOFTWARE WIRD „WIE BESEHEN“ BEREITGESTELLT, OHNE JEGLICHE AUSDRÜCKLICHE ODER STILLSCHWEIGENDE GEWÄHRLEISTUNG, EINSCHLIESSLICH, ABER NICHT BESCHRÄNKT AUF DIE GEWÄHRLEISTUNG DER MARKTGÄNGIGKEIT, EIGNUNG FÜR EINEN BESTIMMTEN ZWECK UND NICHTVERLETZUNG VON RECHTEN. IN KEINEM FALL HAFTEN DIE AUTOREN FÜR ANSPRÜCHE, SCHÄDEN ODER SONSTIGE HAFTUNGEN.",
+    },
+    "disc_footer": {
+        "nl": "Volledige DISCLAIMER.md op GitHub",
+        "fr": "DISCLAIMER.md complet sur GitHub",
+        "en": "Full DISCLAIMER.md on GitHub",
+        "de": "Vollständige DISCLAIMER.md auf GitHub",
+    },
+}
+TRANSLATIONS.update(_V0102_DISC)
+
+
+# ═══════════════════════════════════════════════════════════
+# v0.10.2: frontpage.html — full marketing copy
+# ═══════════════════════════════════════════════════════════
+_V0102_FRONT = {
+    "fp_page_title": {
+        "nl": "YASAFlaskified – Geautomatiseerde slaapanalyse",
+        "fr": "YASAFlaskified – Analyse automatisée du sommeil",
+        "en": "YASAFlaskified – Automated Sleep Analysis",
+        "de": "YASAFlaskified – Automatisierte Schlafanalyse",
+    },
+    "fp_nav_yasa":     {"nl": "Over YASA", "fr": "À propos de YASA", "en": "About YASA", "de": "Über YASA"},
+    "fp_nav_app":      {"nl": "Applicatie", "fr": "Application", "en": "Application", "de": "Anwendung"},
+    "fp_nav_workflow": {"nl": "Workflow", "fr": "Workflow", "en": "Workflow", "de": "Workflow"},
+    "fp_nav_stack":    {"nl": "Stack", "fr": "Stack", "en": "Stack", "de": "Stack"},
+    "fp_nav_credits":  {"nl": "Credits", "fr": "Crédits", "en": "Credits", "de": "Credits"},
+    "fp_nav_login":    {"nl": "Inloggen", "fr": "Connexion", "en": "Login", "de": "Anmelden"},
+
+    "fp_badge": {"nl": "v6 · Geautomatiseerde slaapstadiëring", "fr": "v6 · Stadification automatique du sommeil", "en": "v6 · Automated Sleep Staging", "de": "v6 · Automatisierte Schlafstadien-Erkennung"},
+    "fp_hero_title_1": {"nl": "Slaapanalyse,", "fr": "Analyse du sommeil,", "en": "Sleep Analysis,", "de": "Schlafanalyse,"},
+    "fp_hero_title_2": {"nl": "Heruitgevonden", "fr": "Réinventée", "en": "Reimagined", "de": "Neu gedacht"},
+    "fp_hero_sub": {
+        "nl": "YASAFlaskified brengt de YASA slaapstadiëringsmotor naar een klinisch webplatform — upload uw EDF, verkrijg directe hypnogrammen, spindle- en slow-wave-rapporten en volledige statistische samenvattingen.",
+        "fr": "YASAFlaskified apporte la puissance du moteur de stadification du sommeil YASA dans une plateforme web de niveau clinique — téléchargez votre EDF, obtenez des hypnogrammes immédiats, des rapports de spindles et d'ondes lentes, et des résumés statistiques complets.",
+        "en": "YASAFlaskified brings the power of the YASA sleep-staging engine into a clinical-grade web platform — upload your EDF, get instant hypnograms, spindle & slow-wave reports, and full statistical summaries.",
+        "de": "YASAFlaskified bringt die Leistungsfähigkeit der YASA-Schlafstadien-Engine in eine klinisch geeignete Webplattform — laden Sie Ihre EDF-Datei hoch und erhalten Sie sofort Hypnogramme, Spindel- und Slow-Wave-Berichte sowie vollständige statistische Auswertungen.",
+    },
+    "fp_btn_launch":   {"nl": "▶  App starten", "fr": "▶  Lancer l'app", "en": "▶  Launch App", "de": "▶  App starten"},
+    "fp_btn_learn":    {"nl": "Meer info", "fr": "En savoir plus", "en": "Learn more", "de": "Mehr erfahren"},
+
+    "fp_stat_stages":  {"nl": "Slaapstadia", "fr": "Stades du sommeil", "en": "Sleep stages", "de": "Schlafstadien"},
+    "fp_stat_input":   {"nl": "Inputformaat", "fr": "Format d'entrée", "en": "Input format", "de": "Eingabeformat"},
+    "fp_stat_std":     {"nl": "Standaard", "fr": "Standard", "en": "Standard", "de": "Standard"},
+    "fp_stat_queue":   {"nl": "Jobwachtrij", "fr": "File d'attente", "en": "Job queue", "de": "Job-Queue"},
+    "fp_stat_live":    {"nl": "Live", "fr": "En direct", "en": "Live", "de": "Live"},
+
+    # About YASA
+    "fp_y_tag":   {"nl": "// Over de engine", "fr": "// À propos du moteur", "en": "// About the engine", "de": "// Über die Engine"},
+    "fp_y_title": {"nl": "Wat is YASA?", "fr": "Qu'est-ce que YASA ?", "en": "What is YASA?", "de": "Was ist YASA?"},
+    "fp_y_lead": {
+        "nl": "YASA (Yet Another Spindle Algorithm) is een open-source Python-bibliotheek voor geautomatiseerde analyse van polysomnografische opnames, ontwikkeld door Raphael Vallat. Ze levert state-of-the-art, machine-learning-gebaseerde slaapstadiëring rechtstreeks vanuit ruwe EEG-signalen.",
+        "fr": "YASA (Yet Another Spindle Algorithm) est une bibliothèque Python open source pour l'analyse automatisée d'enregistrements polysomnographiques, développée par Raphael Vallat. Elle fournit une stadification du sommeil à la pointe, basée sur l'apprentissage automatique, directement à partir des signaux EEG bruts.",
+        "en": "YASA (Yet Another Spindle Algorithm) is an open-source Python library for automated analysis of polysomnographic recordings, developed by Raphael Vallat. It delivers state-of-the-art, machine-learning–powered sleep staging directly from raw EEG signals.",
+        "de": "YASA (Yet Another Spindle Algorithm) ist eine Open-Source-Python-Bibliothek zur automatisierten Analyse polysomnographischer Aufzeichnungen, entwickelt von Raphael Vallat. Sie liefert hochmoderne, auf maschinellem Lernen basierende Schlafstadien-Erkennung direkt aus EEG-Rohdaten.",
+    },
+    "fp_y_feat1_title": {"nl": "Geautomatiseerde slaapstadiëring", "fr": "Stadification automatique du sommeil", "en": "Automated sleep staging", "de": "Automatisierte Schlafstadien-Erkennung"},
+    "fp_y_feat1_body":  {"nl": "— classificeert epochs van 30 s in Wake, N1, N2, N3 en REM met een gradient-boosting-classifier getraind op duizenden PSG-opnames.", "fr": "— classe les époques de 30 s en Wake, N1, N2, N3 et REM à l'aide d'un classifieur gradient-boosting entraîné sur des milliers d'enregistrements PSG.", "en": "— classifies 30-second epochs into Wake, N1, N2, N3, and REM using a gradient-boosting classifier trained on thousands of PSG recordings.", "de": "— klassifiziert 30-Sekunden-Epochen in Wake, N1, N2, N3 und REM mit einem Gradient-Boosting-Klassifikator, der auf Tausenden von PSG-Aufzeichnungen trainiert wurde."},
+    "fp_y_feat2_title": {"nl": "Spindle- & slow-wave-detectie", "fr": "Détection de spindles et d'ondes lentes", "en": "Spindle & slow-wave detection", "de": "Spindel- und Slow-Wave-Erkennung"},
+    "fp_y_feat2_body":  {"nl": "— detecteert slaapspindles en trage oscillaties met instelbare drempels en geeft per-event statistieken terug.", "fr": "— détecte les spindles et les oscillations lentes avec des seuils configurables et renvoie les statistiques par événement.", "en": "— detects sleep spindles and slow oscillations with configurable thresholds, returning per-event statistics.", "de": "— erkennt Schlafspindeln und langsame Oszillationen mit konfigurierbaren Schwellenwerten und liefert Statistiken pro Ereignis."},
+    "fp_y_feat3_title": {"nl": "REM-detectie", "fr": "Détection REM", "en": "REM detection", "de": "REM-Erkennung"},
+    "fp_y_feat3_body":  {"nl": "— identificeert REM-epochs en berekent REM-gerelateerde indices, inclusief NREM/REM-overgangen.", "fr": "— identifie les époques REM et calcule les indices liés au REM, y compris les transitions NREM/REM.", "en": "— identifies REM epochs and computes REM-related metrics including NREM/REM transitions.", "de": "— erkennt REM-Epochen und berechnet REM-bezogene Kennwerte einschließlich NREM/REM-Übergängen."},
+    "fp_y_feat4_title": {"nl": "Slaapstatistieken", "fr": "Statistiques du sommeil", "en": "Sleep statistics", "de": "Schlafstatistiken"},
+    "fp_y_feat4_body":  {"nl": "— berekent totale slaaptijd, slaap-efficiëntie, latenties, WASO en volledige stadium-percentages volgens AASM-standaarden.", "fr": "— calcule le temps total de sommeil, l'efficacité du sommeil, les latences, le WASO et les pourcentages complets par stade selon les standards AASM.", "en": "— computes total sleep time, sleep efficiency, latencies, WASO, and full stage percentages per AASM standards.", "de": "— berechnet Gesamtschlafzeit, Schlafeffizienz, Latenzen, WASO und vollständige Stadien-Prozentwerte gemäß AASM-Standards."},
+    "fp_y_feat5_title": {"nl": "Bandpower-analyse", "fr": "Analyse bandpower", "en": "Bandpower analysis", "de": "Bandpower-Analyse"},
+    "fp_y_feat5_body":  {"nl": "— spectraal vermogen in delta-, theta-, alpha-, sigma- en betabanden per epoch en per kanaal.", "fr": "— puissance spectrale dans les bandes delta, thêta, alpha, sigma et bêta, par époque et par canal.", "en": "— spectral power in delta, theta, alpha, sigma, and beta bands per epoch and per channel.", "de": "— Spektralleistung in den Delta-, Theta-, Alpha-, Sigma- und Beta-Bändern pro Epoche und Kanal."},
+
+    "fp_code_comment": {"nl": "# Kern YASA-pipeline", "fr": "# Pipeline YASA principal", "en": "# Core YASA pipeline", "de": "# YASA-Kernpipeline"},
+
+    # About YASAFlaskified
+    "fp_a_tag":   {"nl": "// De webapplicatie", "fr": "// L'application web", "en": "// The web application", "de": "// Die Webanwendung"},
+    "fp_a_title": {"nl": "Wat is YASAFlaskified?", "fr": "Qu'est-ce que YASAFlaskified ?", "en": "What is YASAFlaskified?", "de": "Was ist YASAFlaskified?"},
+    "fp_a_lead": {
+        "nl": "YASAFlaskified verpakt de YASA-engine in een productieklare Flask-applicatie, zodat clinici en onderzoekers volledige slaapanalyses kunnen draaien via een browser — geen Python-kennis vereist. Jobs lopen asynchroon, resultaten worden opgeslagen en rapporten worden binnen seconden geleverd.",
+        "fr": "YASAFlaskified encapsule le moteur YASA dans une application Flask de niveau production, permettant aux cliniciens et chercheurs d'exécuter des analyses complètes du sommeil via un navigateur — aucune connaissance de Python requise. Les tâches s'exécutent de façon asynchrone, les résultats sont stockés et les rapports sont livrés en quelques secondes.",
+        "en": "YASAFlaskified wraps the YASA engine in a production-grade Flask application, letting clinicians and researchers run full sleep analyses through a browser — no Python knowledge required. Jobs run asynchronously, results are stored, and reports are delivered in seconds.",
+        "de": "YASAFlaskified verpackt die YASA-Engine in eine produktionsreife Flask-Anwendung, sodass Klinikerinnen und Forschende vollständige Schlafanalysen über den Browser ausführen können — keine Python-Kenntnisse erforderlich. Jobs laufen asynchron, Ergebnisse werden gespeichert und Berichte stehen in Sekunden bereit.",
+    },
+    "fp_a_c1_title": {"nl": "EDF-upload", "fr": "Téléversement EDF", "en": "EDF Upload", "de": "EDF-Upload"},
+    "fp_a_c1_body":  {"nl": "Drag-and-drop of selecteer een EDF-bestand uit uw PSG-systeem. De app valideert de opname, extraheert beschikbare kanalen en plaatst de job onmiddellijk in de wachtrij.", "fr": "Glissez-déposez ou sélectionnez un fichier EDF de votre système PSG. L'application valide l'enregistrement, extrait les canaux disponibles et met immédiatement la tâche en file d'attente.", "en": "Drag-and-drop or select any EDF file from your PSG system. The app validates the recording, extracts available channels, and queues the job immediately.", "de": "Per Drag-and-Drop oder Auswahl einer EDF-Datei aus Ihrem PSG-System. Die App validiert die Aufnahme, extrahiert die verfügbaren Kanäle und stellt den Job sofort in die Warteschlange."},
+    "fp_a_c2_title": {"nl": "Async verwerking", "fr": "Traitement asynchrone", "en": "Async Processing", "de": "Asynchrone Verarbeitung"},
+    "fp_a_c2_body":  {"nl": "Aangedreven door Redis Queue (RQ) en achtergrondworkers; zware analyses lopen zonder de UI te blokkeren. Real-time jobstatus houdt u op de hoogte.", "fr": "Propulsé par Redis Queue (RQ) et des workers d'arrière-plan, les analyses lourdes s'exécutent sans bloquer l'UI. Le statut des tâches en temps réel vous tient informé.", "en": "Powered by Redis Queue (RQ) and background workers, heavy analyses run without blocking the UI. Real-time job status keeps you informed throughout.", "de": "Angetrieben durch Redis Queue (RQ) und Hintergrund-Worker laufen aufwändige Analysen, ohne die UI zu blockieren. Echtzeit-Job-Status hält Sie informiert."},
+    "fp_a_c3_title": {"nl": "Rijke rapporten", "fr": "Rapports détaillés", "en": "Rich Reports", "de": "Aussagekräftige Berichte"},
+    "fp_a_c3_body":  {"nl": "Hypnogrammen, slaapstatistiektabellen, spindle-kaarten, slow-wave-detecties en bandpower-grafieken — alles server-side gerenderd met Matplotlib en downloadbaar als PNG/CSV.", "fr": "Hypnogrammes, tableaux de statistiques du sommeil, cartes de spindles, détections d'ondes lentes et graphiques bandpower — tout rendu côté serveur avec Matplotlib et téléchargeable en PNG/CSV.", "en": "Hypnograms, sleep statistics tables, spindle maps, slow-wave detections, and bandpower charts — all rendered server-side with Matplotlib and downloadable as PNG/CSV.", "de": "Hypnogramme, Schlafstatistik-Tabellen, Spindelkarten, Slow-Wave-Erkennungen und Bandpower-Diagramme — alle serverseitig mit Matplotlib gerendert und als PNG/CSV herunterladbar."},
+    "fp_a_c4_title": {"nl": "Veilig & gehardd", "fr": "Sécurisé & durci", "en": "Secure & Hardened", "de": "Sicher & gehärtet"},
+    "fp_a_c4_body":  {"nl": "CSRF-bescherming, rate limiting, sterk sessiebeheer, UFW-firewall en Fail2ban — gebouwd voor klinische omgevingen waar gegevensbeveiliging niet onderhandelbaar is.", "fr": "Protection CSRF, limitation de débit, gestion robuste des sessions, pare-feu UFW et Fail2ban — conçu pour les environnements cliniques où la sécurité des données est non négociable.", "en": "CSRF protection, rate limiting, strong session management, UFW firewall, and Fail2ban — built for clinical environments where data security is non-negotiable.", "de": "CSRF-Schutz, Rate Limiting, starkes Sitzungsmanagement, UFW-Firewall und Fail2ban — entwickelt für klinische Umgebungen, in denen Datensicherheit nicht verhandelbar ist."},
+    "fp_a_c5_title": {"nl": "Docker-deployment", "fr": "Déploiement Docker", "en": "Docker Deployment", "de": "Docker-Bereitstellung"},
+    "fp_a_c5_body":  {"nl": "Volledig gecontaineriseerd met Gunicorn + Nginx reverse proxy. One-command deploy op elke Linux-server, met Nginx Proxy Manager voor multi-domein SSL-setups.", "fr": "Entièrement conteneurisé avec Gunicorn + reverse proxy Nginx. Déploiement en une commande sur n'importe quel serveur Linux, avec Nginx Proxy Manager pour les configurations SSL multi-domaines.", "en": "Fully containerised with Gunicorn + Nginx reverse proxy. One-command deploy on any Linux server, with Nginx Proxy Manager for multi-domain SSL setups.", "de": "Vollständig containerisiert mit Gunicorn + Nginx-Reverse-Proxy. Ein-Befehl-Bereitstellung auf jedem Linux-Server, mit Nginx Proxy Manager für Multi-Domain-SSL-Setups."},
+    "fp_a_c6_title": {"nl": "Onderzoekskwaliteit", "fr": "Qualité recherche", "en": "Research-Grade", "de": "Forschungstauglich"},
+    "fp_a_c6_body":  {"nl": "Ondersteunt AASM-conforme stadiëring, instelbare epoch-lengte, multi-kanaalselectie en ruwe µV-signaalvoorbewerking — vertrouwd door slaaponderzoekers.", "fr": "Prend en charge la stadification conforme AASM, une longueur d'époque configurable, la sélection multi-canaux et le prétraitement µV brut — apprécié par les chercheurs du sommeil.", "en": "Supports AASM-compliant staging, configurable epoch length, multi-channel selection, and raw µV signal preprocessing — trusted by sleep researchers.", "de": "Unterstützt AASM-konforme Stadien-Erkennung, konfigurierbare Epochenlänge, Multi-Kanal-Auswahl und Rohsignal-Vorverarbeitung in µV — von Schlafforschenden geschätzt."},
+
+    # Workflow
+    "fp_w_tag":   {"nl": "// Zo werkt het", "fr": "// Comment ça marche", "en": "// How it works", "de": "// So funktioniert es"},
+    "fp_w_title": {"nl": "Van EDF tot inzicht in vier stappen", "fr": "De l'EDF aux résultats en quatre étapes", "en": "From EDF to insights in four steps", "de": "Von EDF zu Einsichten in vier Schritten"},
+    "fp_w_s1_title": {"nl": "EDF uploaden", "fr": "Téléverser l'EDF", "en": "Upload EDF", "de": "EDF hochladen"},
+    "fp_w_s1_body":  {"nl": "Selecteer uw polysomnografische opname. De app accepteert standaard European Data Format-bestanden van elk PSG-toestel.", "fr": "Sélectionnez votre enregistrement de polysomnographie. L'application accepte les fichiers European Data Format standard de tout dispositif PSG.", "en": "Select your polysomnography recording. The app accepts standard European Data Format files from any PSG device.", "de": "Wählen Sie Ihre Polysomnographie-Aufnahme aus. Die App akzeptiert Standard-European-Data-Format-Dateien von jedem PSG-Gerät."},
+    "fp_w_s2_title": {"nl": "Configureren", "fr": "Configurer", "en": "Configure", "de": "Konfigurieren"},
+    "fp_w_s2_body":  {"nl": "Kies uw EEG-, EOG- en EMG-kanalen op naam. Stel de epoch-lengte in en selecteer de gewenste analyses.", "fr": "Choisissez vos canaux EEG, EOG et EMG par nom. Définissez la longueur d'époque et sélectionnez les analyses requises.", "en": "Choose your EEG, EOG, and EMG channels by name. Set epoch length and select the analyses you need.", "de": "Wählen Sie EEG-, EOG- und EMG-Kanäle nach Namen. Legen Sie die Epochenlänge fest und wählen Sie die benötigten Analysen aus."},
+    "fp_w_s3_title": {"nl": "Analyseren", "fr": "Analyser", "en": "Analyse", "de": "Analysieren"},
+    "fp_w_s3_body":  {"nl": "Het gradient-boosting-model van YASA stadieert elke epoch. Spindle-, slow-wave- en bandpower-detectoren lopen op de achtergrond.", "fr": "Le modèle gradient-boosting de YASA stadifie chaque époque. Les détecteurs de spindles, d'ondes lentes et de bandpower s'exécutent en arrière-plan.", "en": "YASA's gradient-boosting model stages every epoch. Spindle, slow-wave, and bandpower detectors run in the background.", "de": "Das Gradient-Boosting-Modell von YASA klassifiziert jede Epoche. Spindel-, Slow-Wave- und Bandpower-Detektoren laufen im Hintergrund."},
+    "fp_w_s4_title": {"nl": "Rapport downloaden", "fr": "Télécharger le rapport", "en": "Download Report", "de": "Bericht herunterladen"},
+    "fp_w_s4_body":  {"nl": "Ontvang uw hypnogram, statistiektabel en event-kaarten. Exporteer naar PNG en CSV voor verdere analyse of klinische dossiers.", "fr": "Recevez votre hypnogramme, votre tableau de statistiques et vos cartes d'événements. Exportez en PNG et CSV pour analyse ou dossiers cliniques.", "en": "Receive your hypnogram, statistics table, and event maps. Export to PNG and CSV for further analysis or clinical records.", "de": "Erhalten Sie Hypnogramm, Statistiktabelle und Ereigniskarten. Export als PNG und CSV für weitere Analysen oder klinische Akten."},
+
+    # Stack
+    "fp_s_tag":   {"nl": "// Techstack", "fr": "// Pile technologique", "en": "// Technology stack", "de": "// Technologie-Stack"},
+    "fp_s_title": {"nl": "Gebouwd op bewezen open source", "fr": "Construit sur des outils open source éprouvés", "en": "Built on proven open-source", "de": "Aufgebaut auf bewährtem Open Source"},
+
+    # Credits
+    "fp_c_tag":   {"nl": "// Credits & dankwoord", "fr": "// Crédits et remerciements", "en": "// Credits & acknowledgements", "de": "// Credits & Danksagungen"},
+    "fp_c_title": {"nl": "De mensen achter YASA", "fr": "Les personnes derrière YASA", "en": "The people behind YASA", "de": "Die Menschen hinter YASA"},
+    "fp_c_lead": {
+        "nl": "YASAFlaskified bouwt voort op het open-source-werk van slaaponderzoekers die hun tools vrij beschikbaar maakten. Alle credits gaan naar hen.",
+        "fr": "YASAFlaskified s'appuie sur le travail open source de chercheurs du sommeil qui ont rendu leurs outils librement disponibles. Tout le mérite leur revient.",
+        "en": "YASAFlaskified builds on the open-source work of sleep researchers who made their tools freely available. Full credit goes to them.",
+        "de": "YASAFlaskified baut auf der Open-Source-Arbeit von Schlafforschenden auf, die ihre Werkzeuge frei zur Verfügung gestellt haben. Der volle Verdienst gebührt ihnen.",
+    },
+    "fp_c_rv_role": {"nl": "Maker & maintainer · YASA", "fr": "Créateur & mainteneur · YASA", "en": "Creator & Maintainer · YASA", "de": "Schöpfer & Maintainer · YASA"},
+    "fp_c_rv_bio": {
+        "nl": "Postdoctoraal onderzoeker aan het <strong>Center for Human Sleep Science</strong>, University of California, Berkeley. Raphael creëerde YASA en houdt het als open-source-project bij, waardoor geautomatiseerde slaapanalyse vrij toegankelijk werd voor onderzoekers en clinici. Hij ontwikkelt ook <em>Pingouin</em> (statistiek) en <em>AntroPy</em> (tijdreeks-complexiteit).",
+        "fr": "Chercheur postdoctoral au <strong>Center for Human Sleep Science</strong>, University of California, Berkeley. Raphael a créé YASA et en assure la maintenance en open source, rendant l'analyse automatisée du sommeil librement accessible aux chercheurs et cliniciens. Il développe également <em>Pingouin</em> (statistiques) et <em>AntroPy</em> (complexité des séries temporelles).",
+        "en": "Postdoctoral researcher at the <strong>Center for Human Sleep Science</strong>, University of California, Berkeley. Raphael created and maintains YASA as an open-source project, making automated sleep analysis freely accessible to researchers and clinicians. He also develops <em>Pingouin</em> (statistics) and <em>AntroPy</em> (time-series complexity).",
+        "de": "Postdoktorand am <strong>Center for Human Sleep Science</strong>, University of California, Berkeley. Raphael hat YASA als Open-Source-Projekt geschaffen und betreut, sodass automatisierte Schlafanalyse für Forschende und Klinikerinnen frei zugänglich ist. Er entwickelt ebenfalls <em>Pingouin</em> (Statistik) und <em>AntroPy</em> (Zeitreihen-Komplexität).",
+    },
+    "fp_c_link_docs": {"nl": "Documentatie", "fr": "Documentation", "en": "Documentation", "de": "Dokumentation"},
+
+    "fp_c_mw_role": {"nl": "Co-auteur · eLife-paper", "fr": "Co-auteur · article eLife", "en": "Co-author · eLife Paper", "de": "Co-Autor · eLife-Veröffentlichung"},
+    "fp_c_mw_bio": {
+        "nl": "Hoogleraar neurowetenschappen en psychologie en directeur van het <strong>Center for Human Sleep Science</strong> aan UC Berkeley. Auteur van <em>Why We Sleep</em> en co-auteur van het peer-reviewed validatiepaper dat de klinische geloofwaardigheid van YASA als geautomatiseerd slaapstadiëringsinstrument vastlegde.",
+        "fr": "Professeur de neurosciences et de psychologie et directeur du <strong>Center for Human Sleep Science</strong> à UC Berkeley. Auteur de <em>Why We Sleep</em> et co-auteur de l'article de validation évalué par les pairs qui a établi la crédibilité clinique de YASA comme outil automatisé de stadification du sommeil.",
+        "en": "Professor of Neuroscience and Psychology and Director of the <strong>Center for Human Sleep Science</strong> at UC Berkeley. Author of <em>Why We Sleep</em> and co-author of the peer-reviewed validation paper that established YASA's clinical credibility as an automated sleep-staging tool.",
+        "de": "Professor für Neurowissenschaften und Psychologie und Direktor des <strong>Center for Human Sleep Science</strong> an der UC Berkeley. Autor von <em>Why We Sleep</em> und Co-Autor des peer-reviewten Validierungspapiers, das die klinische Glaubwürdigkeit von YASA als automatisiertes Schlafstadien-Werkzeug begründete.",
+    },
+    "fp_c_paper_role": {"nl": "Peer-reviewed publicatie · eLife 2021", "fr": "Publication évaluée par les pairs · eLife 2021", "en": "Peer-reviewed publication · eLife 2021", "de": "Peer-reviewte Publikation · eLife 2021"},
+    "fp_c_paper_title": {"nl": "Het validatiepaper", "fr": "L'article de validation", "en": "The validation paper", "de": "Das Validierungspapier"},
+    "fp_c_paper_bio": {
+        "nl": "Getraind en gevalideerd op meer dan <strong>30.000 uur</strong> polysomnografische opnames over heterogene populaties. De mediane staging-nauwkeurigheid was <strong>87,5 %</strong> over 585 testnachten, in lijn met menselijke inter-scoorder-overeenkomst. Gepubliceerd in <em>eLife</em>, oktober 2021.",
+        "fr": "Entraîné et validé sur plus de <strong>30 000 heures</strong> d'enregistrements polysomnographiques sur des populations hétérogènes. La précision médiane de stadification était de <strong>87,5 %</strong> sur 585 nuits de test, comparable à la concordance inter-scoreurs humains. Publié dans <em>eLife</em>, octobre 2021.",
+        "en": "Trained and validated on over <strong>30,000 hours</strong> of polysomnographic recordings across heterogeneous populations. Median staging accuracy was <strong>87.5%</strong> across 585 testing nights, in line with human interscorer agreement. Published in <em>eLife</em>, October 2021.",
+        "de": "Trainiert und validiert auf über <strong>30 000 Stunden</strong> polysomnographischer Aufzeichnungen über heterogene Populationen hinweg. Die mediane Klassifikationsgenauigkeit lag bei <strong>87,5 %</strong> über 585 Test-Nächte, vergleichbar mit der Übereinstimmung menschlicher Scorer. Veröffentlicht in <em>eLife</em>, Oktober 2021.",
+    },
+    "fp_c_paper_quote": {
+        "nl": "« Een open-source, hoogperformant instrument voor geautomatiseerde slaapstadiëring. »",
+        "fr": "« Un outil open source haute performance pour la stadification automatisée du sommeil. »",
+        "en": "\"An open-source, high-performance tool for automated sleep staging.\"",
+        "de": "„Ein leistungsstarkes Open-Source-Werkzeug für die automatisierte Schlafstadien-Erkennung.“",
+    },
+    "fp_c_thanks": {
+        "nl": "<strong>Dank aan Raphael Vallat</strong> voor het bouwen en onderhouden van YASA als open-source-project. YASAFlaskified is in essentie een webwrapper rond zijn werk — het moeilijkste was al gedaan.",
+        "fr": "<strong>Merci à Raphael Vallat</strong> pour avoir construit et maintenu YASA en tant que projet open source. YASAFlaskified n'est essentiellement qu'un wrapper web autour de son travail — le plus dur était déjà fait.",
+        "en": "<strong>Thanks to Raphael Vallat</strong> for building and maintaining YASA as an open-source project. YASAFlaskified is essentially a web wrapper around his work — the hard part was already done.",
+        "de": "<strong>Dank an Raphael Vallat</strong> für den Aufbau und die Pflege von YASA als Open-Source-Projekt. YASAFlaskified ist im Wesentlichen ein Web-Wrapper um seine Arbeit — der schwere Teil war bereits erledigt.",
+    },
+
+    # CTA
+    "fp_cta_tag":   {"nl": "// Aan de slag", "fr": "// Pour commencer", "en": "// Get started", "de": "// Loslegen"},
+    "fp_cta_title": {"nl": "Klaar om te analyseren?", "fr": "Prêt à analyser ?", "en": "Ready to analyse?", "de": "Bereit zu analysieren?"},
+    "fp_cta_lead":  {"nl": "Log in op YASAFlaskified en upload uw eerste EDF-opname. Resultaten binnen een minuut.", "fr": "Connectez-vous à YASAFlaskified et téléversez votre premier enregistrement EDF. Résultats en moins d'une minute.", "en": "Log in to YASAFlaskified and upload your first EDF recording. Results in under a minute.", "de": "Melden Sie sich bei YASAFlaskified an und laden Sie Ihre erste EDF-Aufnahme hoch. Ergebnisse in weniger als einer Minute."},
+    "fp_cta_box_title": {"nl": "Aanmelden bij uw account", "fr": "Connectez-vous à votre compte", "en": "Sign in to your account", "de": "Bei Ihrem Konto anmelden"},
+    "fp_cta_box_body":  {"nl": "Open uw slaapanalyse-dashboard, bekijk eerdere jobs en start nieuwe analyses.", "fr": "Accédez à votre tableau de bord d'analyse du sommeil, consultez les tâches antérieures et démarrez de nouvelles analyses.", "en": "Access your sleep analysis dashboard, review past jobs, and start new analyses.", "de": "Greifen Sie auf Ihr Schlafanalyse-Dashboard zu, prüfen Sie frühere Jobs und starten Sie neue Analysen."},
+    "fp_cta_btn": {"nl": "Inloggen op YASAFlaskified", "fr": "Se connecter à YASAFlaskified", "en": "Login to YASAFlaskified", "de": "Bei YASAFlaskified anmelden"},
+
+    "fp_footer_meta": {"nl": "Mogelijk gemaakt door YASA · Flask · Docker", "fr": "Propulsé par YASA · Flask · Docker", "en": "Powered by YASA · Flask · Docker", "de": "Bereitgestellt von YASA · Flask · Docker"},
+}
+TRANSLATIONS.update(_V0102_FRONT)
+
+
+# ═══════════════════════════════════════════════════════════
+# v0.10.2: PDF generator — hardcoded NL strings replaced
+# ═══════════════════════════════════════════════════════════
+_V0102_PDF = {
+    "pdf_warn_sq_unusable": {
+        "nl": "⚠ Signaalkwaliteit: {n} kanalen onbruikbaar (amplitude &lt; minimum). Staging en micro-architectuur (spindles, slow waves) zijn mogelijk onbetrouwbaar.",
+        "fr": "⚠ Qualité du signal : {n} canaux inutilisables (amplitude &lt; minimum). Le staging et la micro-architecture (spindles, ondes lentes) peuvent être peu fiables.",
+        "en": "⚠ Signal quality: {n} channels unusable (amplitude &lt; minimum). Staging and micro-architecture (spindles, slow waves) may be unreliable.",
+        "de": "⚠ Signalqualität: {n} Kanäle unbrauchbar (Amplitude &lt; Minimum). Staging und Mikroarchitektur (Spindeln, Slow Waves) können unzuverlässig sein.",
+    },
+    "pdf_warn_low_conf": {
+        "nl": "⚠ AI-staging confidence: {pct}% van epochs met confidence &lt;70%. Manuele verificatie aanbevolen.",
+        "fr": "⚠ Confiance du staging IA : {pct} % des époques avec confiance &lt;70 %. Vérification manuelle recommandée.",
+        "en": "⚠ AI staging confidence: {pct}% of epochs below 70%. Manual verification recommended.",
+        "de": "⚠ KI-Staging-Konfidenz: {pct} % der Epochen mit Konfidenz &lt;70 %. Manuelle Überprüfung empfohlen.",
+    },
+    # Event legend
+    "pdf_leg_oa":  {"nl": "OA (obstructief)", "fr": "OA (obstructif)", "en": "OA (obstructive)", "de": "OA (obstruktiv)"},
+    "pdf_leg_ca":  {"nl": "CA (centraal)",    "fr": "CA (central)",    "en": "CA (central)",     "de": "CA (zentral)"},
+    "pdf_leg_ma":  {"nl": "MA (gemengd)",     "fr": "MA (mixte)",      "en": "MA (mixed)",       "de": "MA (gemischt)"},
+    "pdf_leg_hyp": {"nl": "HYP (hypopneu)",   "fr": "HYP (hypopnée)",  "en": "HYP (hypopnea)",   "de": "HYP (Hypopnoe)"},
+    "pdf_leg_fr":  {"nl": "FR (flow-reductie)","fr": "FR (réduction de flux)","en":"FR (flow reduction)","de":"FR (Flussreduktion)"},
+    "pdf_leg_spo2_thr":  {"nl": "90% drempel", "fr": "seuil 90 %", "en": "90% threshold", "de": "90 %-Schwelle"},
+    "pdf_leg_spo2_zone": {"nl": "&lt;90% zone", "fr": "zone &lt;90 %", "en": "&lt;90% zone", "de": "&lt;90 %-Bereich"},
+    "pdf_leg_phono_thr": {"nl": "P60 drempel", "fr": "seuil P60",     "en": "P60 threshold",      "de": "P60-Schwelle"},
+    # Position labels
+    "pdf_pos_buk": {"nl": "BUK (buiklig)",         "fr": "DEC (décubitus ventral)", "en": "PR (prone)",      "de": "BL (Bauchlage)"},
+    "pdf_pos_lnk": {"nl": "LNK (linker zijlig)",   "fr": "G (côté gauche)",         "en": "L (left side)",   "de": "L (linke Seite)"},
+    "pdf_pos_rug": {"nl": "RUG (ruglig)",          "fr": "DOS (décubitus dorsal)",  "en": "SUP (supine)",    "de": "RL (Rückenlage)"},
+    "pdf_pos_rec": {"nl": "REC (rechter zijlig)",  "fr": "D (côté droit)",          "en": "R (right side)",  "de": "R (rechte Seite)"},
+    "pdf_pos_sta": {"nl": "STA (staand/rechtop)",  "fr": "DEB (debout)",            "en": "UP (upright)",    "de": "ST (stehend)"},
+    # Sec 7 artifact summary
+    "pdf_artifact_count": {
+        "nl": "{n_art} van {n_tot} epochs ({pct}%) als artefact.",
+        "fr": "{n_art} sur {n_tot} époques ({pct} %) classées comme artefact.",
+        "en": "{n_art} of {n_tot} epochs ({pct}%) classified as artifact.",
+        "de": "{n_art} von {n_tot} Epochen ({pct} %) als Artefakt klassifiziert.",
+    },
+    # Sec 7b staging confidence
+    "pdf_staging_conf_line": {
+        "nl": "<b>Staging confidence:</b> {n_low}/{n_tot} epochs ({pct}%) AI confidence &lt;70%.",
+        "fr": "<b>Confiance du staging :</b> {n_low}/{n_tot} époques ({pct} %) avec confiance IA &lt;70 %.",
+        "en": "<b>Staging confidence:</b> {n_low}/{n_tot} epochs ({pct}%) below 70%.",
+        "de": "<b>Staging-Konfidenz:</b> {n_low}/{n_tot} Epochen ({pct} %) mit KI-Konfidenz &lt;70 %.",
+    },
+    "pdf_low_conf_per_stage": {
+        "nl": "<i>Low-confidence per stadium: {parts}</i>",
+        "fr": "<i>Faible confiance par stade : {parts}</i>",
+        "en": "<i>Low-confidence per stage: {parts}</i>",
+        "de": "<i>Niedrige Konfidenz pro Stadium: {parts}</i>",
+    },
+    # OAHI uncertainty section
+    "pdf_oahi_uncertainty_hdr": {
+        "nl": "OAHI — Klinische onzekerheidsmarge",
+        "fr": "OAHI — Marge d'incertitude clinique",
+        "en": "OAHI — Clinical uncertainty range",
+        "de": "OAHI — Klinische Unsicherheitsspanne",
+    },
+    "pdf_grade_a_robust": {
+        "nl": "Robuust — diagnose stabiel ongeacht scoringsstrengheid",
+        "fr": "Robuste — diagnostic stable indépendamment de la sévérité du scoring",
+        "en": "Robust — diagnosis stable regardless of scoring strictness",
+        "de": "Robust — Diagnose stabil unabhängig von der Scoring-Strenge",
+    },
+    "pdf_grade_b_likely": {
+        "nl": "Waarschijnlijk — klinische correlatie aanbevolen",
+        "fr": "Probable — corrélation clinique recommandée",
+        "en": "Likely — clinical correlation recommended",
+        "de": "Wahrscheinlich — klinische Korrelation empfohlen",
+    },
+    "pdf_grade_c_uncertain": {
+        "nl": "Onzeker — manuele review aanbevolen",
+        "fr": "Incertain — revue manuelle recommandée",
+        "en": "Uncertain — manual review recommended",
+        "de": "Unsicher — manuelle Überprüfung empfohlen",
+    },
+    "pdf_robust_line": {
+        "nl": "Gem. confidence apneas: <b>{avg}</b>  |  Alle events (officieel): OAHI = {oahi:.1f}/u  |  <b>Robustness: {grade}</b> ({desc})",
+        "fr": "Confiance moy. apnées : <b>{avg}</b>  |  Tous les événements (officiel) : OAHI = {oahi:.1f}/h  |  <b>Robustesse : {grade}</b> ({desc})",
+        "en": "Mean apnea confidence: <b>{avg}</b>  |  All events (official): OAHI = {oahi:.1f}/h  |  <b>Robustness: {grade}</b> ({desc})",
+        "de": "Mittlere Apnoe-Konfidenz: <b>{avg}</b>  |  Alle Ereignisse (offiziell): OAHI = {oahi:.1f}/h  |  <b>Robustheit: {grade}</b> ({desc})",
+    },
+    "pdf_sweep_lenient":   {"nl": "Soepel (c ≥ 0.55)",       "fr": "Souple (c ≥ 0.55)",       "en": "Lenient (c ≥ 0.55)",   "de": "Locker (c ≥ 0.55)"},
+    "pdf_sweep_primary":   {"nl": "Primair (c ≥ 0.60)  ← officiële AASM", "fr": "Primaire (c ≥ 0.60)  ← AASM officiel", "en": "Primary (c ≥ 0.60)  ← official AASM", "de": "Primär (c ≥ 0.60)  ← offizielle AASM"},
+    "pdf_sweep_strict":    {"nl": "Strikt (c ≥ 0.70)",       "fr": "Strict (c ≥ 0.70)",       "en": "Strict (c ≥ 0.70)",    "de": "Streng (c ≥ 0.70)"},
+    "pdf_sweep_spread":    {"nl": "Spreiding (lenient − strict)", "fr": "Étalement (souple − strict)", "en": "Spread (lenient − strict)", "de": "Spannweite (locker − streng)"},
+    "pdf_sweep_lenient_desc": {"nl": "Inclusief net-borderline events", "fr": "Inclut les événements limites", "en": "Includes borderline events", "de": "Inklusive Grenzfall-Ereignisse"},
+    "pdf_sweep_primary_desc": {"nl": "AASM 2.6 standaard cutoff", "fr": "Seuil standard AASM 2.6", "en": "AASM 2.6 standard cutoff", "de": "AASM-2.6-Standard-Cutoff"},
+    "pdf_sweep_strict_desc":  {"nl": "Conservatief, hoge zekerheid", "fr": "Conservateur, haute certitude", "en": "Conservative, high certainty", "de": "Konservativ, hohe Sicherheit"},
+    "pdf_sweep_grade_desc":   {"nl": "&lt;5/u: Grade A · 5–10/u: Grade B · ≥10/u: Grade C", "fr": "&lt;5/h : Grade A · 5–10/h : Grade B · ≥10/h : Grade C", "en": "&lt;5/h: Grade A · 5–10/h: Grade B · ≥10/h: Grade C", "de": "&lt;5/h: Grad A · 5–10/h: Grad B · ≥10/h: Grad C"},
+    "pdf_sweep_col_threshold": {"nl": "Drempel", "fr": "Seuil", "en": "Threshold", "de": "Schwelle"},
+    "pdf_sweep_col_oahi":      {"nl": "OAHI (/u)", "fr": "OAHI (/h)", "en": "OAHI (/h)", "de": "OAHI (/h)"},
+    "pdf_sweep_col_severity":  {"nl": "Ernst", "fr": "Sévérité", "en": "Severity", "de": "Schweregrad"},
+    "pdf_sweep_col_note":      {"nl": "Toelichting", "fr": "Remarque", "en": "Note", "de": "Anmerkung"},
+    "pdf_sweep_unavailable": {
+        "nl": "<i>3-punt sweep niet beschikbaar (oude psgscoring versie). Officiële OAHI: {oahi:.1f}/u</i>",
+        "fr": "<i>Sweep à 3 points non disponible (ancienne version psgscoring). OAHI officiel : {oahi:.1f}/h</i>",
+        "en": "<i>3-point sweep not available (older psgscoring version). Official OAHI: {oahi:.1f}/h</i>",
+        "de": "<i>3-Punkt-Sweep nicht verfügbar (ältere psgscoring-Version). Offizieller OAHI: {oahi:.1f}/h</i>",
+    },
+    # RERA, RDI section
+    "pdf_rera_section_hdr":  {"nl": "RERA, RDI en slaapstadium-AHI", "fr": "RERA, RDI et AHI par stade", "en": "RERA, RDI and stage-AHI", "de": "RERA, RDI und Stadien-AHI"},
+    "pdf_rera_amp_arousal":  {"nl": "RERA — amplitude-reductie + arousal (FRI)", "fr": "RERA — réduction d'amplitude + éveil (FRI)", "en": "RERA — amplitude reduction + arousal (FRI)", "de": "RERA — Amplituden-Reduktion + Arousal (FRI)"},
+    "pdf_rera_flat_arousal": {"nl": "RERA — flattening + arousal (flow limitation)", "fr": "RERA — flattening + éveil (limitation de flux)", "en": "RERA — flattening + arousal (flow limitation)", "de": "RERA — Flattening + Arousal (Flusslimitierung)"},
+    "pdf_rera_total":        {"nl": "RERA totaal", "fr": "RERA total", "en": "RERA total", "de": "RERA gesamt"},
+    "pdf_fri_no_criteria":   {"nl": "FRI (flow-reductie zonder criteria)", "fr": "FRI (réduction de flux sans critères)", "en": "FRI (flow reduction without criteria)", "de": "FRI (Flussreduktion ohne Kriterien)"},
+    "pdf_rdi_formula":       {"nl": "RDI (AHI + RERA-index)", "fr": "RDI (IAH + index RERA)", "en": "RDI (AHI + RERA index)", "de": "RDI (AHI + RERA-Index)"},
+    "pdf_rdi_explanation":   {"nl": "RDI = AHI + RERA-index. Klinisch relevant bij vermoeden UARS.", "fr": "RDI = IAH + index RERA. Cliniquement pertinent en cas de suspicion de UARS.", "en": "RDI = AHI + RERA index. Clinically relevant when UARS is suspected.", "de": "RDI = AHI + RERA-Index. Klinisch relevant bei UARS-Verdacht."},
+    "pdf_spo2_low_sr_warn":  {
+        "nl": "<b><font color='#e74c3c'>⚠ SpO2 samplerate &lt; 0.33 Hz (&gt;3s averaging) — ODI en desaturatie-detectie mogelijk onderschat (AASM: max 3s averaging).</font></b>",
+        "fr": "<b><font color='#e74c3c'>⚠ Fréquence d'échantillonnage SpO2 &lt; 0,33 Hz (moyennage &gt;3 s) — ODI et détection des désaturations possiblement sous-estimés (AASM : max 3 s).</font></b>",
+        "en": "<b><font color='#e74c3c'>⚠ SpO2 sample rate &lt; 0.33 Hz (&gt;3s averaging) — ODI and desaturation detection may be underestimated (AASM: max 3s averaging).</font></b>",
+        "de": "<b><font color='#e74c3c'>⚠ SpO2-Abtastrate &lt; 0,33 Hz (&gt;3 s Mittelung) — ODI und Desaturations-Erkennung möglicherweise unterschätzt (AASM: max 3 s).</font></b>",
+    },
+    "pdf_conf_signal_noise": {"nl": "conf&lt;0.40 = signaalruis", "fr": "conf&lt;0,40 = bruit du signal", "en": "conf&lt;0.40 = signal noise", "de": "Konfidenz&lt;0,40 = Signalrauschen"},
+    "pdf_max_apnea_dur":     {"nl": "Max. apnea-duur", "fr": "Durée max. d'apnée", "en": "Max apnea duration", "de": "Max. Apnoe-Dauer"},
+    "pdf_dual_sensor_note":  {"nl": "<i>Dual-sensor scoring: apneu op thermistor, hypopneu op nasale druk (AASM 2.6).</i>", "fr": "<i>Scoring double capteur : apnée sur thermistance, hypopnée sur pression nasale (AASM 2.6).</i>", "en": "<i>Dual-sensor scoring: apnea on thermistor, hypopnea on nasal pressure (AASM 2.6).</i>", "de": "<i>Dual-Sensor-Scoring: Apnoe am Thermistor, Hypopnoe am Nasendruck (AASM 2.6).</i>"},
+    # Flattening labels
+    "pdf_flat_normal":   {"nl": "normaal",                "fr": "normal",                  "en": "normal",                  "de": "normal"},
+    "pdf_flat_elevated": {"nl": "verhoogd",               "fr": "élevé",                   "en": "elevated",                "de": "erhöht"},
+    "pdf_flat_high":     {"nl": "hoog (flow-limitatie)",  "fr": "élevé (limitation de flux)","en":"high (flow limitation)",  "de": "hoch (Flusslimitierung)"},
+    # Arousal table
+    "pdf_arousal_index": {"nl": "Arousal index (AI)", "fr": "Index d'éveils (AI)", "en": "Arousal index (AI)", "de": "Arousal-Index (AI)"},
+}
+TRANSLATIONS.update(_V0102_PDF)
 

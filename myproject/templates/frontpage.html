@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ current_lang or 'en' }}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>YASAFlaskified – Automated Sleep Analysis</title>
+<title>{{ t('fp_page_title') }}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
 <style>
@@ -733,12 +733,12 @@
 <nav>
   <a class="nav-brand" href="#">YASA<span>Flaskified</span></a>
   <div class="nav-links">
-    <a href="#yasa">About YASA</a>
-    <a href="#app">Application</a>
-    <a href="#workflow">Workflow</a>
-    <a href="#stack">Stack</a>
-    <a href="#credits">Credits</a>
-    <a href="{{ url_for('login') }}" class="btn-login">Login →</a>
+    <a href="#yasa">{{ t('fp_nav_yasa') }}</a>
+    <a href="#app">{{ t('fp_nav_app') }}</a>
+    <a href="#workflow">{{ t('fp_nav_workflow') }}</a>
+    <a href="#stack">{{ t('fp_nav_stack') }}</a>
+    <a href="#credits">{{ t('fp_nav_credits') }}</a>
+    <a href="{{ url_for('login') }}" class="btn-login">{{ t('fp_nav_login') }} →</a>
   </div>
 </nav>
 
@@ -747,37 +747,35 @@
   <div class="stars"></div>
 
   <div class="hero-content">
-    <div class="badge">v6 · Automated Sleep Staging</div>
+    <div class="badge">{{ t('fp_badge') }}</div>
 
-    <h1>Sleep Analysis,<br><em>Reimagined</em></h1>
+    <h1>{{ t('fp_hero_title_1') }}<br><em>{{ t('fp_hero_title_2') }}</em></h1>
 
     <p class="hero-sub">
-      YASAFlaskified brings the power of the YASA sleep-staging engine into a 
-      clinical-grade web platform — upload your EDF, get instant hypnograms, 
-      spindle &amp; slow-wave reports, and full statistical summaries.
+      {{ t('fp_hero_sub') }}
     </p>
 
     <div class="hero-cta">
-      <a href="{{ url_for('login') }}" class="btn-primary">▶ &nbsp;Launch App</a>
-      <a href="#yasa" class="btn-ghost">Learn more</a>
+      <a href="{{ url_for('login') }}" class="btn-primary">{{ t('fp_btn_launch') }}</a>
+      <a href="#yasa" class="btn-ghost">{{ t('fp_btn_learn') }}</a>
     </div>
 
     <div class="hero-stats">
       <div class="stat">
         <div class="stat-num">5</div>
-        <div class="stat-label">Sleep stages</div>
+        <div class="stat-label">{{ t('fp_stat_stages') }}</div>
       </div>
       <div class="stat">
         <div class="stat-num">EDF</div>
-        <div class="stat-label">Input format</div>
+        <div class="stat-label">{{ t('fp_stat_input') }}</div>
       </div>
       <div class="stat">
         <div class="stat-num">AASM</div>
-        <div class="stat-label">Standard</div>
+        <div class="stat-label">{{ t('fp_stat_std') }}</div>
       </div>
       <div class="stat">
-        <div class="stat-num">Live</div>
-        <div class="stat-label">Job queue</div>
+        <div class="stat-num">{{ t('fp_stat_live') }}</div>
+        <div class="stat-label">{{ t('fp_stat_queue') }}</div>
       </div>
     </div>
   </div>
@@ -789,12 +787,10 @@
 <!-- ABOUT YASA -->
 <section id="yasa">
   <div class="section-inner">
-    <div class="section-tag">// About the engine</div>
-    <h2 class="section-title reveal">What is YASA?</h2>
+    <div class="section-tag">{{ t('fp_y_tag') }}</div>
+    <h2 class="section-title reveal">{{ t('fp_y_title') }}</h2>
     <p class="section-lead reveal">
-      YASA (Yet Another Spindle Algorithm) is an open-source Python library for 
-      automated analysis of polysomnographic recordings, developed by Raphael Vallat. 
-      It delivers state-of-the-art, machine-learning–powered sleep staging directly from raw EEG signals.
+      {{ t('fp_y_lead') }}
     </p>
 
     <div class="two-col">
@@ -802,23 +798,23 @@
         <ul class="feature-list reveal">
           <li>
             <span class="icon">🧠</span>
-            <div><strong>Automated sleep staging</strong> — classifies 30-second epochs into Wake, N1, N2, N3, and REM using a gradient-boosting classifier trained on thousands of PSG recordings.</div>
+            <div><strong>{{ t('fp_y_feat1_title') }}</strong> {{ t('fp_y_feat1_body') }}</div>
           </li>
           <li>
             <span class="icon">〰️</span>
-            <div><strong>Spindle &amp; slow-wave detection</strong> — detects sleep spindles and slow oscillations with configurable thresholds, returning per-event statistics.</div>
+            <div><strong>{{ t('fp_y_feat2_title') }}</strong> {{ t('fp_y_feat2_body') }}</div>
           </li>
           <li>
             <span class="icon">👁️</span>
-            <div><strong>REM detection</strong> — identifies REM epochs and computes REM-related metrics including NREM/REM transitions.</div>
+            <div><strong>{{ t('fp_y_feat3_title') }}</strong> {{ t('fp_y_feat3_body') }}</div>
           </li>
           <li>
             <span class="icon">📊</span>
-            <div><strong>Sleep statistics</strong> — computes total sleep time, sleep efficiency, latencies, WASO, and full stage percentages per AASM standards.</div>
+            <div><strong>{{ t('fp_y_feat4_title') }}</strong> {{ t('fp_y_feat4_body') }}</div>
           </li>
           <li>
             <span class="icon">📡</span>
-            <div><strong>Bandpower analysis</strong> — spectral power in delta, theta, alpha, sigma, and beta bands per epoch and per channel.</div>
+            <div><strong>{{ t('fp_y_feat5_title') }}</strong> {{ t('fp_y_feat5_body') }}</div>
           </li>
         </ul>
       </div>
@@ -875,7 +871,7 @@
         </svg>
 
         <div class="code-block">
-<span class="cm"># Core YASA pipeline</span>
+<span class="cm">{{ t('fp_code_comment') }}</span>
 <span class="kw">import</span> yasa, mne
 raw = mne.<span class="fn">io.read_raw_edf</span>(<span class="str">"recording.edf"</span>)
 sls = yasa.<span class="fn">SleepStaging</span>(raw, eeg_name=<span class="str">"C4-M1"</span>)
@@ -890,45 +886,42 @@ stats = yasa.<span class="fn">sleep_statistics</span>(hypno, sf_hyp=<span class=
 <!-- ABOUT YASAFLASKIFIED -->
 <section id="app">
   <div class="section-inner">
-    <div class="section-tag">// The web application</div>
-    <h2 class="section-title reveal">What is YASAFlaskified?</h2>
+    <div class="section-tag">{{ t('fp_a_tag') }}</div>
+    <h2 class="section-title reveal">{{ t('fp_a_title') }}</h2>
     <p class="section-lead reveal">
-      YASAFlaskified wraps the YASA engine in a production-grade Flask application, 
-      letting clinicians and researchers run full sleep analyses through a browser —
-      no Python knowledge required. Jobs run asynchronously, results are stored, 
-      and reports are delivered in seconds.
+      {{ t('fp_a_lead') }}
     </p>
 
     <div class="cards">
       <div class="card card-accent reveal">
         <span class="card-icon">📁</span>
-        <h3>EDF Upload</h3>
-        <p>Drag-and-drop or select any EDF file from your PSG system. The app validates the recording, extracts available channels, and queues the job immediately.</p>
+        <h3>{{ t('fp_a_c1_title') }}</h3>
+        <p>{{ t('fp_a_c1_body') }}</p>
       </div>
       <div class="card reveal">
         <span class="card-icon">⚡</span>
-        <h3>Async Processing</h3>
-        <p>Powered by Redis Queue (RQ) and background workers, heavy analyses run without blocking the UI. Real-time job status keeps you informed throughout.</p>
+        <h3>{{ t('fp_a_c2_title') }}</h3>
+        <p>{{ t('fp_a_c2_body') }}</p>
       </div>
       <div class="card reveal">
         <span class="card-icon">📈</span>
-        <h3>Rich Reports</h3>
-        <p>Hypnograms, sleep statistics tables, spindle maps, slow-wave detections, and bandpower charts — all rendered server-side with Matplotlib and downloadable as PNG/CSV.</p>
+        <h3>{{ t('fp_a_c3_title') }}</h3>
+        <p>{{ t('fp_a_c3_body') }}</p>
       </div>
       <div class="card reveal">
         <span class="card-icon">🔒</span>
-        <h3>Secure & Hardened</h3>
-        <p>CSRF protection, rate limiting, strong session management, UFW firewall, and Fail2ban — built for clinical environments where data security is non-negotiable.</p>
+        <h3>{{ t('fp_a_c4_title') }}</h3>
+        <p>{{ t('fp_a_c4_body') }}</p>
       </div>
       <div class="card reveal">
         <span class="card-icon">🐳</span>
-        <h3>Docker Deployment</h3>
-        <p>Fully containerised with Gunicorn + Nginx reverse proxy. One-command deploy on any Linux server, with Nginx Proxy Manager for multi-domain SSL setups.</p>
+        <h3>{{ t('fp_a_c5_title') }}</h3>
+        <p>{{ t('fp_a_c5_body') }}</p>
       </div>
       <div class="card reveal">
         <span class="card-icon">🧪</span>
-        <h3>Research-Grade</h3>
-        <p>Supports AASM-compliant staging, configurable epoch length, multi-channel selection, and raw µV signal preprocessing — trusted by sleep researchers.</p>
+        <h3>{{ t('fp_a_c6_title') }}</h3>
+        <p>{{ t('fp_a_c6_body') }}</p>
       </div>
     </div>
   </div>
@@ -937,29 +930,29 @@ stats = yasa.<span class="fn">sleep_statistics</span>(hypno, sf_hyp=<span class=
 <!-- WORKFLOW -->
 <section id="workflow">
   <div class="section-inner">
-    <div class="section-tag">// How it works</div>
-    <h2 class="section-title reveal">From EDF to insights in four steps</h2>
+    <div class="section-tag">{{ t('fp_w_tag') }}</div>
+    <h2 class="section-title reveal">{{ t('fp_w_title') }}</h2>
 
     <div class="steps">
       <div class="step reveal">
         <div class="step-num">01</div>
-        <h4>Upload EDF</h4>
-        <p>Select your polysomnography recording. The app accepts standard European Data Format files from any PSG device.</p>
+        <h4>{{ t('fp_w_s1_title') }}</h4>
+        <p>{{ t('fp_w_s1_body') }}</p>
       </div>
       <div class="step reveal">
         <div class="step-num">02</div>
-        <h4>Configure</h4>
-        <p>Choose your EEG, EOG, and EMG channels by name. Set epoch length and select the analyses you need.</p>
+        <h4>{{ t('fp_w_s2_title') }}</h4>
+        <p>{{ t('fp_w_s2_body') }}</p>
       </div>
       <div class="step reveal">
         <div class="step-num">03</div>
-        <h4>Analyse</h4>
-        <p>YASA's gradient-boosting model stages every epoch. Spindle, slow-wave, and bandpower detectors run in the background.</p>
+        <h4>{{ t('fp_w_s3_title') }}</h4>
+        <p>{{ t('fp_w_s3_body') }}</p>
       </div>
       <div class="step reveal">
         <div class="step-num">04</div>
-        <h4>Download Report</h4>
-        <p>Receive your hypnogram, statistics table, and event maps. Export to PNG and CSV for further analysis or clinical records.</p>
+        <h4>{{ t('fp_w_s4_title') }}</h4>
+        <p>{{ t('fp_w_s4_body') }}</p>
       </div>
     </div>
   </div>
@@ -968,8 +961,8 @@ stats = yasa.<span class="fn">sleep_statistics</span>(hypno, sf_hyp=<span class=
 <!-- STACK -->
 <section id="stack">
   <div class="section-inner">
-    <div class="section-tag">// Technology stack</div>
-    <h2 class="section-title reveal">Built on proven open-source</h2>
+    <div class="section-tag">{{ t('fp_s_tag') }}</div>
+    <h2 class="section-title reveal">{{ t('fp_s_title') }}</h2>
 
     <div class="tech-grid reveal">
       <div class="tech-tag"><span class="dot" style="background:#38bdf8"></span>Python 3</div>
@@ -993,11 +986,10 @@ stats = yasa.<span class="fn">sleep_statistics</span>(hypno, sf_hyp=<span class=
 <!-- CREDITS -->
 <section id="credits">
   <div class="section-inner">
-    <div class="section-tag">// Credits & acknowledgements</div>
-    <h2 class="section-title reveal">The people behind YASA</h2>
+    <div class="section-tag">{{ t('fp_c_tag') }}</div>
+    <h2 class="section-title reveal">{{ t('fp_c_title') }}</h2>
     <p class="section-lead reveal">
-      YASAFlaskified builds on the open-source work of sleep researchers who made their 
-      tools freely available. Full credit goes to them.
+      {{ t('fp_c_lead') }}
     </p>
 
     <div class="credits-grid">
@@ -1006,15 +998,9 @@ stats = yasa.<span class="fn">sleep_statistics</span>(hypno, sf_hyp=<span class=
       <div class="credit-card primary reveal">
         <div class="credit-avatar">RV</div>
         <div class="credit-body">
-          <div class="credit-role">Creator &amp; Maintainer · YASA</div>
+          <div class="credit-role">{{ t('fp_c_rv_role') }}</div>
           <h3 class="credit-name">Raphael Vallat, PhD</h3>
-          <p class="credit-bio">
-            Postdoctoral researcher at the <strong>Center for Human Sleep Science</strong>, 
-            University of California, Berkeley. Raphael created and maintains YASA as an 
-            open-source project, making automated sleep analysis freely accessible to 
-            researchers and clinicians. He also develops <em>Pingouin</em> (statistics) 
-            and <em>AntroPy</em> (time-series complexity).
-          </p>
+          <p class="credit-bio">{{ t('fp_c_rv_bio') | safe }}</p>
           <div class="credit-links">
             <a href="https://raphaelvallat.com" target="_blank" class="credit-link">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>
@@ -1026,7 +1012,7 @@ stats = yasa.<span class="fn">sleep_statistics</span>(hypno, sf_hyp=<span class=
             </a>
             <a href="https://yasa-sleep.org" target="_blank" class="credit-link">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-              Documentation
+              {{ t('fp_c_link_docs') }}
             </a>
           </div>
         </div>
@@ -1036,14 +1022,9 @@ stats = yasa.<span class="fn">sleep_statistics</span>(hypno, sf_hyp=<span class=
       <div class="credit-card reveal">
         <div class="credit-avatar mw">MW</div>
         <div class="credit-body">
-          <div class="credit-role">Co-author · eLife Paper</div>
+          <div class="credit-role">{{ t('fp_c_mw_role') }}</div>
           <h3 class="credit-name">Matthew P. Walker, PhD</h3>
-          <p class="credit-bio">
-            Professor of Neuroscience and Psychology and Director of the 
-            <strong>Center for Human Sleep Science</strong> at UC Berkeley. 
-            Author of <em>Why We Sleep</em> and co-author of the peer-reviewed validation 
-            paper that established YASA's clinical credibility as an automated sleep-staging tool.
-          </p>
+          <p class="credit-bio">{{ t('fp_c_mw_bio') | safe }}</p>
           <div class="credit-links">
             <a href="https://www.sleepdiplomat.com" target="_blank" class="credit-link">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>
@@ -1061,16 +1042,11 @@ stats = yasa.<span class="fn">sleep_statistics</span>(hypno, sf_hyp=<span class=
       <div class="credit-card paper reveal">
         <div class="credit-avatar paper-icon">📄</div>
         <div class="credit-body">
-          <div class="credit-role">Peer-reviewed publication · eLife 2021</div>
-          <h3 class="credit-name">The validation paper</h3>
-          <p class="credit-bio">
-            Trained and validated on over <strong>30,000 hours</strong> of 
-            polysomnographic recordings across heterogeneous populations. 
-            Median staging accuracy was <strong>87.5%</strong> across 585 testing nights, 
-            in line with human interscorer agreement. Published in <em>eLife</em>, October 2021.
-          </p>
+          <div class="credit-role">{{ t('fp_c_paper_role') }}</div>
+          <h3 class="credit-name">{{ t('fp_c_paper_title') }}</h3>
+          <p class="credit-bio">{{ t('fp_c_paper_bio') | safe }}</p>
           <div class="credit-quote">
-            "An open-source, high-performance tool for automated sleep staging."
+            {{ t('fp_c_paper_quote') }}
             <span class="quote-source">— Vallat &amp; Walker, eLife 10 (2021)</span>
           </div>
           <div class="credit-links">
@@ -1087,10 +1063,7 @@ stats = yasa.<span class="fn">sleep_statistics</span>(hypno, sf_hyp=<span class=
     <!-- Thank-you note -->
     <div class="thankyou-box reveal">
       <div class="ty-icon">🙏</div>
-      <div>
-        <strong>Thanks to Raphael Vallat</strong> for building and maintaining YASA as an open-source project. 
-        YASAFlaskified is essentially a web wrapper around his work — the hard part was already done.
-      </div>
+      <div>{{ t('fp_c_thanks') | safe }}</div>
     </div>
 
   </div>
@@ -1099,23 +1072,22 @@ stats = yasa.<span class="fn">sleep_statistics</span>(hypno, sf_hyp=<span class=
 <!-- CTA -->
 <section id="cta">
   <div class="section-inner">
-    <div class="section-tag">// Get started</div>
-    <h2 class="section-title reveal">Ready to analyse?</h2>
+    <div class="section-tag">{{ t('fp_cta_tag') }}</div>
+    <h2 class="section-title reveal">{{ t('fp_cta_title') }}</h2>
     <p class="section-lead reveal">
-      Log in to YASAFlaskified and upload your first EDF recording. 
-      Results in under a minute.
+      {{ t('fp_cta_lead') }}
     </p>
 
     <div class="cta-box reveal">
-      <h3>Sign in to your account</h3>
-      <p>Access your sleep analysis dashboard, review past jobs, and start new analyses.</p>
+      <h3>{{ t('fp_cta_box_title') }}</h3>
+      <p>{{ t('fp_cta_box_body') }}</p>
       <a href="{{ url_for('login') }}" class="btn-big">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
           <polyline points="10 17 15 12 10 7"/>
           <line x1="15" y1="12" x2="3" y2="12"/>
         </svg>
-        Login to YASAFlaskified
+        {{ t('fp_cta_btn') }}
       </a>
     </div>
   </div>
@@ -1124,7 +1096,7 @@ stats = yasa.<span class="fn">sleep_statistics</span>(hypno, sf_hyp=<span class=
 <!-- FOOTER -->
 <footer>
   <div class="footer-brand">YASA<span>Flaskified</span></div>
-  <div class="footer-meta">Powered by YASA · Flask · Docker &nbsp;·&nbsp; sleepai.eu</div>
+  <div class="footer-meta">{{ t('fp_footer_meta') }} &nbsp;·&nbsp; sleepai.eu</div>
 </footer>
 
 <script>

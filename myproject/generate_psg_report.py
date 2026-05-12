@@ -309,8 +309,8 @@ def generate_psg_report(
     _site_for_lang = institution or {}
     lang = (
         (patient_info or {}).get("lang")
-        or _site_for_lang.get("language", "nl")
-        or "nl"
+        or _site_for_lang.get("language", "en")
+        or "en"
     )
 
     if institution is None:
@@ -984,7 +984,7 @@ def generate_psg_report(
 
     # v0.8.11: taal uit site of patient_info
     from i18n import t
-    lang = (patient_info.get("lang") or (institution or {}).get("language", "nl"))
+    lang = (patient_info.get("lang") or (institution or {}).get("language", "en"))
 
     from conclusions import generate_conclusions
     spo2_nadir_f = None

@@ -185,7 +185,7 @@
       &nbsp;·&nbsp;
       {{ t('only_authorized') }}
       <br>
-      Powered by
+      {{ t('footer_powered_by') }}
       <a href="https://raphaelvallat.com/yasa/" target="_blank">YASA</a>
       <small>(Vallat &amp; Walker, <i>eLife</i> 2021)</small>
       &nbsp;·&nbsp;
@@ -196,7 +196,7 @@
       &nbsp;·&nbsp;
       &copy; 2023–2026 Bart Rombaut
       &nbsp;·&nbsp;
-      <a href="/disclaimer">Disclaimer</a>
+      <a href="/disclaimer">{{ t('footer_disclaimer') }}</a>
     </div>
   </footer>
 
@@ -229,9 +229,7 @@
   <div id="inactivity-warn" class="position-fixed bottom-0 start-50 translate-middle-x mb-3 alert alert-warning shadow px-4 py-2 small"
        style="display:none;z-index:9999;border-radius:8px">
     <i class="bi bi-clock-history me-1"></i>
-    {% if current_lang == 'fr' %}Session expire bientôt — bougez la souris pour rester connecté
-    {% elif current_lang == 'en' %}Session expiring soon — move mouse to stay logged in
-    {% else %}Sessie verloopt binnenkort — beweeg de muis om ingelogd te blijven{% endif %}
+    {{ t('session_expiring') }}
   </div>
   {% endif %}
 

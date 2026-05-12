@@ -818,7 +818,7 @@ def generate_pdf_report(results:dict, output_path:str,
     # v0.8.11: taal bepalen
     if not lang:
         lang = (results.get("patient_info", {}).get("lang")
-                or site.get("language", "nl"))
+                or site.get("language", "en"))
 
     # v0.8.11: patient_info kan custom header/logo bevatten (via rapport editor)
     pat_hdr = results.get("patient_info", {})
@@ -985,14 +985,9 @@ def generate_pdf_report(results:dict, output_path:str,
         _n_unusable = sum(1 for ch in (sig_q.get("channels") or [])
                          if ch.get("quality_grade") == "unusable")
         if _n_unusable > 0:
-            _warnings.append(
-                f"⚠ Signaalkwaliteit: {_n_unusable} kanalen onbruikbaar "
-                f"(amplitude &lt; minimum). Staging en micro-architectuur "
-                f"(spindles, slow waves) zijn mogelijk onbetrouwbaar.")
+            _warnings.append(t("pdf_warn_sq_unusable", lang).format(n=_n_unusable))
     if pct_low_conf >= 20:
-        _warnings.append(
-            f"⚠ AI-staging confidence: {pct_low_conf:.0f}% van epochs "
-            f"met confidence &lt;70%. Manuele verificatie aanbevolen.")
+        _warnings.append(t("pdf_warn_low_conf", lang).format(pct=f"{pct_low_conf:.0f}"))
     if _warnings:
         _warn_style = ParagraphStyle("WarnBanner", fontName="Helvetica-Bold",
                                       fontSize=7.5, textColor=colors.white,
@@ -1134,28 +1129,28 @@ def generate_pdf_report(results:dict, output_path:str,
     sp(0.1)
     leg_parts = [
         '<font size="6" color="#6b7a99"><b>EVENT:</b></font>',
-        '<font size="6" color="#e74c3c">■</font><font size="6" color="#6b7a99"> OA (obstructief)</font>',
-        '<font size="6" color="#3498db">■</font><font size="6" color="#6b7a99"> CA (centraal)</font>',
-        '<font size="6" color="#9b59b6">■</font><font size="6" color="#6b7a99"> MA (gemengd)</font>',
-        '<font size="6" color="#e67e22">■</font><font size="6" color="#6b7a99"> HYP (hypopnea)</font>',
-        '<font size="6" color="#95a5a6">■</font><font size="6" color="#6b7a99"> FR (flow-reductie)</font>',
+        f'<font size="6" color="#e74c3c">■</font><font size="6" color="#6b7a99"> {t("pdf_leg_oa", lang)}</font>',
+        f'<font size="6" color="#3498db">■</font><font size="6" color="#6b7a99"> {t("pdf_leg_ca", lang)}</font>',
+        f'<font size="6" color="#9b59b6">■</font><font size="6" color="#6b7a99"> {t("pdf_leg_ma", lang)}</font>',
+        f'<font size="6" color="#e67e22">■</font><font size="6" color="#6b7a99"> {t("pdf_leg_hyp", lang)}</font>',
+        f'<font size="6" color="#95a5a6">■</font><font size="6" color="#6b7a99"> {t("pdf_leg_fr", lang)}</font>',
         '&nbsp;&nbsp;',
         '<font size="6" color="#6b7a99"><b>SpO2:</b></font>',
-        '<font size="6" color="#e74c3c">---</font><font size="6" color="#6b7a99"> 90% drempel</font>',
-        '<font size="6" color="#e74c3c">■</font><font size="6" color="#6b7a99"> &lt;90% zone</font>',
+        f'<font size="6" color="#e74c3c">---</font><font size="6" color="#6b7a99"> {t("pdf_leg_spo2_thr", lang)}</font>',
+        f'<font size="6" color="#e74c3c">■</font><font size="6" color="#6b7a99"> {t("pdf_leg_spo2_zone", lang)}</font>',
         '&nbsp;&nbsp;',
         '<font size="6" color="#6b7a99"><b>PHONO:</b></font>',
-        '<font size="6" color="#e67e22">---</font><font size="6" color="#6b7a99"> P60 drempel</font>',
+        f'<font size="6" color="#e67e22">---</font><font size="6" color="#6b7a99"> {t("pdf_leg_phono_thr", lang)}</font>',
     ]
     story.append(Paragraph("  ".join(leg_parts), styles["SM"]))
     # v0.8.22: Positie-legende
     pos_leg = [
         '<font size="6" color="#6b7a99"><b>POS:</b></font>',
-        '<font size="6" color="#2ecc71">■</font><font size="6" color="#6b7a99"> BUK (buiklig)</font>',
-        '<font size="6" color="#3498db">■</font><font size="6" color="#6b7a99"> LNK (linker zijlig)</font>',
-        '<font size="6" color="#e74c3c">■</font><font size="6" color="#6b7a99"> RUG (ruglig)</font>',
-        '<font size="6" color="#9b59b6">■</font><font size="6" color="#6b7a99"> REC (rechter zijlig)</font>',
-        '<font size="6" color="#95a5a6">■</font><font size="6" color="#6b7a99"> STA (staand/rechtop)</font>',
+        f'<font size="6" color="#2ecc71">■</font><font size="6" color="#6b7a99"> {t("pdf_pos_buk", lang)}</font>',
+        f'<font size="6" color="#3498db">■</font><font size="6" color="#6b7a99"> {t("pdf_pos_lnk", lang)}</font>',
+        f'<font size="6" color="#e74c3c">■</font><font size="6" color="#6b7a99"> {t("pdf_pos_rug", lang)}</font>',
+        f'<font size="6" color="#9b59b6">■</font><font size="6" color="#6b7a99"> {t("pdf_pos_rec", lang)}</font>',
+        f'<font size="6" color="#95a5a6">■</font><font size="6" color="#6b7a99"> {t("pdf_pos_sta", lang)}</font>',
     ]
     story.append(Paragraph("  ".join(pos_leg), styles["SM"]))
     sp(0.3)  # v0.9.1: vervangen PageBreak door spacer (voorkomt blanco pagina bij korte recordings)
@@ -1298,7 +1293,10 @@ def generate_pdf_report(results:dict, output_path:str,
       if art.get("success"):
         sa=art.get("summary",{}); pct=sa.get("artifact_percent",0)
         story.append(Paragraph(
-            f"{sa.get('n_artifact_epochs',0)} van {sa.get('n_total_epochs',0)} epochs ({pct}%) als artefact.",
+            t("pdf_artifact_count", lang).format(
+                n_art=sa.get('n_artifact_epochs',0),
+                n_tot=sa.get('n_total_epochs',0),
+                pct=pct),
             styles["B"]))
       else:
         story.append(Paragraph(f"{t('pdf_not_available', lang)}: {art.get('error','—')}",styles["SM"]))
@@ -1321,14 +1319,16 @@ def generate_pdf_report(results:dict, output_path:str,
         pct_low = conf_rev.get("pct_low_confidence", 0)
         if n_low > 0:
             story.append(Paragraph(
-                f"<b>Staging confidence:</b> {n_low}/{conf_rev.get('n_epochs',0)} epochs "
-                f"({pct_low}%) AI confidence &lt;70%.",
+                t("pdf_staging_conf_line", lang).format(
+                    n_low=n_low,
+                    n_tot=conf_rev.get('n_epochs',0),
+                    pct=pct_low),
                 styles["B"]))
             per_stage = conf_rev.get("per_stage_low", {})
             if per_stage:
                 parts = [f"{k}: {v}" for k,v in sorted(per_stage.items(), key=lambda x: -x[1])]
                 story.append(Paragraph(
-                    f"<i>Low-confidence per stadium: {', '.join(parts)}</i>",
+                    t("pdf_low_conf_per_stage", lang).format(parts=', '.join(parts)),
                     styles["SM"]))
             sp(0.15)
 
@@ -1481,52 +1481,53 @@ def generate_pdf_report(results:dict, output_path:str,
         sweep = rsum.get("oahi_sweep") or {}
         sweep_width = rsum.get("oahi_sweep_width", 0) or 0
         grade = rsum.get("robustness_grade", "?") or "?"
-        story.append(_hdr("OAHI — Klinische onzekerheidsmarge", color=BLUE)); sp(0.1)
+        story.append(_hdr(t("pdf_oahi_uncertainty_hdr", lang), color=BLUE)); sp(0.1)
 
         # Robustness label
         if grade == "A":
-            grade_text = "Robuust — diagnose stabiel ongeacht scoringsstrengheid"
+            grade_text = t("pdf_grade_a_robust", lang)
         elif grade == "B":
-            grade_text = "Waarschijnlijk — klinische correlatie aanbevolen"
+            grade_text = t("pdf_grade_b_likely", lang)
         elif grade == "C":
-            grade_text = "Onzeker — manuele review aanbevolen"
+            grade_text = t("pdf_grade_c_uncertain", lang)
         else:
             grade_text = "—"
 
         story.append(Paragraph(
-            f"Gem. confidence apneas: <b>{avg_s}</b>  |  "
-            f"Alle events (officieel): OAHI = {oahi_all:.1f}/u  |  "
-            f"<b>Robustness: {grade}</b> ({grade_text})",
+            t("pdf_robust_line", lang).format(
+                avg=avg_s, oahi=oahi_all, grade=grade, desc=grade_text),
             styles["SM"])); sp(0.1)
 
         if sweep:
             sweep_rows = [
-                ["Soepel (c ≥ 0.55)",
+                [t("pdf_sweep_lenient", lang),
                  f"{sweep.get('lenient', 0):.1f}",
                  _sev(sweep.get('lenient') or 0, lang),
-                 "Inclusief net-borderline events"],
-                ["Primair (c ≥ 0.60)  ← officiële AASM",
+                 t("pdf_sweep_lenient_desc", lang)],
+                [t("pdf_sweep_primary", lang),
                  f"{sweep.get('primary', 0):.1f}",
                  _sev(sweep.get('primary') or 0, lang),
-                 "AASM 2.6 standaard cutoff"],
-                ["Strikt (c ≥ 0.70)",
+                 t("pdf_sweep_primary_desc", lang)],
+                [t("pdf_sweep_strict", lang),
                  f"{sweep.get('strict', 0):.1f}",
                  _sev(sweep.get('strict') or 0, lang),
-                 "Conservatief, hoge zekerheid"],
-                ["Spreiding (lenient − strict)",
+                 t("pdf_sweep_strict_desc", lang)],
+                [t("pdf_sweep_spread", lang),
                  f"{sweep_width:.1f}/u", "",
-                 "<5/u: Grade A · 5–10/u: Grade B · ≥10/u: Grade C"],
+                 t("pdf_sweep_grade_desc", lang)],
             ]
             story.append(KeepTogether([_tbl(
-                ["Drempel", "OAHI (/u)", "Ernst", "Toelichting"],
+                [t("pdf_sweep_col_threshold", lang),
+                 t("pdf_sweep_col_oahi", lang),
+                 t("pdf_sweep_col_severity", lang),
+                 t("pdf_sweep_col_note", lang)],
                 sweep_rows,
                 [6.5, 2.5, 3.0, 4.0])]))
             sp(0.15)
         else:
-            # Fallback voor oude psgscoring zonder oahi_sweep
+            # Fallback for older psgscoring without oahi_sweep
             story.append(Paragraph(
-                "<i>3-punt sweep niet beschikbaar (oude psgscoring versie). "
-                f"Officiële OAHI: {oahi_all:.1f}/u</i>",
+                t("pdf_sweep_unavailable", lang).format(oahi=oahi_all),
                 styles["SM"])); sp(0.1)
 
         # ── v0.8.22: RERA, RDI, REM/NREM AHI ──────────────────────────
@@ -1537,15 +1538,15 @@ def generate_pdf_report(results:dict, output_path:str,
         nrem_ahi = rsum.get("nrem_ahi")
         n_fri_pure = rsum.get("n_fri", 0) or 0
 
-        story.append(_hdr("RERA, RDI en slaapstadium-AHI", color=BLUE)); sp(0.1)
+        story.append(_hdr(t("pdf_rera_section_hdr", lang), color=BLUE)); sp(0.1)
         n_rera_fri  = rsum.get("n_rera_fri", 0) or 0
         n_rera_flat = rsum.get("n_rera_flattening", 0) or 0
         ext_rows = [
-            ["RERA — amplitude-reductie + arousal (FRI)",  str(n_rera_fri), f"{n_rera_fri}"],
-            ["RERA — flattening + arousal (flow limitation)", str(n_rera_flat), f"{n_rera_flat}"],
-            ["RERA totaal",  str(rera_n), f"{rera_idx:.1f} /u"],
-            ["FRI (flow-reductie zonder criteria)", str(n_fri_pure), ""],
-            ["RDI (AHI + RERA-index)",          "", f"{rdi_val:.1f} /u"],
+            [t("pdf_rera_amp_arousal", lang),  str(n_rera_fri), f"{n_rera_fri}"],
+            [t("pdf_rera_flat_arousal", lang), str(n_rera_flat), f"{n_rera_flat}"],
+            [t("pdf_rera_total", lang),  str(rera_n), f"{rera_idx:.1f} /u"],
+            [t("pdf_fri_no_criteria", lang), str(n_fri_pure), ""],
+            [t("pdf_rdi_formula", lang),          "", f"{rdi_val:.1f} /u"],
         ]
         story.append(KeepTogether([_tbl(
             [t("pdf_param",lang), "n", "Index"],
@@ -1569,16 +1570,13 @@ def generate_pdf_report(results:dict, output_path:str,
             [8, 6])])); sp(0.1)
 
         story.append(Paragraph(
-            f"<i>{t('pdf_rera_explanation',lang)} "
-            "RDI = AHI + RERA-index. Klinisch relevant bij vermoeden UARS.</i>",
+            f"<i>{t('pdf_rera_explanation',lang)} {t('pdf_rdi_explanation', lang)}</i>",
             styles["SM"])); sp(0.1)
 
-        # ── SpO2 samplerate waarschuwing ────────────────────────────────
+        # ── SpO2 samplerate warning ────────────────────────────────
         if pneumo.get("spo2", {}).get("spo2_low_samplerate"):
             story.append(Paragraph(
-                "<b><font color='#e74c3c'>⚠ SpO2 samplerate &lt; 0.33 Hz "
-                "(&gt;3s averaging) — ODI en desaturatie-detectie mogelijk onderschat "
-                "(AASM: max 3s averaging).</font></b>",
+                t("pdf_spo2_low_sr_warn", lang),
                 styles["SM"])); sp(0.1)
 
         # ── Overschatting-correctie samenvatting (v0.8.11) ───────────────
@@ -1602,7 +1600,7 @@ def generate_pdf_report(results:dict, output_path:str,
                  t("pdf_fix3_desc",lang)],
                 [t("pdf_fix4_name",lang),
                  f"{n_noise} ruis  +  {n_border} borderline",
-                 (f"AHI excl. ruis (<0.40): {ahi_noise:.1f}/u" if ahi_noise else "conf<0.40 = signaalruis")],
+                 (f"AHI excl. ruis (<0.40): {ahi_noise:.1f}/u" if ahi_noise else t("pdf_conf_signal_noise", lang))],
                 [t("pdf_fix5_name",lang),
                  t("pdf_corrected",lang),
                  t("pdf_fix5_desc",lang)],
@@ -1647,7 +1645,7 @@ def generate_pdf_report(results:dict, output_path:str,
             [["AHI REM",   _v(rsum,"ahi_rem",fmt="{:.1f}"),  ""],
              ["AHI NREM",  _v(rsum,"ahi_nrem",fmt="{:.1f}"), ""],
              [t("pdf_avg_apnea_dur", lang), f"{rsum.get('avg_apnea_dur_s','—')} s", ""],
-             ["Max. apnea-duur",            f"{rsum.get('max_apnea_dur_s','—')} s", ""],
+             [t("pdf_max_apnea_dur", lang),  f"{rsum.get('max_apnea_dur_s','—')} s", ""],
             ], [8, 4, 5])])); sp(0.1)
 
         # v0.8.37: Position × stage cross-table
@@ -1670,7 +1668,7 @@ def generate_pdf_report(results:dict, output_path:str,
             story.append(_hdr(t("rpt_sec8b", lang),color=BLUE)); sp(0.1)
             rdi=_f(asum,"rdi")
             story.append(_tbl([t("pdf_param",lang),t("pdf_value",lang)],[
-                ["Arousal index (AI)",       f"{asum.get('arousal_index','—')} /u"],
+                [t("pdf_arousal_index", lang),       f"{asum.get('arousal_index','—')} /u"],
                 [t("pdf_resp_arousals",lang),    str(asum.get("n_respiratory_arousals","—"))],
                 [t("pdf_spont_arousals",lang),        str(asum.get("n_spontaneous_arousals","—"))],
                 ["RERA's",                   str(asum.get("n_reras","—"))],
@@ -1694,13 +1692,15 @@ def generate_pdf_report(results:dict, output_path:str,
             ]
             if bb.get("avg_flattening") is not None:
                 flat_val = bb["avg_flattening"]
-                flat_label = "normaal" if flat_val < 0.25 else "verhoogd" if flat_val < 0.40 else "hoog (flow-limitatie)"
+                flat_label = (t("pdf_flat_normal", lang) if flat_val < 0.25
+                              else t("pdf_flat_elevated", lang) if flat_val < 0.40
+                              else t("pdf_flat_high", lang))
                 rows.append([t("pdf_mean_flattening", lang), f"{flat_val:.2f} ({flat_label})"])
             story.append(_tbl([t("pdf_param", lang), t("pdf_value", lang)], rows, [9, 8])); sp(0.15)
 
         if resp.get("dual_sensor"):
             story.append(Paragraph(
-                "<i>Dual-sensor scoring: apneu op thermistor, hypopneu op nasale druk (AASM 2.6).</i>",
+                t("pdf_dual_sensor_note", lang),
                 styles["SM"]))
 
         # ── Scoring profielen tabel ───────────────────────────────

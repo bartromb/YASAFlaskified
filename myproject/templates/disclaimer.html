@@ -2,7 +2,7 @@
 {% block content %}
 <div class="container mt-4 mb-5" style="max-width: 800px;">
   <h2 class="text-primary mb-4">
-    <i class="bi bi-shield-exclamation"></i> Medical & Clinical Disclaimer
+    <i class="bi bi-shield-exclamation"></i> {{ t("disc_page_title") }}
   </h2>
 
   <div class="alert alert-warning">
@@ -10,55 +10,51 @@
   </div>
 
   <div class="card mb-3">
-    <div class="card-header bg-primary text-white">1. Research Software — Not a Medical Device</div>
+    <div class="card-header bg-primary text-white">{{ t("disc_s1_title") }}</div>
     <div class="card-body">
-      <p>YASAFlaskified and <code>psgscoring</code> are <strong>research software</strong>,
-      intended exclusively for use by qualified professionals (physicians, researchers,
-      registered polysomnographic technologists) in a research or clinical research context.</p>
-      <p>This software has <strong>not</strong> been evaluated, cleared, or approved by any
-      regulatory authority as a medical device, including:</p>
+      <p>{{ t("disc_s1_p1") | safe }}</p>
+      <p>{{ t("disc_s1_p2") | safe }}</p>
       <ul>
-        <li>European Union Medical Device Regulation (EU MDR 2017/745) — <strong>no CE mark</strong></li>
-        <li>U.S. Food and Drug Administration (FDA 21 CFR Part 820 / 510(k)) — <strong>no FDA clearance</strong></li>
-        <li>Any equivalent national or regional medical device framework</li>
+        <li>{{ t("disc_s1_l1") | safe }}</li>
+        <li>{{ t("disc_s1_l2") | safe }}</li>
+        <li>{{ t("disc_s1_l3") }}</li>
       </ul>
     </div>
   </div>
 
   <div class="card mb-3">
-    <div class="card-header bg-primary text-white">2. Not a Substitute for Clinical Judgement</div>
+    <div class="card-header bg-primary text-white">{{ t("disc_s2_title") }}</div>
     <div class="card-body">
-      <p>All computed indices — including AHI, OAHI, ODI, PLMI, arousal index, and RDI —
-      are <strong>research-grade estimates</strong>. They must be:</p>
+      <p>{{ t("disc_s2_p1") | safe }}</p>
       <ul>
-        <li>Reviewed by a qualified, licensed clinician before any diagnostic or therapeutic decision</li>
-        <li>Validated against manual scoring by a registered polysomnographic technologist (RPSGT)</li>
-        <li>Interpreted in the context of the full clinical picture and patient history</li>
+        <li>{{ t("disc_s2_l1") }}</li>
+        <li>{{ t("disc_s2_l2") }}</li>
+        <li>{{ t("disc_s2_l3") }}</li>
       </ul>
     </div>
   </div>
 
   <div class="card mb-3">
-    <div class="card-header bg-primary text-white">3. Intended Use</div>
+    <div class="card-header bg-primary text-white">{{ t("disc_s3_title") }}</div>
     <div class="card-body">
       <div class="row">
         <div class="col-md-6">
-          <h6 class="text-success">✓ Designed for:</h6>
+          <h6 class="text-success">✓ {{ t("disc_s3_designed_for") }}</h6>
           <ul>
-            <li>Academic sleep research</li>
-            <li>Algorithm development and benchmarking</li>
-            <li>Clinical research under ethics committee approval</li>
-            <li>Educational purposes in sleep medicine</li>
-            <li>Second opinion and screening</li>
+            <li>{{ t("disc_s3_for_1") }}</li>
+            <li>{{ t("disc_s3_for_2") }}</li>
+            <li>{{ t("disc_s3_for_3") }}</li>
+            <li>{{ t("disc_s3_for_4") }}</li>
+            <li>{{ t("disc_s3_for_5") }}</li>
           </ul>
         </div>
         <div class="col-md-6">
-          <h6 class="text-danger">✗ NOT designed for:</h6>
+          <h6 class="text-danger">✗ {{ t("disc_s3_not_for") }}</h6>
           <ul>
-            <li>Standalone clinical diagnosis without expert review</li>
-            <li>Automated treatment decisions</li>
-            <li>Unsupervised patient screening programmes</li>
-            <li>Any setting where output directly determines patient care</li>
+            <li>{{ t("disc_s3_not_1") }}</li>
+            <li>{{ t("disc_s3_not_2") }}</li>
+            <li>{{ t("disc_s3_not_3") }}</li>
+            <li>{{ t("disc_s3_not_4") }}</li>
           </ul>
         </div>
       </div>
@@ -66,30 +62,24 @@
   </div>
 
   <div class="card mb-3">
-    <div class="card-header bg-primary text-white">4. Validation Status</div>
+    <div class="card-header bg-primary text-white">{{ t("disc_s4_title") }}</div>
     <div class="card-body">
-      <p>External validation on the <a href="https://physionet.org/content/psg-ipa/" target="_blank">PSG-IPA dataset</a>
-      (PhysioNet, 5 recordings, 47 independent scorer sessions) demonstrated
-      mean |ΔAHI| = 1.9/h and severity concordance of 4/5 (80%).</p>
-      <p>A formal single-centre validation study (AZORG-YASA-2026-001, n≥50) is in preparation.
-      Until peer-reviewed results are published, all outputs should be treated as
-      <strong>preliminary</strong> and verified by a qualified clinician.</p>
+      <p>{{ t("disc_s4_p1") }}
+      <a href="https://physionet.org/content/psg-ipa/" target="_blank">PSG-IPA</a>.</p>
+      <p>{{ t("disc_s4_p2") | safe }}</p>
     </div>
   </div>
 
   <div class="card mb-3">
-    <div class="card-header bg-primary text-white">5. No Warranty</div>
+    <div class="card-header bg-primary text-white">{{ t("disc_s5_title") }}</div>
     <div class="card-body">
-      <p class="text-muted small">THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-      EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-      FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS
-      BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY.</p>
+      <p class="text-muted small">{{ t("disc_s5_p1") }}</p>
     </div>
   </div>
 
   <p class="text-muted small text-center mt-4">
     psgscoring v{{ PSGSCORING_VERSION }} · YASAFlaskified v{{ APP_VERSION }} · April 2026<br>
-    <a href="https://github.com/bartromb/psgscoring/blob/main/DISCLAIMER.md">Full DISCLAIMER.md on GitHub</a>
+    <a href="https://github.com/bartromb/psgscoring/blob/main/DISCLAIMER.md">{{ t("disc_footer") }}</a>
   </p>
 </div>
 {% endblock %}

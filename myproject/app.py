@@ -250,7 +250,7 @@ class Site(db.Model):
     email     = db.Column(db.String(150), default="")
     logo_path = db.Column(db.String(300), default="")
     url       = db.Column(db.String(200), default="")
-    language  = db.Column(db.String(5),   default="nl")
+    language  = db.Column(db.String(5),   default="en")
     users     = db.relationship("User", backref="site", lazy=True)
 
     def to_config_dict(self):
@@ -276,7 +276,7 @@ class User(UserMixin, db.Model):
     password = db.Column(db.String(150), nullable=False)
     role     = db.Column(db.String(20),  nullable=False, default="user")
     site_id  = db.Column(db.Integer, db.ForeignKey("site.id"), nullable=True)
-    language = db.Column(db.String(5),   nullable=False, default="nl")
+    language = db.Column(db.String(5),   nullable=False, default="en")
 
     @property
     def is_admin(self):
@@ -617,7 +617,7 @@ def requires_role(*roles):
                 return redirect(url_for("login"))
             if current_user.role not in roles:
                 flash(get_translation("insufficient_rights",
-                                      session.get("lang", "nl")), "danger")
+                                      session.get("lang", "en")), "danger")
                 return redirect(url_for("upload_file"))
             return f(*args, **kwargs)
         return decorated
@@ -866,7 +866,7 @@ def login():
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
         if not username or not password:
-            flash(get_translation("login_failed", session.get("lang", "nl")), "danger")
+            flash(get_translation("login_failed", session.get("lang", "en")), "danger")
             return redirect(url_for("login"))
         user = User.query.filter_by(username=username).first()
         if user and check_password_hash(user.password, password):
@@ -875,9 +875,9 @@ def login():
             # v0.8.11 FIX: taal uit USER DATABASE, niet uit formulier
             # Het login-formulier heeft geen lang_select veld.
             # De user.language is gezet via admin user management.
-            user_lang = getattr(user, "language", None) or "nl"
+            user_lang = getattr(user, "language", None) or "en"
             if user_lang not in SUPPORTED_LANGS:
-                user_lang = "nl"
+                user_lang = "en"
             session["lang"] = user_lang
             session.modified = True
             flash(get_translation("login_success", user_lang), "success")
@@ -888,7 +888,7 @@ def login():
                 return redirect(url_for("dashboard"))
             return redirect(url_for("upload_file"))
         logger.warning(f"Failed login for {username} from {request.remote_addr}")
-        flash(get_translation("login_failed", session.get("lang", "nl")), "danger")
+        flash(get_translation("login_failed", session.get("lang", "en")), "danger")
     return render_template("login.html")
 
 
@@ -896,7 +896,7 @@ def login():
 @login_required
 def logout():
     logout_user()
-    flash(get_translation("logged_out", session.get("lang","nl")), "info")
+    flash(get_translation("logged_out", session.get("lang","en")), "info")
     return redirect(url_for("login"))
 
 
@@ -904,26 +904,26 @@ def logout():
 @login_required
 def register():
     if current_user.username != "admin":
-        flash(get_translation("admin_only", session.get("lang","nl")), "danger")
+        flash(get_translation("admin_only", session.get("lang","en")), "danger")
         return redirect(url_for("upload_file"))
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
         if not username or not password:
-            flash(get_translation("all_fields_required", session.get("lang","nl")), "danger")
+            flash(get_translation("all_fields_required", session.get("lang","en")), "danger")
             return redirect(url_for("register"))
         is_valid, message = validate_password_strength(password)
         if not is_valid:
             flash(message, "danger")
             return redirect(url_for("register"))
         if User.query.filter_by(username=username).first():
-            flash(get_translation("username_exists", session.get("lang","nl")), "danger")
+            flash(get_translation("username_exists", session.get("lang","en")), "danger")
             return redirect(url_for("register"))
         hashed = generate_password_hash(password, method="pbkdf2:sha256", salt_length=16)
         db.session.add(User(username=username, password=hashed))
         db.session.commit()
         logger.info(f"New user registered: {username}")
-        flash(get_translation("user_created", session.get("lang","nl")), "success")
+        flash(get_translation("user_created", session.get("lang","en")), "success")
         return redirect(url_for("login"))
     return render_template("register.html")
 
@@ -936,13 +936,13 @@ def change_password():
         new_password     = request.form.get("new_password")
         confirm_password = request.form.get("confirm_password")
         if not all([current_password, new_password, confirm_password]):
-            flash(get_translation("all_fields_required", session.get("lang","nl")), "danger")
+            flash(get_translation("all_fields_required", session.get("lang","en")), "danger")
             return redirect(url_for("change_password"))
         if not check_password_hash(current_user.password, current_password):
-            flash(get_translation("wrong_password", session.get("lang","nl")), "danger")
+            flash(get_translation("wrong_password", session.get("lang","en")), "danger")
             return redirect(url_for("change_password"))
         if new_password != confirm_password:
-            flash(get_translation("password_mismatch", session.get("lang","nl")), "danger")
+            flash(get_translation("password_mismatch", session.get("lang","en")), "danger")
             return redirect(url_for("change_password"))
         is_valid, message = validate_password_strength(new_password)
         if not is_valid:
@@ -951,7 +951,7 @@ def change_password():
         current_user.password = generate_password_hash(
             new_password, method="pbkdf2:sha256", salt_length=16)
         db.session.commit()
-        flash(get_translation("password_changed", session.get("lang","nl")), "success")
+        flash(get_translation("password_changed", session.get("lang","en")), "success")
         return redirect(url_for("upload_file"))
     return render_template("change_password.html")
 
@@ -987,7 +987,7 @@ def admin_add_user():
     password = request.form.get("new_password", "").strip()
     role     = request.form.get("new_role",     "user").strip()
     site_id  = request.form.get("new_site_id",  "").strip() or None
-    lang     = request.form.get("new_lang",     "nl").strip()
+    lang     = request.form.get("new_lang",     "en").strip()
 
     # Site-managers kunnen enkel 'user' aanmaken voor hun eigen site
     if current_user.role == "site":
@@ -997,17 +997,17 @@ def admin_add_user():
     if role not in ("admin", "site", "user"):
         role = "user"
     if lang not in SUPPORTED_LANGS:
-        lang = "nl"
+        lang = "en"
 
     if not username or not password:
-        flash(get_translation("all_fields_required", session.get("lang","nl")), "danger")
+        flash(get_translation("all_fields_required", session.get("lang","en")), "danger")
         return redirect(url_for("admin_users"))
     is_valid, message = validate_password_strength(password)
     if not is_valid:
         flash(message, "danger")
         return redirect(url_for("admin_users"))
     if User.query.filter_by(username=username).first():
-        flash(f"{username}: " + get_translation("user_exists", session.get("lang","nl")), "danger")
+        flash(f"{username}: " + get_translation("user_exists", session.get("lang","en")), "danger")
         return redirect(url_for("admin_users"))
     hashed = generate_password_hash(password, method="pbkdf2:sha256", salt_length=16)
     db.session.add(User(
@@ -1015,7 +1015,7 @@ def admin_add_user():
         role=role, site_id=int(site_id) if site_id else None, language=lang))
     db.session.commit()
     logger.info(f"Admin created user: {username} (role={role}, site={site_id})")
-    flash(f"{username}: " + get_translation("user_created", session.get("lang","nl")), "success")
+    flash(f"{username}: " + get_translation("user_created", session.get("lang","en")), "success")
     return redirect(url_for("admin_users"))
 
 
@@ -1029,7 +1029,7 @@ def admin_reset_password(user_id):
         abort(403)
     new_pw = request.form.get("reset_password", "").strip()
     if not new_pw:
-        flash(get_translation("all_fields_required", session.get("lang","nl")), "danger")
+        flash(get_translation("all_fields_required", session.get("lang","en")), "danger")
         return redirect(url_for("admin_users"))
     is_valid, message = validate_password_strength(new_pw)
     if not is_valid:
@@ -1038,7 +1038,7 @@ def admin_reset_password(user_id):
     user.password = generate_password_hash(new_pw, method="pbkdf2:sha256", salt_length=16)
     db.session.commit()
     logger.info(f"Admin reset password for: {user.username}")
-    flash(f"{user.username}: " + get_translation("password_changed", session.get("lang","nl")), "success")
+    flash(f"{user.username}: " + get_translation("password_changed", session.get("lang","en")), "success")
     return redirect(url_for("admin_users"))
 
 
@@ -1048,14 +1048,14 @@ def admin_reset_password(user_id):
 def admin_delete_user(user_id):
     user = User.query.get_or_404(user_id)
     if user.username == "admin":
-        flash(get_translation("admin_cannot_delete", session.get("lang","nl")), "danger")
+        flash(get_translation("admin_cannot_delete", session.get("lang","en")), "danger")
         return redirect(url_for("admin_users"))
     if current_user.role == "site" and user.site_id != current_user.site_id:
         abort(403)
     logger.info(f"Admin deleted user: {user.username}")
     db.session.delete(user)
     db.session.commit()
-    flash(f"{user.username}: " + get_translation("user_deleted", session.get("lang","nl")), "success")
+    flash(f"{user.username}: " + get_translation("user_deleted", session.get("lang","en")), "success")
     return redirect(url_for("admin_users"))
 
 
@@ -1065,20 +1065,20 @@ def admin_delete_user(user_id):
 def admin_set_role(user_id):
     user = User.query.get_or_404(user_id)
     if user.username == "admin":
-        flash(get_translation("admin_role_fixed", session.get("lang","nl")), "danger")
+        flash(get_translation("admin_role_fixed", session.get("lang","en")), "danger")
         return redirect(url_for("admin_users"))
     new_role = request.form.get("role", "user").strip()
     if new_role not in ("admin", "site", "user"):
-        flash(get_translation("invalid_role", session.get("lang","nl")), "danger")
+        flash(get_translation("invalid_role", session.get("lang","en")), "danger")
         return redirect(url_for("admin_users"))
     site_id  = request.form.get("site_id", "").strip() or None
-    lang     = request.form.get("language", "nl").strip()
+    lang     = request.form.get("language", "en").strip()
     user.role    = new_role
     user.site_id = int(site_id) if site_id else None
-    user.language= lang if lang in SUPPORTED_LANGS else "nl"
+    user.language= lang if lang in SUPPORTED_LANGS else "en"
     db.session.commit()
     logger.info(f"Admin updated {user.username}: role={new_role}, site={site_id}")
-    flash(f"{user.username}: " + get_translation("user_updated", session.get("lang","nl")), "success")
+    flash(f"{user.username}: " + get_translation("user_updated", session.get("lang","en")), "success")
     return redirect(url_for("admin_users"))
 
 
@@ -1098,11 +1098,11 @@ def admin_sites():
 def admin_add_site():
     name = request.form.get("name", "").strip()
     if not name:
-        flash(get_translation("site_name_required", session.get("lang","nl")), "danger")
+        flash(get_translation("site_name_required", session.get("lang","en")), "danger")
         return redirect(url_for("admin_sites"))
-    lang = request.form.get("language", "nl")
+    lang = request.form.get("language", "en")
     if lang not in SUPPORTED_LANGS:
-        lang = "nl"
+        lang = "en"
     site = Site(
         name=name,
         address  =request.form.get("address",   "").strip(),
@@ -1114,7 +1114,7 @@ def admin_add_site():
     )
     db.session.add(site)
     db.session.commit()
-    flash(f"{name}: " + get_translation("site_created", session.get("lang","nl")), "success")
+    flash(f"{name}: " + get_translation("site_created", session.get("lang","en")), "success")
     return redirect(url_for("admin_sites"))
 
 
@@ -1129,10 +1129,10 @@ def admin_edit_site(site_id):
     site.email    = request.form.get("email",     "").strip()
     site.logo_path= request.form.get("logo_path", "").strip()
     site.url      = request.form.get("url",       "").strip()
-    lang = request.form.get("language", "nl")
-    site.language = lang if lang in SUPPORTED_LANGS else "nl"
+    lang = request.form.get("language", "en")
+    site.language = lang if lang in SUPPORTED_LANGS else "en"
     db.session.commit()
-    flash(f"{site.name}: " + get_translation("site_updated", session.get("lang","nl")), "success")
+    flash(f"{site.name}: " + get_translation("site_updated", session.get("lang","en")), "success")
     return redirect(url_for("admin_sites"))
 
 
@@ -1142,12 +1142,12 @@ def admin_edit_site(site_id):
 def admin_delete_site(site_id):
     site = Site.query.get_or_404(site_id)
     if site.users:
-        flash(f"{site.name}: " + get_translation("site_has_users", session.get("lang","nl")), "danger")
+        flash(f"{site.name}: " + get_translation("site_has_users", session.get("lang","en")), "danger")
         return redirect(url_for("admin_sites"))
     name = site.name
     db.session.delete(site)
     db.session.commit()
-    flash(f"{name}: " + get_translation("site_deleted", session.get("lang","nl")), "success")
+    flash(f"{name}: " + get_translation("site_deleted", session.get("lang","en")), "success")
     return redirect(url_for("admin_sites"))
 
 
@@ -1334,7 +1334,7 @@ def process_file():
     raw_selected_channels = request.form.get("selected_channels", "{}").strip()
     filepath = request.form.get("filepath")
     if not filepath:
-        flash(get_translation("invalid_file", session.get("lang","nl")), "danger")
+        flash(get_translation("invalid_file", session.get("lang","en")), "danger")
         return redirect(url_for("upload_file"))
     try:
         selected_channels = json.loads(raw_selected_channels) if raw_selected_channels else {}
@@ -1349,15 +1349,15 @@ def process_file():
         session["processed_files"] = session.get("processed_files", []) + [
             {"filename": os.path.basename(filepath), "job_id": job.id}
         ]
-        flash(get_translation("processing_started", session.get("lang","nl")), "success")
+        flash(get_translation("processing_started", session.get("lang","en")), "success")
         return redirect(url_for("processing"))
     except json.JSONDecodeError as e:
         logger.error(f"Invalid JSON for selected_channels: {e}")
-        flash(get_translation("invalid_channels", session.get("lang","nl")), "danger")
+        flash(get_translation("invalid_channels", session.get("lang","en")), "danger")
         return redirect(url_for("upload_file"))
     except Exception as e:
         logger.error(f"Error enqueuing file processing: {e}")
-        flash(get_translation("processing_failed", session.get("lang","nl")), "danger")
+        flash(get_translation("processing_failed", session.get("lang","en")), "danger")
         return redirect(url_for("upload_file"))
 
 
@@ -1503,12 +1503,12 @@ def channel_select(job_id):
 
     filepath_bytes = redis_conn.get(f"{job_id}_filepath")
     if not filepath_bytes:
-        flash(get_translation("session_expired", session.get("lang","nl")), "danger")
+        flash(get_translation("session_expired", session.get("lang","en")), "danger")
         return redirect(url_for("upload_file"))
 
     filepath = filepath_bytes.decode("utf-8")
     if not os.path.exists(filepath):
-        flash(get_translation("file_not_available", session.get("lang","nl")), "danger")
+        flash(get_translation("file_not_available", session.get("lang","en")), "danger")
         return redirect(url_for("upload_file"))
 
     try:
@@ -1627,7 +1627,7 @@ def channel_select(job_id):
 
     except Exception as e:
         logger.error(f"Fout bij laden EDF voor kanaalkeuze: {e}", exc_info=True)
-        flash(get_translation("edf_read_error", session.get("lang","nl")) + f": {e}", "danger")
+        flash(get_translation("edf_read_error", session.get("lang","en")) + f": {e}", "danger")
         return redirect(url_for("upload_file"))
 
     return render_template(
@@ -1696,17 +1696,17 @@ def start_analysis():
     }
 
     if not job_id or not eeg_ch:
-        flash(get_translation("job_eeg_required", session.get("lang","nl")), "danger")
+        flash(get_translation("job_eeg_required", session.get("lang","en")), "danger")
         return redirect(url_for("upload_file"))
 
     filepath_bytes = redis_conn.get(f"{job_id}_filepath")
     if not filepath_bytes:
-        flash(get_translation("session_expired", session.get("lang","nl")), "danger")
+        flash(get_translation("session_expired", session.get("lang","en")), "danger")
         return redirect(url_for("upload_file"))
     filepath = filepath_bytes.decode("utf-8")
 
     if not os.path.exists(filepath):
-        flash(get_translation("file_not_available", session.get("lang","nl")), "danger")
+        flash(get_translation("file_not_available", session.get("lang","en")), "danger")
         return redirect(url_for("upload_file"))
 
     # Config opslaan voor de worker
@@ -1723,7 +1723,7 @@ def start_analysis():
         # v0.8.11: multi-site toegangscontrole
         "site_id":          current_user.site_id,
         "owner_username":   current_user.username,
-        "language":         session.get("lang", "nl"),
+        "language":         session.get("lang", "en"),
         # v0.8.22: scoring profiel
         "scoring_profile":  request.form.get("scoring_profile", "standard"),
         "study_type":       request.form.get("study_type", "diagnostic_psg"),
@@ -1748,7 +1748,7 @@ def start_analysis():
         logger.info(f"Analyse gestart: job_id={job_id}, rq={rq_job.id}")
     except Exception as e:
         logger.error(f"Fout bij starten analyse-job: {e}", exc_info=True)
-        flash(get_translation("worker_unavailable", session.get("lang","nl")), "danger")
+        flash(get_translation("worker_unavailable", session.get("lang","en")), "danger")
         return redirect(url_for("channel_select", job_id=job_id))
 
     return redirect(url_for("job_status", job_id=job_id))
@@ -1860,7 +1860,7 @@ def download_pdf(job_id):
         try:
             from generate_pdf_report import generate_pdf_report
             data = _load_results(job_id)
-            generate_pdf_report(data, pdf_path, lang=session.get("lang","nl"))
+            generate_pdf_report(data, pdf_path, lang=session.get("lang","en"))
         except Exception as e:
             logger.error(f"PDF genereren mislukt voor {job_id}: {e}", exc_info=True)
             abort(500, description=f"PDF kon niet gegenereerd worden: {e}")
@@ -1916,7 +1916,7 @@ def delete_study(job_id):
     import glob as _glob
     upload_folder = app.config["UPLOAD_FOLDER"]
     processed_folder = app.config.get("PROCESSED_FOLDER", upload_folder)
-    lang = session.get("lang", "nl")
+    lang = session.get("lang", "en")
 
     # ── Permissiecheck ──
     if not current_user.is_admin:
@@ -1976,7 +1976,9 @@ def delete_study(job_id):
                 job_id, deleted, len(errors_list), current_user.username)
 
     if errors_list:
-        flash(f"{get_translation('study_deleted', lang)} ({deleted} bestanden, {len(errors_list)} fouten)", "warning")
+        files_word = get_translation("files_word", lang)
+        errors_word = get_translation("errors_word", lang)
+        flash(f"{get_translation('study_deleted', lang)} ({deleted} {files_word}, {len(errors_list)} {errors_word})", "warning")
     else:
         flash(get_translation("study_deleted", lang), "success")
 
@@ -1997,7 +1999,7 @@ def reanalyze_study(job_id):
     """
     _require_job_access(job_id)
     upload_folder = app.config["UPLOAD_FOLDER"]
-    lang = session.get("lang", "nl")
+    lang = session.get("lang", "en")
 
     # ── Zoek EDF-bestand ──
     edf_path = None
@@ -2053,7 +2055,7 @@ def download_edfplus(job_id):
         )
 
     # Niet aanwezig → genereer nu (v14: edfio is snel, <10s)
-    lang = session.get("lang", "nl")
+    lang = session.get("lang", "en")
     try:
         from generate_edfplus import generate_edfplus
 
@@ -2117,36 +2119,43 @@ STANDARD_CONCLUSIONS = {
         "nl": "Normaal polysomnogram. Geen aanwijzingen voor obstructief slaapapneusyndroom (OSAS). Normale slaaparchitectuur. Geen klinisch significante periodieke beenbewegingen.",
         "fr": "Polysomnogramme normal. Aucun signe de syndrome d'apnées obstructives du sommeil (SAOS). Architecture du sommeil normale. Pas de mouvements périodiques des jambes cliniquement significatifs.",
         "en": "Normal polysomnogram. No evidence of obstructive sleep apnea syndrome (OSAS). Normal sleep architecture. No clinically significant periodic limb movements.",
+        "de": "Normales Polysomnogramm. Kein Hinweis auf ein obstruktives Schlafapnoe-Syndrom (OSAS). Normale Schlafarchitektur. Keine klinisch signifikanten periodischen Beinbewegungen.",
     },
     "mild_osas": {
         "nl": "Licht obstructief slaapapneusyndroom (licht OSAS). Behandelingssuggesties: positietherapie (vermijden rugligging), mandibulair repositieapparaat (MRA) overwegen, slaaphygiëne optimaliseren.",
         "fr": "Syndrome d'apnées obstructives du sommeil léger (SAOS léger). Suggestions thérapeutiques : thérapie positionnelle (éviter le décubitus dorsal), envisager une orthèse d'avancée mandibulaire (OAM), optimiser l'hygiène du sommeil.",
         "en": "Mild obstructive sleep apnea syndrome (mild OSAS). Treatment suggestions: positional therapy (avoid supine), consider mandibular advancement device (MAD), optimize sleep hygiene.",
+        "de": "Leichtes obstruktives Schlafapnoe-Syndrom (leichtes OSAS). Therapievorschläge: Lagerungstherapie (Rückenlage vermeiden), Unterkieferprotrusionsschiene (UPS) erwägen, Schlafhygiene optimieren.",
     },
     "moderate_osas": {
         "nl": "Matig obstructief slaapapneusyndroom (matig OSAS). Behandelingssuggesties: CPAP-therapie aanbevolen (eerste keuze), alternatief mandibulair repositieapparaat (MRA) bij CPAP-intolerantie, positietherapie als adjuvante behandeling.",
         "fr": "Syndrome d'apnées obstructives du sommeil modéré (SAOS modéré). Suggestions thérapeutiques : CPAP recommandé (premier choix), alternative orthèse d'avancée mandibulaire (OAM) en cas d'intolérance à la CPAP, thérapie positionnelle en traitement adjuvant.",
         "en": "Moderate obstructive sleep apnea syndrome (moderate OSAS). Treatment suggestions: CPAP therapy recommended (first-line), mandibular advancement device (MAD) if CPAP-intolerant, positional therapy as adjunctive treatment.",
+        "de": "Mittelschweres obstruktives Schlafapnoe-Syndrom (mittelschweres OSAS). Therapievorschläge: CPAP-Therapie empfohlen (Erstlinientherapie), alternativ Unterkieferprotrusionsschiene (UPS) bei CPAP-Unverträglichkeit, Lagerungstherapie als ergänzende Behandlung.",
     },
     "severe_osas": {
         "nl": "Ernstig obstructief slaapapneusyndroom (ernstig OSAS). Behandelingssuggesties: CPAP-therapie strikt aanbevolen (eerste keuze, dringend), bij ernstige desaturaties evaluatie voor zuurstoftherapie, KNO-evaluatie voor chirurgische opties bij anatomische obstructie.",
         "fr": "Syndrome d'apnées obstructives du sommeil sévère (SAOS sévère). Suggestions thérapeutiques : CPAP strictement recommandé (premier choix, urgent), évaluation pour oxygénothérapie en cas de désaturations sévères, évaluation ORL pour options chirurgicales en cas d'obstruction anatomique.",
         "en": "Severe obstructive sleep apnea syndrome (severe OSAS). Treatment suggestions: CPAP therapy strictly recommended (first-line, urgent), evaluate supplemental O2 for severe desaturations, ENT evaluation for surgical options with anatomical obstruction.",
+        "de": "Schweres obstruktives Schlafapnoe-Syndrom (schweres OSAS). Therapievorschläge: CPAP-Therapie dringend empfohlen (Erstlinientherapie, eilig), bei schweren Entsättigungen Prüfung einer Sauerstofftherapie, HNO-Evaluation für chirurgische Optionen bei anatomischer Obstruktion.",
     },
     "plms": {
         "nl": "Klinisch significante periodieke beenbewegingen tijdens slaap (PLMS). Suggestie: IJzerstatus (ferritine) controleren. Bij ferritine < 75 µg/L: ijzersuppletie. Bij persisterende klachten: dopamine-agonist overwegen.",
         "fr": "Mouvements périodiques des jambes pendant le sommeil cliniquement significatifs (MPJS). Suggestion : contrôler le statut en fer (ferritine). Si ferritine < 75 µg/L : supplémentation en fer. En cas de plaintes persistantes : envisager un agoniste dopaminergique.",
         "en": "Clinically significant periodic limb movements during sleep (PLMS). Suggestion: check iron status (ferritin). If ferritin < 75 µg/L: iron supplementation. If persistent symptoms: consider dopamine agonist.",
+        "de": "Klinisch signifikante periodische Beinbewegungen im Schlaf (PLMS). Empfehlung: Eisenstatus (Ferritin) überprüfen. Bei Ferritin < 75 µg/L: Eisensubstitution. Bei persistierenden Beschwerden: Dopamin-Agonist erwägen.",
     },
     "insomnia": {
         "nl": "Aanwijzingen voor insomnie. Verminderde slaapkwaliteit. Suggestie: Cognitieve gedragstherapie voor insomnie (CGT-i) is eerste keuze. Evaluatie slaaphygiëne. Medicamenteuze behandeling enkel op korte termijn.",
         "fr": "Signes d'insomnie. Qualité de sommeil réduite. Suggestion : la thérapie cognitivo-comportementale de l'insomnie (TCC-i) est le premier choix. Évaluation de l'hygiène du sommeil. Traitement médicamenteux uniquement à court terme.",
         "en": "Indicators of insomnia. Reduced sleep quality. Suggestion: Cognitive behavioral therapy for insomnia (CBT-I) is first-line. Sleep hygiene evaluation. Pharmacotherapy only short-term.",
+        "de": "Hinweise auf Insomnie. Verminderte Schlafqualität. Empfehlung: Kognitive Verhaltenstherapie bei Insomnie (KVT-I) ist Erstlinientherapie. Beurteilung der Schlafhygiene. Medikamentöse Behandlung nur kurzfristig.",
     },
     "weight_loss": {
         "nl": "Gewichtsreductie sterk aanbevolen. Vermagering kan de ernst van OSAS significant verminderen.",
         "fr": "Perte de poids fortement recommandée. La perte de poids peut réduire significativement la sévérité du SAOS.",
         "en": "Weight reduction strongly recommended. Weight loss can significantly reduce OSAS severity.",
+        "de": "Gewichtsreduktion dringend empfohlen. Eine Gewichtsabnahme kann die Schwere des OSAS signifikant verringern.",
     },
 }
 
@@ -2157,7 +2166,7 @@ STANDARD_CONCLUSIONS = {
 def api_get_conclusion(job_id):
     """Haal conclusie-data op: auto-suggestie + huidige manuele tekst."""
     data = _load_results(job_id)
-    lang = session.get("lang", "nl")
+    lang = session.get("lang", "en")
 
     pat = data.get("patient_info", {})
     pneumo = data.get("pneumo", {})
@@ -2197,7 +2206,7 @@ def api_get_conclusion(job_id):
     # Bouw auto-conclusie
     auto_parts = []
     for key in applicable:
-        auto_parts.append(STANDARD_CONCLUSIONS[key].get(lang, STANDARD_CONCLUSIONS[key]["nl"]))
+        auto_parts.append(STANDARD_CONCLUSIONS[key].get(lang, STANDARD_CONCLUSIONS[key]["en"]))
     auto_conclusion = "\n".join(auto_parts)
 
     # Check of er een manuele conclusie opgeslagen is
@@ -2211,7 +2220,7 @@ def api_get_conclusion(job_id):
     # Alle standaardbesluiten voor de dropdown
     all_standards = {}
     for key, texts in STANDARD_CONCLUSIONS.items():
-        all_standards[key] = texts.get(lang, texts["nl"])
+        all_standards[key] = texts.get(lang, texts["en"])
 
     return jsonify({
         "auto_conclusion": auto_conclusion,
@@ -2261,7 +2270,7 @@ def api_save_conclusion(job_id):
     try:
         from generate_pdf_report import generate_pdf_report
         pdf_path = os.path.join(app.config["UPLOAD_FOLDER"], f"{job_id}_rapport.pdf")
-        generate_pdf_report(data, pdf_path, lang=session.get("lang","nl"))
+        generate_pdf_report(data, pdf_path, lang=session.get("lang","en"))
         return jsonify({"status": "ok", "pdf_regenerated": True})
     except Exception as e:
         logger.error(f"PDF regeneratie mislukt: {e}")
@@ -2382,7 +2391,7 @@ def api_save_report(job_id):
         try:
             from generate_pdf_report import generate_pdf_report
             pdf_path = os.path.join(upload_folder, f"{job_id}_rapport.pdf")
-            generate_pdf_report(data, pdf_path, lang=session.get("lang","nl"))
+            generate_pdf_report(data, pdf_path, lang=session.get("lang","en"))
             pdf_ok = True
         except Exception as e:
             logger.error("PDF regeneratie mislukt: %s", e)
@@ -2938,15 +2947,17 @@ def csrf_error(e):
     logger.warning(f"CSRF-fout: {e.description}")
     if request.is_json or request.path.startswith("/api/"):
         return jsonify({"error": "CSRF-token ongeldig of verlopen.", "code": 400}), 400
-    flash(get_translation("session_expired", session.get("lang","nl")), "warning")
+    flash(get_translation("session_expired", session.get("lang","en")), "warning")
     return redirect(url_for("index"))
 
 @app.errorhandler(413)
 def too_large(e):
     max_mb = app.config["MAX_CONTENT_LENGTH"] // (1024 * 1024)
+    lang = session.get("lang", "en")
+    msg = get_translation("file_too_large", lang).format(max_mb=max_mb)
     if request.is_json or request.path.startswith("/api/"):
-        return jsonify({"error": f"Bestand te groot (max {max_mb} MB)"}), 413
-    flash(f"Bestand te groot. Maximum is {max_mb} MB.", "danger")
+        return jsonify({"error": msg}), 413
+    flash(msg, "danger")
     return redirect(url_for("upload_file"))
 
 @app.errorhandler(403)
@@ -2970,7 +2981,7 @@ def ratelimit_exceeded(e):
     # v0.8.11 FIX: NIET redirecten — dat veroorzaakt een loop
     # (429 → redirect(index) → redirect(login) → 429 → ...)
     return render_template("generic.html",
-        title="429", message=get_translation("rate_limited", session.get("lang","nl")),
+        title="429", message=get_translation("rate_limited", session.get("lang","en")),
     ), 429
 
 @app.errorhandler(500)
@@ -2979,7 +2990,7 @@ def internal_error(e):
     if request.is_json or request.path.startswith("/api/"):
         return jsonify({"error": "Interne serverfout.", "code": 500}), 500
     return render_template("generic.html",
-        title="500", message=get_translation("internal_error", session.get("lang","nl")),
+        title="500", message=get_translation("internal_error", session.get("lang","en")),
     ), 500
 
 
@@ -3032,7 +3043,7 @@ def initialize_database():
                 password=generate_password_hash(
                     admin_plain, method="pbkdf2:sha256", salt_length=16),
                 role="admin",
-                language="nl",
+                language="en",
             )
             db.session.add(admin)
             db.session.commit()
@@ -3066,7 +3077,7 @@ def initialize_database():
                 email    = site_cfg.get("email",  ""),
                 logo_path= site_cfg.get("logo_path",""),
                 url      = site_cfg.get("url",    "https://sleepai.be"),
-                language = "nl",
+                language = "en",
             )
             db.session.add(default_site)
             db.session.commit()
