@@ -2680,8 +2680,8 @@ _V0110_FRONT_LIGHT = {
     # New tech / pipeline stats for the hero panel
     "fp_stat_languages":   {"nl": "4 talen UI + rapport", "fr": "4 langues UI + rapport",
                             "en": "4 languages UI + report", "de": "4 Sprachen UI + Bericht"},
-    "fp_stat_aasm":        {"nl": "AASM 2.6",            "fr": "AASM 2.6",
-                            "en": "AASM 2.6",            "de": "AASM 2.6"},
+    "fp_stat_aasm":        {"nl": "AASM-compliant scoring",    "fr": "Scoring AASM-compliant",
+                            "en": "AASM-compliant scoring",     "de": "AASM-konformes Scoring"},
     "fp_stat_pipeline":    {"nl": "12-kanaals pipeline", "fr": "Pipeline 12 canaux",
                             "en": "12-channel pipeline", "de": "12-Kanal-Pipeline"},
 
@@ -2717,4 +2717,150 @@ _V0110_FRONT_LIGHT = {
     },
 }
 TRANSLATIONS.update(_V0110_FRONT_LIGHT)
+
+
+# ═══════════════════════════════════════════════════════════
+# v0.11.2: frontpage content refresh — drop AASM 2.6 hard claim,
+#          add "what's new" + "coming soon" + "work in progress" hint
+# ═══════════════════════════════════════════════════════════
+_V0112_FRONT_FRESH = {
+    # Work-in-progress disclaimer (top of hero, subtle)
+    "fp_wip_chip": {
+        "nl": "🚧 Actieve ontwikkeling — interface en functies veranderen regelmatig",
+        "fr": "🚧 Développement actif — l'interface et les fonctions évoluent régulièrement",
+        "en": "🚧 Active development — interface and features change regularly",
+        "de": "🚧 Aktive Entwicklung — Oberfläche und Funktionen ändern sich regelmäßig",
+    },
+
+    # "What's new" section
+    "fp_new_tag":   {"nl": "// Recent toegevoegd",  "fr": "// Récemment ajouté",
+                     "en": "// Recently added",     "de": "// Kürzlich hinzugefügt"},
+    "fp_new_title": {"nl": "Wat is nieuw in v0.11", "fr": "Nouveautés de la v0.11",
+                     "en": "What's new in v0.11",   "de": "Was ist neu in v0.11"},
+    "fp_new_lead":  {"nl": "Sinds de vorige landingspagina is YASAFlaskified flink uitgebreid. De belangrijkste verbeteringen:",
+                     "fr": "Depuis la précédente page d'accueil, YASAFlaskified s'est considérablement enrichi. Principales améliorations :",
+                     "en": "Since the previous landing page, YASAFlaskified has been substantially expanded. Key improvements:",
+                     "de": "Seit der vorherigen Landingpage wurde YASAFlaskified erheblich erweitert. Wichtigste Verbesserungen:"},
+
+    "fp_new_1_t":   {"nl": "Volledige 4-talen-interface",
+                     "fr": "Interface complète en 4 langues",
+                     "en": "Full 4-language interface",
+                     "de": "Vollständige 4-Sprachen-Oberfläche"},
+    "fp_new_1_b":   {"nl": "UI, foutmeldingen, PDF-rapport en dashboards in NL/FR/EN/DE — gebruiker kiest taal bij login of via picker bovenaan.",
+                     "fr": "UI, messages d'erreur, rapport PDF et tableaux de bord en NL/FR/EN/DE — choix de la langue à la connexion ou via le sélecteur en haut.",
+                     "en": "UI, error messages, PDF report, and dashboards in NL/FR/EN/DE — switch via the picker in the top bar or at login.",
+                     "de": "UI, Fehlermeldungen, PDF-Bericht und Dashboards in NL/FR/EN/DE — Sprachauswahl über den Picker oben oder bei der Anmeldung."},
+
+    "fp_new_2_t":   {"nl": "Signaalkwaliteit per kanaal",
+                     "fr": "Qualité du signal par canal",
+                     "en": "Per-channel signal quality grading",
+                     "de": "Signalqualität pro Kanal"},
+    "fp_new_2_b":   {"nl": "Automatische beoordeling (goed / acceptabel / slecht) op alle EEG-, EMG- en flow-kanalen — voorkomt verkeerde diagnose op slechte opnames.",
+                     "fr": "Évaluation automatique (bonne / acceptable / médiocre) sur tous les canaux EEG, EMG et flux — évite des diagnostics erronés sur des enregistrements de mauvaise qualité.",
+                     "en": "Automatic grading (good / acceptable / poor) on all EEG, EMG, and flow channels — prevents misdiagnosis from low-quality recordings.",
+                     "de": "Automatische Bewertung (gut / akzeptabel / schlecht) auf allen EEG-, EMG- und Flusskanälen — verhindert Fehldiagnosen bei schlechten Aufnahmen."},
+
+    "fp_new_3_t":   {"nl": "Staging-betrouwbaarheid",
+                     "fr": "Confiance du staging",
+                     "en": "Staging confidence",
+                     "de": "Staging-Konfidenz"},
+    "fp_new_3_b":   {"nl": "Per-epoch confidence-score uit het YASA-model; epochs onder 70 % gemarkeerd voor manuele review.",
+                     "fr": "Score de confiance par époque issu du modèle YASA ; les époques sous 70 % sont marquées pour revue manuelle.",
+                     "en": "Per-epoch confidence score from the YASA model; epochs under 70% are flagged for manual review.",
+                     "de": "Konfidenz-Score pro Epoche aus dem YASA-Modell; Epochen unter 70 % werden zur manuellen Überprüfung markiert."},
+
+    "fp_new_4_t":   {"nl": "OAHI 3-punt sweep + robuustheidsgraad",
+                     "fr": "Sweep OAHI à 3 points + grade de robustesse",
+                     "en": "OAHI 3-point sweep + robustness grade",
+                     "de": "OAHI 3-Punkt-Sweep + Robustheitsgrad"},
+    "fp_new_4_b":   {"nl": "OAHI berekend bij drie strikt­heidsdrempels — toont onmiddellijk of OSAS-diagnose stabiel is (grade A) of grensgeval (B/C).",
+                     "fr": "OAHI calculé à trois seuils de sévérité — montre immédiatement si le diagnostic SAOS est stable (grade A) ou limite (B/C).",
+                     "en": "OAHI computed at three strictness thresholds — instantly shows whether the OSAS diagnosis is stable (Grade A) or borderline (B/C).",
+                     "de": "OAHI bei drei Strenge-Schwellen berechnet — zeigt sofort, ob die OSAS-Diagnose stabil (Grad A) oder grenzwertig (B/C) ist."},
+
+    "fp_new_5_t":   {"nl": "Lichte interface + landingspagina",
+                     "fr": "Interface claire + page d'accueil",
+                     "en": "Light interface + landing page",
+                     "de": "Helle Oberfläche + Startseite"},
+    "fp_new_5_b":   {"nl": "Nieuwe lichtgewicht landingspagina met ingebouwde login — geen aparte loginscherm meer. Beter leesbaar onder klinische verlichting.",
+                     "fr": "Nouvelle page d'accueil épurée avec connexion intégrée — plus d'écran de connexion séparé. Mieux lisible sous éclairage clinique.",
+                     "en": "New lightweight landing page with embedded login — no separate sign-in screen. Better readability under clinical lighting.",
+                     "de": "Neue, schlanke Startseite mit integrierter Anmeldung — kein separates Login-Fenster mehr. Besser lesbar unter klinischer Beleuchtung."},
+
+    "fp_new_6_t":   {"nl": "Verifieerbare PDF-rapporten",
+                     "fr": "Rapports PDF vérifiables",
+                     "en": "Verifiable PDF reports",
+                     "de": "Verifizierbare PDF-Berichte"},
+    "fp_new_6_b":   {"nl": "Rapport-editor met verificatie­veld (slaaptechnicus/arts + datum), klinische diagnose-dropdown en aanpasbare header/logo per kliniek.",
+                     "fr": "Éditeur de rapport avec champ de vérification (technicien/médecin + date), liste déroulante de diagnostics cliniques et en-tête/logo personnalisable par clinique.",
+                     "en": "Report editor with a verification field (technician/physician + date), clinical diagnosis dropdown, and per-clinic customizable header/logo.",
+                     "de": "Berichts-Editor mit Verifizierungsfeld (Fachkraft/Ärztin/Arzt + Datum), Dropdown für klinische Diagnose und pro Klinik anpassbarer Kopfzeile/Logo."},
+
+    # Scoring profile note
+    "fp_scoring_profiles_t": {"nl": "Meerdere scoringsprofielen",
+                              "fr": "Plusieurs profils de scoring",
+                              "en": "Multiple scoring profiles",
+                              "de": "Mehrere Scoring-Profile"},
+    "fp_scoring_profiles_b": {"nl": "Naast het standaard AASM-profiel kan de bibliotheek <strong>psgscoring</strong> ook historische regelsets toepassen (R&amp;K 1968, AASM v1.0 → v3.0) — handig voor heranalyse van oudere studies of vergelijkend onderzoek.",
+                              "fr": "Outre le profil AASM standard, la bibliothèque <strong>psgscoring</strong> peut appliquer des règles historiques (R&amp;K 1968, AASM v1.0 → v3.0) — utile pour réanalyser d'anciennes études ou pour la recherche comparative.",
+                              "en": "Beyond the standard AASM profile, the <strong>psgscoring</strong> library can also apply historical rule sets (R&amp;K 1968, AASM v1.0 → v3.0) — useful for re-analyzing older studies or comparative research.",
+                              "de": "Neben dem Standard-AASM-Profil kann die Bibliothek <strong>psgscoring</strong> auch historische Regelwerke anwenden (R&amp;K 1968, AASM v1.0 → v3.0) — nützlich für die Reanalyse älterer Studien oder vergleichende Forschung."},
+
+    # Roadmap / Coming soon
+    "fp_road_tag":   {"nl": "// Op de roadmap",        "fr": "// Sur la feuille de route",
+                      "en": "// On the roadmap",       "de": "// Auf der Roadmap"},
+    "fp_road_title": {"nl": "Wat komt eraan",         "fr": "Ce qui arrive",
+                      "en": "What's coming next",     "de": "Was als Nächstes kommt"},
+    "fp_road_lead":  {"nl": "YASAFlaskified is een werk in opbouw. Onderstaande punten zijn in voorbereiding of in actief onderzoek.",
+                      "fr": "YASAFlaskified est en construction. Les éléments ci-dessous sont en préparation ou en cours de validation.",
+                      "en": "YASAFlaskified is a work in progress. The items below are in preparation or under active validation.",
+                      "de": "YASAFlaskified ist work in progress. Die folgenden Punkte sind in Vorbereitung oder werden aktiv validiert."},
+
+    "fp_road_1_t":   {"nl": "Klinische validatiestudie",  "fr": "Étude de validation clinique",
+                      "en": "Clinical validation study",  "de": "Klinische Validierungsstudie"},
+    "fp_road_1_b":   {"nl": "Monocentrische studie AZORG-YASA-2026-001 (n ≥ 50, ethisch protocol v7.0) — vergelijkt automatische scoring met manuele scoring door een geregistreerd polysomnograaf.",
+                      "fr": "Étude monocentrique AZORG-YASA-2026-001 (n ≥ 50, protocole éthique v7.0) — compare le scoring automatique au scoring manuel par un polysomnographe agréé.",
+                      "en": "Single-centre study AZORG-YASA-2026-001 (n ≥ 50, ethics protocol v7.0) — compares automated scoring to manual scoring by a registered polysomnographer.",
+                      "de": "Monozentrische Studie AZORG-YASA-2026-001 (n ≥ 50, Ethikprotokoll v7.0) — vergleicht automatisches Scoring mit manuellem Scoring durch eine registrierte Polysomnographin."},
+
+    "fp_road_2_t":   {"nl": "Peer-reviewed publicatie",   "fr": "Publication évaluée par les pairs",
+                      "en": "Peer-reviewed publication",  "de": "Peer-reviewte Publikation"},
+    "fp_road_2_b":   {"nl": "Paper v36 in pre-submission review bij <em>Physiological Measurement</em> (co-auteurs Vallat, Remy, Pevernagie).",
+                      "fr": "Article v36 en relecture préalable chez <em>Physiological Measurement</em> (co-auteurs Vallat, Remy, Pevernagie).",
+                      "en": "Paper v36 in pre-submission review at <em>Physiological Measurement</em> (co-authors Vallat, Remy, Pevernagie).",
+                      "de": "Paper v36 in der Pre-Submission-Begutachtung bei <em>Physiological Measurement</em> (Co-Autoren Vallat, Remy, Pevernagie)."},
+
+    "fp_road_3_t":   {"nl": "MESA-extern validatie",     "fr": "Validation externe MESA",
+                      "en": "MESA external validation",  "de": "MESA-Externe Validierung"},
+    "fp_road_3_b":   {"nl": "Validatie op de MESA-SHHS-datasets (≥ 2000 nachten) om de generaliseerbaarheid van psgscoring buiten één centrum aan te tonen.",
+                      "fr": "Validation sur les ensembles MESA-SHHS (≥ 2000 nuits) pour démontrer la généralisation de psgscoring au-delà d'un seul centre.",
+                      "en": "Validation on the MESA-SHHS datasets (≥ 2000 nights) to demonstrate generalization of psgscoring beyond a single centre.",
+                      "de": "Validierung auf den MESA-SHHS-Datensätzen (≥ 2000 Nächte) zur Demonstration der Generalisierung von psgscoring über ein Zentrum hinaus."},
+
+    "fp_road_4_t":   {"nl": "FHIR-export",               "fr": "Export FHIR",
+                      "en": "FHIR export",               "de": "FHIR-Export"},
+    "fp_road_4_b":   {"nl": "Automatische export van slaapdiagnose-bevindingen naar EPD-systemen via HL7 FHIR-resources.",
+                      "fr": "Export automatique des résultats de diagnostic du sommeil vers les systèmes DPI via les ressources HL7 FHIR.",
+                      "en": "Automatic export of sleep-diagnostic findings to EHR systems via HL7 FHIR resources.",
+                      "de": "Automatischer Export von Schlafdiagnose-Befunden in EPA/KIS-Systeme über HL7 FHIR-Ressourcen."},
+
+    "fp_road_5_t":   {"nl": "Update naar AASM Manual v3.0",
+                      "fr": "Mise à jour vers AASM Manual v3.0",
+                      "en": "Update to AASM Manual v3.0",
+                      "de": "Aktualisierung auf AASM Manual v3.0"},
+    "fp_road_5_b":   {"nl": "Implementatie van de wijzigingen uit de AASM Manual editie 3.0 (2023) — onder andere herziene RERA-criteria en strengere arousal-regels.",
+                      "fr": "Mise en œuvre des changements de l'édition 3.0 (2023) du manuel AASM — entre autres, critères RERA révisés et règles d'éveil plus strictes.",
+                      "en": "Implementation of the changes from AASM Manual edition 3.0 (2023) — including revised RERA criteria and stricter arousal rules.",
+                      "de": "Umsetzung der Änderungen aus dem AASM Manual Edition 3.0 (2023) — u. a. überarbeitete RERA-Kriterien und strengere Arousal-Regeln."},
+
+    "fp_road_6_t":   {"nl": "Manuele scorer-interface (bèta)",
+                      "fr": "Interface de scorage manuel (bêta)",
+                      "en": "Manual scorer interface (beta)",
+                      "de": "Manuelle Scorer-Oberfläche (Beta)"},
+    "fp_road_6_b":   {"nl": "Browser-gebaseerde hypnogram-editor en EDF-viewer — toelaten dat een arts ad-hoc AI-stages corrigeert of events toevoegt zonder externe software.",
+                      "fr": "Éditeur d'hypnogramme et visionneuse EDF dans le navigateur — permet à un médecin de corriger les stades IA ou d'ajouter des événements sans logiciel externe.",
+                      "en": "Browser-based hypnogram editor and EDF viewer — lets a clinician correct AI stages or add events ad hoc, no external software needed.",
+                      "de": "Browserbasierter Hypnogramm-Editor und EDF-Viewer — ermöglicht es einer Klinikerin, KI-Stadien zu korrigieren oder Ereignisse ad hoc hinzuzufügen, ohne externe Software."},
+}
+TRANSLATIONS.update(_V0112_FRONT_FRESH)
 

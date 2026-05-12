@@ -371,6 +371,61 @@
   /* Scroll reveal */
   .reveal { opacity: 0; transform: translateY(20px); transition: opacity .6s ease, transform .6s ease; }
   .revealed { opacity: 1; transform: none; }
+
+  /* WIP chip (top of hero) */
+  .wip-chip {
+    display: inline-flex; align-items: center; gap: .5rem;
+    margin-bottom: 1.25rem;
+    background: rgba(245, 158, 11, 0.10);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    color: #92400e;
+    border-radius: 999px;
+    padding: .35rem .9rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .72rem; letter-spacing: .04em;
+  }
+
+  /* "What's new" + "Roadmap" lists */
+  .item-list {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.2rem;
+    margin-top: 2.5rem;
+  }
+  @media (max-width: 900px) { .item-list { grid-template-columns: 1fr; } }
+  .item {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.4rem 1.5rem; display: flex; gap: 1rem;
+    align-items: flex-start;
+    box-shadow: var(--shadow-sm);
+  }
+  .item .item-icon {
+    flex-shrink: 0;
+    width: 36px; height: 36px; border-radius: 8px;
+    background: rgba(37,99,235,0.10); color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+  }
+  .item.coming .item-icon { background: rgba(124,58,237,0.10); color: var(--accent-2); }
+  .item h4 {
+    font-family: 'DM Serif Display', serif; font-size: 1.05rem;
+    margin: 0 0 .35rem; color: var(--text);
+  }
+  .item p { font-size: .88rem; color: var(--text-soft); margin: 0; line-height: 1.6; }
+  .item p em { color: var(--accent); font-style: italic; }
+
+  .scoring-note {
+    margin-top: 2rem;
+    background: var(--bg); border: 1px solid var(--border);
+    border-left: 3px solid var(--accent-3);
+    border-radius: 10px;
+    padding: 1.2rem 1.4rem;
+    display: flex; gap: 1rem; align-items: flex-start;
+    font-size: .92rem; color: var(--text-soft);
+  }
+  .scoring-note .sn-icon { font-size: 1.4rem; flex-shrink: 0; }
+  .scoring-note strong { color: var(--text); }
+
+  #new      { background: var(--bg); }
+  #roadmap  { background: var(--surface); border-top: 1px solid var(--border); }
 </style>
 </head>
 <body>
@@ -381,6 +436,8 @@
     <a href="#yasa">{{ t('fp_nav_yasa') }}</a>
     <a href="#app">{{ t('fp_nav_app') }}</a>
     <a href="#workflow">{{ t('fp_nav_workflow') }}</a>
+    <a href="#new">{{ t('fp_new_title') }}</a>
+    <a href="#roadmap">{{ t('fp_road_title') }}</a>
     <a href="#stack">{{ t('fp_nav_stack') }}</a>
     <a href="#credits">{{ t('fp_nav_credits') }}</a>
     <span class="lang-picker">
@@ -393,6 +450,7 @@
 
 <section class="hero">
   <div class="hero-left">
+    <span class="wip-chip">{{ t('fp_wip_chip') }}</span>
     <div class="section-tag">{{ t('fp_badge') }}</div>
     <h1>{{ t('fp_hero_title_1') }}<br><em>{{ t('fp_hero_title_2') }}</em></h1>
     <p class="hero-tag">{{ t('fp_hero_tagline') }}</p>
@@ -599,6 +657,86 @@ stats = yasa.<span class="fn">sleep_statistics</span>(hypno, sf_hyp=<span class=
         <div class="step-num">04</div>
         <h4>{{ t('fp_w_s4_title') }}</h4>
         <p>{{ t('fp_w_s4_body') }}</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHAT'S NEW -->
+<section id="new">
+  <div class="section-inner">
+    <div class="section-tag">{{ t('fp_new_tag') }}</div>
+    <h2 class="section-title reveal">{{ t('fp_new_title') }}</h2>
+    <p class="section-lead reveal">{{ t('fp_new_lead') }}</p>
+
+    <div class="item-list">
+      <div class="item reveal">
+        <span class="item-icon">🌍</span>
+        <div><h4>{{ t('fp_new_1_t') }}</h4><p>{{ t('fp_new_1_b') }}</p></div>
+      </div>
+      <div class="item reveal">
+        <span class="item-icon">🩺</span>
+        <div><h4>{{ t('fp_new_2_t') }}</h4><p>{{ t('fp_new_2_b') }}</p></div>
+      </div>
+      <div class="item reveal">
+        <span class="item-icon">🎯</span>
+        <div><h4>{{ t('fp_new_3_t') }}</h4><p>{{ t('fp_new_3_b') }}</p></div>
+      </div>
+      <div class="item reveal">
+        <span class="item-icon">📐</span>
+        <div><h4>{{ t('fp_new_4_t') }}</h4><p>{{ t('fp_new_4_b') }}</p></div>
+      </div>
+      <div class="item reveal">
+        <span class="item-icon">☀️</span>
+        <div><h4>{{ t('fp_new_5_t') }}</h4><p>{{ t('fp_new_5_b') }}</p></div>
+      </div>
+      <div class="item reveal">
+        <span class="item-icon">✍️</span>
+        <div><h4>{{ t('fp_new_6_t') }}</h4><p>{{ t('fp_new_6_b') }}</p></div>
+      </div>
+    </div>
+
+    <div class="scoring-note reveal">
+      <span class="sn-icon">📚</span>
+      <div>
+        <strong>{{ t('fp_scoring_profiles_t') }}.</strong>
+        {{ t('fp_scoring_profiles_b') | safe }}
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ROADMAP -->
+<section id="roadmap">
+  <div class="section-inner">
+    <div class="section-tag">{{ t('fp_road_tag') }}</div>
+    <h2 class="section-title reveal">{{ t('fp_road_title') }}</h2>
+    <p class="section-lead reveal">{{ t('fp_road_lead') }}</p>
+
+    <div class="item-list">
+      <div class="item coming reveal">
+        <span class="item-icon">🧪</span>
+        <div><h4>{{ t('fp_road_1_t') }}</h4><p>{{ t('fp_road_1_b') }}</p></div>
+      </div>
+      <div class="item coming reveal">
+        <span class="item-icon">📄</span>
+        <div><h4>{{ t('fp_road_2_t') }}</h4><p>{{ t('fp_road_2_b') | safe }}</p></div>
+      </div>
+      <div class="item coming reveal">
+        <span class="item-icon">🌐</span>
+        <div><h4>{{ t('fp_road_3_t') }}</h4><p>{{ t('fp_road_3_b') }}</p></div>
+      </div>
+      <div class="item coming reveal">
+        <span class="item-icon">🔗</span>
+        <div><h4>{{ t('fp_road_4_t') }}</h4><p>{{ t('fp_road_4_b') }}</p></div>
+      </div>
+      <div class="item coming reveal">
+        <span class="item-icon">📘</span>
+        <div><h4>{{ t('fp_road_5_t') }}</h4><p>{{ t('fp_road_5_b') }}</p></div>
+      </div>
+      <div class="item coming reveal">
+        <span class="item-icon">🖥️</span>
+        <div><h4>{{ t('fp_road_6_t') }}</h4><p>{{ t('fp_road_6_b') }}</p></div>
       </div>
     </div>
   </div>
