@@ -249,7 +249,7 @@ def generate_demo_edf(duration_min: int = DEMO_DURATION_MIN,
     for b in range(n_blocks):
         s = b * block_samples
         e = s + block_samples
-        block_data = [ch[3][s:e].astype(np.float64) for ch in channels]
+        block_data = [ch[2][s:e].astype(np.float64) for ch in channels]
         writer.writeSamples(block_data)
 
     writer.close()
