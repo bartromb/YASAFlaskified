@@ -13,7 +13,10 @@ AI-based sleep staging + AASM-compliant respiratory scoring + multilingual clini
 
 ~90-second walkthrough of the full pipeline: landing → sign in → EDF upload → channel auto-selection → analysis start → dashboard → results → report editor.
 
-https://github.com/bartromb/YASAFlaskified/releases/download/v0.11.2/en.mp4
+<video src="https://github.com/bartromb/YASAFlaskified/releases/download/v0.11.2/en.mp4" controls width="100%" poster="https://raw.githubusercontent.com/bartromb/YASAFlaskified/main/images/demo-poster.png">
+  Your browser does not support the video tag.
+  <a href="https://github.com/bartromb/YASAFlaskified/releases/download/v0.11.2/en.mp4">Download the demo video</a>.
+</video>
 
 Also available in **[🇧🇪 Dutch](https://github.com/bartromb/YASAFlaskified/releases/download/v0.11.2/nl.mp4)** · **[🇫🇷 French](https://github.com/bartromb/YASAFlaskified/releases/download/v0.11.2/fr.mp4)** · **[🇩🇪 German](https://github.com/bartromb/YASAFlaskified/releases/download/v0.11.2/de.mp4)**.
 
