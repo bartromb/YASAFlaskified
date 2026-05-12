@@ -4,784 +4,445 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{ t('fp_page_title') }}</title>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;500&family=Lato:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
 <style>
   :root {
-    --bg:        #060b18;
-    --bg2:       #0b1328;
-    --panel:     #0f1c3a;
-    --border:    rgba(56,189,248,0.12);
-    --accent:    #38bdf8;
-    --accent2:   #818cf8;
-    --accent3:   #34d399;
-    --text:      #e2e8f0;
-    --muted:     #64748b;
-    --glow:      rgba(56,189,248,0.18);
+    --bg:        #f7f9fc;
+    --surface:   #ffffff;
+    --surface-2: #f1f4fa;
+    --border:    rgba(15, 28, 58, 0.08);
+    --border-2:  rgba(15, 28, 58, 0.14);
+    --text:      #1a2233;
+    --text-soft: #475569;
+    --muted:     #6b7a99;
+    --accent:    #2563eb;
+    --accent-2:  #7c3aed;
+    --accent-3:  #059669;
+    --shadow-sm: 0 1px 2px rgba(15,28,58,0.04);
+    --shadow:    0 4px 24px rgba(15,28,58,0.06);
+    --shadow-lg: 0 18px 50px rgba(15,28,58,0.10);
   }
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+  * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
-
   body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Lato', sans-serif;
-    font-weight: 300;
-    line-height: 1.7;
-    overflow-x: hidden;
+    background: var(--bg); color: var(--text);
+    font-family: 'Lato', system-ui, -apple-system, sans-serif;
+    font-weight: 400; line-height: 1.65; margin: 0;
   }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
 
-  /* ─── NAV ─── */
-  nav {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 1.2rem 4rem;
-    background: rgba(6,11,24,0.7);
-    backdrop-filter: blur(14px);
+  /* ── NAV ── */
+  nav.topnav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(255,255,255,0.85); backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
+    padding: .9rem 1.6rem;
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
   }
-  .nav-brand {
-    font-family: 'DM Serif Display', serif;
-    font-size: 1.3rem;
-    color: var(--accent);
-    letter-spacing: 0.02em;
-    text-decoration: none;
+  .brand {
+    font-family: 'DM Serif Display', serif; font-size: 1.25rem;
+    color: var(--accent); letter-spacing: .01em;
   }
-  .nav-brand span { color: var(--text); }
-  .nav-links { display: flex; gap: 2.5rem; align-items: center; }
+  .brand span { color: var(--text); }
+  .nav-links { display: flex; gap: 1.6rem; align-items: center; flex-wrap: wrap; }
   .nav-links a {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.78rem;
-    font-weight: 400;
-    color: var(--muted);
-    text-decoration: none;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    transition: color .25s;
+    font-family: 'JetBrains Mono', monospace; font-size: .76rem;
+    letter-spacing: .07em; text-transform: uppercase; color: var(--text-soft);
   }
-  .nav-links a:hover { color: var(--accent); }
-  .btn-login {
-    padding: .55rem 1.5rem;
-    border: 1px solid var(--accent);
-    border-radius: 3px;
-    color: var(--accent) !important;
-    transition: background .25s, color .25s !important;
+  .nav-links a:hover { color: var(--accent); text-decoration: none; }
+  .lang-picker {
+    display: inline-flex; gap: 0; align-items: center;
+    border: 1px solid var(--border-2); border-radius: 999px;
+    padding: 2px; overflow: hidden;
   }
-  .btn-login:hover {
-    background: var(--accent) !important;
-    color: var(--bg) !important;
+  .lang-picker a {
+    padding: .25rem .65rem; font-family: 'JetBrains Mono', monospace;
+    font-size: .72rem; letter-spacing: .04em; color: var(--text-soft);
+    text-transform: uppercase; border-radius: 999px; transition: background .2s;
   }
+  .lang-picker a.active { background: var(--accent); color: #fff; }
+  .lang-picker a:hover { text-decoration: none; }
+  .lang-picker a:not(.active):hover { background: var(--surface-2); }
 
-  /* ─── HERO ─── */
+  /* ── HERO ── */
   .hero {
-    min-height: 100vh;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    text-align: center;
-    padding: 7rem 2rem 4rem;
-    position: relative;
-    overflow: hidden;
+    padding: 4.5rem 1.6rem 5rem;
+    max-width: 1200px; margin: 0 auto;
+    display: grid; grid-template-columns: 1.15fr .85fr; gap: 4rem; align-items: center;
   }
+  @media (max-width: 900px) { .hero { grid-template-columns: 1fr; gap: 2.5rem; padding: 3rem 1.2rem; } }
 
-  /* starfield */
-  .stars {
-    position: absolute; inset: 0; z-index: 0;
-    background:
-      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.5) 0%, transparent 100%),
-      radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.35) 0%, transparent 100%),
-      radial-gradient(1px 1px at 55% 15%, rgba(255,255,255,0.4) 0%, transparent 100%),
-      radial-gradient(1px 1px at 75% 75%, rgba(255,255,255,0.3) 0%, transparent 100%),
-      radial-gradient(1px 1px at 90% 40%, rgba(255,255,255,0.45) 0%, transparent 100%),
-      radial-gradient(1px 1px at 20% 85%, rgba(255,255,255,0.3) 0%, transparent 100%),
-      radial-gradient(1px 1px at 65% 50%, rgba(255,255,255,0.25) 0%, transparent 100%),
-      radial-gradient(1px 1px at 42% 92%, rgba(255,255,255,0.4) 0%, transparent 100%),
-      radial-gradient(1px 1px at 82% 10%, rgba(255,255,255,0.35) 0%, transparent 100%);
-  }
-
-  /* glow orbs */
-  .hero::before {
-    content: '';
-    position: absolute;
-    width: 700px; height: 700px;
-    border-radius: 50%;
-    background: radial-gradient(ellipse, rgba(56,189,248,0.07) 0%, transparent 70%);
-    top: 50%; left: 50%;
-    transform: translate(-50%, -55%);
-    pointer-events: none;
-  }
-  .hero::after {
-    content: '';
-    position: absolute;
-    width: 400px; height: 400px;
-    border-radius: 50%;
-    background: radial-gradient(ellipse, rgba(129,140,248,0.07) 0%, transparent 70%);
-    bottom: 10%; right: 15%;
-    pointer-events: none;
-  }
-
-  /* EEG canvas strip */
-  .eeg-strip {
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 110px;
-    opacity: 0.45;
-    z-index: 1;
-  }
-
-  .hero-content { position: relative; z-index: 2; max-width: 820px; }
-
-  .badge {
-    display: inline-flex; align-items: center; gap: .5rem;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.72rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--accent);
-    border: 1px solid rgba(56,189,248,0.3);
-    border-radius: 20px;
-    padding: .35rem 1rem;
-    margin-bottom: 2rem;
-    animation: fadeUp .8s ease both;
-  }
-  .badge::before {
-    content: '';
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--accent);
-    animation: pulse 2s infinite;
-  }
-
-  @keyframes pulse {
-    0%,100% { opacity: 1; transform: scale(1); }
-    50% { opacity: .4; transform: scale(1.5); }
-  }
-
-  .hero h1 {
+  .hero-left h1 {
     font-family: 'DM Serif Display', serif;
-    font-size: clamp(2.8rem, 6vw, 5rem);
-    line-height: 1.1;
-    letter-spacing: -0.01em;
-    color: #f0f6ff;
-    animation: fadeUp .9s .1s ease both;
+    font-size: clamp(2.2rem, 4.5vw, 3.4rem); line-height: 1.1;
+    margin: 0 0 1rem; color: var(--text);
   }
-  .hero h1 em {
-    font-style: italic;
-    color: var(--accent);
+  .hero-left h1 em { font-style: italic; color: var(--accent); }
+  .hero-tag {
+    font-size: 1.05rem; color: var(--text-soft);
+    max-width: 540px; margin: 0 0 2rem;
   }
-
-  .hero-sub {
-    margin-top: 1.5rem;
-    font-size: 1.1rem;
-    color: #94a3b8;
-    max-width: 580px;
-    margin-left: auto; margin-right: auto;
-    animation: fadeUp 1s .2s ease both;
-  }
-
-  .hero-cta {
-    margin-top: 2.8rem;
-    display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;
-    animation: fadeUp 1s .35s ease both;
-  }
-
-  .btn-primary {
-    padding: .85rem 2.5rem;
-    background: var(--accent);
-    color: var(--bg);
-    border: none;
-    border-radius: 4px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.85rem;
-    font-weight: 500;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    cursor: pointer;
-    text-decoration: none;
-    transition: transform .2s, box-shadow .2s;
-    box-shadow: 0 0 28px rgba(56,189,248,0.25);
-  }
-  .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 0 42px rgba(56,189,248,0.4);
-  }
-
-  .btn-ghost {
-    padding: .85rem 2.5rem;
-    background: transparent;
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.85rem;
-    font-weight: 400;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    cursor: pointer;
-    text-decoration: none;
-    transition: border-color .2s, color .2s;
-  }
-  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
-
   .hero-stats {
-    margin-top: 3.5rem;
-    display: flex; gap: 3rem; justify-content: center;
-    animation: fadeUp 1s .5s ease both;
+    display: flex; gap: 1.5rem; flex-wrap: wrap; margin: 0 0 1rem;
   }
-  .stat { text-align: center; }
-  .stat-num {
-    font-family: 'DM Serif Display', serif;
-    font-size: 2rem;
-    color: var(--accent);
-    line-height: 1;
+  .stat-pill {
+    display: inline-flex; align-items: center; gap: .5rem;
+    padding: .45rem .9rem; background: var(--surface);
+    border: 1px solid var(--border-2); border-radius: 999px;
+    font-family: 'JetBrains Mono', monospace; font-size: .76rem;
+    color: var(--text-soft); box-shadow: var(--shadow-sm);
   }
-  .stat-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.68rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+  .stat-pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+  .stat-pill.green .dot   { background: var(--accent-3); }
+  .stat-pill.purple .dot  { background: var(--accent-2); }
+  .scroll-cue {
+    margin-top: 2rem;
+    font-family: 'JetBrains Mono', monospace; font-size: .76rem;
     color: var(--muted);
-    margin-top: .3rem;
   }
 
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(22px); }
-    to   { opacity: 1; transform: translateY(0); }
+  /* ── LOGIN CARD ── */
+  .login-card {
+    background: var(--surface);
+    border: 1px solid var(--border-2);
+    border-radius: 16px;
+    box-shadow: var(--shadow-lg);
+    padding: 2rem 1.9rem;
+    position: relative; overflow: hidden;
+  }
+  .login-card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  }
+  .login-card h3 {
+    font-family: 'DM Serif Display', serif; font-size: 1.55rem;
+    margin: 0 0 .3rem; color: var(--text);
+  }
+  .login-card .login-sub {
+    font-size: .85rem; color: var(--muted); margin: 0 0 1.6rem;
+  }
+  .login-card .form-label {
+    font-size: .82rem; font-weight: 600; color: var(--text-soft);
+    margin-bottom: .35rem; display: flex; align-items: center; gap: .4rem;
+  }
+  .login-card .form-control {
+    border-radius: 8px; border: 1px solid var(--border-2);
+    padding: .65rem .85rem; font-size: 1rem;
+  }
+  .login-card .form-control:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+  }
+  .btn-signin {
+    width: 100%; background: var(--accent); color: #fff;
+    border: none; border-radius: 8px; padding: .75rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .85rem; font-weight: 500; letter-spacing: .06em;
+    text-transform: uppercase; cursor: pointer;
+    transition: background .2s, transform .15s;
+    margin-top: .4rem;
+  }
+  .btn-signin:hover { background: #1d4ed8; }
+  .btn-signin:active { transform: translateY(1px); }
+  .login-card .demo-link {
+    display: block; text-align: center; margin-top: 1.2rem;
+    font-size: .8rem; color: var(--muted);
+  }
+  .login-card .demo-link a { color: var(--accent); }
+
+  /* Flash messages embedded above login */
+  .flash-box { margin-bottom: 1rem; }
+  .flash-box .alert {
+    padding: .55rem .8rem; font-size: .85rem; border-radius: 8px;
+    margin-bottom: .4rem;
   }
 
-  /* ─── SECTION SHARED ─── */
-  section { padding: 6rem 4rem; }
-  .section-inner { max-width: 1100px; margin: 0 auto; }
+  /* ── SECTION SHARED ── */
+  section { padding: 5rem 1.6rem; }
+  .section-inner { max-width: 1200px; margin: 0 auto; }
   .section-tag {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.72rem;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 1rem;
+    font-size: .72rem; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: .8rem;
   }
   .section-title {
     font-family: 'DM Serif Display', serif;
-    font-size: clamp(2rem, 3.5vw, 2.8rem);
-    color: #f0f6ff;
-    line-height: 1.15;
-    margin-bottom: 1.2rem;
+    font-size: clamp(1.8rem, 3vw, 2.4rem); margin: 0 0 1rem;
+    color: var(--text); line-height: 1.2;
   }
   .section-lead {
-    font-size: 1.05rem;
-    color: #94a3b8;
-    max-width: 640px;
-    line-height: 1.75;
+    font-size: 1rem; color: var(--text-soft); max-width: 700px; line-height: 1.7;
+    margin: 0;
   }
 
-  /* ─── ABOUT YASA ─── */
-  #yasa { background: var(--bg2); }
-
+  /* ── ABOUT YASA ── */
+  #yasa { background: var(--surface); border-top: 1px solid var(--border); }
   .two-col {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 5rem;
-    align-items: center;
-    margin-top: 3.5rem;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 3rem;
+    align-items: start; margin-top: 2.5rem;
   }
-
-  .info-visual {
-    position: relative;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background: var(--panel);
-    padding: 2rem;
-    overflow: hidden;
+  @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; gap: 2rem; } }
+  .info-card {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.6rem;
   }
-  .info-visual::before {
-    content: '';
-    position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-  }
-
-  .hypnogram {
-    width: 100%;
-    height: 160px;
-  }
-
+  .hypnogram { width: 100%; height: 160px; }
   .code-block {
-    margin-top: 1.5rem;
-    background: rgba(0,0,0,0.4);
-    border-radius: 6px;
-    padding: 1.2rem 1.4rem;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.78rem;
-    line-height: 1.9;
-    color: #94a3b8;
-    border: 1px solid rgba(255,255,255,0.05);
+    margin-top: 1.2rem;
+    background: #0f1c3a; color: #cbd5e1;
+    border-radius: 8px; padding: 1.1rem 1.2rem;
+    font-family: 'JetBrains Mono', monospace; font-size: .78rem; line-height: 1.85;
   }
-  .code-block .kw { color: var(--accent2); }
-  .code-block .fn { color: var(--accent); }
-  .code-block .str { color: var(--accent3); }
-  .code-block .cm { color: #475569; }
+  .code-block .kw  { color: #818cf8; }
+  .code-block .fn  { color: #38bdf8; }
+  .code-block .str { color: #34d399; }
+  .code-block .cm  { color: #64748b; }
 
-  .feature-list { list-style: none; margin-top: 1.8rem; }
+  .feature-list { list-style: none; margin: 1.5rem 0 0; padding: 0; }
   .feature-list li {
-    display: flex; align-items: flex-start; gap: 1rem;
-    padding: .8rem 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 0.95rem;
-    color: #cbd5e1;
+    display: flex; align-items: flex-start; gap: .9rem;
+    padding: .9rem 0; border-bottom: 1px solid var(--border);
+    font-size: .95rem; color: var(--text-soft);
   }
   .feature-list li:last-child { border-bottom: none; }
   .feature-list .icon {
-    flex-shrink: 0;
-    width: 28px; height: 28px;
-    border-radius: 6px;
-    background: rgba(56,189,248,0.1);
-    border: 1px solid rgba(56,189,248,0.2);
+    flex-shrink: 0; width: 30px; height: 30px; border-radius: 6px;
+    background: rgba(37,99,235,0.08); border: 1px solid rgba(37,99,235,0.18);
     display: flex; align-items: center; justify-content: center;
-    font-size: 0.85rem;
-    margin-top: 2px;
+    font-size: .9rem; margin-top: 2px;
   }
+  .feature-list strong { color: var(--text); font-weight: 600; }
 
-  /* ─── ABOUT YASAFLASKIFIED ─── */
+  /* ── FEATURES (cards) ── */
   #app { background: var(--bg); }
-
   .cards {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem;
-    margin-top: 3.5rem;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem;
+    margin-top: 2.5rem;
   }
+  @media (max-width: 900px) { .cards { grid-template-columns: 1fr; } }
+  .card-light {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.5rem; box-shadow: var(--shadow-sm);
+    transition: transform .15s, box-shadow .2s, border-color .2s;
+  }
+  .card-light:hover {
+    transform: translateY(-2px); box-shadow: var(--shadow);
+    border-color: var(--border-2);
+  }
+  .card-light .card-icon { font-size: 1.7rem; display: block; margin-bottom: .8rem; }
+  .card-light h3 {
+    font-family: 'DM Serif Display', serif; font-size: 1.18rem;
+    color: var(--text); margin: 0 0 .5rem;
+  }
+  .card-light p { font-size: .9rem; color: var(--text-soft); margin: 0; line-height: 1.6; }
 
-  .card {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 2rem;
-    position: relative;
-    overflow: hidden;
-    transition: transform .25s, box-shadow .25s;
-  }
-  .card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 40px rgba(56,189,248,0.1);
-  }
-  .card::after {
-    content: '';
-    position: absolute; inset: 0;
-    background: linear-gradient(135deg, rgba(56,189,248,0.03) 0%, transparent 60%);
-    pointer-events: none;
-  }
-
-  .card-icon {
-    font-size: 1.8rem;
-    margin-bottom: 1.2rem;
-    display: block;
-  }
-  .card h3 {
-    font-family: 'DM Serif Display', serif;
-    font-size: 1.25rem;
-    color: #e2e8f0;
-    margin-bottom: .7rem;
-  }
-  .card p {
-    font-size: 0.9rem;
-    color: #64748b;
-    line-height: 1.7;
-  }
-
-  .card-accent { border-color: rgba(56,189,248,0.3); }
-  .card-accent::before {
-    content: '';
-    position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: var(--accent);
-  }
-
-  /* ─── WORKFLOW ─── */
-  #workflow {
-    background: var(--bg2);
-  }
-
+  /* ── WORKFLOW ── */
+  #workflow { background: var(--surface); border-top: 1px solid var(--border); }
   .steps {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0;
-    margin-top: 4rem;
-    position: relative;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;
+    margin-top: 3rem; position: relative;
   }
-  .steps::before {
-    content: '';
-    position: absolute;
-    top: 36px; left: 12.5%; right: 12.5%;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--accent), var(--accent2), transparent);
-    opacity: 0.4;
-    z-index: 0;
+  @media (max-width: 900px) {
+    .steps { grid-template-columns: repeat(2, 1fr); }
   }
-
-  .step {
-    text-align: center;
-    padding: 0 1.5rem;
-    position: relative;
-    z-index: 1;
-  }
+  @media (max-width: 600px) { .steps { grid-template-columns: 1fr; } }
+  .step { text-align: center; padding: 0 .8rem; }
   .step-num {
-    width: 72px; height: 72px;
-    border-radius: 50%;
-    background: var(--panel);
-    border: 2px solid var(--accent);
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--surface); border: 2px solid var(--accent);
     display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 1.5rem;
+    margin: 0 auto 1rem;
     font-family: 'DM Serif Display', serif;
-    font-size: 1.5rem;
-    color: var(--accent);
-    box-shadow: 0 0 24px rgba(56,189,248,0.15);
-    transition: box-shadow .3s;
-  }
-  .step:hover .step-num {
-    box-shadow: 0 0 40px rgba(56,189,248,0.35);
+    font-size: 1.2rem; color: var(--accent);
   }
   .step h4 {
-    font-family: 'DM Serif Display', serif;
-    font-size: 1.05rem;
-    color: #e2e8f0;
-    margin-bottom: .5rem;
+    font-family: 'DM Serif Display', serif; font-size: 1.05rem;
+    color: var(--text); margin: 0 0 .4rem;
   }
-  .step p {
-    font-size: 0.85rem;
-    color: var(--muted);
-    line-height: 1.65;
-  }
+  .step p { font-size: .87rem; color: var(--text-soft); margin: 0; }
 
-  /* ─── STACK ─── */
+  /* ── STACK ── */
   #stack { background: var(--bg); }
-
-  .tech-grid {
-    display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 3rem;
-  }
-
+  .tech-grid { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: 2rem; }
   .tech-tag {
-    display: flex; align-items: center; gap: .6rem;
-    padding: .6rem 1.2rem;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.8rem;
-    color: #94a3b8;
-    transition: border-color .2s, color .2s;
+    display: inline-flex; align-items: center; gap: .5rem;
+    padding: .45rem 1rem; background: var(--surface);
+    border: 1px solid var(--border-2); border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace; font-size: .8rem;
+    color: var(--text-soft);
   }
-  .tech-tag:hover { border-color: var(--accent); color: var(--accent); }
-  .tech-tag .dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-  }
+  .tech-tag .dot { width: 7px; height: 7px; border-radius: 50%; }
 
-  /* ─── CTA SECTION ─── */
-  #cta {
-    background: var(--bg2);
-    text-align: center;
-    padding: 7rem 4rem;
+  /* ── CREDITS ── */
+  #credits { background: var(--surface); border-top: 1px solid var(--border); }
+  .credits-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem;
+    margin-top: 2.5rem;
   }
+  @media (max-width: 900px) { .credits-grid { grid-template-columns: 1fr; } }
+  .credit-card {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.6rem; display: flex; gap: 1.2rem;
+  }
+  @media (max-width: 600px) { .credit-card { flex-direction: column; } }
+  .credit-card.primary { grid-column: 1 / -1; border-color: rgba(37,99,235,0.25); }
+  .credit-card.primary::before, .credit-card.paper::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  }
+  .credit-card { position: relative; overflow: hidden; }
+  .credit-card.primary::before {
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  }
+  .credit-card.paper { border-color: rgba(5,150,105,0.25); }
+  .credit-card.paper::before {
+    background: linear-gradient(90deg, var(--accent-3), var(--accent));
+  }
+  .credit-avatar {
+    flex-shrink: 0; width: 56px; height: 56px; border-radius: 50%;
+    background: rgba(37,99,235,0.08); border: 2px solid rgba(37,99,235,0.25);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Serif Display', serif; font-size: 1rem;
+    color: var(--accent);
+  }
+  .credit-avatar.mw { background: rgba(124,58,237,0.08); border-color: rgba(124,58,237,0.25); color: var(--accent-2); }
+  .credit-avatar.paper-icon { font-size: 1.6rem; background: rgba(5,150,105,0.08); border-color: rgba(5,150,105,0.25); }
+  .credit-role {
+    font-family: 'JetBrains Mono', monospace; font-size: .7rem;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--accent);
+    margin-bottom: .35rem;
+  }
+  .credit-card.paper .credit-role { color: var(--accent-3); }
+  .credit-name {
+    font-family: 'DM Serif Display', serif; font-size: 1.2rem;
+    color: var(--text); margin: 0 0 .6rem;
+  }
+  .credit-bio { font-size: .88rem; color: var(--text-soft); line-height: 1.65; margin: 0 0 .8rem; }
+  .credit-bio strong { color: var(--text); }
+  .credit-bio em { font-style: normal; color: var(--accent); }
+  .credit-quote {
+    font-family: 'DM Serif Display', serif; font-style: italic; font-size: .95rem;
+    color: var(--text-soft); border-left: 2px solid var(--accent-3);
+    padding-left: .9rem; margin: 0 0 .8rem;
+  }
+  .quote-source {
+    display: block; font-family: 'JetBrains Mono', monospace; font-style: normal;
+    font-size: .7rem; color: var(--muted); margin-top: .3rem;
+  }
+  .credit-links { display: flex; flex-wrap: wrap; gap: .5rem; }
+  .credit-link {
+    display: inline-flex; align-items: center; gap: .35rem;
+    padding: .35rem .75rem; background: rgba(37,99,235,0.06);
+    border: 1px solid rgba(37,99,235,0.18); border-radius: 5px;
+    font-family: 'JetBrains Mono', monospace; font-size: .72rem;
+    color: var(--accent);
+  }
+  .credit-link:hover { background: rgba(37,99,235,0.12); text-decoration: none; }
+  .credit-link svg { width: 12px; height: 12px; }
+  .credit-link.accent3 { color: var(--accent-3); background: rgba(5,150,105,0.06); border-color: rgba(5,150,105,0.2); }
+  .thankyou-box {
+    margin-top: 2rem;
+    background: rgba(37,99,235,0.04); border: 1px solid rgba(37,99,235,0.14);
+    border-radius: 10px; padding: 1.3rem 1.6rem;
+    font-size: .92rem; color: var(--text-soft); line-height: 1.6;
+    display: flex; align-items: flex-start; gap: 1rem;
+  }
+  .ty-icon { font-size: 1.5rem; flex-shrink: 0; }
+  .thankyou-box strong { color: var(--text); }
 
-  #cta .section-title { margin-bottom: 1rem; }
-  #cta .section-lead { margin: 0 auto 2.5rem; }
-
-  .cta-box {
-    max-width: 620px;
-    margin: 3rem auto 0;
-    background: var(--panel);
-    border: 1px solid rgba(56,189,248,0.2);
-    border-radius: 14px;
-    padding: 3rem;
-    position: relative;
-    overflow: hidden;
-  }
-  .cta-box::before {
-    content: '';
-    position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3));
-  }
-
-  .cta-box h3 {
-    font-family: 'DM Serif Display', serif;
-    font-size: 1.7rem;
-    color: #f0f6ff;
-    margin-bottom: .8rem;
-  }
-  .cta-box p {
-    font-size: 0.95rem;
-    color: #64748b;
-    margin-bottom: 2rem;
-  }
-
-  .btn-big {
-    display: inline-flex;
-    align-items: center; gap: .7rem;
-    padding: 1rem 3rem;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.9rem;
-    font-weight: 500;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    text-decoration: none;
-    cursor: pointer;
-    transition: transform .2s, box-shadow .2s;
-    box-shadow: 0 0 36px rgba(56,189,248,0.3);
-  }
-  .btn-big:hover { transform: translateY(-2px); box-shadow: 0 0 54px rgba(56,189,248,0.45); }
-  .btn-big svg { width: 18px; height: 18px; }
-
-  /* ─── FOOTER ─── */
+  /* ── FOOTER ── */
   footer {
-    padding: 2.5rem 4rem;
-    background: var(--bg);
+    padding: 2rem 1.6rem; background: var(--surface);
     border-top: 1px solid var(--border);
     display: flex; align-items: center; justify-content: space-between;
     flex-wrap: wrap; gap: 1rem;
-  }
-  .footer-brand {
-    font-family: 'DM Serif Display', serif;
-    font-size: 1.1rem;
-    color: var(--accent);
-  }
-  .footer-brand span { color: var(--muted); }
-  .footer-meta {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.72rem;
-    letter-spacing: 0.08em;
+    font-family: 'JetBrains Mono', monospace; font-size: .72rem;
     color: var(--muted);
   }
+  footer .brand { font-family: 'DM Serif Display', serif; color: var(--accent); }
 
-  /* ─── CREDITS ─── */
-  #credits { background: var(--bg); }
-
-  .credits-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-    margin-top: 3.5rem;
-  }
-
-  .credit-card {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 2rem;
-    display: flex;
-    gap: 1.5rem;
-    position: relative;
-    overflow: hidden;
-    transition: transform .25s, box-shadow .25s;
-  }
-  .credit-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 40px rgba(56,189,248,0.08);
-  }
-  .credit-card.primary {
-    grid-column: 1 / -1;
-    border-color: rgba(56,189,248,0.25);
-  }
-  .credit-card.primary::before {
-    content: '';
-    position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-  }
-  .credit-card.paper { border-color: rgba(52,211,153,0.2); }
-  .credit-card.paper::before {
-    content: '';
-    position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, var(--accent3), var(--accent2));
-  }
-
-  .credit-avatar {
-    flex-shrink: 0;
-    width: 64px; height: 64px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, rgba(56,189,248,0.15), rgba(129,140,248,0.15));
-    border: 2px solid rgba(56,189,248,0.3);
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'DM Serif Display', serif;
-    font-size: 1.1rem;
-    color: var(--accent);
-    letter-spacing: 0.05em;
-  }
-  .credit-avatar.mw {
-    background: linear-gradient(135deg, rgba(129,140,248,0.15), rgba(56,189,248,0.15));
-    border-color: rgba(129,140,248,0.3);
-    color: var(--accent2);
-  }
-  .credit-avatar.paper-icon {
-    font-size: 1.8rem;
-    background: linear-gradient(135deg, rgba(52,211,153,0.1), rgba(129,140,248,0.1));
-    border-color: rgba(52,211,153,0.25);
-  }
-
-  .credit-body { flex: 1; }
-  .credit-role {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.68rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: .4rem;
-  }
-  .credit-card.paper .credit-role { color: var(--accent3); }
-
-  .credit-name {
-    font-family: 'DM Serif Display', serif;
-    font-size: 1.4rem;
-    color: #f0f6ff;
-    margin-bottom: .8rem;
-    line-height: 1.2;
-  }
-  .credit-bio {
-    font-size: 0.9rem;
-    color: #64748b;
-    line-height: 1.75;
-    margin-bottom: 1.2rem;
-  }
-  .credit-bio strong { color: #94a3b8; }
-  .credit-bio em { color: var(--accent); font-style: normal; }
-
-  .credit-quote {
-    font-family: 'DM Serif Display', serif;
-    font-style: italic;
-    font-size: 1rem;
-    color: #94a3b8;
-    border-left: 2px solid var(--accent3);
-    padding-left: 1rem;
-    margin-bottom: 1.2rem;
-    line-height: 1.5;
-  }
-  .quote-source {
-    display: block;
-    font-family: 'JetBrains Mono', monospace;
-    font-style: normal;
-    font-size: 0.72rem;
-    color: var(--muted);
-    margin-top: .4rem;
-    letter-spacing: 0.06em;
-  }
-
-  .credit-links { display: flex; flex-wrap: wrap; gap: .7rem; }
-  .credit-link {
-    display: inline-flex; align-items: center; gap: .45rem;
-    padding: .4rem .9rem;
-    background: rgba(56,189,248,0.06);
-    border: 1px solid rgba(56,189,248,0.18);
-    border-radius: 4px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.72rem;
-    color: var(--accent);
-    text-decoration: none;
-    letter-spacing: 0.05em;
-    transition: background .2s, border-color .2s;
-  }
-  .credit-link svg { width: 12px; height: 12px; }
-  .credit-link:hover { background: rgba(56,189,248,0.12); border-color: rgba(56,189,248,0.4); }
-  .credit-link.accent3 {
-    color: var(--accent3);
-    background: rgba(52,211,153,0.06);
-    border-color: rgba(52,211,153,0.2);
-  }
-  .credit-link.accent3:hover { background: rgba(52,211,153,0.12); }
-
-  .thankyou-box {
-    margin-top: 2.5rem;
-    display: flex; align-items: flex-start; gap: 1.2rem;
-    background: linear-gradient(135deg, rgba(56,189,248,0.05), rgba(129,140,248,0.05));
-    border: 1px solid rgba(56,189,248,0.15);
-    border-radius: 10px;
-    padding: 1.8rem 2rem;
-    font-size: 0.95rem;
-    color: #94a3b8;
-    line-height: 1.7;
-  }
-  .ty-icon { font-size: 1.6rem; flex-shrink: 0; }
-  .thankyou-box strong { color: #e2e8f0; }
-
-  /* ─── SCROLL REVEAL ─── */
-  .reveal { opacity: 0; transform: translateY(30px); transition: opacity .7s ease, transform .7s ease; }
+  /* Scroll reveal */
+  .reveal { opacity: 0; transform: translateY(20px); transition: opacity .6s ease, transform .6s ease; }
   .revealed { opacity: 1; transform: none; }
-
-  /* ─── RESPONSIVE ─── */
-  @media (max-width: 900px) {
-    nav { padding: 1rem 2rem; }
-    section { padding: 4rem 2rem; }
-    .two-col { grid-template-columns: 1fr; gap: 2.5rem; }
-    .cards { grid-template-columns: 1fr; }
-    .credits-grid { grid-template-columns: 1fr; }
-    .credit-card.primary { grid-column: auto; }
-    .credit-card { flex-direction: column; }
-    .steps { grid-template-columns: repeat(2, 1fr); gap: 2rem; }
-    .steps::before { display: none; }
-    footer { padding: 2rem; flex-direction: column; gap: .5rem; text-align: center; }
-  }
-  @media (max-width: 600px) {
-    .nav-links { display: none; }
-    .hero-stats { gap: 1.5rem; }
-    .steps { grid-template-columns: 1fr; }
-  }
 </style>
 </head>
 <body>
 
-<!-- NAV -->
-<nav>
-  <a class="nav-brand" href="#">YASA<span>Flaskified</span></a>
+<nav class="topnav">
+  <a class="brand" href="/">YASA<span>Flaskified</span></a>
   <div class="nav-links">
     <a href="#yasa">{{ t('fp_nav_yasa') }}</a>
     <a href="#app">{{ t('fp_nav_app') }}</a>
     <a href="#workflow">{{ t('fp_nav_workflow') }}</a>
     <a href="#stack">{{ t('fp_nav_stack') }}</a>
     <a href="#credits">{{ t('fp_nav_credits') }}</a>
-    <a href="{{ url_for('login') }}" class="btn-login">{{ t('fp_nav_login') }} →</a>
+    <span class="lang-picker">
+      {% for code, label in [('nl','NL'),('fr','FR'),('en','EN'),('de','DE')] %}
+      <a href="/lang/{{ code }}" class="{% if current_lang == code %}active{% endif %}">{{ label }}</a>
+      {% endfor %}
+    </span>
   </div>
 </nav>
 
-<!-- HERO -->
 <section class="hero">
-  <div class="stars"></div>
-
-  <div class="hero-content">
-    <div class="badge">{{ t('fp_badge') }}</div>
-
+  <div class="hero-left">
+    <div class="section-tag">{{ t('fp_badge') }}</div>
     <h1>{{ t('fp_hero_title_1') }}<br><em>{{ t('fp_hero_title_2') }}</em></h1>
-
-    <p class="hero-sub">
-      {{ t('fp_hero_sub') }}
-    </p>
-
-    <div class="hero-cta">
-      <a href="{{ url_for('login') }}" class="btn-primary">{{ t('fp_btn_launch') }}</a>
-      <a href="#yasa" class="btn-ghost">{{ t('fp_btn_learn') }}</a>
-    </div>
-
+    <p class="hero-tag">{{ t('fp_hero_tagline') }}</p>
     <div class="hero-stats">
-      <div class="stat">
-        <div class="stat-num">5</div>
-        <div class="stat-label">{{ t('fp_stat_stages') }}</div>
-      </div>
-      <div class="stat">
-        <div class="stat-num">EDF</div>
-        <div class="stat-label">{{ t('fp_stat_input') }}</div>
-      </div>
-      <div class="stat">
-        <div class="stat-num">AASM</div>
-        <div class="stat-label">{{ t('fp_stat_std') }}</div>
-      </div>
-      <div class="stat">
-        <div class="stat-num">{{ t('fp_stat_live') }}</div>
-        <div class="stat-label">{{ t('fp_stat_queue') }}</div>
-      </div>
+      <span class="stat-pill"><span class="dot"></span>{{ t('fp_stat_aasm') }}</span>
+      <span class="stat-pill green"><span class="dot"></span>{{ t('fp_stat_pipeline') }}</span>
+      <span class="stat-pill purple"><span class="dot"></span>{{ t('fp_stat_languages') }}</span>
     </div>
+    <div class="scroll-cue">{{ t('fp_explore_below') }}</div>
   </div>
 
-  <!-- Animated EEG wave -->
-  <canvas class="eeg-strip" id="eegCanvas"></canvas>
+  <div class="login-card">
+    <h3>{{ t('fp_login_card_title') }}</h3>
+    <p class="login-sub">{{ t('fp_login_card_sub') }}</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="flash-box">
+        {% for cat, msg in messages %}
+          <div class="alert alert-{{ cat }}">{{ msg }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('login') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="mb-3">
+        <label for="username" class="form-label">
+          <i class="bi bi-person"></i> {{ t('username') }}
+        </label>
+        <input type="text" id="username" name="username" class="form-control"
+               required autocomplete="username" autofocus>
+      </div>
+      <div class="mb-3">
+        <label for="password" class="form-label">
+          <i class="bi bi-lock"></i> {{ t('password') }}
+        </label>
+        <input type="password" id="password" name="password" class="form-control"
+               required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn-signin">
+        <i class="bi bi-box-arrow-in-right me-1"></i> {{ t('sign_in') }}
+      </button>
+    </form>
+
+    <span class="demo-link">
+      <a href="mailto:{{ t('fp_demo_email') }}">{{ t('fp_request_demo') }}</a>
+    </span>
+  </div>
 </section>
 
 <!-- ABOUT YASA -->
@@ -789,9 +450,7 @@
   <div class="section-inner">
     <div class="section-tag">{{ t('fp_y_tag') }}</div>
     <h2 class="section-title reveal">{{ t('fp_y_title') }}</h2>
-    <p class="section-lead reveal">
-      {{ t('fp_y_lead') }}
-    </p>
+    <p class="section-lead reveal">{{ t('fp_y_lead') }}</p>
 
     <div class="two-col">
       <div>
@@ -819,57 +478,31 @@
         </ul>
       </div>
 
-      <div class="info-visual reveal">
-        <!-- Hypnogram SVG -->
+      <div class="info-card reveal">
         <svg class="hypnogram" viewBox="0 0 500 160" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <linearGradient id="hGrad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.3"/>
-              <stop offset="100%" stop-color="#818cf8" stop-opacity="0.3"/>
+              <stop offset="0%" stop-color="#2563eb" stop-opacity="0.6"/>
+              <stop offset="100%" stop-color="#7c3aed" stop-opacity="0.6"/>
             </linearGradient>
           </defs>
-          <!-- Stage labels -->
-          <text x="8" y="22" fill="#38bdf8" font-family="JetBrains Mono,monospace" font-size="9" opacity="0.7">W</text>
-          <text x="8" y="52" fill="#38bdf8" font-family="JetBrains Mono,monospace" font-size="9" opacity="0.7">REM</text>
-          <text x="8" y="82" fill="#38bdf8" font-family="JetBrains Mono,monospace" font-size="9" opacity="0.7">N1</text>
-          <text x="8" y="112" fill="#38bdf8" font-family="JetBrains Mono,monospace" font-size="9" opacity="0.7">N2</text>
-          <text x="8" y="142" fill="#38bdf8" font-family="JetBrains Mono,monospace" font-size="9" opacity="0.7">N3</text>
-          <!-- Grid lines -->
-          <line x1="30" y1="15" x2="490" y2="15" stroke="#1e3a5f" stroke-width="0.5"/>
-          <line x1="30" y1="45" x2="490" y2="45" stroke="#1e3a5f" stroke-width="0.5"/>
-          <line x1="30" y1="75" x2="490" y2="75" stroke="#1e3a5f" stroke-width="0.5"/>
-          <line x1="30" y1="105" x2="490" y2="105" stroke="#1e3a5f" stroke-width="0.5"/>
-          <line x1="30" y1="135" x2="490" y2="135" stroke="#1e3a5f" stroke-width="0.5"/>
-          <!-- Hypnogram path -->
-          <polyline
-            fill="none"
-            stroke="url(#hGrad)"
-            stroke-width="2"
-            stroke-linejoin="round"
-            points="
-              30,15 60,15 60,112 100,112 100,142 130,142 130,112 160,112
-              160,142 190,142 190,45  220,45  220,112 250,112
-              250,142 280,142 280,112 300,112 300,45  330,45
-              330,112 360,112 360,45  390,45  390,112 420,112
-              420,15  450,15  450,45  470,45  470,15  490,15
-            "
-          />
-          <!-- Fill under line -->
-          <polyline
-            fill="url(#hGrad)"
-            stroke="none"
-            points="
-              30,160 30,15 60,15 60,112 100,112 100,142 130,142 130,112 160,112
-              160,142 190,142 190,45  220,45  220,112 250,112
-              250,142 280,142 280,112 300,112 300,45  330,45
-              330,112 360,112 360,45  390,45  390,112 420,112
-              420,15  450,15  450,45  470,45  470,15  490,15
-              490,160
-            "
-            opacity="0.25"
-          />
+          <text x="8" y="22"  fill="#6b7a99" font-family="JetBrains Mono,monospace" font-size="9">W</text>
+          <text x="8" y="52"  fill="#6b7a99" font-family="JetBrains Mono,monospace" font-size="9">REM</text>
+          <text x="8" y="82"  fill="#6b7a99" font-family="JetBrains Mono,monospace" font-size="9">N1</text>
+          <text x="8" y="112" fill="#6b7a99" font-family="JetBrains Mono,monospace" font-size="9">N2</text>
+          <text x="8" y="142" fill="#6b7a99" font-family="JetBrains Mono,monospace" font-size="9">N3</text>
+          <line x1="30" y1="15"  x2="490" y2="15"  stroke="#e5e9f2" stroke-width="0.7"/>
+          <line x1="30" y1="45"  x2="490" y2="45"  stroke="#e5e9f2" stroke-width="0.7"/>
+          <line x1="30" y1="75"  x2="490" y2="75"  stroke="#e5e9f2" stroke-width="0.7"/>
+          <line x1="30" y1="105" x2="490" y2="105" stroke="#e5e9f2" stroke-width="0.7"/>
+          <line x1="30" y1="135" x2="490" y2="135" stroke="#e5e9f2" stroke-width="0.7"/>
+          <polyline fill="none" stroke="url(#hGrad)" stroke-width="2.2" stroke-linejoin="round"
+            points="30,15 60,15 60,112 100,112 100,142 130,142 130,112 160,112
+                    160,142 190,142 190,45  220,45  220,112 250,112
+                    250,142 280,142 280,112 300,112 300,45  330,45
+                    330,112 360,112 360,45  390,45  390,112 420,112
+                    420,15  450,15  450,45  470,45  470,15  490,15"/>
         </svg>
-
         <div class="code-block">
 <span class="cm">{{ t('fp_code_comment') }}</span>
 <span class="kw">import</span> yasa, mne
@@ -883,42 +516,55 @@ stats = yasa.<span class="fn">sleep_statistics</span>(hypno, sf_hyp=<span class=
   </div>
 </section>
 
-<!-- ABOUT YASAFLASKIFIED -->
+<!-- APP FEATURES -->
 <section id="app">
   <div class="section-inner">
     <div class="section-tag">{{ t('fp_a_tag') }}</div>
     <h2 class="section-title reveal">{{ t('fp_a_title') }}</h2>
-    <p class="section-lead reveal">
-      {{ t('fp_a_lead') }}
-    </p>
+    <p class="section-lead reveal">{{ t('fp_a_lead') }}</p>
 
     <div class="cards">
-      <div class="card card-accent reveal">
+      <div class="card-light reveal">
         <span class="card-icon">📁</span>
         <h3>{{ t('fp_a_c1_title') }}</h3>
         <p>{{ t('fp_a_c1_body') }}</p>
       </div>
-      <div class="card reveal">
+      <div class="card-light reveal">
         <span class="card-icon">⚡</span>
         <h3>{{ t('fp_a_c2_title') }}</h3>
         <p>{{ t('fp_a_c2_body') }}</p>
       </div>
-      <div class="card reveal">
+      <div class="card-light reveal">
         <span class="card-icon">📈</span>
         <h3>{{ t('fp_a_c3_title') }}</h3>
         <p>{{ t('fp_a_c3_body') }}</p>
       </div>
-      <div class="card reveal">
+      <div class="card-light reveal">
+        <span class="card-icon">🩺</span>
+        <h3>{{ t('fp_a_c7_title') }}</h3>
+        <p>{{ t('fp_a_c7_body') }}</p>
+      </div>
+      <div class="card-light reveal">
+        <span class="card-icon">🎯</span>
+        <h3>{{ t('fp_a_c8_title') }}</h3>
+        <p>{{ t('fp_a_c8_body') }}</p>
+      </div>
+      <div class="card-light reveal">
+        <span class="card-icon">📐</span>
+        <h3>{{ t('fp_a_c9_title') }}</h3>
+        <p>{{ t('fp_a_c9_body') }}</p>
+      </div>
+      <div class="card-light reveal">
         <span class="card-icon">🔒</span>
         <h3>{{ t('fp_a_c4_title') }}</h3>
         <p>{{ t('fp_a_c4_body') }}</p>
       </div>
-      <div class="card reveal">
+      <div class="card-light reveal">
         <span class="card-icon">🐳</span>
         <h3>{{ t('fp_a_c5_title') }}</h3>
         <p>{{ t('fp_a_c5_body') }}</p>
       </div>
-      <div class="card reveal">
+      <div class="card-light reveal">
         <span class="card-icon">🧪</span>
         <h3>{{ t('fp_a_c6_title') }}</h3>
         <p>{{ t('fp_a_c6_body') }}</p>
@@ -965,20 +611,23 @@ stats = yasa.<span class="fn">sleep_statistics</span>(hypno, sf_hyp=<span class=
     <h2 class="section-title reveal">{{ t('fp_s_title') }}</h2>
 
     <div class="tech-grid reveal">
-      <div class="tech-tag"><span class="dot" style="background:#38bdf8"></span>Python 3</div>
-      <div class="tech-tag"><span class="dot" style="background:#818cf8"></span>Flask</div>
-      <div class="tech-tag"><span class="dot" style="background:#38bdf8"></span>YASA</div>
-      <div class="tech-tag"><span class="dot" style="background:#34d399"></span>MNE-Python</div>
+      <div class="tech-tag"><span class="dot" style="background:#2563eb"></span>Python 3.11</div>
+      <div class="tech-tag"><span class="dot" style="background:#7c3aed"></span>Flask</div>
+      <div class="tech-tag"><span class="dot" style="background:#2563eb"></span>YASA 0.7</div>
+      <div class="tech-tag"><span class="dot" style="background:#059669"></span>psgscoring 0.6</div>
+      <div class="tech-tag"><span class="dot" style="background:#059669"></span>MNE-Python</div>
       <div class="tech-tag"><span class="dot" style="background:#f59e0b"></span>Redis / RQ</div>
-      <div class="tech-tag"><span class="dot" style="background:#818cf8"></span>Gunicorn</div>
-      <div class="tech-tag"><span class="dot" style="background:#38bdf8"></span>Nginx</div>
-      <div class="tech-tag"><span class="dot" style="background:#34d399"></span>Docker</div>
-      <div class="tech-tag"><span class="dot" style="background:#f59e0b"></span>Flask-WTF (CSRF)</div>
-      <div class="tech-tag"><span class="dot" style="background:#818cf8"></span>Flask-Limiter</div>
-      <div class="tech-tag"><span class="dot" style="background:#38bdf8"></span>Matplotlib</div>
-      <div class="tech-tag"><span class="dot" style="background:#34d399"></span>Let's Encrypt</div>
-      <div class="tech-tag"><span class="dot" style="background:#f59e0b"></span>Fail2ban</div>
-      <div class="tech-tag"><span class="dot" style="background:#818cf8"></span>Hetzner Cloud</div>
+      <div class="tech-tag"><span class="dot" style="background:#7c3aed"></span>Gunicorn</div>
+      <div class="tech-tag"><span class="dot" style="background:#2563eb"></span>Nginx</div>
+      <div class="tech-tag"><span class="dot" style="background:#059669"></span>Docker</div>
+      <div class="tech-tag"><span class="dot" style="background:#f59e0b"></span>LightGBM</div>
+      <div class="tech-tag"><span class="dot" style="background:#7c3aed"></span>SQLite</div>
+      <div class="tech-tag"><span class="dot" style="background:#2563eb"></span>Matplotlib</div>
+      <div class="tech-tag"><span class="dot" style="background:#059669"></span>ReportLab (PDF)</div>
+      <div class="tech-tag"><span class="dot" style="background:#f59e0b"></span>Bootstrap 5.3</div>
+      <div class="tech-tag"><span class="dot" style="background:#7c3aed"></span>Let's Encrypt</div>
+      <div class="tech-tag"><span class="dot" style="background:#2563eb"></span>Fail2ban</div>
+      <div class="tech-tag"><span class="dot" style="background:#059669"></span>Hetzner Cloud</div>
     </div>
   </div>
 </section>
@@ -988,13 +637,9 @@ stats = yasa.<span class="fn">sleep_statistics</span>(hypno, sf_hyp=<span class=
   <div class="section-inner">
     <div class="section-tag">{{ t('fp_c_tag') }}</div>
     <h2 class="section-title reveal">{{ t('fp_c_title') }}</h2>
-    <p class="section-lead reveal">
-      {{ t('fp_c_lead') }}
-    </p>
+    <p class="section-lead reveal">{{ t('fp_c_lead') }}</p>
 
     <div class="credits-grid">
-
-      <!-- Raphael Vallat -->
       <div class="credit-card primary reveal">
         <div class="credit-avatar">RV</div>
         <div class="credit-body">
@@ -1018,27 +663,15 @@ stats = yasa.<span class="fn">sleep_statistics</span>(hypno, sf_hyp=<span class=
         </div>
       </div>
 
-      <!-- Matthew Walker -->
       <div class="credit-card reveal">
         <div class="credit-avatar mw">MW</div>
         <div class="credit-body">
           <div class="credit-role">{{ t('fp_c_mw_role') }}</div>
           <h3 class="credit-name">Matthew P. Walker, PhD</h3>
           <p class="credit-bio">{{ t('fp_c_mw_bio') | safe }}</p>
-          <div class="credit-links">
-            <a href="https://www.sleepdiplomat.com" target="_blank" class="credit-link">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>
-              sleepdiplomat.com
-            </a>
-            <a href="https://sleepcentre.berkeley.edu" target="_blank" class="credit-link">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-              UC Berkeley Sleep Lab
-            </a>
-          </div>
         </div>
       </div>
 
-      <!-- eLife paper -->
       <div class="credit-card paper reveal">
         <div class="credit-avatar paper-icon">📄</div>
         <div class="credit-body">
@@ -1051,115 +684,36 @@ stats = yasa.<span class="fn">sleep_statistics</span>(hypno, sf_hyp=<span class=
           </div>
           <div class="credit-links">
             <a href="https://doi.org/10.7554/eLife.70092" target="_blank" class="credit-link accent3">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
               doi: 10.7554/eLife.70092
             </a>
           </div>
         </div>
       </div>
-
     </div>
 
-    <!-- Thank-you note -->
     <div class="thankyou-box reveal">
       <div class="ty-icon">🙏</div>
-      <div>{{ t('fp_c_thanks') | safe }}</div>
-    </div>
-
-  </div>
-</section>
-
-<!-- CTA -->
-<section id="cta">
-  <div class="section-inner">
-    <div class="section-tag">{{ t('fp_cta_tag') }}</div>
-    <h2 class="section-title reveal">{{ t('fp_cta_title') }}</h2>
-    <p class="section-lead reveal">
-      {{ t('fp_cta_lead') }}
-    </p>
-
-    <div class="cta-box reveal">
-      <h3>{{ t('fp_cta_box_title') }}</h3>
-      <p>{{ t('fp_cta_box_body') }}</p>
-      <a href="{{ url_for('login') }}" class="btn-big">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-          <polyline points="10 17 15 12 10 7"/>
-          <line x1="15" y1="12" x2="3" y2="12"/>
-        </svg>
-        {{ t('fp_cta_btn') }}
-      </a>
+      <div>
+        {{ t('fp_c_thanks') | safe }}
+        <br><br>
+        {{ t('fp_aside_psgscoring') | safe }}
+      </div>
     </div>
   </div>
 </section>
 
-<!-- FOOTER -->
 <footer>
-  <div class="footer-brand">YASA<span>Flaskified</span></div>
-  <div class="footer-meta">{{ t('fp_footer_meta') }} &nbsp;·&nbsp; sleepai.eu</div>
+  <span><span class="brand">YASAFlaskified</span> v{{ APP_VERSION }}</span>
+  <span>{{ t('fp_footer_meta') }} · slaapkliniek.be</span>
+  <span>© 2023–2026 Bart Rombaut · <a href="/disclaimer">{{ t('footer_disclaimer') }}</a></span>
 </footer>
 
 <script>
-// ─── EEG Canvas Animation ───
-const canvas = document.getElementById('eegCanvas');
-const ctx = canvas.getContext('2d');
-let W, H, t = 0;
-
-function resize() {
-  W = canvas.width  = canvas.offsetWidth;
-  H = canvas.height = canvas.offsetHeight;
-}
-resize();
-window.addEventListener('resize', resize);
-
-function eeg(x, t) {
-  // Composite of several sine waves to mimic EEG
-  return Math.sin(x * 0.04 + t) * 18
-       + Math.sin(x * 0.15 + t * 1.3) * 8
-       + Math.sin(x * 0.5  + t * 2.1) * 4
-       + Math.sin(x * 1.2  + t * 3.7) * 2
-       + (Math.random() - 0.5) * 2;
-}
-
-function draw() {
-  ctx.clearRect(0, 0, W, H);
-
-  const channels = [
-    { y: H * 0.28, col: '#38bdf8', alpha: 0.8, label: 'C4-M1' },
-    { y: H * 0.58, col: '#818cf8', alpha: 0.6, label: 'F3-M2' },
-    { y: H * 0.82, col: '#34d399', alpha: 0.5, label: 'EOG-L' },
-  ];
-
-  channels.forEach(ch => {
-    // channel label
-    ctx.font = '10px JetBrains Mono, monospace';
-    ctx.fillStyle = ch.col;
-    ctx.globalAlpha = ch.alpha * 0.7;
-    ctx.fillText(ch.label, 8, ch.y - 6);
-
-    ctx.beginPath();
-    ctx.strokeStyle = ch.col;
-    ctx.lineWidth = 1.2;
-    ctx.globalAlpha = ch.alpha;
-    for (let x = 0; x < W; x++) {
-      const y = ch.y + eeg(x, t + ch.y * 0.01);
-      if (x === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-  });
-
-  ctx.globalAlpha = 1;
-  t += 0.022;
-  requestAnimationFrame(draw);
-}
-draw();
-
-// ─── Scroll reveal ───
-const obs = new IntersectionObserver(entries => {
-  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('revealed'); });
-}, { threshold: 0.12 });
-document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+  // Scroll reveal
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('revealed'); });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
 </script>
 </body>
 </html>

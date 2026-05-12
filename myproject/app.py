@@ -1169,12 +1169,13 @@ def disclaimer_page():
 
 @app.route("/")
 def index():
-    # v0.8.11: vermijd dubbele redirect (/ → /login → /dashboard)
+    # v0.11.0: unauthenticated visitors see the landing page (with embedded login)
+    # at "/" directly — no redirect to a separate /login screen.
     if current_user.is_authenticated:
         if current_user.role in ("admin", "site"):
             return redirect(url_for("dashboard"))
         return redirect(url_for("upload_file"))
-    return redirect(url_for("login"))
+    return render_template("frontpage.html")
 
 
 @app.route("/upload", methods=["GET"])

@@ -2641,3 +2641,80 @@ _V0105_SWEEP = {
 }
 TRANSLATIONS.update(_V0105_SWEEP)
 
+
+# ═══════════════════════════════════════════════════════════
+# v0.11.0: light-themed frontpage with embedded login
+# ═══════════════════════════════════════════════════════════
+_V0110_FRONT_LIGHT = {
+    "fp_hero_tagline":  {
+        "nl": "Klinische slaapanalyse vanuit één EDF-bestand — automatische staging, ademhalingsevents, signaalkwaliteit en PDF-rapport.",
+        "fr": "Analyse clinique du sommeil à partir d'un seul fichier EDF — staging automatique, événements respiratoires, qualité du signal et rapport PDF.",
+        "en": "Clinical sleep analysis from a single EDF file — automated staging, respiratory events, signal quality, and PDF report.",
+        "de": "Klinische Schlafanalyse aus einer einzigen EDF-Datei — automatisches Staging, respiratorische Ereignisse, Signalqualität und PDF-Bericht.",
+    },
+    "fp_login_card_title": {
+        "nl": "Aanmelden",
+        "fr": "Connexion",
+        "en": "Sign in",
+        "de": "Anmelden",
+    },
+    "fp_login_card_sub":   {
+        "nl": "Toegang voor bevoegde zorgverleners",
+        "fr": "Accès réservé aux professionnels de santé autorisés",
+        "en": "Authorized healthcare professionals only",
+        "de": "Nur für autorisierte medizinische Fachkräfte",
+    },
+    "fp_request_demo":     {
+        "nl": "Probeer-account aanvragen",
+        "fr": "Demander un compte de démo",
+        "en": "Request a demo account",
+        "de": "Demo-Konto anfragen",
+    },
+    "fp_explore_below":    {
+        "nl": "Of bekijk eerst wat YASAFlaskified doet ↓",
+        "fr": "Ou découvrez d'abord les capacités de YASAFlaskified ↓",
+        "en": "Or explore what YASAFlaskified does first ↓",
+        "de": "Oder erkunden Sie zuerst die Funktionen von YASAFlaskified ↓",
+    },
+
+    # New tech / pipeline stats for the hero panel
+    "fp_stat_languages":   {"nl": "4 talen UI + rapport", "fr": "4 langues UI + rapport",
+                            "en": "4 languages UI + report", "de": "4 Sprachen UI + Bericht"},
+    "fp_stat_aasm":        {"nl": "AASM 2.6",            "fr": "AASM 2.6",
+                            "en": "AASM 2.6",            "de": "AASM 2.6"},
+    "fp_stat_pipeline":    {"nl": "12-kanaals pipeline", "fr": "Pipeline 12 canaux",
+                            "en": "12-channel pipeline", "de": "12-Kanal-Pipeline"},
+
+    # Updated feature cards reflecting v0.10.x capabilities
+    "fp_a_c7_title": {"nl": "Signaalkwaliteit per kanaal",       "fr": "Qualité du signal par canal",
+                      "en": "Per-channel signal quality",         "de": "Signalqualität pro Kanal"},
+    "fp_a_c7_body":  {"nl": "Automatische beoordeling per kanaal (goed / acceptabel / slecht), zichtbaar in dashboard én PDF — voorkomt foutieve diagnoses op slechte opnames.",
+                      "fr": "Évaluation automatique par canal (bon / acceptable / médiocre), visible sur le tableau de bord et dans le PDF — évite des diagnostics erronés sur des enregistrements de mauvaise qualité.",
+                      "en": "Automatic per-channel grading (good / acceptable / poor), shown on the dashboard and in the PDF — prevents misdiagnosis from poor recordings.",
+                      "de": "Automatische Bewertung pro Kanal (gut / akzeptabel / schlecht), im Dashboard und im PDF sichtbar — verhindert Fehldiagnosen bei schlechten Aufnahmen."},
+    "fp_a_c8_title": {"nl": "Staging-betrouwbaarheid",            "fr": "Confiance du staging",
+                      "en": "Staging confidence",                 "de": "Staging-Konfidenz"},
+    "fp_a_c8_body":  {"nl": "Per-epoch confidence-score uit het YASA-model; epochs onder 70% worden gemarkeerd voor manuele review.",
+                      "fr": "Score de confiance par époque du modèle YASA ; les époques sous 70 % sont marquées pour revue manuelle.",
+                      "en": "Per-epoch confidence score from the YASA model; epochs below 70% are flagged for manual review.",
+                      "de": "Konfidenz-Score pro Epoche aus dem YASA-Modell; Epochen unter 70 % werden zur manuellen Überprüfung markiert."},
+    "fp_a_c9_title": {"nl": "OAHI-onzekerheidsmarge",             "fr": "Marge d'incertitude OAHI",
+                      "en": "OAHI uncertainty range",             "de": "OAHI-Unsicherheitsspanne"},
+    "fp_a_c9_body":  {"nl": "3-punt sweep (soepel / primair / strikt) toont hoe stabiel de OSAS-diagnose is bij verschillende scoringscriteria.",
+                      "fr": "Sweep à 3 points (souple / primaire / strict) montre la stabilité du diagnostic de SAOS selon les critères de scoring.",
+                      "en": "3-point sweep (lenient / primary / strict) shows how stable the OSAS diagnosis is across scoring strictness.",
+                      "de": "3-Punkt-Sweep (locker / primär / streng) zeigt, wie stabil die OSAS-Diagnose über verschiedene Scoring-Schwellen ist."},
+
+    # Demo CTA
+    "fp_demo_email":   {"nl": "bart.rombaut@gmail.com",  "fr": "bart.rombaut@gmail.com",
+                        "en": "bart.rombaut@gmail.com",  "de": "bart.rombaut@gmail.com"},
+
+    "fp_aside_psgscoring": {
+        "nl": "Aangedreven door <strong>psgscoring</strong> v0.6 — open-source PSG analyse-bibliotheek (PyPI).",
+        "fr": "Propulsé par <strong>psgscoring</strong> v0.6 — bibliothèque d'analyse PSG open source (PyPI).",
+        "en": "Powered by <strong>psgscoring</strong> v0.6 — open-source PSG analysis library (PyPI).",
+        "de": "Bereitgestellt durch <strong>psgscoring</strong> v0.6 — Open-Source-PSG-Analysebibliothek (PyPI).",
+    },
+}
+TRANSLATIONS.update(_V0110_FRONT_LIGHT)
+
