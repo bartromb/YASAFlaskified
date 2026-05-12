@@ -857,11 +857,14 @@ def _sqlite_columns(table_name: str) -> list:
 @app.route("/login", methods=["GET","POST"])
 @limiter.limit("5 per minute")
 def login():
-    # v0.8.11: als al ingelogd → door naar app
-    if request.method == "GET" and current_user.is_authenticated:
-        if current_user.role in ("admin", "site"):
-            return redirect(url_for("dashboard"))
-        return redirect(url_for("upload_file"))
+    # v0.11.0: bookmarks to /login redirect to / where the embedded login lives.
+    # Authenticated users still go straight to the app.
+    if request.method == "GET":
+        if current_user.is_authenticated:
+            if current_user.role in ("admin", "site"):
+                return redirect(url_for("dashboard"))
+            return redirect(url_for("upload_file"))
+        return redirect(url_for("index"))
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
@@ -889,7 +892,9 @@ def login():
             return redirect(url_for("upload_file"))
         logger.warning(f"Failed login for {username} from {request.remote_addr}")
         flash(get_translation("login_failed", session.get("lang", "en")), "danger")
-    return render_template("login.html")
+        return redirect(url_for("index"))
+    # Should not reach here, but keep a safe fallback.
+    return redirect(url_for("index"))
 
 
 @app.route("/logout")
