@@ -338,7 +338,7 @@
       </div>
       {% if art.artifact_epochs %}
       <table class="table table-sm table-striped">
-        <thead><tr><th>{{ t('epoch') }}</th><th>Max amplitude (μV)</th><th>Vlak signaal</th><th>Hoge amplitude</th></tr></thead>
+        <thead><tr><th>{{ t('epoch') }}</th><th>{{ t('col_max_amplitude') }}</th><th>{{ t('col_flat_signal') }}</th><th>{{ t('col_high_amp') }}</th></tr></thead>
         <tbody>
           {% for ep in art.artifact_epochs %}
           <tr>
@@ -808,7 +808,7 @@ document.addEventListener('DOMContentLoaded', function() {
           label.textContent = '⬇ Download EDF+';
           btn.classList.remove('btn-outline-dark');
           btn.classList.add('btn-success');
-          btn.title = 'EDF+ klaar — klik om te downloaden';
+          btn.title = '{{ t("edf_ready_btn_title") }}';
 
           // Stop polling
           if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
@@ -819,8 +819,8 @@ document.addEventListener('DOMContentLoaded', function() {
             showEdfNotification();
           }
         } else {
-          label.textContent = 'Genereer EDF+';
-          btn.title = 'Klik om EDF+ op de achtergrond te genereren (enkele minuten)';
+          label.textContent = '{{ t("edf_generate") }}';
+          btn.title = '{{ t("edf_generate_title") }}';
         }
       })
       .catch(function() {
@@ -838,10 +838,10 @@ document.addEventListener('DOMContentLoaded', function() {
       '  <div class="d-flex">' +
       '    <div class="toast-body">' +
       '      <i class="bi bi-check-circle me-1"></i>' +
-      '      <strong>EDF+ klaar!</strong> Het gescoorde EDF+ bestand is beschikbaar voor download.' +
+      '      <strong>{{ t("edf_ready_title") }}</strong> {{ t("edf_ready_msg") }}' +
       '      <div class="mt-2">' +
       '        <a href="/results/{{ job_id }}/edfplus" class="btn btn-sm btn-light me-1">⬇ Download</a>' +
-      '        <button type="button" class="btn btn-sm btn-outline-light" onclick="this.closest(\'.position-fixed\').remove()">Sluiten</button>' +
+      '        <button type="button" class="btn btn-sm btn-outline-light" onclick="this.closest(\'.position-fixed\').remove()">{{ t("close_btn") }}</button>' +
       '      </div>' +
       '    </div>' +
       '  </div>' +

@@ -172,21 +172,21 @@
       <div class="card-body p-3" style="font-size:.85rem">
         <table class="table table-sm mb-0">
           <tbody>
-            <tr><td><kbd>W</kbd> <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>R</kbd></td><td>Stage toekennen (Wake/N1/N2/N3/REM)</td></tr>
-            <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Vorige / volgende epoch (hypnogram)</td></tr>
-            <tr><td><kbd>PgUp</kbd> <kbd>PgDn</kbd></td><td>Vorige / volgende epoch (EDF viewer)</td></tr>
-            <tr><td><kbd>Home</kbd> <kbd>End</kbd></td><td>Begin / einde opname</td></tr>
-            <tr><td><kbd>Ctrl+Z</kbd></td><td>Ongedaan maken (staging)</td></tr>
-            <tr><td><kbd>Ctrl+1</kbd>…<kbd>4</kbd></td><td>Zoom: 30s / 60s / 150s / 300s</td></tr>
-            <tr><td><kbd>Alt+O</kbd></td><td>Tool: Obstructief apnea</td></tr>
-            <tr><td><kbd>Alt+C</kbd></td><td>Tool: Centraal apnea</td></tr>
-            <tr><td><kbd>Alt+M</kbd></td><td>Tool: Gemengd apnea</td></tr>
-            <tr><td><kbd>Alt+H</kbd></td><td>Tool: Hypopnea</td></tr>
-            <tr><td><kbd>Alt+A</kbd></td><td>Tool: Arousal</td></tr>
-            <tr><td><kbd>Alt+E</kbd></td><td>Tool: RERA</td></tr>
-            <tr><td><kbd>?</kbd></td><td>Deze help tonen/verbergen</td></tr>
-            <tr><td><kbd>Scroll</kbd> op kanaalnaam</td><td>Per-kanaal amplitude aanpassen</td></tr>
-            <tr><td><kbd>Scroll</kbd> op signaal</td><td>Globale amplitude aanpassen</td></tr>
+            <tr><td><kbd>W</kbd> <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>R</kbd></td><td>{{ t('kbd_assign_stage') }}</td></tr>
+            <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>{{ t('kbd_prev_next_hyp') }}</td></tr>
+            <tr><td><kbd>PgUp</kbd> <kbd>PgDn</kbd></td><td>{{ t('kbd_prev_next_edf') }}</td></tr>
+            <tr><td><kbd>Home</kbd> <kbd>End</kbd></td><td>{{ t('kbd_begin_end') }}</td></tr>
+            <tr><td><kbd>Ctrl+Z</kbd></td><td>{{ t('kbd_undo') }}</td></tr>
+            <tr><td><kbd>Ctrl+1</kbd>…<kbd>4</kbd></td><td>{{ t('kbd_zoom') }}</td></tr>
+            <tr><td><kbd>Alt+O</kbd></td><td>{{ t('kbd_tool_obs') }}</td></tr>
+            <tr><td><kbd>Alt+C</kbd></td><td>{{ t('kbd_tool_ca') }}</td></tr>
+            <tr><td><kbd>Alt+M</kbd></td><td>{{ t('kbd_tool_mixed') }}</td></tr>
+            <tr><td><kbd>Alt+H</kbd></td><td>{{ t('kbd_tool_hyp') }}</td></tr>
+            <tr><td><kbd>Alt+A</kbd></td><td>{{ t('kbd_tool_arousal') }}</td></tr>
+            <tr><td><kbd>Alt+E</kbd></td><td>{{ t('kbd_tool_rera') }}</td></tr>
+            <tr><td><kbd>?</kbd></td><td>{{ t('kbd_help_toggle') }}</td></tr>
+            <tr><td><kbd>Scroll</kbd> {{ t('kbd_scroll_channel') }}</td><td>{{ t('kbd_amp_per_channel') }}</td></tr>
+            <tr><td><kbd>Scroll</kbd> {{ t('kbd_scroll_signal') }}</td><td>{{ t('kbd_amp_global') }}</td></tr>
           </tbody>
         </table>
       </div>
@@ -275,7 +275,7 @@
       })
       .catch(e => {
         document.getElementById("event-list-body").innerHTML =
-          '<div class="text-danger small">Laden mislukt</div>';
+          '<div class="text-danger small">{{ t("load_failed") }}</div>';
       });
   }
 

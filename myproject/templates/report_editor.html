@@ -306,8 +306,8 @@ async function loadReport() {
     }
 
   } catch (e) {
-    console.error("Laden mislukt:", e);
-    showAlert("danger", "Laden mislukt: " + e.message);
+    console.error("{{ t('load_failed') }}:", e);
+    showAlert("danger", "{{ t('load_failed') }}: " + e.message);
   }
 }
 

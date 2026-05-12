@@ -204,16 +204,16 @@
       <div class="card-body py-2">
         <div class="row g-2">
           {% set pneumo_types = [
-            ("flow",     "🌬️ Flow (nasaal)",    "Nasale druk / thermistor"),
-            ("thorax",   "📊 Thorax",            "Thoracale effort"),
-            ("abdomen",  "📊 Abdomen",           "Abdominale effort"),
-            ("spo2",     "💉 SpO2",              "Pulse oximetrie"),
-            ("leg_l",    "🦵 Been links",        "Tibialis anterior links"),
-            ("leg_r",    "🦵 Been rechts",       "Tibialis anterior rechts"),
-            ("position", "🔄 Positie",           "Lichaamshouding"),
-            ("snore",    "🔊 Snurk",             "Snurkmicrofoon"),
-            ("pulse",    "❤️ Hartritme",         "Pulse / HR"),
-            ("ecg",      "💓 ECG",               "Electrocardiogram"),
+            ("flow",     t("ch_flow_label"),     t("ch_flow_desc")),
+            ("thorax",   t("ch_thorax_label"),   t("ch_thorax_desc")),
+            ("abdomen",  t("ch_abdomen_label"),  t("ch_abdomen_desc")),
+            ("spo2",     t("ch_spo2_label"),     t("ch_spo2_desc")),
+            ("leg_l",    t("ch_leg_l_label"),    t("ch_leg_l_desc")),
+            ("leg_r",    t("ch_leg_r_label"),    t("ch_leg_r_desc")),
+            ("position", t("ch_position_label"), t("ch_position_desc")),
+            ("snore",    t("ch_snore_label"),    t("ch_snore_desc")),
+            ("pulse",    t("ch_pulse_label"),    t("ch_pulse_desc")),
+            ("ecg",      t("ch_ecg_label"),      t("ch_ecg_desc")),
           ] %}
           {% for ch_type, label, desc in pneumo_types %}
           <div class="col-md-6 col-lg-4">

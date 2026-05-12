@@ -2450,3 +2450,85 @@ _V0102_PDF = {
 }
 TRANSLATIONS.update(_V0102_PDF)
 
+
+# ═══════════════════════════════════════════════════════════
+# v0.10.3: Analysis-section Dutch leaks reported by user 2026-05-12
+#   channel_select pneumo labels (Been links, Positie, Snurk, ...),
+#   upload page, job_status, results_extended, scorer_v12, report_editor
+# ═══════════════════════════════════════════════════════════
+_V0103_ANALYSIS = {
+    # Pneumo channel labels (channel_select.html L207-216)
+    "ch_flow_label":      {"nl": "🌬️ Flow (nasaal)",      "fr": "🌬️ Flux (nasal)",          "en": "🌬️ Flow (nasal)",          "de": "🌬️ Fluss (nasal)"},
+    "ch_flow_desc":       {"nl": "Nasale druk / thermistor", "fr": "Pression nasale / thermistance", "en": "Nasal pressure / thermistor", "de": "Nasendruck / Thermistor"},
+    "ch_thorax_label":    {"nl": "📊 Thorax",                "fr": "📊 Thorax",                  "en": "📊 Thorax",                  "de": "📊 Thorax"},
+    "ch_thorax_desc":     {"nl": "Thoracale effort",         "fr": "Effort thoracique",          "en": "Thoracic effort",            "de": "Thorakale Atemanstrengung"},
+    "ch_abdomen_label":   {"nl": "📊 Abdomen",               "fr": "📊 Abdomen",                 "en": "📊 Abdomen",                 "de": "📊 Abdomen"},
+    "ch_abdomen_desc":    {"nl": "Abdominale effort",        "fr": "Effort abdominal",           "en": "Abdominal effort",           "de": "Abdominale Atemanstrengung"},
+    "ch_spo2_label":      {"nl": "💉 SpO2",                  "fr": "💉 SpO2",                    "en": "💉 SpO2",                    "de": "💉 SpO2"},
+    "ch_spo2_desc":       {"nl": "Pulse oximetrie",          "fr": "Oxymétrie de pouls",         "en": "Pulse oximetry",             "de": "Pulsoximetrie"},
+    "ch_leg_l_label":     {"nl": "🦵 Been links",            "fr": "🦵 Jambe gauche",            "en": "🦵 Left leg",                "de": "🦵 Linkes Bein"},
+    "ch_leg_l_desc":      {"nl": "Tibialis anterior links",  "fr": "Tibial antérieur gauche",    "en": "Left tibialis anterior",     "de": "Tibialis anterior links"},
+    "ch_leg_r_label":     {"nl": "🦵 Been rechts",           "fr": "🦵 Jambe droite",            "en": "🦵 Right leg",               "de": "🦵 Rechtes Bein"},
+    "ch_leg_r_desc":      {"nl": "Tibialis anterior rechts", "fr": "Tibial antérieur droit",     "en": "Right tibialis anterior",    "de": "Tibialis anterior rechts"},
+    "ch_position_label":  {"nl": "🔄 Positie",               "fr": "🔄 Position",                "en": "🔄 Position",                "de": "🔄 Position"},
+    "ch_position_desc":   {"nl": "Lichaamshouding",          "fr": "Position du corps",          "en": "Body position",              "de": "Körperposition"},
+    "ch_snore_label":     {"nl": "🔊 Snurk",                 "fr": "🔊 Ronflement",              "en": "🔊 Snore",                   "de": "🔊 Schnarchen"},
+    "ch_snore_desc":      {"nl": "Snurkmicrofoon",           "fr": "Microphone de ronflement",   "en": "Snoring microphone",         "de": "Schnarchmikrofon"},
+    "ch_pulse_label":     {"nl": "❤️ Hartritme",             "fr": "❤️ Fréquence cardiaque",     "en": "❤️ Heart rate",              "de": "❤️ Herzfrequenz"},
+    "ch_pulse_desc":      {"nl": "Pulse / HR",               "fr": "Pouls / FC",                 "en": "Pulse / HR",                 "de": "Puls / HR"},
+    "ch_ecg_label":       {"nl": "💓 ECG",                   "fr": "💓 ECG",                     "en": "💓 ECG",                     "de": "💓 EKG"},
+    "ch_ecg_desc":        {"nl": "Electrocardiogram",        "fr": "Électrocardiogramme",        "en": "Electrocardiogram",          "de": "Elektrokardiogramm"},
+
+    # index.html upload card
+    "upload_card_title": {"nl": "📂 EDF-bestand uploaden", "fr": "📂 Téléverser un fichier EDF", "en": "📂 Upload an EDF file", "de": "📂 EDF-Datei hochladen"},
+    "upload_card_sub":   {"nl": "Polysomnografie-opname in European Data Format (.edf) — max 500 MB",
+                          "fr": "Enregistrement de polysomnographie au format European Data Format (.edf) — 500 Mo max",
+                          "en": "Polysomnography recording in European Data Format (.edf) — max 500 MB",
+                          "de": "Polysomnographie-Aufnahme im European Data Format (.edf) — max. 500 MB"},
+    "upload_drop_browse": {"nl": "Klik om te bladeren", "fr": "Cliquez pour parcourir", "en": "Click to browse", "de": "Zum Durchsuchen klicken"},
+    "upload_drop_or_drag":{"nl": "of sleep een .edf bestand hiernaartoe", "fr": "ou faites glisser un fichier .edf ici", "en": "or drag an .edf file here", "de": "oder ziehen Sie eine .edf-Datei hierher"},
+    "invalid_edf_file":   {"nl": "Selecteer een geldig .edf bestand.", "fr": "Veuillez sélectionner un fichier .edf valide.", "en": "Please select a valid .edf file.", "de": "Bitte wählen Sie eine gültige .edf-Datei aus."},
+
+    # job_status.html
+    "retry":                  {"nl": "Opnieuw proberen",     "fr": "Réessayer",                "en": "Retry",                "de": "Erneut versuchen"},
+    "check_edf_channels":     {"nl": "Controleer het EDF-bestand en de kanaalkeuze.", "fr": "Vérifiez le fichier EDF et la sélection des canaux.", "en": "Check the EDF file and the channel selection.", "de": "Bitte überprüfen Sie die EDF-Datei und die Kanalauswahl."},
+    "timeout_60min":          {"nl": "Time-out na 60 minuten.", "fr": "Délai dépassé après 60 minutes.", "en": "Timed out after 60 minutes.", "de": "Zeitüberschreitung nach 60 Minuten."},
+    "error_occurred":         {"nl": "Fout opgetreden", "fr": "Erreur survenue", "en": "An error occurred", "de": "Fehler aufgetreten"},
+
+    # scorer_v12.html keyboard shortcut help
+    "kbd_assign_stage":   {"nl": "Stage toekennen (Wake/N1/N2/N3/REM)", "fr": "Assigner un stade (Wake/N1/N2/N3/REM)", "en": "Assign stage (Wake/N1/N2/N3/REM)", "de": "Stadium zuweisen (Wake/N1/N2/N3/REM)"},
+    "kbd_prev_next_hyp":  {"nl": "Vorige / volgende epoch (hypnogram)", "fr": "Époque précédente / suivante (hypnogramme)", "en": "Previous / next epoch (hypnogram)", "de": "Vorherige / nächste Epoche (Hypnogramm)"},
+    "kbd_prev_next_edf":  {"nl": "Vorige / volgende epoch (EDF viewer)", "fr": "Époque précédente / suivante (visionneuse EDF)", "en": "Previous / next epoch (EDF viewer)", "de": "Vorherige / nächste Epoche (EDF-Viewer)"},
+    "kbd_begin_end":      {"nl": "Begin / einde opname", "fr": "Début / fin de l'enregistrement", "en": "Start / end of recording", "de": "Anfang / Ende der Aufnahme"},
+    "kbd_undo":           {"nl": "Ongedaan maken (staging)", "fr": "Annuler (staging)", "en": "Undo (staging)", "de": "Rückgängig (Staging)"},
+    "kbd_zoom":           {"nl": "Zoom: 30s / 60s / 150s / 300s", "fr": "Zoom : 30 s / 60 s / 150 s / 300 s", "en": "Zoom: 30s / 60s / 150s / 300s", "de": "Zoom: 30 s / 60 s / 150 s / 300 s"},
+    "kbd_tool_obs":       {"nl": "Tool: Obstructief apnea", "fr": "Outil : Apnée obstructive", "en": "Tool: Obstructive apnea", "de": "Werkzeug: Obstruktive Apnoe"},
+    "kbd_tool_ca":        {"nl": "Tool: Centraal apnea", "fr": "Outil : Apnée centrale", "en": "Tool: Central apnea", "de": "Werkzeug: Zentrale Apnoe"},
+    "kbd_tool_mixed":     {"nl": "Tool: Gemengd apnea", "fr": "Outil : Apnée mixte", "en": "Tool: Mixed apnea", "de": "Werkzeug: Gemischte Apnoe"},
+    "kbd_tool_hyp":       {"nl": "Tool: Hypopnea", "fr": "Outil : Hypopnée", "en": "Tool: Hypopnea", "de": "Werkzeug: Hypopnoe"},
+    "kbd_tool_arousal":   {"nl": "Tool: Arousal", "fr": "Outil : Éveil", "en": "Tool: Arousal", "de": "Werkzeug: Arousal"},
+    "kbd_tool_rera":      {"nl": "Tool: RERA", "fr": "Outil : RERA", "en": "Tool: RERA", "de": "Werkzeug: RERA"},
+    "kbd_help_toggle":    {"nl": "Deze help tonen/verbergen", "fr": "Afficher/masquer cette aide", "en": "Show/hide this help", "de": "Diese Hilfe ein-/ausblenden"},
+    "kbd_scroll_channel": {"nl": "op kanaalnaam", "fr": "sur le nom du canal", "en": "on channel name", "de": "auf Kanalnamen"},
+    "kbd_scroll_signal":  {"nl": "op signaal", "fr": "sur le signal", "en": "on the signal", "de": "auf das Signal"},
+    "kbd_amp_per_channel":{"nl": "Per-kanaal amplitude aanpassen", "fr": "Ajuster l'amplitude par canal", "en": "Per-channel amplitude adjust", "de": "Amplitude pro Kanal anpassen"},
+    "kbd_amp_global":     {"nl": "Globale amplitude aanpassen", "fr": "Ajuster l'amplitude globale", "en": "Adjust global amplitude", "de": "Globale Amplitude anpassen"},
+
+    # Generic "load failed"
+    "load_failed":          {"nl": "Laden mislukt", "fr": "Échec du chargement", "en": "Load failed", "de": "Laden fehlgeschlagen"},
+
+    # results_extended.html artifact table
+    "col_max_amplitude": {"nl": "Max amplitude (μV)", "fr": "Amplitude max. (μV)", "en": "Max amplitude (μV)", "de": "Max. Amplitude (μV)"},
+    "col_flat_signal":   {"nl": "Vlak signaal",       "fr": "Signal plat",        "en": "Flat signal",      "de": "Flaches Signal"},
+    "col_high_amp":      {"nl": "Hoge amplitude",     "fr": "Amplitude élevée",   "en": "High amplitude",   "de": "Hohe Amplitude"},
+
+    # EDF+ notification (results_extended.html)
+    "edf_ready_title":      {"nl": "EDF+ klaar!", "fr": "EDF+ prêt !", "en": "EDF+ ready!", "de": "EDF+ fertig!"},
+    "edf_ready_msg":        {"nl": "Het gescoorde EDF+ bestand is beschikbaar voor download.", "fr": "Le fichier EDF+ scoré est disponible au téléchargement.", "en": "The scored EDF+ file is available for download.", "de": "Die gescorte EDF+-Datei steht zum Download bereit."},
+    "edf_ready_btn_title":  {"nl": "EDF+ klaar — klik om te downloaden", "fr": "EDF+ prêt — cliquez pour télécharger", "en": "EDF+ ready — click to download", "de": "EDF+ fertig — zum Herunterladen klicken"},
+    "edf_generate":         {"nl": "Genereer EDF+", "fr": "Générer EDF+", "en": "Generate EDF+", "de": "EDF+ erzeugen"},
+    "edf_generate_title":   {"nl": "Klik om EDF+ op de achtergrond te genereren (enkele minuten)", "fr": "Cliquer pour générer EDF+ en arrière-plan (quelques minutes)", "en": "Click to generate EDF+ in the background (a few minutes)", "de": "Klicken, um EDF+ im Hintergrund zu erzeugen (einige Minuten)"},
+    "close_btn":            {"nl": "Sluiten", "fr": "Fermer", "en": "Close", "de": "Schließen"},
+}
+TRANSLATIONS.update(_V0103_ANALYSIS)
+

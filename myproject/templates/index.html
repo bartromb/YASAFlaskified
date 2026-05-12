@@ -31,9 +31,9 @@
   {# Uploadkaart #}
   <div class="card shadow-sm border-0">
     <div class="card-body p-4 p-md-5">
-      <h4 class="mb-1">📂 EDF-bestand uploaden</h4>
+      <h4 class="mb-1">{{ t('upload_card_title') }}</h4>
       <p class="text-muted small mb-4">
-        Polysomnografie-opname in European Data Format (.edf) — max 500 MB
+        {{ t('upload_card_sub') }}
       </p>
 
       <form method="POST" action="/upload" enctype="multipart/form-data" id="uploadForm">
@@ -46,7 +46,7 @@
              onclick="document.getElementById('edfInput').click()">
           <div class="fs-2 mb-2" id="dropIcon">📁</div>
           <div id="dropText">
-            <strong>Klik om te bladeren</strong> of sleep een .edf bestand hiernaartoe
+            <strong>{{ t('upload_drop_browse') }}</strong> {{ t('upload_drop_or_drag') }}
           </div>
           <div class="text-muted small mt-2" id="fileInfo"></div>
         </div>
@@ -109,7 +109,7 @@ const form    = document.getElementById("uploadForm");
 
 function setFile(file) {
   if (!file || !file.name.toLowerCase().endsWith(".edf")) {
-    alert("Selecteer een geldig .edf bestand.");
+    alert("{{ t('invalid_edf_file') }}");
     return;
   }
   const mb = (file.size / 1024 / 1024).toFixed(1);

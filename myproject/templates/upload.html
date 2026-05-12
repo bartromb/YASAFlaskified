@@ -654,8 +654,8 @@ function resetUpload() {
   isUploading = false;
   uploadBtn.disabled = false;
   uploadBtn.classList.remove('loading');
-  btnText.textContent = 'Opnieuw proberen';
-  setProgress(0, 'Fout opgetreden');
+  btnText.textContent = '{{ t("retry") }}';
+  setProgress(0, '{{ t("error_occurred") }}');
   progressFill.style.background = 'var(--danger)';
 }
 </script>
