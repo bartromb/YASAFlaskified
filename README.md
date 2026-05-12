@@ -19,7 +19,7 @@ Available in 🇬🇧 [English](https://github.com/bartromb/YASAFlaskified/relea
 
 ## Paper
 
-> Rombaut B, Rombaut B, Rombaut C, et al. **Automated Polysomnography Scoring for Clinical Sleep Medicine: An Open-Source Platform Validated Against 59 Independent Scorer Sessions on PSG-IPA.** Manuscript in preparation, 2026.
+> Rombaut B, Rombaut B, Rombaut C, et al. **An open-source, AASM-compliant tool for respiratory event detection in polysomnography.** Manuscript in preparation, 2026.
 
 Technical supplement: **[psgscoring Technical Reference](https://github.com/bartromb/psgscoring/wiki/Technical-Reference)**
 
@@ -84,9 +84,8 @@ See [github.com/bartromb/psgscoring](https://github.com/bartromb/psgscoring) for
 
 ```bibtex
 @article{rombaut2026psgscoring,
-  title     = {Automated Polysomnography Scoring for Clinical Sleep Medicine:
-               An Open-Source Platform Validated Against 59 Independent
-               Scorer Sessions on {PSG-IPA}},
+  title     = {An open-source, {AASM}-compliant tool for respiratory event
+               detection in polysomnography},
   author    = {Rombaut, Bart and Rombaut, Briek and Rombaut, Cedric},
   year      = {2026},
   note      = {Manuscript in preparation}
