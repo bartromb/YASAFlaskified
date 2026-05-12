@@ -66,12 +66,12 @@
   {# Wat doet het #}
   <div class="row g-3 mt-4">
     {% set features = [
-      ("🌙", "Slaapstaging", "Automatisch hypnogram via YASA machine learning"),
-      ("🌀", "Spindle detectie", "Slaapspoelen per kanaal met frequentie & amplitude"),
-      ("〰️", "Trage golven", "Slow oscillations in N3 met duurstatistieken"),
-      ("👁️", "REM analyse", "REM-perioden, cycli en NREM→REM transities"),
-      ("📡", "Bandvermogen", "Delta/theta/alpha/sigma/beta per slaapfase"),
-      ("📄", "PDF & Excel", "Professioneel rapport direct downloadbaar"),
+      ("🌙", t("feat_staging_title"), t("feat_staging_body")),
+      ("🌀", t("feat_spindle_title"), t("feat_spindle_body")),
+      ("〰️", t("feat_sw_title"),     t("feat_sw_body")),
+      ("👁️", t("feat_rem_title"),    t("feat_rem_body")),
+      ("📡", t("feat_bp_title"),     t("feat_bp_body")),
+      ("📄", t("feat_pdf_title"),    t("feat_pdf_body")),
     ] %}
     {% for icon, title, desc in features %}
     <div class="col-6 col-md-4">

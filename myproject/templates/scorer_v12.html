@@ -285,7 +285,7 @@
     document.getElementById("event-count").textContent = filtered.length;
 
     if (!filtered.length) {
-      body.innerHTML = '<div class="text-muted text-center py-2">Geen events</div>';
+      body.innerHTML = '<div class="text-muted text-center py-2">{{ t("no_events") }}</div>';
       return;
     }
 

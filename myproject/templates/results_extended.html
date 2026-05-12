@@ -944,7 +944,7 @@ function saveConclusion() {
     if (data.pdf_regenerated) {
       st.innerHTML = '<div class="alert alert-success py-1 small">✅ {{ t("conclusion_saved") }}</div>';
     } else {
-      st.innerHTML = '<div class="alert alert-warning py-1 small">⚠️ Opgeslagen, maar PDF fout: ' + (data.error || '') + '</div>';
+      st.innerHTML = '<div class="alert alert-warning py-1 small">⚠️ {{ t("saved_pdf_error") }} ' + (data.error || '') + '</div>';
     }
   });
 }

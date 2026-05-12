@@ -2583,3 +2583,61 @@ _V0104_EDITOR = {
 }
 TRANSLATIONS.update(_V0104_EDITOR)
 
+
+# ═══════════════════════════════════════════════════════════
+# v0.10.5: full-codebase sweep — remaining Dutch leaks
+# ═══════════════════════════════════════════════════════════
+_V0105_SWEEP = {
+    # dashboard.html — failed status badge
+    "status_failed_short": {"nl": "Mislukt", "fr": "Échec", "en": "Failed", "de": "Fehlgeschlagen"},
+
+    # index.html — feature cards
+    "feat_staging_title": {"nl": "Slaapstaging",   "fr": "Stadification du sommeil", "en": "Sleep staging",   "de": "Schlafstadien"},
+    "feat_staging_body":  {"nl": "Automatisch hypnogram via YASA machine learning",
+                           "fr": "Hypnogramme automatique via le machine learning YASA",
+                           "en": "Automatic hypnogram via YASA machine learning",
+                           "de": "Automatisches Hypnogramm mittels YASA Machine Learning"},
+    "feat_spindle_title": {"nl": "Spindle detectie", "fr": "Détection de spindles",  "en": "Spindle detection","de": "Spindel-Erkennung"},
+    "feat_spindle_body":  {"nl": "Slaapspoelen per kanaal met frequentie & amplitude",
+                           "fr": "Spindles par canal avec fréquence et amplitude",
+                           "en": "Sleep spindles per channel with frequency & amplitude",
+                           "de": "Schlafspindeln pro Kanal mit Frequenz & Amplitude"},
+    "feat_sw_title":      {"nl": "Trage golven",   "fr": "Ondes lentes",          "en": "Slow waves",        "de": "Slow Waves"},
+    "feat_sw_body":       {"nl": "Slow oscillations in N3 met duurstatistieken",
+                           "fr": "Oscillations lentes en N3 avec statistiques de durée",
+                           "en": "Slow oscillations in N3 with duration statistics",
+                           "de": "Slow Oscillations in N3 mit Dauerstatistiken"},
+    "feat_rem_title":     {"nl": "REM analyse",    "fr": "Analyse REM",           "en": "REM analysis",      "de": "REM-Analyse"},
+    "feat_rem_body":      {"nl": "REM-perioden, cycli en NREM→REM transities",
+                           "fr": "Périodes REM, cycles et transitions NREM→REM",
+                           "en": "REM periods, cycles, and NREM→REM transitions",
+                           "de": "REM-Perioden, Zyklen und NREM→REM-Übergänge"},
+    "feat_bp_title":      {"nl": "Bandvermogen",   "fr": "Puissance par bande",   "en": "Bandpower",         "de": "Bandpower"},
+    "feat_bp_body":       {"nl": "Delta/theta/alpha/sigma/beta per slaapfase",
+                           "fr": "Delta/thêta/alpha/sigma/bêta par stade de sommeil",
+                           "en": "Delta/theta/alpha/sigma/beta per sleep stage",
+                           "de": "Delta/Theta/Alpha/Sigma/Beta pro Schlafstadium"},
+    "feat_pdf_title":     {"nl": "PDF & Excel",    "fr": "PDF & Excel",           "en": "PDF & Excel",       "de": "PDF & Excel"},
+    "feat_pdf_body":      {"nl": "Professioneel rapport direct downloadbaar",
+                           "fr": "Rapport professionnel téléchargeable immédiatement",
+                           "en": "Professional report ready to download",
+                           "de": "Professioneller Bericht sofort herunterladbar"},
+
+    # report_editor.html — placeholder for institution name
+    "rh_inst_placeholder": {"nl": "bv. Slaapkliniek AZORG", "fr": "p.ex. Clinique du sommeil", "en": "e.g. Sleep Clinic", "de": "z. B. Schlafklinik"},
+
+    # results_extended.html — partial-save warning
+    "saved_pdf_error": {"nl": "Opgeslagen, maar PDF fout:", "fr": "Enregistré, mais erreur PDF :", "en": "Saved, but PDF error:", "de": "Gespeichert, aber PDF-Fehler:"},
+
+    # scorer_v12.html
+    "no_events": {"nl": "Geen events", "fr": "Aucun événement", "en": "No events", "de": "Keine Ereignisse"},
+
+    # upload.html — log + progress JS strings
+    "upload_only_edf":          {"nl": "⚠️ Alleen .edf bestanden zijn toegestaan.", "fr": "⚠️ Seuls les fichiers .edf sont autorisés.", "en": "⚠️ Only .edf files are allowed.", "de": "⚠️ Nur .edf-Dateien sind erlaubt."},
+    "upload_chunks_uploading":  {"nl": "Chunks uploaden...", "fr": "Téléversement des chunks...", "en": "Uploading chunks...", "de": "Chunks werden hochgeladen..."},
+    "upload_channels_detected": {"nl": "Kanalen gedetecteerd...", "fr": "Canaux détectés...", "en": "Channels detected...", "de": "Kanäle erkannt..."},
+    "upload_next_channel_sel":  {"nl": "Doorgaan naar kanaalkeuze...", "fr": "Passage à la sélection des canaux...", "en": "Proceeding to channel selection...", "de": "Weiter zur Kanalauswahl..."},
+    "upload_channel_sel_load":  {"nl": "Kanaalkeuze laden...", "fr": "Chargement de la sélection des canaux...", "en": "Loading channel selection...", "de": "Kanalauswahl wird geladen..."},
+}
+TRANSLATIONS.update(_V0105_SWEEP)
+
