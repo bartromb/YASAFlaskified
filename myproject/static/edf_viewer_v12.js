@@ -22,7 +22,7 @@ const EDF_COLORS = {
   snore:"#7f8c8d", pos:"#2980b9", other:"#95a5a6",
 };
 
-const STAGE_COLORS = {
+const EDF_STAGE_COLORS = {
   W:"#e74c3c", N1:"#f39c12", N2:"#2980b9",
   N3:"#1a3a8f", R:"#8e44ad",
 };
@@ -626,7 +626,7 @@ class EdfViewer {
       const s     = stages[epIdx];
       if (!s) continue;
       const x = this.LABEL_W + ei * cellW;
-      ctx.fillStyle = (STAGE_COLORS[s] || "#aaa") + "cc";
+      ctx.fillStyle = (EDF_STAGE_COLORS[s] || "#aaa") + "cc";
       ctx.fillRect(x, stripY, cellW, stripH);
       // Stage label in white
       if (cellW > 22) {
