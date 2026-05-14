@@ -127,13 +127,20 @@
             </span>
             <span class="badge bg-secondary" id="event-count">—</span>
           </div>
-          {# Filter buttons #}
+          {# Filter buttons — counts injected by JS #}
           <div class="d-flex gap-1 flex-wrap mb-2" id="ev-filter-btns">
             <button class="btn btn-sm py-0 px-1 active" data-filter="all"
-                    style="font-size:.65rem;border:1px solid #666;background:#f0f0f0">Alle</button>
+                    style="font-size:.65rem;border:1px solid #666;background:#f0f0f0">
+              {% if current_lang=='fr' %}Tous{% elif current_lang=='en' %}All{% elif current_lang=='de' %}Alle{% else %}Alle{% endif %}
+              <span class="badge bg-secondary ms-1 ev-filter-count" data-count-for="all">0</span>
+            </button>
             {% for evtype, col in [('OA','#e74c3c'),('CA','#3498db'),('MA','#9b59b6'),('H','#f39c12'),('AR','#2ecc71'),('RERA','#1abc9c')] %}
             <button class="btn btn-sm py-0 px-1" data-filter="{{ evtype }}"
-                    style="font-size:.65rem;border:1px solid {{ col }};color:{{ col }}">{{ evtype }}</button>
+                    style="font-size:.65rem;border:1px solid {{ col }};color:{{ col }}">
+              {{ evtype }}
+              <span class="badge ms-1 ev-filter-count" data-count-for="{{ evtype }}"
+                    style="background:{{ col }};color:#fff">0</span>
+            </button>
             {% endfor %}
           </div>
           <div id="event-list-body">
@@ -184,6 +191,7 @@
             <tr><td><kbd>Alt+H</kbd></td><td>{{ t('kbd_tool_hyp') }}</td></tr>
             <tr><td><kbd>Alt+A</kbd></td><td>{{ t('kbd_tool_arousal') }}</td></tr>
             <tr><td><kbd>Alt+E</kbd></td><td>{{ t('kbd_tool_rera') }}</td></tr>
+            <tr><td><kbd>N</kbd> / <kbd>P</kbd></td><td>{{ t('kbd_next_prev_event') }}</td></tr>
             <tr><td><kbd>?</kbd></td><td>{{ t('kbd_help_toggle') }}</td></tr>
             <tr><td><kbd>Scroll</kbd> {{ t('kbd_scroll_channel') }}</td><td>{{ t('kbd_amp_per_channel') }}</td></tr>
             <tr><td><kbd>Scroll</kbd> {{ t('kbd_scroll_signal') }}</td><td>{{ t('kbd_amp_global') }}</td></tr>
@@ -223,6 +231,7 @@
       const t=(idx*30/3600).toFixed(2);
       document.getElementById("sync-badge").textContent=`Epoch ${idx+1}  (${t}h)`;
     },
+    onEventsChanged: () => loadEventList(),
     onStatsUpdate: (stats) => {
       // Update AHI/event-tellers live
       const set = (id,val) => { const el=document.getElementById(id); if(el&&val!==undefined) el.textContent=val; };
@@ -271,12 +280,24 @@
       .then(data => {
         _allEvents = (data.events || []).sort((a,b) => a.t_start - b.t_start);
         document.getElementById("event-count").textContent = _allEvents.length;
+        updateFilterCounts();
         renderEventList();
       })
       .catch(e => {
         document.getElementById("event-list-body").innerHTML =
           '<div class="text-danger small">{{ t("load_failed") }}</div>';
       });
+  }
+
+  function updateFilterCounts() {
+    const counts = {all: _allEvents.length};
+    for (const ev of _allEvents) {
+      counts[ev.type] = (counts[ev.type] || 0) + 1;
+    }
+    document.querySelectorAll('.ev-filter-count').forEach(el => {
+      const k = el.dataset.countFor;
+      el.textContent = counts[k] || 0;
+    });
   }
 
   function renderEventList() {
@@ -324,16 +345,40 @@
   // Load event list on page load
   loadEventList();
 
+  // ── Next/Prev event hotkey (N / P) ───────────────────────
+  function jumpToEventRelative(direction) {
+    if (!_allEvents.length) return;
+    const filtered = _evFilter === "all" ? _allEvents : _allEvents.filter(e => e.type === _evFilter);
+    if (!filtered.length) return;
+    const tNow = viewer.epochIdx * 30;
+    let target;
+    if (direction > 0) {
+      target = filtered.find(e => e.t_start > tNow + 0.5);
+    } else {
+      const past = filtered.filter(e => e.t_start < tNow - 0.5);
+      target = past.length ? past[past.length - 1] : null;
+    }
+    if (target) {
+      viewer.goToTime(target.t_start);
+    }
+  }
+
   // ── Keyboard help overlay (? toets) ──────────────────────
   document.addEventListener('keydown', function(e) {
-    if ((e.key === '?' || e.key === '/') && !e.ctrlKey && !e.altKey) {
-      const el = document.activeElement;
-      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) return;
+    const el = document.activeElement;
+    const inField = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA');
+
+    if ((e.key === '?' || e.key === '/') && !e.ctrlKey && !e.altKey && !inField) {
       e.preventDefault();
       document.getElementById('kb-help').classList.toggle('d-none');
     }
     if (e.key === 'Escape') {
       document.getElementById('kb-help').classList.add('d-none');
+    }
+    // N / P → next / previous event in active filter
+    if (!e.ctrlKey && !e.altKey && !inField) {
+      if (e.key === 'n' || e.key === 'N') { e.preventDefault(); jumpToEventRelative(+1); }
+      if (e.key === 'p' || e.key === 'P') { e.preventDefault(); jumpToEventRelative(-1); }
     }
   });
 </script>

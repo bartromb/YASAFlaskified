@@ -22,6 +22,11 @@ const EDF_COLORS = {
   snore:"#7f8c8d", pos:"#2980b9", other:"#95a5a6",
 };
 
+const STAGE_COLORS = {
+  W:"#e74c3c", N1:"#f39c12", N2:"#2980b9",
+  N3:"#1a3a8f", R:"#8e44ad",
+};
+
 const EVENT_META = {
   OA:  { label:"Obstructief apnea", color:"#e74c3c", alpha:0.25, minDur:10 },
   CA:  { label:"Centraal apnea",    color:"#3498db", alpha:0.25, minDur:10 },
@@ -44,6 +49,11 @@ const VI18N = {
        event_added:"Event toegevoegd", event_removed:"Event verwijderd",
        click_to_toggle:"Klik op signaal om event toe te voegen / te verwijderen",
        active_tool:"Actief:",
+       jump_title:"Spring naar epoch # (Enter)",
+       no_next_event:"Geen volgend event", no_prev_event:"Geen vorig event",
+       show:"Tonen", hide:"Verbergen", show_all:"Alle",
+       reset_all:"Reset alle", channels_label:"Kanalen",
+       ch_help:"Klik naam = tonen/verbergen · ＋/－ = amplitude",
   },
   fr:{ loading:"Chargement…", error:"Erreur de chargement.",
        epoch:"Époque", prev:"◀ Précédent", next:"Suivant ▶",
@@ -52,6 +62,11 @@ const VI18N = {
        event_added:"Événement ajouté", event_removed:"Événement supprimé",
        click_to_toggle:"Cliquez sur le signal pour ajouter / supprimer un événement",
        active_tool:"Actif :",
+       jump_title:"Aller à l'époque # (Entrée)",
+       no_next_event:"Aucun événement suivant", no_prev_event:"Aucun événement précédent",
+       show:"Afficher", hide:"Masquer", show_all:"Tous",
+       reset_all:"Tout réinitialiser", channels_label:"Canaux",
+       ch_help:"Clic nom = afficher/masquer · ＋/－ = amplitude",
   },
   en:{ loading:"Loading…", error:"Load error.",
        epoch:"Epoch", prev:"◀ Prev", next:"Next ▶",
@@ -60,6 +75,24 @@ const VI18N = {
        event_added:"Event added", event_removed:"Event removed",
        click_to_toggle:"Click signal to add / remove event",
        active_tool:"Active:",
+       jump_title:"Jump to epoch # (Enter)",
+       no_next_event:"No next event", no_prev_event:"No previous event",
+       show:"Show", hide:"Hide", show_all:"All",
+       reset_all:"Reset all", channels_label:"Channels",
+       ch_help:"Click name = show/hide · ＋/－ = amplitude",
+  },
+  de:{ loading:"Lädt…", error:"Ladefehler.",
+       epoch:"Epoche", prev:"◀ Zurück", next:"Weiter ▶",
+       zoom_in:"Zoom +", zoom_out:"Zoom −", ch_toggle:"Kanäle",
+       no_data:"Keine Signaldaten.",
+       event_added:"Ereignis hinzugefügt", event_removed:"Ereignis entfernt",
+       click_to_toggle:"Klick auf Signal um Ereignis hinzuzufügen / zu entfernen",
+       active_tool:"Aktiv:",
+       jump_title:"Zu Epoche # springen (Enter)",
+       no_next_event:"Kein nächstes Ereignis", no_prev_event:"Kein vorheriges Ereignis",
+       show:"Zeigen", hide:"Verbergen", show_all:"Alle",
+       reset_all:"Alle zurücksetzen", channels_label:"Kanäle",
+       ch_help:"Klick Name = zeigen/verbergen · ＋/－ = Amplitude",
   },
 };
 
@@ -74,6 +107,7 @@ class EdfViewer {
     this.eventsEnabled   = opts.eventsEnabled !== false;
     this.activeEventType = opts.activeEventType || "OA";
     this.onStatsUpdate   = opts.onStatsUpdate  || null;
+    this.onEventsChanged = opts.onEventsChanged|| null;
 
     // State
     this.info        = null;
@@ -86,10 +120,11 @@ class EdfViewer {
     this.chAmpScale  = {};          // per-kanaal amplitude multiplier {ch_name: float}
 
     // Layout
-    this.TRACK_H = 62;
-    this.LABEL_W = 92;
-    this.PAD_TOP = 4;
-    this.PAD_BOT = 22;
+    this.TRACK_H  = 62;
+    this.LABEL_W  = 92;
+    this.STAGE_H  = 14;          // thin colour strip showing sleep stage(s)
+    this.PAD_TOP  = 4 + this.STAGE_H;  // channels start below the stage strip
+    this.PAD_BOT  = 22;
 
     this._build();
     this._loadInfo();
@@ -120,6 +155,21 @@ class EdfViewer {
     this.prevBtn   = this._btn(`◀ ${this.lang.prev}`,  "outline-secondary", () => this.goTo(this.epochIdx-this.epochSpan));
     this.epochLbl  = this._el("span","badge bg-primary px-3"); this.epochLbl.style.fontSize=".82rem";
     this.nextBtn   = this._btn(`${this.lang.next} ▶`,  "outline-secondary", () => this.goTo(this.epochIdx+this.epochSpan));
+
+    // Jump-to-epoch input
+    this.jumpInput = this._el("input","form-control form-control-sm");
+    this.jumpInput.type = "number"; this.jumpInput.min = "1";
+    this.jumpInput.placeholder = "#";
+    this.jumpInput.title = this.lang.jump_title;
+    this.jumpInput.style.cssText = "width:70px;font-size:.75rem;padding:1px 4px";
+    this.jumpInput.addEventListener("keydown", e => {
+      if (e.key === "Enter") {
+        const n = parseInt(this.jumpInput.value, 10);
+        if (!isNaN(n) && n >= 1) this.goTo(n - 1);
+        this.jumpInput.value = "";
+        this.jumpInput.blur();
+      }
+    });
     const zIn      = this._btn("＋","outline-secondary",() => {this.ampScale*=1.4;this._redraw();},this.lang.zoom_in);
     const zOut     = this._btn("－","outline-secondary",() => {this.ampScale/=1.4;this._redraw();},this.lang.zoom_out);
 
@@ -137,7 +187,7 @@ class EdfViewer {
     this.chBtn     = this._btn(`☰ ${this.lang.ch_toggle}`,"outline-secondary",() => this._toggleChPanel());
     this.statusBadge = this._el("span","badge bg-secondary ms-auto");
     this.statusBadge.textContent = this.lang.loading;
-    [this.prevBtn,this.epochLbl,this.nextBtn,zOut,zIn,spanGrp,this.chBtn,this.statusBadge].forEach(e=>tb.appendChild(e));
+    [this.prevBtn,this.epochLbl,this.nextBtn,this.jumpInput,zOut,zIn,spanGrp,this.chBtn,this.statusBadge].forEach(e=>tb.appendChild(e));
     this.container.appendChild(tb);
 
     // ── Event-toolbar ─────────────────────────────────────────
@@ -211,7 +261,7 @@ class EdfViewer {
 
     const hdr = this._el("div","d-flex justify-content-between align-items-center mb-2");
     hdr.innerHTML = `<b>${this.lang.ch_toggle}</b>
-      <span class="text-muted" style="font-size:.7rem">Klik naam = tonen/verbergen · ＋/－ = amplitude</span>`;
+      <span class="text-muted" style="font-size:.7rem">${this.lang.ch_help}</span>`;
     this.chPanel.appendChild(hdr);
 
     // ── v0.8.2: Kanaalgroep-filters ──────────────────────────
@@ -228,7 +278,7 @@ class EdfViewer {
     // "Alle" toggle
     const allBtn = this._el("button","btn btn-sm");
     allBtn.style.cssText = `font-size:.7rem;padding:2px 8px;border:1px solid #333;background:#fff;color:#333;font-weight:600`;
-    allBtn.textContent = "👁 Alle";
+    allBtn.textContent = `👁 ${this.lang.show_all}`;
     allBtn.addEventListener("click",()=>{
       this.hiddenChs.clear();
       this._buildChPanel(); this._resize(); this._redraw();
@@ -250,7 +300,7 @@ class EdfViewer {
         background:${active ? grp.color : "#fff"};color:${active ? "#fff" : grp.color};
         font-weight:600;opacity:${allHidden ? "0.5" : "1"}`;
       btn.textContent = `${grp.label} (${grpChs.length})`;
-      btn.title = `${allHidden ? "Toon" : "Verberg"} ${grp.label} kanalen`;
+      btn.title = `${allHidden ? this.lang.show : this.lang.hide} ${grp.label}`;
 
       btn.addEventListener("click",()=>{
         if (allHidden) {
@@ -295,7 +345,7 @@ class EdfViewer {
       const minusBtn = this._el("button","btn btn-outline-secondary btn-sm");
       minusBtn.style.cssText="font-size:.65rem;padding:0 5px;line-height:1.4";
       minusBtn.textContent = "－";
-      minusBtn.title = `${ch}: amplitude verlagen`;
+      minusBtn.title = `${ch}: ${this.lang.zoom_out}`;
       minusBtn.addEventListener("click",()=>{
         this.chAmpScale[ch] = (this.chAmpScale[ch]||1.0) / 1.5;
         ampLabel.textContent = `×${(this.chAmpScale[ch]||1).toFixed(1)}`;
@@ -313,7 +363,7 @@ class EdfViewer {
       const plusBtn = this._el("button","btn btn-outline-secondary btn-sm");
       plusBtn.style.cssText="font-size:.65rem;padding:0 5px;line-height:1.4";
       plusBtn.textContent = "＋";
-      plusBtn.title = `${ch}: amplitude verhogen`;
+      plusBtn.title = `${ch}: ${this.lang.zoom_in}`;
       plusBtn.addEventListener("click",()=>{
         this.chAmpScale[ch] = (this.chAmpScale[ch]||1.0) * 1.5;
         ampLabel.textContent = `×${(this.chAmpScale[ch]||1).toFixed(1)}`;
@@ -325,7 +375,7 @@ class EdfViewer {
       const resetBtn = this._el("button","btn btn-outline-warning btn-sm");
       resetBtn.style.cssText="font-size:.6rem;padding:0 4px;line-height:1.4";
       resetBtn.textContent = "↺";
-      resetBtn.title = `${ch}: reset amplitude`;
+      resetBtn.title = `${ch}: ${this.lang.reset_all}`;
       resetBtn.addEventListener("click",()=>{
         delete this.chAmpScale[ch];
         ampLabel.textContent = "×1.0";
@@ -344,7 +394,7 @@ class EdfViewer {
     this.chPanel.appendChild(tbl);
 
     // Reset all button
-    const resetAll = this._btn("↺ Reset alle","outline-warning",()=>{
+    const resetAll = this._btn(`↺ ${this.lang.reset_all}`,"outline-warning",()=>{
       this.chAmpScale = {};
       this._buildChPanel();
       this._redraw();
@@ -480,6 +530,9 @@ class EdfViewer {
 
     const usableW = W - this.LABEL_W;
 
+    // ── Sleep-stage colour strip (top, contextual) ──────────
+    this._drawStageStrip(ctx, usableW);
+
     // ── Event-overlay (achtergrond) ──────────────────────────
     this._drawEventOverlay(ctx, combinedEvents, W, visChs.length, usableW, totalEpochLen, t0);
 
@@ -551,6 +604,41 @@ class EdfViewer {
     this._drawTimeAxis(ctx, W, H, totalEpochLen, t0);
   }
 
+  _drawStageStrip(ctx, usableW) {
+    // Coloured band above the signals indicating sleep stage(s) for each visible epoch.
+    const stripY = 4;
+    const stripH = this.STAGE_H - 2;
+    const stages = (this.scorer && this.scorer.getStages) ? this.scorer.getStages() : [];
+
+    // Subtle frame
+    ctx.fillStyle = "#f0f4f8";
+    ctx.fillRect(this.LABEL_W, stripY, usableW, stripH);
+
+    // Y-label: "Stage"
+    ctx.fillStyle = "#6b7a99"; ctx.font = "bold 9px system-ui"; ctx.textAlign = "right";
+    ctx.fillText("Stage", this.LABEL_W - 5, stripY + stripH - 3);
+
+    if (!stages.length) return;
+
+    const cellW = usableW / this.epochSpan;
+    for (let ei = 0; ei < this.epochSpan; ei++) {
+      const epIdx = this.epochIdx + ei;
+      const s     = stages[epIdx];
+      if (!s) continue;
+      const x = this.LABEL_W + ei * cellW;
+      ctx.fillStyle = (STAGE_COLORS[s] || "#aaa") + "cc";
+      ctx.fillRect(x, stripY, cellW, stripH);
+      // Stage label in white
+      if (cellW > 22) {
+        ctx.fillStyle = "#fff"; ctx.font = "bold 10px system-ui"; ctx.textAlign = "center";
+        ctx.fillText(s, x + cellW/2, stripY + stripH - 3);
+      }
+    }
+    // Frame
+    ctx.strokeStyle = "#d8e3ef"; ctx.lineWidth = 0.6;
+    ctx.strokeRect(this.LABEL_W, stripY, usableW, stripH);
+  }
+
   _drawEventOverlay(ctx, events, W, nChs, usableW, epochLen, t0) {
     const totalH = nChs * this.TRACK_H;
     for (const ev of events) {
@@ -603,24 +691,32 @@ class EdfViewer {
     }
   }
 
+  _gridStepFor(epochLen) {
+    // Adaptive grid: keep ~6-10 ticks regardless of span
+    if (epochLen <= 30)   return 5;     // 30s → ticks every 5s
+    if (epochLen <= 60)   return 10;    // 60s
+    if (epochLen <= 150)  return 30;    // 5 epochs (150s) → every 30s
+    return 60;                          // 10 epochs (300s) → every 60s
+  }
+
   _drawTimeGrid(ctx, W, H, epochLen, nChs) {
     ctx.strokeStyle="#dde3ed"; ctx.lineWidth=0.4;
-    [5,10,15,20,25].forEach(s=>{
-      if(s>=epochLen) return;
+    const step = this._gridStepFor(epochLen);
+    for (let s = step; s < epochLen; s += step) {
       const x = this.LABEL_W + (s/epochLen)*(W-this.LABEL_W);
       ctx.beginPath(); ctx.moveTo(x,this.PAD_TOP);
       ctx.lineTo(x, this.PAD_TOP+nChs*this.TRACK_H); ctx.stroke();
-    });
+    }
   }
 
   _drawTimeAxis(ctx, W, H, epochLen, t0) {
     ctx.fillStyle="#888"; ctx.font="9px system-ui"; ctx.textAlign="center";
-    [0,5,10,15,20,25,30].forEach(s=>{
-      if(s>epochLen) return;
+    const step = this._gridStepFor(epochLen);
+    for (let s = 0; s <= epochLen; s += step) {
       const x = this.LABEL_W + (s/epochLen)*(W-this.LABEL_W);
       const t = t0+s; const mm=Math.floor(t/60); const ss=Math.round(t%60);
       ctx.fillText(`${mm}:${String(ss).padStart(2,"0")}`, x, H-5);
-    });
+    }
   }
 
   _drawLoading() {
@@ -647,7 +743,7 @@ class EdfViewer {
       this.info = await resp.json();
       this._buildChPanel();
       this._resize();
-      this.statusBadge.textContent = `${this.info.channels.length} kanalen`;
+      this.statusBadge.textContent = `${this.info.channels.length} ${this.lang.channels_label}`;
       this.statusBadge.className   = "badge bg-success ms-auto";
       await this.goTo(0);
     } catch(err) {
@@ -750,7 +846,7 @@ class EdfViewer {
           }),
         });
         const result = await resp.json();
-        if (!resp.ok) throw new Error(result.error||"Fout");
+        if (!resp.ok) throw new Error(result.error||this.lang.error);
 
         // Herlaad events voor huidig epoch en aangrenzende
         await this._reloadEvents(this.epochIdx);
@@ -763,6 +859,7 @@ class EdfViewer {
 
         // Stats bijwerken
         if (result.stats && this.onStatsUpdate) this.onStatsUpdate(result.stats);
+        if (this.onEventsChanged) this.onEventsChanged();
 
       } catch(err) {
         this.evFeedback.textContent="❌ "+err.message;
