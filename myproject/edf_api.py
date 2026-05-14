@@ -142,10 +142,15 @@ def _get_raw(job_id: str, upload_folder: str):
         raise FileNotFoundError(f"EDF niet gevonden voor job {job_id}")
 
     import mne
-    logger.info("EDF laden voor viewer: %s", edf_path)
-    raw = mne.io.read_raw_edf(edf_path, preload=True, verbose=False)
+    logger.info("EDF openen voor viewer (lazy): %s", edf_path)
+    # preload=False: open the file header + index only. Per-epoch reads
+    # pull just the requested 30s slice from disk (~1 MB). With preload=True
+    # an 8h 32-ch PSG would block the first /info request for 20-60s while
+    # ~1-2 GB is loaded into RAM. Viewer access is sparse and sequential,
+    # so lazy reads give much better time-to-first-signal.
+    raw = mne.io.read_raw_edf(edf_path, preload=False, verbose=False)
     _raw_cache.set(job_id, raw)
-    logger.info("EDF geladen: %d kanalen, %.0f Hz, %.0f s",
+    logger.info("EDF geopend: %d kanalen, %.0f Hz, %.0f s",
                 len(raw.ch_names), raw.info["sfreq"], raw.times[-1])
     return raw
 
