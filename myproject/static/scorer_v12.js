@@ -30,18 +30,31 @@ const I18N = {
   nl: { save:"Opslaan & hergeneren", saved:"Opgeslagen!", saving:"Bezig...",
         undo:"Ongedaan (Ctrl+Z)", reset:"Terug naar AI",
         changes:"wijzigingen t.o.v. AI", epoch:"Epoch",
-        help:"Klik epoch | Toetsenbord: W · 1=N1 · 2=N2 · 3=N3 · R | Ctrl+Z=ongedaan",
-        confirm_reset:"Alle manuele correcties wissen en terugkeren naar AI-staging?" },
+        help:"Klik epoch | W·1·2·3·R | Shift+←→ ±10 | Ctrl+←→ overgang | wiel = scroll",
+        confirm_reset:"Alle manuele correcties wissen en terugkeren naar AI-staging?",
+        jump_title:"Spring naar epoch # (Enter)", jump_ph:"#",
+        jump_w:"Volgende Wake", jump_n3:"Volgende N3", jump_r:"Volgende REM" },
   fr: { save:"Enregistrer & regénérer", saved:"Enregistré !", saving:"En cours...",
         undo:"Annuler (Ctrl+Z)", reset:"Revenir à l'IA",
         changes:"modifications vs IA", epoch:"Époque",
-        help:"Cliquez époque | Clavier: W · 1=N1 · 2=N2 · 3=N3 · R | Ctrl+Z=annuler",
-        confirm_reset:"Effacer toutes les corrections et revenir au staging IA ?" },
+        help:"Clic époque | W·1·2·3·R | Maj+←→ ±10 | Ctrl+←→ transition | molette = défilement",
+        confirm_reset:"Effacer toutes les corrections et revenir au staging IA ?",
+        jump_title:"Aller à l'époque # (Entrée)", jump_ph:"#",
+        jump_w:"Prochain éveil", jump_n3:"Prochain N3", jump_r:"Prochain REM" },
   en: { save:"Save & regenerate", saved:"Saved!", saving:"Saving...",
         undo:"Undo (Ctrl+Z)", reset:"Reset to AI",
         changes:"changes vs AI", epoch:"Epoch",
-        help:"Click epoch | Keyboard: W · 1=N1 · 2=N2 · 3=N3 · R | Ctrl+Z=undo",
-        confirm_reset:"Clear all manual corrections and revert to AI staging?" },
+        help:"Click epoch | W·1·2·3·R | Shift+←→ ±10 | Ctrl+←→ transition | wheel = scroll",
+        confirm_reset:"Clear all manual corrections and revert to AI staging?",
+        jump_title:"Jump to epoch # (Enter)", jump_ph:"#",
+        jump_w:"Next Wake", jump_n3:"Next N3", jump_r:"Next REM" },
+  de: { save:"Speichern & neu generieren", saved:"Gespeichert!", saving:"Speichert...",
+        undo:"Rückgängig (Strg+Z)", reset:"Zurück zur KI",
+        changes:"Änderungen vs KI", epoch:"Epoche",
+        help:"Klick Epoche | W·1·2·3·R | Umschalt+←→ ±10 | Strg+←→ Übergang | Mausrad = scrollen",
+        confirm_reset:"Alle manuellen Korrekturen löschen und zur KI-Stadieneinteilung zurückkehren?",
+        jump_title:"Zu Epoche # springen (Enter)", jump_ph:"#",
+        jump_w:"Nächstes Wach", jump_n3:"Nächstes N3", jump_r:"Nächstes REM" },
 };
 
 class HypnoScorer {
@@ -122,6 +135,34 @@ class HypnoScorer {
       grp.appendChild(b);
     }
     parent.appendChild(grp);
+
+    // Jump-to-epoch input
+    this.jumpInput = this._el("input","form-control form-control-sm");
+    this.jumpInput.type = "number"; this.jumpInput.min = "1";
+    this.jumpInput.placeholder = this.lang.jump_ph;
+    this.jumpInput.title = this.lang.jump_title;
+    this.jumpInput.style.cssText = "width:72px;font-size:.78rem;padding:1px 6px";
+    this.jumpInput.addEventListener("keydown", e => {
+      if (e.key === "Enter") {
+        const n = parseInt(this.jumpInput.value, 10);
+        if (!isNaN(n) && n >= 1) this._goTo(n - 1);
+        this.jumpInput.value = "";
+        this.jumpInput.blur();
+      }
+    });
+    parent.appendChild(this.jumpInput);
+
+    // Stage-jump shortcuts: → next W / N3 / R
+    const jumpGrp = this._el("div","btn-group btn-group-sm");
+    for (const [stage, lblKey] of [["W","jump_w"],["N3","jump_n3"],["R","jump_r"]]) {
+      const b = this._el("button","btn btn-outline-secondary");
+      b.style.cssText = `border-color:${STAGE_COLORS[stage]};color:${STAGE_COLORS[stage]};font-size:.72rem;padding:1px 6px`;
+      b.innerHTML = `⇥<b>${stage}</b>`;
+      b.title = this.lang[lblKey];
+      b.addEventListener("click", () => this._jumpToStage(stage, +1));
+      jumpGrp.appendChild(b);
+    }
+    parent.appendChild(jumpGrp);
 
     // Undo
     const undoBtn = this._el("button","btn btn-sm btn-outline-secondary");
@@ -305,31 +346,115 @@ class HypnoScorer {
       const i = this._epochAt(e.clientX);
       if (i === null) return;
       this.selected = i;
+      this._requestDraw();
+    });
+
+    // Mouse wheel → horizontal scroll the hypnogram (much faster than
+    // dragging the bottom scrollbar on a 8-h recording).
+    this.canvasWrap.addEventListener("wheel", e => {
+      // Use whichever delta the OS reports; trackpads send deltaX for hscroll.
+      const dx = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      if (!dx) return;
+      e.preventDefault();
+      this.canvasWrap.scrollLeft += dx * (e.shiftKey ? 4 : 1.5);
+    }, { passive: false });
+  }
+
+  // Coalesce multiple _draw() calls per frame — prevents redraw-storm
+  // when keys repeat or during drag (was visibly laggy on long recordings).
+  _requestDraw() {
+    if (this._drawPending) return;
+    this._drawPending = true;
+    requestAnimationFrame(() => {
+      this._drawPending = false;
       this._draw();
     });
   }
 
   _bindKeys() {
     document.addEventListener("keydown", e => {
+      // Skip when focus is inside an input/textarea (jump-input etc.)
+      const el = document.activeElement;
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) return;
+
       // Ctrl+Z = undo
       if ((e.ctrlKey || e.metaKey) && e.code === "KeyZ") {
         e.preventDefault(); this._undo(); return;
       }
+      // Home / End = first / last epoch (work even without selection)
+      if (e.code === "Home") {
+        e.preventDefault(); this._goTo(0); return;
+      }
+      if (e.code === "End") {
+        e.preventDefault(); this._goTo(this.stages.length - 1); return;
+      }
       if (this.selected === null) return;
-      const stage = STAGE_KEYS[e.code];
-      if (stage) { e.preventDefault(); this._setStage(this.selected, stage); }
-      // Pijltoetsen: navigeer epoch
+
+      // Stage assign (W / 1 / 2 / 3 / R) — only WITHOUT modifiers to avoid
+      // clobbering arrow-nav shortcut combinations.
+      if (!e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey) {
+        const stage = STAGE_KEYS[e.code];
+        if (stage) { e.preventDefault(); this._setStage(this.selected, stage); return; }
+      }
+
+      // Arrow navigation:
+      //   Ctrl+←/→  = jump to previous / next stage transition
+      //   Shift+←/→ = ±10 epochs (5 min)
+      //   ←/→       = ±1 epoch
       if (e.code === "ArrowRight") {
         e.preventDefault();
-        this.selected = Math.min(this.stages.length - 1, this.selected + 1);
-        this._scrollToEpoch(this.selected); this._draw();
+        const target = e.ctrlKey ? this._findNextTransition(+1)
+                     : e.shiftKey ? Math.min(this.stages.length - 1, this.selected + 10)
+                     :              Math.min(this.stages.length - 1, this.selected + 1);
+        this._goTo(target);
       }
       if (e.code === "ArrowLeft") {
         e.preventDefault();
-        this.selected = Math.max(0, this.selected - 1);
-        this._scrollToEpoch(this.selected); this._draw();
+        const target = e.ctrlKey ? this._findNextTransition(-1)
+                     : e.shiftKey ? Math.max(0, this.selected - 10)
+                     :              Math.max(0, this.selected - 1);
+        this._goTo(target);
       }
     });
+  }
+
+  // Move selection to epoch idx, sync scroll + viewer, redraw.
+  _goTo(idx) {
+    if (idx < 0 || idx >= this.stages.length) return;
+    this.selected = idx;
+    this._scrollToEpoch(idx);
+    this._requestDraw();
+    if (typeof this._onEpochSelect === "function") this._onEpochSelect(idx);
+  }
+
+  _findNextTransition(dir) {
+    const start = this.selected ?? 0;
+    if (dir > 0) {
+      for (let i = start + 1; i < this.stages.length; i++)
+        if (this.stages[i] !== this.stages[i-1]) return i;
+      return this.stages.length - 1;
+    } else {
+      for (let i = start - 1; i > 0; i--)
+        if (this.stages[i] !== this.stages[i-1]) return i;
+      return 0;
+    }
+  }
+
+  _jumpToStage(stage, dir = +1) {
+    const start = this.selected ?? 0;
+    if (dir > 0) {
+      for (let i = start + 1; i < this.stages.length; i++) {
+        if (this.stages[i] === stage && this.stages[i-1] !== stage) {
+          this._goTo(i); return;
+        }
+      }
+    } else {
+      for (let i = start - 1; i > 0; i--) {
+        if (this.stages[i] === stage && this.stages[i-1] !== stage) {
+          this._goTo(i); return;
+        }
+      }
+    }
   }
 
   _scrollToEpoch(i) {
@@ -344,7 +469,7 @@ class HypnoScorer {
     if (old === newStage) return;
     this.history.push({ idx, from: old, to: newStage });
     this.stages[idx] = newStage;
-    this._draw();
+    this._requestDraw();
     this._updateChanges();
   }
 
@@ -353,7 +478,7 @@ class HypnoScorer {
     if (!last) return;
     this.stages[last.idx] = last.from;
     this.selected = last.idx;
-    this._draw();
+    this._requestDraw();
     this._updateChanges();
   }
 

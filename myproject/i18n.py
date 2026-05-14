@@ -2510,6 +2510,8 @@ _V0103_ANALYSIS = {
     "kbd_tool_rera":      {"nl": "Tool: RERA", "fr": "Outil : RERA", "en": "Tool: RERA", "de": "Werkzeug: RERA"},
     "kbd_help_toggle":    {"nl": "Deze help tonen/verbergen", "fr": "Afficher/masquer cette aide", "en": "Show/hide this help", "de": "Diese Hilfe ein-/ausblenden"},
     "kbd_next_prev_event":{"nl": "Volgend/vorig event (huidige filter)", "fr": "Événement suivant/précédent (filtre actif)", "en": "Next/previous event (active filter)", "de": "Nächstes/vorheriges Ereignis (aktiver Filter)"},
+    "kbd_jump10":         {"nl": "±10 epochs (5 min)", "fr": "±10 époques (5 min)", "en": "±10 epochs (5 min)", "de": "±10 Epochen (5 Min)"},
+    "kbd_jump_transition":{"nl": "Spring naar stage-overgang", "fr": "Aller à la transition de stade", "en": "Jump to stage transition", "de": "Zum Stadienwechsel springen"},
     "kbd_scroll_channel": {"nl": "op kanaalnaam", "fr": "sur le nom du canal", "en": "on channel name", "de": "auf Kanalnamen"},
     "kbd_scroll_signal":  {"nl": "op signaal", "fr": "sur le signal", "en": "on the signal", "de": "auf das Signal"},
     "kbd_amp_per_channel":{"nl": "Per-kanaal amplitude aanpassen", "fr": "Ajuster l'amplitude par canal", "en": "Per-channel amplitude adjust", "de": "Amplitude pro Kanal anpassen"},
