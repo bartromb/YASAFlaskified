@@ -2867,3 +2867,31 @@ _V0112_FRONT_FRESH = {
 }
 TRANSLATIONS.update(_V0112_FRONT_FRESH)
 
+
+# ═══════════════════════════════════════════════════════════
+# v0.12.0: Bulk-onderhoud + archivering (dashboard)
+# ═══════════════════════════════════════════════════════════
+_MAINTENANCE_V0120 = {
+    "select_all":          {"nl": "Alles selecteren",        "fr": "Tout sélectionner",        "en": "Select all",            "de": "Alle auswählen"},
+    "n_selected":          {"nl": "geselecteerd",            "fr": "sélectionné(s)",            "en": "selected",              "de": "ausgewählt"},
+    "bulk_archive":        {"nl": "Archiveren",              "fr": "Archiver",                  "en": "Archive",               "de": "Archivieren"},
+    "bulk_unarchive":      {"nl": "Herstellen",              "fr": "Restaurer",                 "en": "Restore",               "de": "Wiederherstellen"},
+    "bulk_delete":         {"nl": "Verwijderen",             "fr": "Supprimer",                 "en": "Delete",                "de": "Löschen"},
+    "show_archived":       {"nl": "Toon gearchiveerd",       "fr": "Afficher les archivées",    "en": "Show archived",         "de": "Archivierte anzeigen"},
+    "hide_archived":       {"nl": "Verberg gearchiveerd",    "fr": "Masquer les archivées",     "en": "Hide archived",         "de": "Archivierte ausblenden"},
+    "archived_badge":      {"nl": "Gearchiveerd",            "fr": "Archivée",                  "en": "Archived",              "de": "Archiviert"},
+    "back_to_active":      {"nl": "Terug naar actieve studies","fr": "Retour aux études actives","en": "Back to active studies","de": "Zurück zu aktiven Studien"},
+    "archived_view_title": {"nl": "Gearchiveerde studies",   "fr": "Études archivées",          "en": "Archived studies",      "de": "Archivierte Studien"},
+    "confirm_bulk_delete": {"nl": "studie(s) definitief verwijderen? Alle bijhorende bestanden worden gewist. Dit kan niet ongedaan worden.",
+                            "fr": "étude(s) à supprimer définitivement ? Tous les fichiers associés seront effacés. Action irréversible.",
+                            "en": "study/studies permanently? All associated files will be removed. This cannot be undone.",
+                            "de": "Studie(n) endgültig löschen? Alle zugehörigen Dateien werden entfernt. Dies kann nicht rückgängig gemacht werden."},
+    "bulk_archived":       {"nl": "studie(s) gearchiveerd",  "fr": "étude(s) archivée(s)",      "en": "study/studies archived","de": "Studie(n) archiviert"},
+    "bulk_unarchived":     {"nl": "studie(s) hersteld",      "fr": "étude(s) restaurée(s)",     "en": "study/studies restored","de": "Studie(n) wiederhergestellt"},
+    "bulk_deleted":        {"nl": "studie(s) verwijderd",    "fr": "étude(s) supprimée(s)",     "en": "study/studies deleted", "de": "Studie(n) gelöscht"},
+    "bulk_skipped":        {"nl": "overgeslagen (geen rechten)","fr": "ignorée(s) (pas d'autorisation)","en": "skipped (no permission)","de": "übersprungen (keine Berechtigung)"},
+    "bulk_none_selected":  {"nl": "Geen studies geselecteerd.","fr": "Aucune étude sélectionnée.","en": "No studies selected.",  "de": "Keine Studien ausgewählt."},
+    "bulk_invalid_action": {"nl": "Ongeldige bulk-actie.",   "fr": "Action groupée invalide.",  "en": "Invalid bulk action.",  "de": "Ungültige Sammelaktion."},
+}
+TRANSLATIONS.update(_MAINTENANCE_V0120)
+

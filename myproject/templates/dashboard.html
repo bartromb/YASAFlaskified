@@ -39,7 +39,7 @@
   <div class="d-flex align-items-center justify-content-between mb-3">
     <div>
       <h4 class="mb-0 display-font" style="color:var(--accent-navy)">
-        <span class="mono-letter">D</span>{{ t('patient_overview') }}
+        <span class="mono-letter">D</span>{% if show_archived %}{{ t('archived_view_title') }}{% else %}{{ t('patient_overview') }}{% endif %}
       </h4>
       <small class="text-muted">{{ total }} {{ t('studies_found') }}</small>
     </div>
@@ -52,8 +52,51 @@
         <i class="bi bi-list-ul me-1"></i>{{ t('list_view') }}
       </a>
       {% endif %}
+      {% if can_bulk %}
+        {% if show_archived %}
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-left me-1"></i>{{ t('back_to_active') }}
+        </a>
+        {% else %}
+        <a href="{{ url_for('dashboard', archived='1') }}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-archive me-1"></i>{{ t('show_archived') }}
+          {% if n_archived %}<span class="badge bg-secondary ms-1">{{ n_archived }}</span>{% endif %}
+        </a>
+        {% endif %}
+      {% endif %}
     </div>
   </div>
+
+  {% if can_bulk %}
+  {# ── v0.12.0 Bulk-actiebalk (verschijnt bij ≥1 selectie) ───── #}
+  <div id="bulkBar" class="card card-quiet mb-3 d-none" style="border-left:3px solid var(--accent-navy)">
+    <div class="card-body py-2 px-3 d-flex align-items-center gap-3 flex-wrap">
+      <span class="fw-semibold"><span id="bulkCount">0</span> {{ t('n_selected') }}</span>
+      <div class="d-flex gap-2 ms-auto">
+        {% if show_archived %}
+        <button type="button" class="btn btn-outline-success btn-sm" data-bulk-action="unarchive">
+          <i class="bi bi-arrow-counterclockwise me-1"></i>{{ t('bulk_unarchive') }}
+        </button>
+        {% else %}
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bulk-action="archive">
+          <i class="bi bi-archive me-1"></i>{{ t('bulk_archive') }}
+        </button>
+        {% endif %}
+        <button type="button" class="btn btn-outline-danger btn-sm" data-bulk-action="delete">
+          <i class="bi bi-trash me-1"></i>{{ t('bulk_delete') }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  {# Verborgen formulier waarmee de bulk-actie wordt verstuurd #}
+  <form id="bulkForm" method="POST" action="{{ url_for('studies_bulk') }}" class="d-none">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" id="bulkActionField" value="">
+    <input type="hidden" name="show_archived" value="{{ '1' if show_archived else '0' }}">
+    <div id="bulkIdsContainer"></div>
+  </form>
+  {% endif %}
 
   {# ── Zoek & Filter balk (v0.10.0 quiet card) ────────── #}
   <div class="card card-quiet mb-3">
@@ -121,6 +164,12 @@
         <table class="table table-hover table-sm align-middle mb-0 kbd-nav-table" id="dashTable">
           <thead class="table-dark">
             <tr>
+              {% if can_bulk %}
+              <th class="text-center" style="width:2.2rem">
+                <input type="checkbox" id="selectAll" class="form-check-input"
+                       title="{{ t('select_all') }}" aria-label="{{ t('select_all') }}">
+              </th>
+              {% endif %}
               <th class="ps-3">{{ t('patient') }}</th>
               <th>ID</th>
               <th>{{ t('date_of_birth') }}</th>
@@ -144,6 +193,13 @@
                 data-date="{{ s.date|lower }}"
                 data-sev="{{ s.ahi_sev|lower }}"
                 data-status="{{ s.status|lower }}">
+
+              {% if can_bulk %}
+              <td class="text-center">
+                <input type="checkbox" class="form-check-input row-check"
+                       value="{{ s.job_id }}" aria-label="{{ t('select_all') }}">
+              </td>
+              {% endif %}
 
               {# Naam #}
               <td class="ps-3">
@@ -302,6 +358,27 @@
                      title="{{ t('edit_report') }}" style="font-size:.7rem">
                     <i class="bi bi-pencil-square"></i>
                   </a>
+                  {# 8b. Archiveren / Herstellen (v0.12.0, admin + site-manager) #}
+                  {% if can_bulk %}
+                  <form method="POST" action="{{ url_for('studies_bulk') }}" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="job_ids" value="{{ s.job_id }}">
+                    <input type="hidden" name="show_archived" value="{{ '1' if show_archived else '0' }}">
+                    {% if show_archived %}
+                    <input type="hidden" name="action" value="unarchive">
+                    <button type="submit" class="btn btn-outline-success btn-sm py-0 px-1"
+                            title="{{ t('bulk_unarchive') }}" style="font-size:.7rem">
+                      <i class="bi bi-arrow-counterclockwise"></i>
+                    </button>
+                    {% else %}
+                    <input type="hidden" name="action" value="archive">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm py-0 px-1"
+                            title="{{ t('bulk_archive') }}" style="font-size:.7rem">
+                      <i class="bi bi-archive"></i>
+                    </button>
+                    {% endif %}
+                  </form>
+                  {% endif %}
                   {# 9. Delete #}
                   <form method="POST" action="{{ url_for('delete_study', job_id=s.job_id) }}"
                         class="d-inline"
@@ -317,10 +394,10 @@
             </tr>
             {% else %}
             <tr>
-              <td colspan="12" class="text-center text-muted py-5">
+              <td colspan="{{ 14 if can_bulk else 13 }}" class="text-center text-muted py-5">
                 <i class="bi bi-inbox fs-3 d-block mb-2"></i>
-                {{ t('no_analyses_yet') }}
-                <a href="{{ url_for('upload_file') }}" class="ms-1">{{ t('upload_to_start') }}</a>.
+                {% if show_archived %}{{ t('archived_view_title') }} — 0{% else %}{{ t('no_analyses_yet') }}
+                <a href="{{ url_for('upload_file') }}" class="ms-1">{{ t('upload_to_start') }}</a>.{% endif %}
               </td>
             </tr>
             {% endfor %}
@@ -378,5 +455,58 @@
       if (link) window.location.href = link.href;
     });
   });
+
+{% if can_bulk %}
+  // ── v0.12.0 Bulk-selectie + acties ─────────────────────────
+  (function () {
+    const selectAll = document.getElementById("selectAll");
+    const bulkBar   = document.getElementById("bulkBar");
+    const bulkCount = document.getElementById("bulkCount");
+    const bulkForm  = document.getElementById("bulkForm");
+    const actionFld = document.getElementById("bulkActionField");
+    const idsCont   = document.getElementById("bulkIdsContainer");
+    const confirmDelTxt = {{ t('confirm_bulk_delete') | tojson }};
+    const allChecks = () => Array.from(document.querySelectorAll(".row-check"));
+    const visibleChecks = () => allChecks().filter(c => c.closest("tr").style.display !== "none");
+    const checkedVisible = () => visibleChecks().filter(c => c.checked);
+
+    function refresh() {
+      const n = checkedVisible().length;
+      bulkCount.textContent = n;
+      bulkBar.classList.toggle("d-none", n === 0);
+      const vis = visibleChecks();
+      selectAll.checked = vis.length > 0 && vis.every(c => c.checked);
+      selectAll.indeterminate = n > 0 && !selectAll.checked;
+    }
+
+    selectAll.addEventListener("change", () => {
+      visibleChecks().forEach(c => c.checked = selectAll.checked);
+      refresh();
+    });
+    allChecks().forEach(c => c.addEventListener("change", refresh));
+
+    // Houd selectie-status correct wanneer filters rijen verbergen/tonen
+    ["input", "change"].forEach(evt => {
+      [search, sevF, statF].forEach(el => el && el.addEventListener(evt, refresh));
+    });
+
+    document.querySelectorAll("[data-bulk-action]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const action = btn.dataset.bulkAction;
+        const ids = checkedVisible().map(c => c.value);
+        if (!ids.length) return;
+        if (action === "delete" && !confirm(ids.length + " " + confirmDelTxt)) return;
+        idsCont.innerHTML = "";
+        ids.forEach(id => {
+          const inp = document.createElement("input");
+          inp.type = "hidden"; inp.name = "job_ids"; inp.value = id;
+          idsCont.appendChild(inp);
+        });
+        actionFld.value = action;
+        bulkForm.submit();
+      });
+    });
+  })();
+{% endif %}
 </script>
 {% endblock %}

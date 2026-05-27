@@ -835,6 +835,96 @@ def _filter_studies_for_user(json_files: list) -> list:
     return filtered
 
 
+# ═══════════════════════════════════════════════════════════════
+# v0.12.0: ARCHIVERING + BULK-ONDERHOUD
+# ═══════════════════════════════════════════════════════════════
+
+def _archive_marker_path(job_id: str) -> str:
+    """Pad naar het archief-markerbestand voor een job."""
+    return os.path.join(app.config["UPLOAD_FOLDER"], f"{job_id}.archived")
+
+
+def _is_archived(job_id: str) -> bool:
+    """True als de studie gearchiveerd is (markerbestand aanwezig)."""
+    return os.path.exists(_archive_marker_path(job_id))
+
+
+def _can_modify_job(job_id: str) -> bool:
+    """
+    True als current_user deze studie mag wijzigen (delete/archive).
+      admin → altijd
+      site  → studies van eigen site, of zelf gescoord/eigenaar
+      user  → alleen zelf gescoord/eigenaar
+    Gemodelleerd op de bestaande inline-check in delete_study.
+    """
+    if not current_user.is_authenticated:
+        return False
+    if current_user.is_admin:
+        return True
+    result_path = os.path.join(app.config["UPLOAD_FOLDER"], f"{job_id}_results.json")
+    data = {}
+    if os.path.exists(result_path):
+        try:
+            with open(result_path) as f:
+                data = json.load(f)
+        except Exception:
+            data = {}
+    scorer  = data.get("patient_info", {}).get("scorer", "")
+    owner   = data.get("owner_username", "")
+    site_id = data.get("site_id")
+    if current_user.username in (scorer, owner) and current_user.username:
+        return True
+    if (current_user.role == "site"
+            and site_id is not None
+            and current_user.site_id is not None
+            and int(site_id) == current_user.site_id):
+        return True
+    return False
+
+
+def _delete_job_files(job_id: str) -> tuple[int, list[str]]:
+    """
+    Verwijder alle bestanden van een job uit upload- + processed-map,
+    plus conclusie-bestand, archief-marker en Redis-cache.
+    Geen permissiecheck hier — caller MOET die uitvoeren.
+    Retourneert (aantal_verwijderd, lijst_fouten).
+    """
+    import glob as _glob
+    upload_folder    = app.config["UPLOAD_FOLDER"]
+    processed_folder = app.config.get("PROCESSED_FOLDER", upload_folder)
+
+    files = []
+    for folder in set([upload_folder, processed_folder]):
+        files.extend(_glob.glob(os.path.join(folder, f"{job_id}*")))
+    conclusion_path = os.path.join(upload_folder, f"{job_id}_conclusion.json")
+    if os.path.exists(conclusion_path):
+        files.append(conclusion_path)
+
+    deleted, errors_list = 0, []
+    for f in set(files):
+        try:
+            os.remove(f)
+            deleted += 1
+        except Exception as e:
+            logger.error("Kan %s niet verwijderen: %s", f, e)
+            errors_list.append(str(e))
+
+    # EDF-viewer cache vrijgeven
+    try:
+        from edf_api import clear_cache
+        clear_cache(job_id)
+    except Exception:
+        pass
+    # Redis-sleutels opschonen
+    try:
+        for key_suffix in ["_filepath", "_config", "_progress", "_orig_file_id"]:
+            redis_conn.delete(f"{job_id}{key_suffix}")
+    except Exception:
+        pass
+
+    return deleted, errors_list
+
+
 def _looks_like_werkzeug_hash(value: str) -> bool:
     if not value:
         return False
@@ -1428,6 +1518,9 @@ def results():
 
     studies = []
     for job_id, data, jf in accessible:
+        # v0.12.0: gearchiveerde studies niet tonen in list-view
+        if _is_archived(job_id):
+            continue
         try:
             meta = data.get("meta", {})
             pat = data.get("patient_info", {})
@@ -1919,64 +2012,23 @@ def delete_study(job_id):
     Andere gebruikers: alleen eigen studies.
     """
     _require_job_access(job_id)
-    import glob as _glob
     upload_folder = app.config["UPLOAD_FOLDER"]
-    processed_folder = app.config.get("PROCESSED_FOLDER", upload_folder)
     lang = session.get("lang", "en")
 
-    # ── Permissiecheck ──
-    if not current_user.is_admin:
-        # Check eigendom: laad results en vergelijk scorer
-        result_path = os.path.join(upload_folder, f"{job_id}_results.json")
-        if os.path.exists(result_path):
-            try:
-                with open(result_path) as f:
-                    data = json.load(f)
-                scorer = data.get("patient_info", {}).get("scorer", "")
-                site_id = data.get("site_id")
-                # User mag verwijderen als: zelf gescoord OF zelfde site (site_manager)
-                if scorer != current_user.username:
-                    if not (current_user.role == "site" and site_id == current_user.site_id):
-                        logger.warning("Delete geweigerd: %s probeert %s te verwijderen (eigenaar: %s)",
-                                      current_user.username, job_id, scorer)
-                        flash(get_translation("delete_not_allowed", lang), "danger")
-                        return redirect(request.referrer or url_for("dashboard"))
-            except Exception as e:
-                logger.warning("Kan eigendom niet checken voor %s: %s", job_id, e)
+    # ── Permissiecheck (v0.12.0: gecentraliseerd in _can_modify_job) ──
+    if not _can_modify_job(job_id):
+        logger.warning("Delete geweigerd: %s probeert %s te verwijderen",
+                       current_user.username, job_id)
+        flash(get_translation("delete_not_allowed", lang), "danger")
+        return redirect(request.referrer or url_for("dashboard"))
 
-    # ── Zoek bestanden in BEIDE mappen ──
-    files = []
-    for folder in set([upload_folder, processed_folder]):
-        pattern = os.path.join(folder, f"{job_id}*")
-        files.extend(_glob.glob(pattern))
-
-    # Ook conclusie-bestand
-    conclusion_path = os.path.join(upload_folder, f"{job_id}_conclusion.json")
-    if os.path.exists(conclusion_path):
-        files.append(conclusion_path)
-
-    if not files:
-        logger.warning("Delete: geen bestanden gevonden voor %s in %s", job_id, upload_folder)
+    # Bestaat de studie nog?
+    if not os.path.exists(os.path.join(upload_folder, f"{job_id}_results.json")):
+        logger.warning("Delete: geen results gevonden voor %s", job_id)
         flash(get_translation("study_not_found", lang), "warning")
         return redirect(request.referrer or url_for("dashboard"))
 
-    # ── Verwijder bestanden ──
-    deleted = 0
-    errors_list = []
-    for f in files:
-        try:
-            os.remove(f)
-            deleted += 1
-        except Exception as e:
-            logger.error("Kan %s niet verwijderen: %s", f, e)
-            errors_list.append(str(e))
-
-    # ── Redis cache opschonen ──
-    try:
-        for key_suffix in ["_filepath", "_config", "_progress"]:
-            redis_conn.delete(f"{job_id}{key_suffix}")
-    except Exception:
-        pass
+    deleted, errors_list = _delete_job_files(job_id)
 
     logger.info("Studie verwijderd: %s (%d bestanden, %d fouten) door %s",
                 job_id, deleted, len(errors_list), current_user.username)
@@ -1989,6 +2041,74 @@ def delete_study(job_id):
         flash(get_translation("study_deleted", lang), "success")
 
     return redirect(request.referrer or url_for("dashboard"))
+
+
+# ═══════════════════════════════════════════════════════════════
+# v0.12.0: BULK-ONDERHOUD  (selecteren + archiveren / verwijderen)
+# ═══════════════════════════════════════════════════════════════
+
+@app.route("/studies/bulk", methods=["POST"])
+@login_required
+def studies_bulk():
+    """
+    Bulk-actie op meerdere studies tegelijk.
+    Form-params:
+      action   — 'archive' | 'unarchive' | 'delete'
+      job_ids  — herhaalde veldnaam met één job_id per waarde
+    Toegang: admin + site-manager. Per studie wordt _can_modify_job afgedwongen.
+    """
+    lang = session.get("lang", "en")
+
+    # Alleen admin + site-manager mogen bulk-onderhoud
+    if not current_user.is_site_manager:
+        abort(403, description="Geen toegang tot bulk-onderhoud.")
+
+    action  = request.form.get("action", "")
+    job_ids = request.form.getlist("job_ids")
+    if action not in ("archive", "unarchive", "delete"):
+        flash(get_translation("bulk_invalid_action", lang), "danger")
+        return redirect(request.referrer or url_for("dashboard"))
+    if not job_ids:
+        flash(get_translation("bulk_none_selected", lang), "warning")
+        return redirect(request.referrer or url_for("dashboard"))
+
+    done, skipped = 0, 0
+    for job_id in job_ids:
+        # Padveiligheid: alleen UUID-achtige tokens, geen slashes
+        if "/" in job_id or "\\" in job_id or ".." in job_id:
+            skipped += 1
+            continue
+        if not _can_modify_job(job_id):
+            skipped += 1
+            continue
+        try:
+            if action == "archive":
+                open(_archive_marker_path(job_id), "w").close()
+            elif action == "unarchive":
+                marker = _archive_marker_path(job_id)
+                if os.path.exists(marker):
+                    os.remove(marker)
+            elif action == "delete":
+                _delete_job_files(job_id)
+            done += 1
+        except Exception as e:
+            logger.error("Bulk-%s mislukt voor %s: %s", action, job_id, e)
+            skipped += 1
+
+    logger.info("Bulk-%s door %s: %d verwerkt, %d overgeslagen",
+                action, current_user.username, done, skipped)
+
+    msg_key = {"archive": "bulk_archived", "unarchive": "bulk_unarchived",
+               "delete": "bulk_deleted"}[action]
+    msg = f"{done} {get_translation(msg_key, lang)}"
+    if skipped:
+        msg += f" — {skipped} {get_translation('bulk_skipped', lang)}"
+    flash(msg, "warning" if skipped else "success")
+
+    # Behoud de archief-weergave bij delete/unarchive vanuit het archief
+    show_archived = request.form.get("show_archived") == "1"
+    return redirect(url_for("dashboard", archived="1") if show_archived
+                    else url_for("dashboard"))
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -2560,10 +2680,19 @@ def dashboard():
     """Patiëntenoverzicht — gefilterd op rol."""
     import glob
     upload_folder = app.config["UPLOAD_FOLDER"]
-    json_files = sorted(
+    # v0.12.0: archief-weergave via ?archived=1
+    show_archived = request.args.get("archived") == "1"
+    all_files = sorted(
         glob.glob(os.path.join(upload_folder, "*_results.json")),
         key=os.path.getmtime, reverse=True
-    )[:300]
+    )
+    # Splits op archief-marker; tel het archief voor de toggle-badge
+    def _jid(f): return os.path.basename(f).replace("_results.json", "")
+    n_archived = sum(1 for f in all_files if _is_archived(_jid(f)))
+    if show_archived:
+        json_files = [f for f in all_files if _is_archived(_jid(f))][:300]
+    else:
+        json_files = [f for f in all_files if not _is_archived(_jid(f))][:300]
 
     studies = []
     # v0.8.11: centraal site-filter (vervangt inline rolfilter)
@@ -2631,6 +2760,7 @@ def dashboard():
                 "sev_cls":           sev_cls,
                 "scorer":            scorer or "—",
                 "status":            "klaar",
+                "archived":          show_archived,  # v0.12.0
                 "has_pdf":     os.path.exists(os.path.join(upload_folder, f"{job_id}_rapport.pdf")),
                 "has_psg":     os.path.exists(os.path.join(upload_folder, f"{job_id}_rapport.pdf")),
                 "has_excel":   os.path.exists(os.path.join(upload_folder, f"{job_id}_rapport.xlsx")),
@@ -2650,7 +2780,11 @@ def dashboard():
             logger.warning(f"Dashboard: {jf}: {e}")
 
     sites = Site.query.order_by(Site.name).all() if current_user.is_admin else []
-    return render_template("dashboard.html", studies=studies, total=len(studies), sites=sites)
+    return render_template("dashboard.html", studies=studies, total=len(studies),
+                           sites=sites,
+                           show_archived=show_archived,      # v0.12.0
+                           n_archived=n_archived,
+                           can_bulk=current_user.is_site_manager)
 
 
 # ═══════════════════════════════════════════════════════════════
