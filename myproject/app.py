@@ -2083,14 +2083,25 @@ def studies_bulk():
             continue
         try:
             if action == "archive":
+                # v0.12.0: archiveer enkel bestaande studies (geen wees-markers)
+                if not os.path.exists(
+                        os.path.join(app.config["UPLOAD_FOLDER"], f"{job_id}_results.json")):
+                    skipped += 1
+                    continue
                 open(_archive_marker_path(job_id), "w").close()
+                done += 1
             elif action == "unarchive":
                 marker = _archive_marker_path(job_id)
                 if os.path.exists(marker):
                     os.remove(marker)
+                done += 1
             elif action == "delete":
-                _delete_job_files(job_id)
-            done += 1
+                _deleted, _errors = _delete_job_files(job_id)
+                # Gedeeltelijke fout (bestand niet te verwijderen) → tel als overgeslagen
+                if _errors:
+                    skipped += 1
+                else:
+                    done += 1
         except Exception as e:
             logger.error("Bulk-%s mislukt voor %s: %s", action, job_id, e)
             skipped += 1
@@ -2686,17 +2697,18 @@ def dashboard():
         glob.glob(os.path.join(upload_folder, "*_results.json")),
         key=os.path.getmtime, reverse=True
     )
-    # Splits op archief-marker; tel het archief voor de toggle-badge
-    def _jid(f): return os.path.basename(f).replace("_results.json", "")
-    n_archived = sum(1 for f in all_files if _is_archived(_jid(f)))
+    # v0.12.0: site-filter VÓÓR de archief-split, zodat zowel de
+    # archief-badge als de lijst enkel tellen/tonen wat deze
+    # gebruiker mag zien (een site-manager mag het archief van
+    # andere sites niet meetellen).
+    accessible_all = _filter_studies_for_user(all_files)
+    n_archived = sum(1 for job_id, _data, _jf in accessible_all if _is_archived(job_id))
     if show_archived:
-        json_files = [f for f in all_files if _is_archived(_jid(f))][:300]
+        accessible = [t for t in accessible_all if _is_archived(t[0])][:300]
     else:
-        json_files = [f for f in all_files if not _is_archived(_jid(f))][:300]
+        accessible = [t for t in accessible_all if not _is_archived(t[0])][:300]
 
     studies = []
-    # v0.8.11: centraal site-filter (vervangt inline rolfilter)
-    accessible = _filter_studies_for_user(json_files)
     for job_id, data, jf in accessible:
         try:
             pat    = data.get("patient_info", {})
