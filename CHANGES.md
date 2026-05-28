@@ -1,8 +1,5 @@
 # Changelog — YASAFlaskified
 
-> Note: entries for v0.11.0–v0.11.7 are not yet backfilled here; see
-> `git log` and the GitHub releases for those.
-
 ## v0.12.1 — 2026-05-28  *(harden bulk maintenance)*
 
 Robustness fixes for the v0.12.0 bulk-maintenance feature. Behavior
@@ -53,6 +50,118 @@ EDF files.
 - `myproject/app.py` `delete_study()` — refactored onto the shared
   `_can_modify_job` + `_delete_job_files` helpers.
 - `myproject/version.py` — `__version__ = "0.12.0"`.
+
+## v0.11.7 — 2026-05-23  *(fix header Upload link)*
+
+### Fixed
+- `myproject/templates/base.html` — the header "Upload" link sent
+  authenticated admin / site-manager users to `/dashboard` (because `/`
+  redirects them there) instead of the upload page. It now uses
+  `url_for('upload_file')`. The "New analysis" button was already
+  correct, so only the header was affected.
+
+## v0.11.6 — 2026-05-14  *(faster EDF viewer start-up)*
+
+### Changed
+- `myproject/edf_api.py` — open EDF recordings with `preload=False`
+  instead of `preload=True`. The first `/api/edf/<job>/info` call
+  previously blocked 20–60 s on long PSGs while 1–2 GB loaded into RAM;
+  per-epoch reads now pull only the visible 30 s slice (~1 MB from
+  disk), dropping time-to-first-signal from ~30 s to ~1–2 s. The
+  per-worker LRU cache still holds the raw object across requests, so
+  navigation within a job avoids repeated file opens.
+
+## v0.11.5 — 2026-05-14  *(hotfix — viewer constant clash)*
+
+### Fixed
+- `myproject/static/edf_viewer_v12.js` — production had been broken
+  since v0.11.3: both `scorer_v12.js` and `edf_viewer_v12.js` declared a
+  top-level `const STAGE_COLORS`. Because sibling `<script>` tags share
+  one lexical scope, the second declaration threw "Identifier already
+  declared" at parse time, so `EdfViewer` was never defined and the
+  viewer / event-sidebar never initialised. The viewer copy is renamed
+  `EDF_STAGE_COLORS`.
+
+## v0.11.4 — 2026-05-14  *(hypnogram navigation + render perf)*
+
+### Added
+- `myproject/static/scorer_v12.js`, `myproject/templates/scorer_v12.html`
+  — hypnogram navigation for long recordings: mouse-wheel horizontal
+  scroll (Shift = 4×), Shift+←/→ = ±10 epochs (5 min), Ctrl+←/→ = jump
+  to previous / next stage transition, Home / End = first / last epoch,
+  a jump-to-epoch input (# + Enter), and stage-jump buttons (→ W,
+  → N3, → R).
+
+### Changed
+- `myproject/static/scorer_v12.js` — `_draw()` throttled via
+  `requestAnimationFrame` to coalesce redraws per frame (was laggy
+  during key-repeat and drag on long recordings).
+- `myproject/i18n.py` — full German entry added (was falling back to
+  NL); new keys `kbd_jump10`, `kbd_jump_transition`.
+
+### Fixed
+- `myproject/static/scorer_v12.js` — scorer no longer reacts to
+  W / 1 / 2 / 3 / R keys while focus is inside an input (added a focus
+  guard).
+
+## v0.11.3 — 2026-05-14  *(EDF browser improvements)*
+
+### Added
+- `myproject/static/edf_viewer_v12.js`,
+  `myproject/templates/scorer_v12.html` — sleep-stage colour strip above
+  the signal traces, jump-to-epoch input (# + Enter), N / P hotkeys for
+  next / previous event in the active sidebar filter, and event-count
+  badges on the sidebar filter buttons (auto-refreshed via a new
+  `onEventsChanged` hook).
+
+### Fixed
+- `myproject/static/edf_viewer_v12.js` — multi-epoch time-axis tick
+  labels now scale with the visible span (were hardcoded 0–30 s
+  regardless of 2× / 5× / 10× zoom).
+
+### Changed
+- `myproject/i18n.py` — channel-panel strings (previously hardcoded
+  Dutch) moved into the language dict; full German entry added; new key
+  `kbd_next_prev_event` (NL / FR / EN / DE).
+
+## v0.11.2 — 2026-05-12  *(frontpage content refresh)*
+
+### Changed
+- `myproject/templates/frontpage.html` — dropped the hard "AASM 2.6"
+  claim in the hero (now generic "AASM-compliant scoring"), since the
+  PDF generator still cites Berry 2020 / Manual 2.6 while v3.0 is the
+  current edition; v3.0 work moved to a new roadmap section. Added a
+  "What's new in v0.11" section (6 cards) and an "On the roadmap"
+  section (6 cards: AZORG-YASA-2026-001 validation study, paper v36 at
+  *Physiological Measurement*, MESA-SHHS external validation, FHIR
+  export, AASM Manual v3.0, browser scorer / viewer), a work-in-progress
+  chip in the hero, and nav links to both sections.
+- `myproject/i18n.py` — +33 keys (1007 → 1040), all four languages.
+
+## v0.11.1 — 2026-05-12  *(login redirect + credits trim)*
+
+### Changed
+- `myproject/app.py` — `GET /login` now redirects to `/` (the landing
+  page already embeds the login form), so old bookmarks land on the new
+  page; `POST /login` is unchanged.
+- `myproject/templates/frontpage.html` — removed the "thanks to Raphael
+  Vallat" box from the credits section.
+
+## v0.11.0 — 2026-05-12  *(light-themed frontpage with embedded login)*
+
+### Changed
+- `myproject/templates/frontpage.html` — replaced the dark `/about`
+  marketing page plus separate `/login` screen with a single
+  light-themed landing page at `/`: hero with brand / tagline / stats
+  beside an inline login card (flash messages render above the form), a
+  language picker (NL / FR / EN / DE) in the top nav, 9 feature cards
+  reflecting v0.10.x capabilities (per-channel signal quality, staging
+  confidence, OAHI 3-point sweep / robustness grade), and tech-stack
+  pills (psgscoring v0.6, LightGBM, ReportLab).
+- `myproject/app.py` — `/` renders `frontpage.html` for unauthenticated
+  visitors instead of redirecting to `/login`.
+- `myproject/i18n.py` — +14 keys for the new hero copy and feature cards
+  (991 → 1007), all four languages.
 
 ## v0.10.0 — 2026-05-10  *(UI overhaul)*
 
