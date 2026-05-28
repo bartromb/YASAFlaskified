@@ -1,5 +1,59 @@
 # Changelog — YASAFlaskified
 
+> Note: entries for v0.11.0–v0.11.7 are not yet backfilled here; see
+> `git log` and the GitHub releases for those.
+
+## v0.12.1 — 2026-05-28  *(harden bulk maintenance)*
+
+Robustness fixes for the v0.12.0 bulk-maintenance feature. Behavior
+only — no new UI, routes, or settings.
+
+### Fixed
+- `myproject/app.py` `dashboard()` — the archived-study count behind the
+  "Show archived" toggle is now site-filtered. Site-managers no longer
+  see other sites' archived studies reflected in the badge. The 300-study
+  display cap is now applied *after* the site filter, so a site-manager
+  sees up to 300 of their own studies instead of 300 raw files that then
+  get filtered down.
+- `myproject/app.py` `studies_bulk()` — bulk delete now counts studies
+  with leftover file-removal errors as *skipped* rather than reporting
+  them as deleted, matching the per-row `delete_study` behavior.
+- `myproject/app.py` `studies_bulk()` — bulk archive verifies the study's
+  results file exists before writing the `.archived` marker, preventing
+  stray marker files for non-existent studies.
+
+### Changed
+- `myproject/version.py` — `__version__ = "0.12.1"`.
+
+## v0.12.0 — 2026-05-27  *(dashboard bulk maintenance + archiving)*
+
+Multi-select maintenance on the dashboard so admins and site-managers can
+archive or delete several studies at once. Archiving uses a lightweight
+marker file (`{job_id}.archived`) — reversible and without moving large
+EDF files.
+
+### Added
+- `myproject/app.py` — archiving helpers `_archive_marker_path`,
+  `_is_archived`, `_can_modify_job`, `_delete_job_files`, and a new
+  `POST /studies/bulk` route (`studies_bulk`) gated to admin + site-manager,
+  enforcing `_can_modify_job` per study with path-safety filtering.
+  Supported actions: `archive`, `unarchive`, `delete`.
+- `myproject/templates/dashboard.html` — checkbox column + select-all,
+  a floating bulk-action bar, hidden bulk-submit form, per-row
+  archive/restore button, and an "Show archived / Back to active" toggle
+  with an archived-count badge. Selection logic is filter-aware (ignores
+  rows hidden by search/severity/status filters).
+- `myproject/i18n.py` — 17 maintenance/archiving keys in NL / FR / EN / DE.
+
+### Changed
+- `myproject/app.py` `dashboard()` — splits studies on the archive marker;
+  `?archived=1` shows the archived view.
+- `myproject/app.py` `results()` — archived studies are hidden from the
+  history list.
+- `myproject/app.py` `delete_study()` — refactored onto the shared
+  `_can_modify_job` + `_delete_job_files` helpers.
+- `myproject/version.py` — `__version__ = "0.12.0"`.
+
 ## v0.10.0 — 2026-05-10  *(UI overhaul)*
 
 End-to-end visual / interaction refresh aimed at clinical density.
