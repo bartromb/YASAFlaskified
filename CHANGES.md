@@ -163,6 +163,73 @@ EDF files.
 - `myproject/i18n.py` — +14 keys for the new hero copy and feature cards
   (991 → 1007), all four languages.
 
+## v0.10.5 — 2026-05-12  *(template translation sweep)*
+
+### Changed
+- `myproject/i18n.py` plus six templates (`dashboard.html`, `index.html`,
+  `report_editor.html`, `results_extended.html`, `scorer_v12.html`,
+  `upload.html`) — final sweep of all 24 templates: 21 remaining
+  hardcoded Dutch strings replaced with `t()` calls (upload-landing
+  feature cards, "Mislukt" status badge, institution-name placeholder,
+  partial-save warning, "no events" empty state, upload-flow JS
+  messages). `i18n.py` 970 → 991 keys, all four languages. A focused
+  Dutch-string detector then reported zero hits across every template.
+
+## v0.10.4 — 2026-05-12  *(translate edit-report page)*
+
+### Changed
+- `myproject/templates/report_editor.html`, `myproject/i18n.py` —
+  remaining Dutch in the edit-report page routed through `t()`:
+  verification card, report-header card, logo upload / remove, diagnosis
+  quick-add buttons, and the save-flow JS messages. `i18n.py` 942 → 970
+  keys, all four languages.
+
+## v0.10.3 — 2026-05-12  *(translate analysis workflow)*
+
+### Changed
+- `myproject/i18n.py` plus templates (`channel_select.html`, `index.html`,
+  `job_status.html`, `report_editor.html`, `results_extended.html`,
+  `scorer_v12.html`, `upload.html`) — channel-selection labels and
+  adjacent screens (leg / position / snore / pulse / ECG channel labels
+  and descriptions, upload card, job-status retry / timeout, the 15
+  keyboard-shortcut rows, artifact-table headers) now flow through
+  `t()`. `i18n.py` 887 → 942 keys, all four languages.
+
+## v0.10.2 — 2026-05-12  *(full 4-language coverage; default English)*
+
+### Changed
+- `myproject/i18n.py` — 707 → 887 keys, now complete in NL / FR / EN / DE
+  (one DE entry was missing). New keys cover error pages, admin-sites
+  columns, dashboard buttons, channel-select ML help, base footer +
+  session warning, the full `disclaimer.html` and `frontpage.html`
+  marketing copy, and the PDF-report hardcoded NL strings.
+- `myproject/app.py` — `DEFAULT_LANG` changed `"nl"` → `"en"` (affects
+  new user / site defaults and the `session.get("lang", ...)` fallbacks
+  in 50+ flash sites); `STANDARD_CONCLUSIONS` gains German entries;
+  flash messages and the 413 "file too large" response routed through
+  i18n instead of mixing Dutch fragments.
+- `myproject/generate_pdf_report.py`, `myproject/generate_psg_report.py`,
+  `myproject/tasks.py`, and templates (`404`, `500`, `admin_sites`,
+  `base`, `channel_select`, `dashboard`, `disclaimer`, `frontpage`) —
+  hardcoded strings moved into the language dict.
+
+## v0.10.1 — 2026-05-11  *(fix config.json load path)*
+
+### Fixed
+- `myproject/app.py` — on a fresh deploy the admin login was always
+  `admin/admin` instead of the random password `deploy.sh` prints:
+  `deploy.sh` writes the generated SECRET_KEY / ADMIN_PASSWORD to
+  `/data/slaapkliniek/instance/config.json`, but `app.py` opened a
+  relative `config.json` from the working dir and only saw the baked-in
+  template with `VERANDER_DIT_*` placeholders, silently falling through
+  to defaults. `config.json` is now resolved in order:
+  (1) `/data/slaapkliniek/instance/config.json`,
+  (2) `instance/config.json` (local dev),
+  (3) the baked-in template — and a template whose `ADMIN_PASSWORD`
+  still starts with `VERANDER_DIT_` is discarded in favour of env vars /
+  safe defaults. Existing installs keep their current admin password
+  (the bcrypt hash in `users.db` is not reset).
+
 ## v0.10.0 — 2026-05-10  *(UI overhaul)*
 
 End-to-end visual / interaction refresh aimed at clinical density.
