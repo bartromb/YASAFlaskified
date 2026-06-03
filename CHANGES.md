@@ -1,5 +1,20 @@
 # Changelog — YASAFlaskified
 
+## v0.12.2 — 2026-06-03  *(bump psgscoring to 0.6.1)*
+
+Dependency bump only — no UI, route, or behavior changes in
+YASAFlaskified itself.
+
+### Changed
+- `requirements.txt` — pin `psgscoring[ml]==0.6.1` (was 0.6.0).
+  v0.6.1 fixes two POOR-quality scoring crashes that could abort a
+  patient's analysis: the Rule 1B `KeyError: 'stage'` (any recording
+  with EEG arousal detection, where a stable-breathing-rejected
+  hypopnea coincides with an arousal) and the ML `KeyError: 'type'`.
+  Clinical AASM profiles are unchanged. See the psgscoring v0.6.1
+  changelog for details.
+- `myproject/version.py` — `PSGSCORING_VERSION` 0.6.0 → 0.6.1.
+
 ## v0.12.1 — 2026-05-28  *(harden bulk maintenance)*
 
 Robustness fixes for the v0.12.0 bulk-maintenance feature. Behavior
