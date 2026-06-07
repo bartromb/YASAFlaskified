@@ -1,6 +1,8 @@
 # Hetzner Current State
 
-**Last updated:** 2026-05-01
+> For the step-by-step deploy procedure, see **`DEPLOY_RUNBOOK.md`**.
+
+**Last updated:** 2026-06-07
 **Server:** dedodedodo.be / 65.108.230.243 (Ryzen 9 5950X, 128 GB RAM)
 **Container set:** `kliniek_app` (Flask/Gunicorn) + `kliniek_worker[1-8]` (RQ workers) + `kliniek_redis` + host `pneumo-web` (Nginx)
 **Public endpoint:** https://slaapkliniek.be
@@ -10,8 +12,8 @@
 
 | Component | Version | Source |
 |---|---|---|
-| YASAFlaskified | **v0.9.6** | `version.py` + `APP_VERSION` in `.env` both updated; Docker image tagged `yasaflaskified:0.9.6` |
-| psgscoring | **v0.6.0** | Installed from PyPI via `requirements.txt` (`psgscoring[ml]==0.6.0` — `[ml]` extra installs `lightgbm` for the v0.6 candidate-classifier on `mesa_shhs`); previously bundled under `myproject/psgscoring/`, removed in v0.9.2 |
+| YASAFlaskified | **v0.12.4** | `version.py` + `APP_VERSION` in `.env`; Docker image tagged `yasaflaskified:0.12.4` (deployed 2026-06-07; v0.12.4 = ~2.4× faster PDF reports) |
+| psgscoring | **v0.7.2** | Installed from PyPI via `requirements.txt` (`psgscoring[ml]==0.7.2` — `[ml]` extra installs `lightgbm` for the candidate-classifier on `mesa_shhs`). 0.6.1→0.7.2 is clinically byte-identical (0.6.2 dual-AHI, 0.7.0 Tier-1 fixes, 0.7.2 shared-preprocessing perf) |
 | Python | 3.11 | `python:3.11-slim` base image |
 | YASA | 0.7.x | Vallat & Walker 2021 (transitive dep of psgscoring) |
 | Redis | 7-alpine | Queue backend |
