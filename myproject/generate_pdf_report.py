@@ -584,7 +584,7 @@ def _select_example_events(events, n=3):
 
 def _plot_epoch_example(edf_path, channel_map, event, hypno=None,
                         pre_s=15, post_s=30, wc=16.2, hc_per_ch=1.2,
-                        all_events=None):
+                        all_events=None, raw=None):
     """Plot een enkel epoch-voorbeeld: gestapelde pneumokanalen rond een event.
 
     Parameters
@@ -604,12 +604,19 @@ def _plot_epoch_example(edf_path, channel_map, event, hypno=None,
     t_start = max(0, onset - pre_s)
     t_end   = onset + dur + post_s
 
-    # Bepaal welke kanalen beschikbaar zijn
-    try:
-        raw_hdr = mne.io.read_raw_edf(edf_path, preload=False, verbose=False)
-        available = raw_hdr.ch_names
-    except Exception:
-        return None
+    # perf: reuse a pre-loaded raw (shared across all example events by
+    # _build_epoch_examples) so the EDF is read+loaded ONCE per report instead
+    # of once per event. The shared raw is read full-header (preload=False) +
+    # pick(needed) + load_data, so sfreq and sample values are byte-identical to
+    # the per-event path. When no raw is passed (e.g. standalone), we open it
+    # here (a single read — was two: a redundant header read is gone).
+    _own_raw = raw is None
+    if _own_raw:
+        try:
+            raw = mne.io.read_raw_edf(edf_path, preload=False, verbose=False)
+        except Exception:
+            return None
+    available = raw.ch_names
 
     ch_to_plot = []
     for ch_type, label, color in _EPOCH_CH_ORDER:
@@ -620,12 +627,13 @@ def _plot_epoch_example(edf_path, channel_map, event, hypno=None,
     if len(ch_to_plot) < 2:
         return None
 
-    # Laad alleen de benodigde kanalen
     try:
-        ch_names_load = [c[1] for c in ch_to_plot]
-        raw = mne.io.read_raw_edf(edf_path, preload=False, verbose=False)
-        raw.pick(ch_names_load)
-        raw.load_data()
+        if _own_raw:
+            # Load only the needed channels (full night — required so the
+            # mixed-sample-rate channels keep the same upsampling as before;
+            # partial/cropped reads change those values).
+            raw.pick([c[1] for c in ch_to_plot])
+            raw.load_data()
         sf = raw.info["sfreq"]
     except Exception:
         return None
@@ -794,12 +802,35 @@ def _build_epoch_examples(results, wc=16.2):
         hypno = [ep.get("stage", "W") for ep in timeline]
 
     picks = _select_example_events(events, n=3)
+    if not picks:
+        return []
+
+    # perf: read + load the EDF ONCE for all example events (only the channels
+    # the plots need), then reuse it. Previously each _plot_epoch_example
+    # re-read the full EDF — ~3x the load cost. Byte-identical (same channels,
+    # same sfreq, same full load_data). Falls back to per-event loading.
+    shared_raw = None
+    try:
+        import mne
+        mne.set_log_level("ERROR")
+        shared_raw = mne.io.read_raw_edf(edf_path, preload=False, verbose=False)
+        _avail = shared_raw.ch_names
+        _need = [ch_map[t] for t, _, _ in _EPOCH_CH_ORDER
+                 if ch_map.get(t) and ch_map.get(t) in _avail]
+        if _need:
+            shared_raw.pick(_need)
+            shared_raw.load_data()
+        else:
+            shared_raw = None
+    except Exception:
+        shared_raw = None
+
     images = []
     for ev in picks:
         try:
             img = _plot_epoch_example(edf_path, ch_map, ev, hypno=hypno,
                                        pre_s=15, post_s=30, wc=wc,
-                                       all_events=events)
+                                       all_events=events, raw=shared_raw)
             if img:
                 images.append((ev, img))
         except Exception:
