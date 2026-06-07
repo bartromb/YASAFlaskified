@@ -1,9 +1,13 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════
-# deploy.sh — YASAFlaskified v0.10.0 automated deployment
+# deploy.sh — YASAFlaskified automated deployment
 # ═══════════════════════════════════════════════════════════════
 #
-# Installs YASAFlaskified on a vanilla Ubuntu 22.04/24.04 server.
+# Version-agnostic: installs whatever myproject/version.py declares
+# (cloned/copied from the current checkout), so this script does not
+# need bumping per release.
+#
+# Installs YASAFlaskified on a vanilla Ubuntu 22.04+ / Debian server.
 # Run as root or with sudo:
 #
 #   curl -sSL https://raw.githubusercontent.com/bartromb/yasaflaskified/main/deploy.sh | sudo bash
@@ -193,14 +197,22 @@ CONFIG_FILE="${APP_DIR}/instance/config.json"
 EXPECTED_VERSION="$(grep -oE '__version__\s*=\s*"[^"]+"' \
     "${APP_DIR}/myproject/version.py" 2>/dev/null \
     | sed -E 's/.*"([^"]+)".*/\1/' || true)"
-[ -z "${EXPECTED_VERSION}" ] && EXPECTED_VERSION="0.10.0"
+[ -z "${EXPECTED_VERSION}" ] && err "Cannot read __version__ from ${APP_DIR}/myproject/version.py — aborting rather than tagging a wrong image."
 
 # ── .env (Docker Compose image tag) ───────────────────────────
+# APP_VERSION is ALWAYS synced to myproject/version.py — even when .env
+# already exists. Otherwise re-running the script (an update) leaves a stale
+# APP_VERSION, so `docker compose` keeps building/starting the OLD image tag
+# and the update silently does not take effect.
 if [ -f "${ENV_FILE}" ]; then
-    warn ".env already exists — leaving in place"
+    warn ".env exists — keeping secrets, syncing APP_VERSION=${EXPECTED_VERSION}"
+    if grep -q '^APP_VERSION=' "${ENV_FILE}"; then
+        sed -i -E "s|^APP_VERSION=.*|APP_VERSION=${EXPECTED_VERSION}|" "${ENV_FILE}"
+    else
+        echo "APP_VERSION=${EXPECTED_VERSION}" >> "${ENV_FILE}"
+    fi
 else
     cp "${APP_DIR}/.env.example" "${ENV_FILE}"
-    # Pin APP_VERSION to whatever myproject/version.py declares.
     sed -i -E "s|^APP_VERSION=.*|APP_VERSION=${EXPECTED_VERSION}|" "${ENV_FILE}"
     chmod 600 "${ENV_FILE}"
     chown "${APP_USER}:${APP_USER}" "${ENV_FILE}"
