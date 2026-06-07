@@ -74,7 +74,7 @@ APP_PORT="${YASA_PORT:-8071}"
 DOMAIN="${YASA_DOMAIN:-}"          # Set to enable SSL (e.g. slaapkliniek.be)
 ADMIN_PASSWORD="${YASA_ADMIN_PASSWORD:-}"
 BRANCH="${YASA_BRANCH:-main}"
-REPO="https://github.com/bartromb/yasaflaskified.git"
+REPO="https://github.com/bartromb/YASAFlaskified.git"
 
 # ── Pre-flight checks ────────────────────────────────────────
 if [ "$(id -u)" -ne 0 ]; then
