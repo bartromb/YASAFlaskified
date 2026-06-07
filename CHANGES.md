@@ -1,5 +1,19 @@
 # Changelog — YASAFlaskified
 
+## v0.12.3 — 2026-06-07  *(bump psgscoring to 0.7.2)*
+
+Dependency bump only — no UI, route, or behavior changes in
+YASAFlaskified itself.
+
+### Changed
+- `requirements.txt` — pin `psgscoring[ml]==0.7.2` (was 0.6.1).
+  Brings in: v0.6.2 dual AHI reporting (`ahi_incl_uncertain`, additive),
+  v0.7.0 Tier-1 scoring-accuracy fixes (validated byte-identical on the
+  clinical AASM-v3 path), v0.7.1 docs, and v0.7.2 a ~1.8–2.0× speed-up of
+  the respiratory analysis (shared preprocessing across the 3-profile AHI
+  interval — validated byte-identical on the MESA q7 holdout + PSG-IPA).
+  Clinical scoring output is unchanged.
+
 ## v0.12.2 — 2026-06-03  *(bump psgscoring to 0.6.1)*
 
 Dependency bump only — no UI, route, or behavior changes in

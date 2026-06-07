@@ -1,3 +1,3 @@
 """Single source of truth for YASAFlaskified version string."""
-__version__ = "0.12.2"
-PSGSCORING_VERSION = "0.6.1"
+__version__ = "0.12.3"
+PSGSCORING_VERSION = "0.7.2"
