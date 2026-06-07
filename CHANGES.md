@@ -1,5 +1,20 @@
 # Changelog — YASAFlaskified
 
+## v0.12.4 — 2026-06-07  *(faster PDF report)*
+
+Performance only — report content is byte-identical.
+
+### Changed
+- `generate_pdf_report.py` — the epoch-example panels re-opened and
+  `load_data()`'d the EDF once per example event (~3 full loads per report).
+  The EDF is now read + loaded **once** (only the needed channels) in
+  `_build_epoch_examples` and reused across the example plots. Measured on a
+  full-night MESA recording: the epoch-example section dropped from **27.9 s to
+  11.6 s (~2.4×, ~16 s/report)**, byte-identical (same channels / sfreq / full
+  `load_data` → identical samples, incl. the mixed-sample-rate nasal-pressure
+  channel). A partial/cropped read was rejected because it changes the
+  upsampled-channel values.
+
 ## v0.12.3 — 2026-06-07  *(bump psgscoring to 0.7.2)*
 
 Dependency bump only — no UI, route, or behavior changes in
