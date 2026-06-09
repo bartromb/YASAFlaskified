@@ -7,7 +7,10 @@ AI-based sleep staging + AASM-compliant respiratory scoring + multilingual clini
 [![Live](https://img.shields.io/badge/live-slaapkliniek.be-blue)](https://slaapkliniek.be)
 [![psgscoring](https://img.shields.io/pypi/v/psgscoring?label=psgscoring)](https://pypi.org/project/psgscoring/)
 [![License](https://img.shields.io/badge/license-BSD--3-green)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/bartromb/YASAFlaskified?cacheSeconds=3600)](https://github.com/bartromb/YASAFlaskified/releases/latest)
+<!-- static release badge: the dynamic github/v/release endpoint intermittently
+     fails with "Unable to select next GitHub token from pool" (shields.io token-pool
+     rate limit). Bump the version here on each new release. -->
+[![Release](https://img.shields.io/badge/release-v0.12.4-blue)](https://github.com/bartromb/YASAFlaskified/releases/latest)
 
 ## Demo
 
