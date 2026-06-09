@@ -7,7 +7,7 @@ AI-based sleep staging + AASM-compliant respiratory scoring + multilingual clini
 [![Live](https://img.shields.io/badge/live-slaapkliniek.be-blue)](https://slaapkliniek.be)
 [![psgscoring](https://img.shields.io/pypi/v/psgscoring?label=psgscoring)](https://pypi.org/project/psgscoring/)
 [![License](https://img.shields.io/badge/license-BSD--3-green)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/bartromb/YASAFlaskified)](https://github.com/bartromb/YASAFlaskified/releases/latest)
+[![Release](https://img.shields.io/github/v/release/bartromb/YASAFlaskified?cacheSeconds=3600)](https://github.com/bartromb/YASAFlaskified/releases/latest)
 
 ## Demo
 
