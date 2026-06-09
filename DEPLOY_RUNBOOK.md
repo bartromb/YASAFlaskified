@@ -39,6 +39,15 @@ first-init seed).
 3. **Clinical scoring changes** must pass the psgscoring golden harness + cohort
    validation (q7 + PSG-IPA) **before** they reach production. A pure dependency
    bump where clinical output is byte-identical is safe to ship directly.
+4. **Cut a GitHub Release + bump the README release badge.** Create the release
+   so it shows up as *Latest*:
+   `gh release create vX.Y.Z --target main --title "..." --notes "..."` (notes
+   from `CHANGES.md`). Then **update the version in the static release badge** in
+   `README.md` — it is intentionally static (`img.shields.io/badge/release-vX.Y.Z-blue`)
+   because the dynamic `github/v/release` endpoint intermittently fails with
+   *"Unable to select next GitHub token from pool"* (shields.io token-pool rate
+   limit). The static badge needs a manual bump per release; an HTML comment next
+   to it in `README.md` flags this.
 
 ---
 
