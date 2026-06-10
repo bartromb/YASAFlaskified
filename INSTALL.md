@@ -417,7 +417,7 @@ signal.py    (307)   preprocessing: linearisatie, MMSD, envelopes, baselines
 breath.py    (254)   breath-by-breath segmentatie, flattening index
 classify.py  (228)   apnea-type classificatie (obstr/centraal/gemengd)
 spo2.py      (218)   SpO2-koppeling Rule 1A, ODI, desaturatie-detectie
-plm.py       (271)   PLM-detectie AASM 2.6
+plm.py       (271)   PLM-detectie AASM
 ancillary.py (277)   positie, hartritme, snurken, Cheyne-Stokes
 respiratory.py(694)  event-detectie, Rule 1B, samenvatting
 pipeline.py  (334)   MNE-facing master function

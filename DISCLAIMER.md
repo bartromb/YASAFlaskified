@@ -64,7 +64,7 @@ accuracy:
 | Cheyne-Stokes respiration | Decrescendo phases may be scored as hypopnoeas |
 | Signal dropout / sensor displacement | Post-gap recovery ramp may be scored as event |
 | Paediatric recordings | Not validated for patients under 18 years of age |
-| Non-AASM sensor configurations | Results may deviate from manual AASM 2.6 scoring |
+| Non-AASM sensor configurations | Results may deviate from manual AASM scoring |
 | Automated sleep staging | ~85% epoch agreement; REM misclassification possible in OSAS |
 | Artefact-heavy recordings | Artefact detection is automated; manual review recommended |
 

@@ -13,7 +13,7 @@ into the modular ``psgscoring`` package:
         breath.py      – breath-by-breath segmentation and events
         classify.py    – apnea-type classification
         spo2.py        – SpO2 coupling and ODI analysis
-        plm.py         – PLM detection (AASM 2.6)
+        plm.py         – PLM detection (AASM)
         ancillary.py   – position, heart rate, snoring, Cheyne-Stokes
         respiratory.py – event detection, Rule 1B, summary
         pipeline.py    – MNE-facing master function

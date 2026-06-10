@@ -128,7 +128,7 @@ def results_to_fhir(results: dict, job_id: str,
     _robust_label = _interval.get("robustness_label", "")
 
     conclusion = (
-        f"Automated PSG analysis (YASAFlaskified v{_APP_VERSION}, AASM 2.6). "
+        f"Automated PSG analysis (YASAFlaskified v{_APP_VERSION}, AASM). "
         f"AHI = {_fmt_val(ahi)} /h ({severity}). "
     )
     if _intv_lo is not None and _intv_hi is not None:

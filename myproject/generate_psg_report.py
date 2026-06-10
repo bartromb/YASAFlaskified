@@ -857,7 +857,7 @@ def generate_psg_report(
             if n_resp > 0:
                 bespreking += (
                     f"{n_resp} bewegingen waren respiratoir-geassocieerd en werden "
-                    "conform AASM 2.6 uitgesloten uit de PLM-telling. "
+                    "conform AASM uitgesloten uit de PLM-telling. "
                 )
             if ahi >= 5:
                 bespreking += (
@@ -1100,7 +1100,7 @@ def generate_psg_report(
         canvas.drawRightString(PAGE_W - MARGIN, 0.9*cm, f"Pagina {doc.page}")
         # Tweede regel: versie-info (lager, geen overlap)
         canvas.drawString(MARGIN, 0.55*cm,
-            f"YASAFlaskified v{_APP_VERSION} | AASM 2.6 | www.slaapkliniek.be | \u00a9 Bart Rombaut")
+            f"YASAFlaskified v{_APP_VERSION} | AASM | www.slaapkliniek.be | \u00a9 Bart Rombaut")
         canvas.restoreState()
 
     doc.build(story, onFirstPage=make_footer, onLaterPages=make_footer)

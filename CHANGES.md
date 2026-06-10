@@ -171,7 +171,7 @@ EDF files.
 ## v0.11.2 — 2026-05-12  *(frontpage content refresh)*
 
 ### Changed
-- `myproject/templates/frontpage.html` — dropped the hard "AASM 2.6"
+- `myproject/templates/frontpage.html` — dropped the hard "AASM"
   claim in the hero (now generic "AASM-compliant scoring"), since the
   PDF generator still cites Berry 2020 / Manual 2.6 while v3.0 is the
   current edition; v3.0 work moved to a new roadmap section. Added a
@@ -668,7 +668,7 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 
 ### Fixed — Multilingual & clinical display
 - **German (DE) as language choice**: added to `SUPPORTED_LANGS`, `LANG_NAMES`, `LANG_FLAGS`, and all HTML dropdown selectors (`base.html`, `admin_sites.html`, `admin_users.html`)
-- **Scoring profile in AHI classification bar**: PDF now shows `Profile: Standard (AASM 2.6)` alongside AHI/OAHI values
+- **Scoring profile in AHI classification bar**: PDF now shows `Profile: Standard (AASM)` alongside AHI/OAHI values
 - **Severity labels multilingual**: `Normaal/Mild/Matig/Ernstig` → language-dependent via `_SEV_LABELS` dict (NL/FR/EN/DE)
 - **Hardcoded Dutch in PDF report**: `Niet beschikbaar`, `Overschatting-correctie` replaced with `t()` i18n calls
 - **5 new i18n keys**: `pdf_not_available`, `pdf_overcounting_corrections`, `pdf_correction`, `pdf_impact`, `pdf_explanation` (all 4 languages)
@@ -906,7 +906,7 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 **Cosmetisch (v0.8.16):**
 - Logo: Concept C (EEG-trace + "YASAFlaskified" + slaapkliniek.be)
 - Dubbele "Download PSG" knop verwijderd (was redirect naar PDF)
-- Footer: referenties YASA, psgscoring, AASM 2.6
+- Footer: referenties YASA, psgscoring, AASM
 - EDF patient info (naam, geslacht, geboortedatum) in PDF
 
 ### Changed
@@ -960,8 +960,8 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 
 ### Added — AASM-conforme peak-based hypopnea detection
 
-**Peak signal excursion detection (AASM 2.6 conformiteit):**
-- AASM 2.6 definieert hypopnea als "peak signal excursions drop by ≥30%"
+**Peak signal excursion detection (AASM conformiteit):**
+- AASM definieert hypopnea als "peak signal excursions drop by ≥30%"
   — dit verwijst naar **piek-amplitude per ademhaling**, niet naar de
   continue Hilbert-envelope
 - Nieuwe detectielogica: per ademhaling (via `detect_breaths()` +
@@ -1479,7 +1479,7 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 
 - **Respiratory:** artifact exclusion from AHI/OAHI; OAHI definition; Rule 1B two-pass
 - **Arousal:** EEG-based (alpha/theta/beta); respiratory coupling; RERA; RDI
-- **PLM:** full AASM 2.6 rewrite (amplitude threshold, bilateral merge, respiratory exclusion)
+- **PLM:** full AASM rewrite (amplitude threshold, bilateral merge, respiratory exclusion)
 - **EDF+** export with scoring annotations
 - Multi-language (NL/FR/EN) with 186+ translation keys via `i18n.py`
 - Admin dashboard: user management, role-based menus
@@ -1488,7 +1488,7 @@ All notable changes documented per [Keep a Changelog](https://keepachangelog.com
 ### [0.3.0] — v7: Pneumological Extension
 
 - Channel selection UI (EEG, EOG, EMG)
-- Apnoea/hypopnoea detection (AASM 2.6 basis), AHI severity classification
+- Apnoea/hypopnoea detection (AASM basis), AHI severity classification
 - SpO₂, heart rate, body position, snoring, PLM (basic)
 - Docker Compose: Redis + App + Worker (RQ task queue)
 - PDF report expanded with respiratory, SpO₂, PLM sections

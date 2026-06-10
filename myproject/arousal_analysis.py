@@ -2,7 +2,7 @@
 arousal_analysis.py — Arousal detectie & respiratoir-arousal koppeling
 voor YASAFlaskified v0.8.37
 
-Conform AASM 2.6 Adult Scoring Manual, Chapter 5 (Arousals):
+Conform AASM Adult Scoring Manual, Chapter 5 (Arousals):
   - Arousal: abrupte EEG-frequentieverandering ≥3s (α/θ/β in NREM; α in REM)
     voorafgegaan door ≥10s stabiele slaap
   - Respiratoire arousal: arousal binnen 15s na einde apnea/hypopnea
@@ -305,7 +305,7 @@ def _recompute_arousal_summary(
 
 
 # ═══════════════════════════════════════════════════════════════
-# CONSTANTEN  (AASM 2.6, v0.8.11 — verbeterd)
+# CONSTANTEN  (AASM, v0.8.11 — verbeterd)
 # ═══════════════════════════════════════════════════════════════
 
 AROUSAL_MIN_DUR_S     = 3.0     # ≥3s EEG-frequentieverandering
@@ -506,7 +506,7 @@ def detect_arousals(eeg_data: np.ndarray, sf: float,
                     hr_data: np.ndarray = None,
                     sf_hr: float = 1.0) -> dict:
     """
-    Detecteer EEG-arousals conform AASM 2.6, Sectie 5.
+    Detecteer EEG-arousals conform AASM, Sectie 5.
 
     v0.8.11 verbeteringen:
     1. Theta band (4-8 Hz) toegevoegd — veel arousals bij ouderen
@@ -1162,7 +1162,7 @@ def detect_reras(
     artifact_epochs: list = None,
 ) -> dict:
     """
-    Detecteer RERAs conform AASM 2.6, Sectie 3E.
+    Detecteer RERAs conform AASM, Sectie 3E.
 
     RERA = sequentie van ademhalingen met:
       1. Toenemende inspiratoire inspanning (flow plateau of crescendo-effort)

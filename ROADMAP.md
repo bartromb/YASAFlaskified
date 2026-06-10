@@ -3,7 +3,7 @@
 ## Current: v0.8.37 (April 2026)
 
 **Production-ready:**
-- AASM 2.6 respiratory scoring with 6 over-counting + 6 under-counting corrections
+- AASM respiratory scoring with 6 over-counting + 6 under-counting corrections
 - ECG-derived effort classification (TECG Berry 2019 + spectral classifier) for central/obstructive differentiation
 - Hilbert phase-angle effort classification, K-complex exclusion
 - CVR arousal confidence boost, patient-specific baseline anchoring

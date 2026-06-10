@@ -18,7 +18,7 @@
 
 ## v7.0 — Pneumological Extension
 - **Channel selection UI:** User chooses EEG, EOG, EMG, extra EEG channels
-- **Respiratory analysis (AASM 2.6 basis):**
+- **Respiratory analysis (AASM basis):**
   - Apnea detection (obstructive/central/mixed classification)
   - Hypopnea detection (Rule 1A — ≥3% desaturation criterion)
   - AHI calculation with severity classification
@@ -49,7 +49,7 @@
 - RDI calculation (AHI + RERA index)
 - Arousal index, respiratory vs spontaneous classification
 
-### PLM Rewrite (AASM 2.6)
+### PLM Rewrite (AASM)
 - Amplitude threshold: ≥8 μV above resting EMG (was: 2× mean RMS)
 - Band-pass filter: 10–100 Hz (was: 10 Hz highpass)
 - Bilateral merge: L+R within 0.5s = 1 LM
@@ -154,7 +154,7 @@
   8. Artifact detection
   9. Respiratory analysis (AHI/OAHI/RDI, Rule 1A+1B, arousal/RERA)
   10. SpO2 analysis with timeseries graph
-  11. PLM (AASM 2.6)
+  11. PLM (AASM)
   12. Standardized diagnosis with treatment suggestions
 - **Institutional header:** Configurable clinic name, address, contact
 - **Scorer + physician signature line**
@@ -289,7 +289,7 @@
 - 5 under-counting corrections: peak-based detection, SpO₂ de-blocking, extended nadir window, flow smoothing, position auto-mapping
 - Hilbert phase-angle effort classification for apnea typing
 - Configurable scoring profiles (strict, standard, sensitive)
-- Dual-sensor flow detection (thermistor + nasal pressure per AASM 2.6)
+- Dual-sensor flow detection (thermistor + nasal pressure per AASM)
 - Full i18n system (NL/FR/EN/DE) with 449+ translation keys
 - EDF+ export via pyedflib
 - Report editor page with diagnosis editing and PDF regeneration

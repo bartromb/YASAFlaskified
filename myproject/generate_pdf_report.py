@@ -492,7 +492,7 @@ def _callbacks(site, lang="nl"):
         canvas.line(ML,MB-0.2*cm,W_A4-MR,MB-0.2*cm)
         canvas.setFont("Helvetica",6.5); canvas.setFillColor(GR)
         canvas.drawString(ML,MB-0.45*cm,
-            f"YASAFlaskified v{_APP_VERSION}  |  AASM 2.6  |  www.slaapkliniek.be  |  \u00a9 Bart Rombaut")
+            f"YASAFlaskified v{_APP_VERSION}  |  AASM  |  www.slaapkliniek.be  |  \u00a9 Bart Rombaut")
         canvas.drawRightString(W_A4-MR,MB-0.45*cm,f"{t('pdf_page',lang)} {doc.page}")
         canvas.restoreState()
     return draw,draw
@@ -926,7 +926,7 @@ def generate_pdf_report(results:dict, output_path:str,
 
     sp(0.1)
     story.append(Paragraph(title_txt, styles["T"]))
-    _sp_label = pneumo.get("meta", {}).get("scoring_label", "Standard (AASM 2.6)")
+    _sp_label = pneumo.get("meta", {}).get("scoring_label", "Standard (AASM)")
     story.append(Paragraph(f"AASM-scoring via YASA  ·  {site.get('name','SleepAI')}  ·  {_sp_label}",styles["ST"]))
     story.append(HRFlowable(width="100%",thickness=1.2,color=NAVY,spaceAfter=6))
 
@@ -1426,7 +1426,7 @@ def generate_pdf_report(results:dict, output_path:str,
 
         # ── Classificatiebalk ────────────────────────────────────────────
         _active_prof = pneumo.get("meta", {}).get("scoring_profile", "standard")
-        _prof_labels = {"strict": "Strict", "standard": "Standard (AASM 2.6)", "sensitive": "Sensitive"}
+        _prof_labels = {"strict": "Strict", "standard": "Standard (AASM)", "sensitive": "Sensitive"}
         _prof_lbl = _prof_labels.get(_active_prof, _active_prof)
         ab = Table([[Paragraph(
             f"{_ahi_lbl} = {ahi:.1f}/u  →  <b>{sev}</b>   |   "
