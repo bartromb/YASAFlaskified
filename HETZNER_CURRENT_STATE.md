@@ -12,7 +12,7 @@
 
 | Component | Version | Source |
 |---|---|---|
-| YASAFlaskified | **v0.12.4** | `version.py` + `APP_VERSION` in `.env`; Docker image tagged `yasaflaskified:0.12.4` (deployed 2026-06-07; v0.12.4 = ~2.4× faster PDF reports) |
+| YASAFlaskified | **v0.12.4** | `version.py` + `APP_VERSION` in `.env`; Docker image tagged `yasaflaskified:0.12.4` (deployed 2026-06-07; v0.12.4 = an efficiency fix to the *disabled* PDF epoch-example code — inert in current reports; the real speed-up is psgscoring 0.7.2 scoring, v0.12.3) |
 | psgscoring | **v0.7.2** | Installed from PyPI via `requirements.txt` (`psgscoring[ml]==0.7.2` — `[ml]` extra installs `lightgbm` for the candidate-classifier on `mesa_shhs`). 0.6.1→0.7.2 is clinically byte-identical (0.6.2 dual-AHI, 0.7.0 Tier-1 fixes, 0.7.2 shared-preprocessing perf) |
 | Python | 3.11 | `python:3.11-slim` base image |
 | YASA | 0.7.x | Vallat & Walker 2021 (transitive dep of psgscoring) |

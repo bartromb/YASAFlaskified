@@ -1,19 +1,23 @@
 # Changelog — YASAFlaskified
 
-## v0.12.4 — 2026-06-07  *(faster PDF report)*
+## v0.12.4 — 2026-06-07  *(PDF epoch-example efficiency — inert in current reports)*
 
-Performance only — report content is byte-identical.
+Code efficiency only — no behaviour or output change.
 
 ### Changed
-- `generate_pdf_report.py` — the epoch-example panels re-opened and
-  `load_data()`'d the EDF once per example event (~3 full loads per report).
-  The EDF is now read + loaded **once** (only the needed channels) in
-  `_build_epoch_examples` and reused across the example plots. Measured on a
-  full-night MESA recording: the epoch-example section dropped from **27.9 s to
-  11.6 s (~2.4×, ~16 s/report)**, byte-identical (same channels / sfreq / full
-  `load_data` → identical samples, incl. the mixed-sample-rate nasal-pressure
-  channel). A partial/cropped read was rejected because it changes the
+- `generate_pdf_report.py` — `_build_epoch_examples` / `_plot_epoch_example` now read +
+  load the EDF **once** (only the needed channels) instead of once per example event
+  (~2.4× faster for that routine in isolation: 27.9 s → 11.6 s on a full-night MESA
+  recording; byte-identical — same channels / sfreq / full `load_data`). A
+  partial/cropped read was rejected because it changes the mixed-sample-rate
   upsampled-channel values.
+
+  **Note:** the epoch-example panels are currently **disabled** at the call site
+  (commented out since v0.8.22), so `_build_epoch_examples` is not invoked during
+  report generation. This change therefore does **not** reduce actual
+  report-generation time — it only takes effect if the panels are re-enabled.
+  (The real per-recording speed-up in this version range is the scoring engine:
+  psgscoring 0.7.2, bumped in v0.12.3.)
 
 ## v0.12.3 — 2026-06-07  *(bump psgscoring to 0.7.2)*
 
