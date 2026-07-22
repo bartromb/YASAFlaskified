@@ -12,7 +12,7 @@
 
 | Component | Version | Source |
 |---|---|---|
-| YASAFlaskified | **v0.12.6** | `version.py` + `APP_VERSION` in `.env`; Docker image `yasaflaskified:0.12.6` (deployed 2026-07-22). v0.12.6 = fix re-analysis serving a stale cached report (no-cache + regen-if-stale); v0.12.5 = pin bump to psgscoring 0.7.6 |
+| YASAFlaskified | **v0.12.7** | `version.py` + `APP_VERSION` in `.env`; Docker image `yasaflaskified:0.12.7` (deployed 2026-07-22). v0.12.7 = cache-buster (?v=mtime) on report links so a re-analysis always fetches the fresh PDF (browser-cache proof); v0.12.6 = no-cache + regen-if-stale; v0.12.5 = pin bump to psgscoring 0.7.6 |
 | psgscoring | **v0.7.6** | Installed from PyPI via `requirements.txt` (`psgscoring[ml]==0.7.6` — `[ml]` extra installs `lightgbm` for the candidate-classifier on `mesa_shhs`). 0.7.2→0.7.6 restores RDI/RERA on Cheyne-Stokes reports (was blank) + corrects hypoxic burden on sensor-dropout recordings; **no AHI/OSAS-grade change** (real MESA A/B: ahi_total byte-identical on all 16 recordings). Also folds in 0.7.4 output-preserving robustness |
 | Python | 3.11 | `python:3.11-slim` base image |
 | YASA | 0.7.x | Vallat & Walker 2021 (transitive dep of psgscoring) |
