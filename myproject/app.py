@@ -1949,48 +1949,72 @@ def show_results(job_id):
     )
 
 
+def _serve_fresh_report(job_id, path, gen_fn, download_name, mimetype, kind):
+    """Serve a derived report artifact, guaranteeing it reflects the current
+    results and is never served from a stale browser cache.
+
+    A re-analysis (`run_analysis_job`, same job_id) rewrites `_results.json` and
+    regenerates the artifact, but two things previously let a client keep an old
+    copy: (1) the download URL is identical across re-analyses, so the browser
+    served its cached PDF; (2) the on-the-fly fallback only fired when the file
+    was *missing*, not when it was *older than the results*. So a fixed re-score
+    (e.g. RDI/RERA restored on a Cheyne-Stokes patient) could still hand back the
+    pre-fix report. This regenerates when stale and sends no-cache headers.
+    """
+    results_path = os.path.join(app.config["UPLOAD_FOLDER"], f"{job_id}_results.json")
+    stale = (not os.path.exists(path)) or (
+        os.path.exists(results_path)
+        and os.path.getmtime(path) < os.path.getmtime(results_path)
+    )
+    if stale:
+        try:
+            gen_fn()
+        except Exception as e:
+            logger.error("%s genereren mislukt voor %s: %s", kind, job_id, e, exc_info=True)
+            # do not serve a stale artifact as if current
+            if not os.path.exists(path):
+                abort(500, description=f"{kind} kon niet gegenereerd worden: {e}")
+    resp = send_file(path, as_attachment=True, download_name=download_name, mimetype=mimetype)
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
+
+
 @app.route("/results/<job_id>/pdf")
 @login_required
 def download_pdf(job_id):
-    """Download PDF-rapport. Genereert on-the-fly indien nodig."""
+    """Download PDF-rapport. (Re)genereert wanneer verouderd t.o.v. results."""
     _require_job_access(job_id)
     pdf_path = os.path.join(app.config["UPLOAD_FOLDER"], f"{job_id}_rapport.pdf")
-    if not os.path.exists(pdf_path):
-        try:
-            from generate_pdf_report import generate_pdf_report
-            data = _load_results(job_id)
-            generate_pdf_report(data, pdf_path, lang=session.get("lang","en"))
-        except Exception as e:
-            logger.error(f"PDF genereren mislukt voor {job_id}: {e}", exc_info=True)
-            abort(500, description=f"PDF kon niet gegenereerd worden: {e}")
-    return send_file(
-        pdf_path,
-        as_attachment=True,
+
+    def _gen():
+        from generate_pdf_report import generate_pdf_report
+        generate_pdf_report(_load_results(job_id), pdf_path,
+                            lang=session.get("lang", "en"))
+
+    return _serve_fresh_report(
+        job_id, pdf_path, _gen,
         download_name=f"slaaprapport_{job_id[:8]}.pdf",
-        mimetype="application/pdf",
-    )
+        mimetype="application/pdf", kind="PDF")
 
 
 @app.route("/results/<job_id>/excel")
 @login_required
 def download_excel(job_id):
-    """Download Excel-rapport. Genereert on-the-fly indien nodig."""
+    """Download Excel-rapport. (Re)genereert wanneer verouderd t.o.v. results."""
     _require_job_access(job_id)
     xlsx_path = os.path.join(app.config["UPLOAD_FOLDER"], f"{job_id}_rapport.xlsx")
-    if not os.path.exists(xlsx_path):
-        try:
-            from generate_excel_report import generate_excel_report
-            data = _load_results(job_id)
-            generate_excel_report(data, xlsx_path)
-        except Exception as e:
-            logger.error(f"Excel genereren mislukt voor {job_id}: {e}", exc_info=True)
-            abort(500, description=f"Excel kon niet gegenereerd worden: {e}")
-    return send_file(
-        xlsx_path,
-        as_attachment=True,
+
+    def _gen():
+        from generate_excel_report import generate_excel_report
+        generate_excel_report(_load_results(job_id), xlsx_path)
+
+    return _serve_fresh_report(
+        job_id, xlsx_path, _gen,
         download_name=f"slaaprapport_{job_id[:8]}.xlsx",
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
+        kind="Excel")
 
 
 @app.route("/results/<job_id>/psg")

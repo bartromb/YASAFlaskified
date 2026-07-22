@@ -1,5 +1,21 @@
 # Changelog — YASAFlaskified
 
+## v0.12.6 — 2026-07-22  *(fix: re-analysis served a stale cached report)*
+
+- **A re-analysis now always yields the up-to-date PDF/Excel.** After
+  re-analysing an existing study, the download could still hand back the
+  *previous* report: the download URL (`/results/<job_id>/pdf`) is identical
+  across re-analyses, so the browser served its cached copy, and the on-the-fly
+  fallback only regenerated when the file was *missing* — not when it was
+  *older than the fresh results*. Concretely, a study re-scored on psgscoring
+  0.7.6 (e.g. a Cheyne-Stokes patient whose RDI/REM-NREM AHI were restored)
+  could still download the pre-fix PDF.
+- **Fix** (`app.py`): report downloads now (a) regenerate the PDF/Excel when the
+  artifact is older than `{job_id}_results.json`, and (b) send
+  `Cache-Control: no-cache, no-store, must-revalidate` so the browser always
+  fetches the current file. `/psg` redirects to `/pdf` and is covered too.
+- No scoring change; server-side results were already correct after re-analysis.
+
 ## v0.12.5 — 2026-07-22  *(psgscoring 0.7.6 — RERA/CSR + hypoxic-burden fixes)*
 
 Bumps the pinned scoring library to **psgscoring 0.7.6** (`requirements.txt`,
