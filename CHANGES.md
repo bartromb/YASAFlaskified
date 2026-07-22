@@ -1,5 +1,21 @@
 # Changelog — YASAFlaskified
 
+## v0.12.5 — 2026-07-22  *(psgscoring 0.7.6 — RERA/CSR + hypoxic-burden fixes)*
+
+Bumps the pinned scoring library to **psgscoring 0.7.6** (`requirements.txt`,
+`version.py`). No YASAFlaskified code change.
+
+- **RDI/RERA now appear on Cheyne-Stokes reports.** psgscoring 0.7.6 fixes a bug
+  where the RERA index, RDI and REM/NREM AHI were silently dropped from the
+  respiratory summary on CSR-positive recordings — so the PDF/Excel reports
+  showed a blank RDI for those patients. They now render correctly.
+- **Hypoxic burden corrected on sensor-dropout recordings** (invalid in-sleep
+  SpO2 samples excluded from the TST denominator; de Chazal `calcHB.m` reference).
+- **No AHI / OSAS-severity change for any patient.** Validated on a real MESA
+  A/B (16 recordings): `ahi_total` byte-identical, RERA restored on 9 CSR
+  recordings, HB raised on 5 dropout recordings. Also includes psgscoring's
+  output-preserving robustness hardening (graceful per-channel degradation).
+
 ## v0.12.4 — 2026-06-07  *(PDF epoch-example efficiency — inert in current reports)*
 
 Code efficiency only — no behaviour or output change.
