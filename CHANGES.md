@@ -1,5 +1,31 @@
 # Changelog — YASAFlaskified
 
+## v0.12.8 — 2026-07-22  *(analysis history now distinguishes OSAS vs CSAS)*
+
+- **The analysis-history list (`/results`) now shows the apnea *type* and the
+  central component, not just a bare AHI.** Two columns were added between OAHI
+  and Severity:
+  - **Centr.** — the central apnea index (CAI, `central_index`, /h), so a
+    central-driven study is visible at a glance.
+  - **Type** — an **OSAS** / **CSAS** badge. A study is labelled **CSAS**
+    (central-predominant) when the central events make up **≥ 50 % of the AHI**
+    (AASM convention), otherwise **OSAS**; below AHI 5 no type is shown. The
+    badge carries a tooltip with the full syndrome name.
+- The **Severity** badge is now localised (`Mild` / `Matig` / `Ernstig` in NL,
+  with FR/EN equivalents) instead of the raw English word, so a row reads e.g.
+  *AHI 51.3 · OAHI 6.9 · Centr. 44.5 · **CSAS** · **Ernstig*** — an *Ernstig
+  CSAS* at a glance, no longer indistinguishable from an obstructive study.
+- Classification is a list-level heuristic in `_sas_type()` (`app.py`); the PDF
+  report remains the source of truth for the full event breakdown. No scoring
+  change; new NL/FR/EN i18n keys (`resp_type`, `osas`, `csas`, `central_ahi_*`,
+  `osas_full`, `csas_full`); NL `sev_mild` label aligned to "Mild".
+- **Terminology harmonised:** the Dutch conclusion/diagnosis texts for mild OSAS
+  now read **"Mild OSAS"** instead of "Licht OSAS" (`STANDARD_CONCLUSIONS`,
+  `concl_mild_title`/`concl_mild_body`, `dx_mild_osas`, and the arousal-latency
+  note), matching the new history badge. FR ("léger") / EN ("mild") / DE
+  ("leichtes") were already correct and are unchanged; the N1 sleep-stage label
+  "Licht" (= light sleep) is a different concept and stays.
+
 ## v0.12.7 — 2026-07-22  *(fix: browser served a stale report from cache after re-analysis)*
 
 - Follow-up to v0.12.6. Even with `no-cache` response headers, a browser that

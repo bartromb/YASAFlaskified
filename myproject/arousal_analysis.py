@@ -1134,7 +1134,7 @@ def _interpret_arousal_coupling(
                 "code":  "SHORT_AROUSAL_LATENCY",
                 "msg":   f"Gemiddelde arousal-latentie {avg_latency:.1f}s — "
                          "snelle corticale respons op respiratoire stress. "
-                         "Typisch bij licht-tot-matig OSAS.",
+                         "Typisch bij mild-tot-matig OSAS.",
             })
         elif avg_latency > 12:
             msgs.append({

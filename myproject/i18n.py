@@ -227,6 +227,21 @@ TRANSLATIONS = {
     "mild_osa":             {"nl":"Mild OSA",         "fr":"SAOS léger",        "en":"Mild OSA"},
     "moderate_osa":         {"nl":"Matig OSA",        "fr":"SAOS modéré",       "en":"Moderate OSA"},
     "severe_osa":           {"nl":"Ernstig OSA",      "fr":"SAOS sévère",       "en":"Severe OSA"},
+    # ── Analysegeschiedenis: OSAS/CSAS-type + ernst (v0.12.8) ──────────────
+    "resp_type":            {"nl":"Type",             "fr":"Type",              "en":"Type"},
+    "central_ahi_short":    {"nl":"Centr.",           "fr":"Centr.",            "en":"Centr."},
+    "central_ahi_full":     {"nl":"Centrale apnoe-index (CAI, /u)",
+                             "fr":"Index d'apnées centrales (IAC, /h)",
+                             "en":"Central apnea index (CAI, /h)"},
+    "osas":                 {"nl":"OSAS",             "fr":"SAOS",              "en":"OSAS"},
+    "csas":                 {"nl":"CSAS",             "fr":"SASC",              "en":"CSAS"},
+    "osas_full":            {"nl":"Obstructief slaapapneusyndroom",
+                             "fr":"Syndrome d'apnées obstructives du sommeil",
+                             "en":"Obstructive sleep apnea syndrome"},
+    "csas_full":            {"nl":"Centraal slaapapneusyndroom (centrale events ≥ 50% van de AHI)",
+                             "fr":"Syndrome d'apnées centrales du sommeil (≥ 50% des événements centraux)",
+                             "en":"Central sleep apnea syndrome (central events ≥ 50% of AHI)"},
+    # sev_normal/mild/moderate/severe: canonieke set staat verderop (~regel 540)
     "spo2_mean":            {"nl":"Gem. SpO2",        "fr":"SpO2 moyen",        "en":"Mean SpO2"},
     "spo2_min":             {"nl":"Min. SpO2",        "fr":"SpO2 min.",         "en":"Min. SpO2"},
     "time_below_90":        {"nl":"Tijd < 90%",       "fr":"Temps < 90%",       "en":"Time < 90%"},
@@ -511,7 +526,7 @@ TRANSLATIONS = {
     # ── KLINISCHE CONCLUSIES (v0.8.11: gecentraliseerd) ─────────────────────
     # Severity labels
     "sev_normal":       {"nl": "Normaal",       "fr": "Normal",      "en": "Normal"},
-    "sev_mild":         {"nl": "Licht",         "fr": "Léger",       "en": "Mild"},
+    "sev_mild":         {"nl": "Mild",          "fr": "Léger",       "en": "Mild"},
     "sev_moderate":     {"nl": "Matig",         "fr": "Modéré",      "en": "Moderate"},
     "sev_severe":       {"nl": "Ernstig",       "fr": "Sévère",      "en": "Severe"},
 
@@ -530,10 +545,10 @@ TRANSLATIONS = {
                              "en": "No evidence of obstructive sleep apnea syndrome (OSAS). Normal sleep architecture. No clinically significant periodic limb movements."},
 
     # Mild OSAS
-    "concl_mild_title":     {"nl": "Besluit: Licht obstructief slaapapneusyndroom (licht OSAS).",
+    "concl_mild_title":     {"nl": "Besluit: Mild obstructief slaapapneusyndroom (mild OSAS).",
                              "fr": "Conclusion : Syndrome d'apnée obstructive du sommeil léger (SAOS léger).",
                              "en": "Conclusion: Mild obstructive sleep apnea syndrome (mild OSAS)."},
-    "concl_mild_body":      {"nl": "Licht OSAS met beperkte slaapfragmentatie.",
+    "concl_mild_body":      {"nl": "Mild OSAS met beperkte slaapfragmentatie.",
                              "fr": "SAOS léger avec fragmentation limitée du sommeil.",
                              "en": "Mild OSAS with limited sleep fragmentation."},
     "concl_mild_tx":        {"nl": "Positietherapie (vermijden rugligging). Mandibulair repositieapparaat (MRA) overwegen. Slaaphygiëne optimaliseren.",
@@ -2567,7 +2582,7 @@ _V0104_EDITOR = {
 
     # Diagnosis quick-add button labels (short forms used as ＋ buttons)
     "dx_normal":          {"nl": "Normaal",         "fr": "Normal",         "en": "Normal",          "de": "Normal"},
-    "dx_mild_osas":       {"nl": "Licht OSAS",      "fr": "SAOS léger",     "en": "Mild OSAS",       "de": "Leichtes OSAS"},
+    "dx_mild_osas":       {"nl": "Mild OSAS",       "fr": "SAOS léger",     "en": "Mild OSAS",       "de": "Leichtes OSAS"},
     "dx_moderate_osas":   {"nl": "Matig OSAS",      "fr": "SAOS modéré",    "en": "Moderate OSAS",   "de": "Mittelschweres OSAS"},
     "dx_severe_osas":     {"nl": "Ernstig OSAS",    "fr": "SAOS sévère",    "en": "Severe OSAS",     "de": "Schweres OSAS"},
     "dx_plms":            {"nl": "PLMS",            "fr": "MPJS",           "en": "PLMS",            "de": "PLMS"},

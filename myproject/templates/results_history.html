@@ -28,6 +28,8 @@
             <th>SE</th>
             <th>AHI</th>
             <th>OAHI</th>
+            <th title="{{ t('central_ahi_full') }}">{{ t('central_ahi_short') }}</th>
+            <th>{{ t('resp_type') }}</th>
             <th>{{ t('severity') }}</th>
             <th>{{ t('actions') }}</th>
           </tr>
@@ -62,9 +64,26 @@
               {% endif %}
             </td>
             <td>
+              {% if s.central != '—' and s.central is not none %}
+                {{ "%.1f"|format(s.central) }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>
+              {% if s.sas_type %}
+                <span class="badge bg-{% if s.sas_type == 'CSAS' %}primary{% else %}secondary{% endif %}"
+                      title="{{ t('csas_full') if s.sas_type == 'CSAS' else t('osas_full') }}">
+                  {{ t('csas') if s.sas_type == 'CSAS' else t('osas') }}
+                </span>
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>
               {% if s.severity and s.severity != '—' %}
                 <span class="badge bg-{% if s.severity == 'severe' %}danger{% elif s.severity == 'moderate' %}warning{% elif s.severity == 'mild' %}info{% else %}success{% endif %}">
-                  {{ s.severity }}
+                  {{ t('sev_' ~ s.severity) if s.severity in ['normal','mild','moderate','severe'] else s.severity }}
                 </span>
               {% else %}
                 —
