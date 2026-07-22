@@ -314,7 +314,7 @@
                   </a>
                   {# 2. PSG PDF #}
                   {% if s.has_pdf %}
-                  <a href="{{ url_for('download_pdf', job_id=s.job_id) }}"
+                  <a href="{{ url_for('download_pdf', job_id=s.job_id, v=report_ver(s.job_id)) }}"
                      class="btn btn-outline-primary btn-sm py-0 px-1"
                      title="PSG PDF rapport" style="font-size:.7rem">
                     <i class="bi bi-file-earmark-pdf"></i> PDF
@@ -322,7 +322,7 @@
                   {% endif %}
                   {# 3. XLS #}
                   {% if s.has_excel %}
-                  <a href="{{ url_for('download_excel', job_id=s.job_id) }}"
+                  <a href="{{ url_for('download_excel', job_id=s.job_id, v=report_ver(s.job_id)) }}"
                      class="btn btn-outline-success btn-sm py-0 px-1"
                      title="{{ t('download_excel') }}" style="font-size:.7rem">
                     <i class="bi bi-file-earmark-spreadsheet"></i> XLS

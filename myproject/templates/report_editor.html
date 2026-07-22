@@ -9,7 +9,7 @@
     <h4 class="mb-0"><i class="bi bi-pencil-square"></i> {{ t("edit_report") }}</h4>
     <div>
       <a href="/results/{{ job_id }}" class="btn btn-outline-secondary btn-sm">← {{ t("back_to_results") }}</a>
-      <a href="/results/{{ job_id }}/pdf" class="btn btn-outline-danger btn-sm" target="_blank">📄 PDF</a>
+      <a href="/results/{{ job_id }}/pdf?v={{ report_ver(job_id) }}" class="btn btn-outline-danger btn-sm" target="_blank">📄 PDF</a>
     </div>
   </div>
 
@@ -194,7 +194,7 @@
     <button class="btn btn-outline-secondary" onclick="resetDiag()">
       <i class="bi bi-arrow-counterclockwise"></i> {{ t("reset_to_auto") }}
     </button>
-    <a href="/results/{{ job_id }}/pdf" class="btn btn-outline-danger" target="_blank" id="btnPdf">
+    <a href="/results/{{ job_id }}/pdf?v={{ report_ver(job_id) }}" class="btn btn-outline-danger" target="_blank" id="btnPdf">
       📄 {{ t("view_pdf") }}
     </a>
   </div>
