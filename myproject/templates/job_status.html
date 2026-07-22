@@ -37,10 +37,10 @@
         <a href="/results/{{ job_id }}" class="btn btn-primary btn-lg">
           📊 &nbsp; {{ t('view_report') }}
         </a>
-        <a href="/results/{{ job_id }}/pdf" class="btn btn-outline-danger" id="btnPdf">
+        <a href="/results/{{ job_id }}/pdf?v={{ report_ver(job_id) }}" class="btn btn-outline-danger" id="btnPdf">
           📄 &nbsp; {{ t('download_pdf') }}
         </a>
-        <a href="/results/{{ job_id }}/excel" class="btn btn-outline-success" id="btnExcel">
+        <a href="/results/{{ job_id }}/excel?v={{ report_ver(job_id) }}" class="btn btn-outline-success" id="btnExcel">
           📊 &nbsp; {{ t('download_excel') }}
         </a>
         <a href="/score_v12/{{ job_id }}" class="btn btn-warning" id="btnEdfBrowser">

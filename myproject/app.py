@@ -602,6 +602,23 @@ def duration_fmt(minutes):
 
 app.jinja_env.globals["now"] = datetime.utcnow
 
+
+def _report_ver(job_id):
+    """Cache-buster for report download links: the mtime of the job's
+    results.json. Appended as ?v=<int> to the /pdf and /excel links so a
+    re-analysis (which rewrites results.json, same job_id → same base URL)
+    yields a NEW url the browser has not cached. Without this, Firefox served
+    a stale attachment from before the analysis (e.g. a Cheyne-Stokes report
+    with the old RDI=0). Complements the no-cache headers on the response."""
+    try:
+        p = os.path.join(app.config["UPLOAD_FOLDER"], f"{job_id}_results.json")
+        return int(os.path.getmtime(p))
+    except OSError:
+        return 0
+
+
+app.jinja_env.globals["report_ver"] = _report_ver
+
 # ── i18n (meertalig NL/FR/EN) ──
 from functools import wraps
 

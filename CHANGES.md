@@ -1,5 +1,19 @@
 # Changelog — YASAFlaskified
 
+## v0.12.7 — 2026-07-22  *(fix: browser served a stale report from cache after re-analysis)*
+
+- Follow-up to v0.12.6. Even with `no-cache` response headers, a browser that
+  had **already** cached `/results/<job_id>/pdf` (from an earlier, pre-fix visit)
+  kept serving the old attachment — a re-analysis reuses the same `job_id`, so
+  the download URL was unchanged and the browser never re-fetched. Users saw the
+  pre-fix report (e.g. a Cheyne-Stokes study with RDI=0) despite the server
+  holding the corrected one.
+- **Fix:** the PDF/Excel download links now carry a `?v=<results.json mtime>`
+  cache-buster (`report_ver()` Jinja global). A re-analysis rewrites
+  `results.json`, so the link changes and the browser fetches the fresh report.
+  Server-side content was already correct; this makes the client always request
+  it. No scoring change.
+
 ## v0.12.6 — 2026-07-22  *(fix: re-analysis served a stale cached report)*
 
 - **A re-analysis now always yields the up-to-date PDF/Excel.** After

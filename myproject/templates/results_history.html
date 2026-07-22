@@ -78,13 +78,13 @@
                 </a>
                 {# 2. PSG PDF #}
                 {% if s.has_pdf %}
-                <a href="/results/{{ s.job_id }}/pdf" class="btn btn-outline-primary" title="PSG PDF">
+                <a href="/results/{{ s.job_id }}/pdf?v={{ report_ver(s.job_id) }}" class="btn btn-outline-primary" title="PSG PDF">
                   📄
                 </a>
                 {% endif %}
                 {# 3. XLS #}
                 {% if s.has_excel %}
-                <a href="/results/{{ s.job_id }}/excel" class="btn btn-outline-success" title="Download Excel">
+                <a href="/results/{{ s.job_id }}/excel?v={{ report_ver(s.job_id) }}" class="btn btn-outline-success" title="Download Excel">
                   📗
                 </a>
                 {% endif %}
