@@ -1519,6 +1519,27 @@ def process_file_with_channels(filepath, selected_channels):
         raise
 
 
+def _sas_type(ahi, central_ahi):
+    """Classificeer een studie als OSAS of CSAS voor de geschiedenis-lijst.
+
+    CSAS (centraal-predominant) volgens de AASM-conventie zodra de centrale
+    events ≥ 50% van de totale AHI uitmaken; anders OSAS. Onder AHI 5 is er
+    geen klinisch relevant slaapapneusyndroom → None (geen type-badge).
+    Dit is een lijst-heuristiek; het rapport geeft de volledige verdeling.
+    """
+    try:
+        ahi = float(ahi)
+    except (TypeError, ValueError):
+        return None
+    if ahi < 5:
+        return None
+    try:
+        cai = float(central_ahi)
+    except (TypeError, ValueError):
+        cai = 0.0
+    return "CSAS" if ahi > 0 and (cai / ahi) >= 0.5 else "OSAS"
+
+
 @app.route("/results")
 @login_required
 def results():
@@ -1559,6 +1580,9 @@ def results():
                 "se":           stats.get("SE", "—"),
                 "ahi":          pneumo.get("ahi_total", "—"),
                 "oahi":         pneumo.get("oahi", "—"),
+                "central":      pneumo.get("central_index", "—"),
+                "sas_type":     _sas_type(pneumo.get("ahi_total"),
+                                          pneumo.get("central_index")),
                 "severity":     pneumo.get("severity", "—"),
                 "has_pdf":      os.path.exists(os.path.join(upload_folder, f"{job_id}_rapport.pdf")),
                 "has_excel":    os.path.exists(os.path.join(upload_folder, f"{job_id}_rapport.xlsx")),
@@ -2300,7 +2324,7 @@ STANDARD_CONCLUSIONS = {
         "de": "Normales Polysomnogramm. Kein Hinweis auf ein obstruktives Schlafapnoe-Syndrom (OSAS). Normale Schlafarchitektur. Keine klinisch signifikanten periodischen Beinbewegungen.",
     },
     "mild_osas": {
-        "nl": "Licht obstructief slaapapneusyndroom (licht OSAS). Behandelingssuggesties: positietherapie (vermijden rugligging), mandibulair repositieapparaat (MRA) overwegen, slaaphygiëne optimaliseren.",
+        "nl": "Mild obstructief slaapapneusyndroom (mild OSAS). Behandelingssuggesties: positietherapie (vermijden rugligging), mandibulair repositieapparaat (MRA) overwegen, slaaphygiëne optimaliseren.",
         "fr": "Syndrome d'apnées obstructives du sommeil léger (SAOS léger). Suggestions thérapeutiques : thérapie positionnelle (éviter le décubitus dorsal), envisager une orthèse d'avancée mandibulaire (OAM), optimiser l'hygiène du sommeil.",
         "en": "Mild obstructive sleep apnea syndrome (mild OSAS). Treatment suggestions: positional therapy (avoid supine), consider mandibular advancement device (MAD), optimize sleep hygiene.",
         "de": "Leichtes obstruktives Schlafapnoe-Syndrom (leichtes OSAS). Therapievorschläge: Lagerungstherapie (Rückenlage vermeiden), Unterkieferprotrusionsschiene (UPS) erwägen, Schlafhygiene optimieren.",
