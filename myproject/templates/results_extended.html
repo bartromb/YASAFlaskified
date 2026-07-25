@@ -420,6 +420,22 @@
               <tr class="table-warning"><td><strong>OAHI</strong></td><td><strong>{{ "%.1f"|format(rsum.oahi or 0) }} /u — {{ rsum.oahi_severity or '—' }}</strong></td></tr>
               <tr><td>AHI REM</td><td>{{ rsum.ahi_rem or '—' }}</td></tr>
               <tr><td>AHI NREM</td><td>{{ rsum.ahi_nrem or '—' }}</td></tr>
+              {% if rsum.ventilatory_burden is not none %}
+              <tr><td>{{ t('pdf_ventilatory_burden') }}</td><td>{{ rsum.ventilatory_burden }} %·min/u</td></tr>
+              {% endif %}
+              {% set ph = rsum.phenotypes or {} %}
+              {% set posa = ph.positional_osa %}
+              {% if posa %}
+              <tr class="{{ 'table-warning' if posa.flag else '' }}"><td>{{ t('pdf_pheno_posa') }}</td>
+                <td>{{ t('pdf_pheno_yes') if posa.flag else t('pdf_pheno_no') }}
+                    (supine {{ posa.ahi_supine }} / non-supine {{ posa.ahi_non_supine }} /u{% if posa.supine_non_supine_ratio %}, {{ posa.supine_non_supine_ratio }}×{% endif %}){% if posa.flag and posa.positional_therapy_candidate %} — {{ t('pdf_pheno_posa_therapy') }}{% endif %}</td></tr>
+              {% endif %}
+              {% set remp = ph.rem_predominant %}
+              {% if remp %}
+              <tr class="{{ 'table-warning' if remp.flag else '' }}"><td>{{ t('pdf_pheno_rem') }}</td>
+                <td>{{ t('pdf_pheno_yes') if remp.flag else t('pdf_pheno_no') }}
+                    (REM {{ remp.rem_ahi }} / NREM {{ remp.nrem_ahi }} /u, {{ remp.rem_nrem_ratio }}×)</td></tr>
+              {% endif %}
               <tr><td>{{ t('avg_duration') }}</td><td>{{ rsum.avg_apnea_dur_s or '—' }} s</td></tr>
               <tr><td>Max apnea {{ t('dur_s') }}</td><td>{{ rsum.max_apnea_dur_s or '—' }} s</td></tr>
               <tr><td>{{ t('avg_desaturation') }}</td><td>{{ rsum.avg_desaturation or '—' }}%</td></tr>

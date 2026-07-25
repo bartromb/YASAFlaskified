@@ -1600,6 +1600,32 @@ def generate_pdf_report(results:dict, output_path:str,
             stage_rows,
             [8, 6])])); sp(0.1)
 
+        # ── v0.10.0: klinische fenotypes (POSA, REM-predominant) ──────────
+        _ph = rsum.get("phenotypes") or {}
+        _pheno_lines = []
+        _posa = _ph.get("positional_osa")
+        if _posa:
+            _yn = t("pdf_pheno_yes", lang) if _posa.get("flag") else t("pdf_pheno_no", lang)
+            _txt = (f"<b>{t('pdf_pheno_posa', lang)}:</b> {_yn} "
+                    f"(supine {_posa.get('ahi_supine')} vs non-supine {_posa.get('ahi_non_supine')} /u"
+                    + (f", {_posa.get('supine_non_supine_ratio')}×"
+                       if _posa.get('supine_non_supine_ratio') is not None else "") + ")")
+            if _posa.get("flag") and _posa.get("positional_therapy_candidate"):
+                _txt += " — " + t("pdf_pheno_posa_therapy", lang)
+            _pheno_lines.append(_txt)
+        _remp = _ph.get("rem_predominant")
+        if _remp:
+            _yn = t("pdf_pheno_yes", lang) if _remp.get("flag") else t("pdf_pheno_no", lang)
+            _pheno_lines.append(
+                f"<b>{t('pdf_pheno_rem', lang)}:</b> {_yn} "
+                f"(REM {_remp.get('rem_ahi')} vs NREM {_remp.get('nrem_ahi')} /u, "
+                f"{_remp.get('rem_nrem_ratio')}×)")
+        if _pheno_lines:
+            story.append(_hdr(t("pdf_pheno_hdr", lang), color=BLUE)); sp(0.05)
+            for _ln in _pheno_lines:
+                story.append(Paragraph(_ln, styles["SM"]))
+            sp(0.1)
+
         story.append(Paragraph(
             f"<i>{t('pdf_rera_explanation',lang)} {t('pdf_rdi_explanation', lang)}</i>",
             styles["SM"])); sp(0.1)
@@ -1852,6 +1878,9 @@ def generate_pdf_report(results:dict, output_path:str,
             ["ODI 3%",           f"{ss.get('odi_3pct','—')} /u",    "< 5/u"],
             ["ODI 4%",           f"{ss.get('odi_4pct','—')} /u",    "< 5/u"],
             ["Hypoxic burden",   f"{ss.get('hypoxic_burden','—')} %·min/h", "< 20"],
+            [t("pdf_ventilatory_burden", lang),
+             (f"{rsum.get('ventilatory_burden')} %·min/h"
+              if rsum.get('ventilatory_burden') is not None else "—"), ""],
         ],[8,4.5,4.5]))
         ts=spo2.get("timeseries")
         if ts and len(ts)>10:
