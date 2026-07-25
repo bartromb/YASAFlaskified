@@ -2,7 +2,7 @@
 
 > For the step-by-step deploy procedure, see **`DEPLOY_RUNBOOK.md`**.
 
-**Last updated:** 2026-07-22
+**Last updated:** 2026-07-25
 **Server:** dedodedodo.be / 65.108.230.243 (Ryzen 9 5950X, 128 GB RAM)
 **Container set:** `kliniek_app` (Flask/Gunicorn) + `kliniek_worker[1-8]` (RQ workers) + `kliniek_redis` + host `pneumo-web` (Nginx)
 **Public endpoint:** https://slaapkliniek.be
@@ -12,8 +12,8 @@
 
 | Component | Version | Source |
 |---|---|---|
-| YASAFlaskified | **v0.12.8** | `version.py` + `APP_VERSION` in `.env`; Docker image `yasaflaskified:0.12.8` (deployed 2026-07-22). v0.12.8 = analysis-history now shows apnea **Type** (OSAS/CSAS badge, CSAS when central ≥50% of AHI) + a **Centr.** (central AHI) column + localised severity (Mild/Matig/Ernstig); NL conclusion/diagnosis texts harmonised "Licht OSAS"→"Mild OSAS". No scoring change. v0.12.7 = cache-buster (?v=mtime) on report links so a re-analysis always fetches the fresh PDF (browser-cache proof); v0.12.6 = no-cache + regen-if-stale; v0.12.5 = pin bump to psgscoring 0.7.6 |
-| psgscoring | **v0.7.6** | Installed from PyPI via `requirements.txt` (`psgscoring[ml]==0.7.6` — `[ml]` extra installs `lightgbm` for the candidate-classifier on `mesa_shhs`). 0.7.2→0.7.6 restores RDI/RERA on Cheyne-Stokes reports (was blank) + corrects hypoxic burden on sensor-dropout recordings; **no AHI/OSAS-grade change** (real MESA A/B: ahi_total byte-identical on all 16 recordings). Also folds in 0.7.4 output-preserving robustness |
+| YASAFlaskified | **v0.14.0** | `version.py` + `APP_VERSION` in `.env`; Docker image `yasaflaskified:0.14.0` (deployed 2026-07-25). v0.14.0 = **clinical phenotypes (POSA, REM-predominant) + ventilatory burden in the report** (from psgscoring 0.10.0; pin → 0.10.0): PDF gets a "Clinical phenotypes" block + a ventilatory-burden row next to the hypoxic burden; web report shows the same. **No AHI/OSAS-CSAS-grade change**; fields render conditionally. Earlier: v0.13.0 = arousal & RERA moved to psgscoring + multi-derivation arousals by default (single via `PSGSCORING_AROUSAL_DERIVATION=single`); v0.12.8 = analysis-history OSAS/CSAS Type + Centr. column |
+| psgscoring | **v0.10.0** | Installed from PyPI via `requirements.txt` (`psgscoring[ml]==0.10.0` — `[ml]` extra installs `lightgbm`). 0.10.0 = output-additive **phenotype flags** (`summary["phenotypes"]`: POSA/Cartwright + REM-predominant) + **ventilatory burden** (`summary["ventilatory_burden"]`, %·min/h; `ventilation.py`, method after Labarca 2023 — scale to be calibrated). 0.9.0 = arousal & RERA in-package + multi-derivation arousal default (clinical; `mesa_shhs` single). **No AHI/OSAS-grade change** (golden byte-identical). Arousal mode: env `PSGSCORING_AROUSAL_DERIVATION=single\|multi` |
 | Python | 3.11 | `python:3.11-slim` base image |
 | YASA | 0.7.x | Vallat & Walker 2021 (transitive dep of psgscoring) |
 | Redis | 7-alpine | Queue backend |

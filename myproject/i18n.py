@@ -1890,6 +1890,25 @@ _PDF_V036 = {
 }
 TRANSLATIONS.update(_PDF_V036)
 
+# v0.13.0: phenotype flags (POSA / REM-predominant) + ventilatory burden
+_PDF_PHENO_VB = {
+    "pdf_ventilatory_burden": {"nl": "Ventilatory burden", "fr": "Charge ventilatoire",
+                               "en": "Ventilatory burden", "de": "Ventilatorische Last"},
+    "pdf_pheno_hdr":  {"nl": "Klinische fenotypes", "fr": "Phénotypes cliniques",
+                       "en": "Clinical phenotypes", "de": "Klinische Phänotypen"},
+    "pdf_pheno_posa": {"nl": "Positioneel OSAS (POSA)", "fr": "SAOS positionnel (POSA)",
+                       "en": "Positional OSA (POSA)", "de": "Lageabhängige OSA (POSA)"},
+    "pdf_pheno_rem":  {"nl": "REM-predominant OSAS", "fr": "SAOS à prédominance REM",
+                       "en": "REM-predominant OSA", "de": "REM-prädominante OSA"},
+    "pdf_pheno_yes":  {"nl": "ja", "fr": "oui", "en": "yes", "de": "ja"},
+    "pdf_pheno_no":   {"nl": "nee", "fr": "non", "en": "no", "de": "nein"},
+    "pdf_pheno_posa_therapy": {"nl": "kandidaat voor positietherapie",
+                               "fr": "candidat à la thérapie positionnelle",
+                               "en": "positional-therapy candidate",
+                               "de": "Kandidat für Lagetherapie"},
+}
+TRANSLATIONS.update(_PDF_PHENO_VB)
+
 def t(key: str, lang: str = None) -> str:
     """Alias voor get_translation — handig in Python-code."""
     return get_translation(key, lang)

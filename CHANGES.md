@@ -1,5 +1,18 @@
 # Changelog — YASAFlaskified
 
+## v0.14.0 — 2026-07-25  *(clinical phenotypes + ventilatory burden in the report)*
+
+- **New clinical findings in the report** (from psgscoring 0.10.0; pin `0.9.0 → 0.10.0`):
+  - **Positional OSA (POSA)** and **REM-predominant OSA** phenotype flags — shown in
+    the PDF (a "Clinical phenotypes" block) and the web report, with the supine /
+    non-supine and REM / NREM AHI and, for POSA, positional-therapy candidacy. POSA
+    needs a body-position channel; both render only when the criteria are met.
+  - **Ventilatory burden** (%·min/h) shown next to the hypoxic burden — a
+    cardiovascular-risk pair beyond the AHI. ⚠️ Scale to be calibrated against
+    Labarca 2023; no reference range shown yet.
+- 7 new NL/FR/EN/DE translation keys. **No AHI / OSAS-CSAS-grade change**; the new
+  fields render conditionally (graceful when absent).
+
 ## v0.13.0 — 2026-07-25  *(arousal & RERA detection moved to psgscoring; multi-derivation arousals by default)*
 
 - **Arousal & RERA detection now live in `psgscoring` (v0.9.0), not in
