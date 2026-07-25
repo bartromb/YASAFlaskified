@@ -1,5 +1,22 @@
 # Changelog — YASAFlaskified
 
+## v0.13.0 — 2026-07-25  *(arousal & RERA detection moved to psgscoring; multi-derivation arousals by default)*
+
+- **Arousal & RERA detection now live in `psgscoring` (v0.9.0), not in
+  YASAFlaskified.** `myproject/arousal_analysis.py` is now a thin compatibility
+  shim that re-exports `psgscoring.arousal`; the detector code moved to the library
+  so it is self-contained and versioned. Pin bumped `psgscoring[ml]==0.7.6 → 0.9.0`.
+- **Arousals are now scored multi-derivation by default** (central + occipital +
+  frontal, event-level union + EOG-reject) for clinical scoring — a more sensitive,
+  more human-like operating point (a scorer scans the whole montage). Set
+  `PSGSCORING_AROUSAL_DERIVATION=single` to restore single-channel behaviour.
+- **Clinical impact:** the **AHI / OSAS-CSAS grade is unchanged** (arousals
+  contribute no arousal-only events on the validation cohort; psgscoring's golden
+  regression passes). The **arousal index in reports rises** (multi is more
+  sensitive) — a deliberate, validated sensitivity-first choice. Validated on
+  PSG-IPA (5 recordings × 12 scorers).
+- No UI change; PDF/Excel/FHIR reports unchanged in structure.
+
 ## v0.12.8 — 2026-07-22  *(analysis history now distinguishes OSAS vs CSAS)*
 
 - **The analysis-history list (`/results`) now shows the apnea *type* and the
