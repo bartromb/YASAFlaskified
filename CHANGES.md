@@ -1,5 +1,13 @@
 # Changelog — YASAFlaskified
 
+## v0.16.5 — 2026-07-26  *(hide VB reference for central-dominant studies)*
+
+Content-only. The ventilatory-burden reference (≤ 25 %) is now hidden when > 50 % of
+apneic events are central (CSAS / Cheyne-Stokes). The VB norm (AJRCCM 2023) is derived
+and validated in OBSTRUCTIVE OSA cohorts and is inherently very high in central apnea by
+morphology, so comparing against ≤ 25 % would mislead. The VB value itself stays shown.
+Applies to the PDF and web reports. No scoring change.
+
 ## v0.16.4 — 2026-07-26  *(de-detail ML tooltip)*
 
 Content-only. Removed the internal manuscript reference ("paper v35 §3.6.1") and model
