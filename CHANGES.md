@@ -1,5 +1,17 @@
 # Changelog — YASAFlaskified
 
+## v0.16.2 — 2026-07-26  *(landing page refreshed with current feature set)*
+
+Content-only (public landing page at `/`). No scoring or pin change.
+
+- **"What's New" section rewritten** to the current clinical highlights: AASM v3-compliant
+  scoring, dual AHI (Rule 1A vs 4 %/CMS), ventilatory + hypoxic burden, clinical phenotypes
+  (POSA / REM-predominant), the clinician-focused report, and arousal aetiology + OSAS/CSAS
+  typing. Removed the now-obsolete "OAHI 3-point sweep" item (that feature was dropped from
+  the report in v0.15.0).
+- Hero badge → "AASM v3 · …"; AASM stat pill → "AASM v3-compliant"; tech stack now shows
+  `psgscoring 0.12` (was 0.6). All copy in NL/FR/EN/DE.
+
 ## v0.16.1 — 2026-07-26  *(ventilatory burden made breath-based)*
 
 Requires **psgscoring 0.12.1** (pin bumped). No report-code change — VB already renders
