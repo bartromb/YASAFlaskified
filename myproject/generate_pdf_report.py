@@ -252,6 +252,21 @@ def _central_component_present(rsum, pneumo):
     return bool((pneumo.get("cheyne_stokes") or {}).get("criteria_met"))
 
 
+def _is_central_dominant(rsum):
+    """True when > 50% of apneic events are central (CSAS pattern). Used to suppress
+    the ventilatory-burden reference (≤ 25%), which is derived and validated in
+    OBSTRUCTIVE OSA cohorts (AJRCCM 2023) and is not calibrated for central apnea /
+    Cheyne-Stokes, where VB is inherently very high by morphology."""
+    try:
+        n_o = (rsum or {}).get("n_obstructive", 0) or 0
+        n_c = (rsum or {}).get("n_central", 0) or 0
+        n_m = (rsum or {}).get("n_mixed", 0) or 0
+        total = n_o + n_c + n_m
+        return bool(total > 0 and (n_c / total) > 0.5)
+    except Exception:
+        return False
+
+
 def _clinical_flags(rsum, pneumo, ss, asum, lang="nl"):
     """B5: descriptive clinician attention points (NOT medical advice)."""
     flags = []
@@ -1962,7 +1977,9 @@ def generate_pdf_report(results:dict, output_path:str,
             [t("pdf_ventilatory_burden", lang),
              (f"{rsum.get('ventilatory_burden')} %"
               if rsum.get('ventilatory_burden') is not None else "—"),
-             "≤ 25%"],   # v0.16.0: validated metric (% small breaths, AJRCCM 2023)
+             # v0.16.5: hide the ≤25% reference for central-dominant (CSAS) studies —
+             # the VB norm is OBSTRUCTIVE-OSA-derived and not calibrated for central apnea.
+             ("" if _is_central_dominant(rsum) else "≤ 25%")],
         ],[8,4.5,4.5]))
         ts=spo2.get("timeseries")
         if ts and len(ts)>10:
