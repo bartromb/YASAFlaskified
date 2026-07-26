@@ -1960,9 +1960,9 @@ def generate_pdf_report(results:dict, output_path:str,
             ["ODI 4%",           f"{ss.get('odi_4pct','—')} /u",    "< 5/u"],
             ["Hypoxic burden",   f"{ss.get('hypoxic_burden','—')} %·min/h", "< 20"],
             [t("pdf_ventilatory_burden", lang),
-             (f"{rsum.get('ventilatory_burden')} %·min/h"
+             (f"{rsum.get('ventilatory_burden')} %"
               if rsum.get('ventilatory_burden') is not None else "—"),
-             t("pdf_vb_experimental", lang)],   # v0.15.0 (B7): mark experimental
+             "≤ 25%"],   # v0.16.0: validated metric (% small breaths, AJRCCM 2023)
         ],[8,4.5,4.5]))
         ts=spo2.get("timeseries")
         if ts and len(ts)>10:

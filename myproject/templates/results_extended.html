@@ -421,7 +421,7 @@
               <tr><td>AHI REM</td><td>{{ rsum.ahi_rem or '—' }}</td></tr>
               <tr><td>AHI NREM</td><td>{{ rsum.ahi_nrem or '—' }}</td></tr>
               {% if rsum.ventilatory_burden is not none %}
-              <tr><td>{{ t('pdf_ventilatory_burden') }}</td><td>{{ rsum.ventilatory_burden }} %·min/u</td></tr>
+              <tr><td>{{ t('pdf_ventilatory_burden') }}</td><td>{{ rsum.ventilatory_burden }} % <span style="color:#6b7a99">(≤ 25%)</span></td></tr>
               {% endif %}
               {% set ph = rsum.phenotypes or {} %}
               {% set posa = ph.positional_osa %}

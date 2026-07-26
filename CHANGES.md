@@ -1,5 +1,21 @@
 # Changelog — YASAFlaskified
 
+## v0.16.0 — 2026-07-26  *(VB recalibration + saturation bands + arousal-aetiology fix)*
+
+Requires **psgscoring 0.12.0** (pin bumped). Three fixes found while verifying a real
+v0.15.0 report; no change to AHI/OSAS numerics.
+
+- **Ventilatory burden** is now the validated metric — **% of sleep with airflow < 50%
+  of the eupneic baseline** (proportion of "small breaths"; AJRCCM 2023) — shown as a
+  bounded `%` with reference **≤ 25%** in the PDF + web report (was an unbounded
+  `%·min/h` value marked *experimental*, which produced implausible numbers, e.g. ~1074).
+- **Time-in-saturation-bands table is populated.** psgscoring 0.12.0 now emits the band
+  keys the table reads (`time_95_100_min` … `time_below_70_min`); previously all rows
+  showed 0.0%. No YF code change — the reader already expected these keys.
+- **Arousal-aetiology indices reconcile with the arousal index** (psgscoring 0.12.0):
+  respiratory + spontaneous arousal indices now sum to the arousal index (were computed
+  against a different TST); PLM arousal index reported as a subset of spontaneous.
+
 ## v0.15.0 — 2026-07-26  *(clinician-focused PDF report; AASM v3 enrichments; removals)*
 
 Requires **psgscoring 0.11.0** (pin bumped). PDF report reworked for the clinician;
