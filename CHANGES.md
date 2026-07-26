@@ -1,5 +1,11 @@
 # Changelog — YASAFlaskified
 
+## v0.16.4 — 2026-07-26  *(de-detail ML tooltip)*
+
+Content-only. Removed the internal manuscript reference ("paper v35 §3.6.1") and model
+version tag from the `ml_help` scoring-profile tooltip — now simply "LightGBM candidate
+classifier (enabled by default only on mesa_shhs)". No scoring change.
+
 ## v0.16.3 — 2026-07-26  *(disclaimer fix + landing-page publication wording)*
 
 Content-only. No scoring or pin change.
