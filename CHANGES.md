@@ -1,5 +1,17 @@
 # Changelog — YASAFlaskified
 
+## v0.16.3 — 2026-07-26  *(disclaimer fix + landing-page publication wording)*
+
+Content-only. No scoring or pin change.
+
+- **PDF disclaimer**: fixed "Vallat \& Walker" → "Vallat & Walker" (`\&` → `&amp;`, was
+  rendering a literal backslash) and dropped the internal "(paper v35)" version tag.
+- **Landing page**: the peer-reviewed-publication item no longer names the target journal,
+  manuscript version, or co-authors — now simply "a peer-reviewed publication … is in
+  preparation".
+- **Landing page roadmap**: removed the "Update to AASM Manual v3.0" card — that work is
+  done and already listed under "What's New".
+
 ## v0.16.2 — 2026-07-26  *(landing page refreshed with current feature set)*
 
 Content-only (public landing page at `/`). No scoring or pin change.
