@@ -2124,11 +2124,12 @@ _V0102_UI = {
     # channel_select.html
     "not_detected": {"nl": "niet gedetecteerd", "fr": "non détecté", "en": "not detected", "de": "nicht erkannt"},
     "ml_help": {
-        "nl": "🤖 ML = profiel past de LightGBM v0.6 candidate-classifier toe (paper v35 §3.6.1; standaard alleen op mesa_shhs).",
-        "fr": "🤖 ML = le profil applique le classificateur de candidats LightGBM v0.6 (article v35 §3.6.1 ; activé par défaut uniquement sur mesa_shhs).",
-        "en": "🤖 ML = the profile applies the LightGBM v0.6 candidate classifier (paper v35 §3.6.1; enabled by default only on mesa_shhs).",
-        "de": "🤖 ML = das Profil wendet den LightGBM-v0.6-Kandidaten-Klassifikator an (Paper v35 §3.6.1; standardmäßig nur bei mesa_shhs aktiv).",
+        "nl": "🤖 ML = profiel past de LightGBM candidate-classifier toe (standaard alleen op mesa_shhs).",
+        "fr": "🤖 ML = le profil applique le classificateur de candidats LightGBM (activé par défaut uniquement sur mesa_shhs).",
+        "en": "🤖 ML = the profile applies the LightGBM candidate classifier (enabled by default only on mesa_shhs).",
+        "de": "🤖 ML = das Profil wendet den LightGBM-Kandidaten-Klassifikator an (standardmäßig nur bei mesa_shhs aktiv).",
     },
+
 
     # base.html footer
     "footer_powered_by":   {"nl": "Mogelijk gemaakt door", "fr": "Propulsé par", "en": "Powered by", "de": "Bereitgestellt von"},
