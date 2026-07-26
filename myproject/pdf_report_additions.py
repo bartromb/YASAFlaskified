@@ -514,17 +514,20 @@ def compute_osas_score(results, ess=None):
     }
 
 
-def draw_ess_section(story, results, ess=None, t=None):
+def draw_ess_section(story, results, ess=None, t=None, include_severity_profile=False):
     """
-    Draw ESS input and OSAS score section.
+    Draw ESS input and (optionally) the OSAS severity-profile score section.
 
     Args:
         ess: Epworth Sleepiness Scale score (0-24), or None if unknown
+        include_severity_profile: v0.15.0 — the O-S-A-S "OSAS severity profile"
+            score table is not a validated severity instrument and is OFF by
+            default in the clinical PDF. Only the ESS line is rendered.
     """
     tr = t if t else lambda x, **kw: x
 
     story.append(Paragraph(
-        tr('Symptom assessment and severity profile'),
+        tr('Symptom assessment (ESS)'),
         _heading_style()))
 
     # ESS
@@ -544,6 +547,10 @@ def draw_ess_section(story, results, ess=None, t=None):
 
     story.append(Paragraph(ess_text, _body_style()))
     story.append(Spacer(1, 3*mm))
+
+    # v0.15.0: OSAS severity-profile score table off by default (not validated).
+    if not include_severity_profile:
+        return
 
     # OSAS score
     score = compute_osas_score(results, ess=ess)

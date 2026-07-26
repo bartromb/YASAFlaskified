@@ -10,7 +10,7 @@ AI-based sleep staging + AASM-compliant respiratory scoring + multilingual clini
 <!-- static release badge: the dynamic github/v/release endpoint intermittently
      fails with "Unable to select next GitHub token from pool" (shields.io token-pool
      rate limit). Bump the version here on each new release. -->
-[![Release](https://img.shields.io/badge/release-v0.14.0-blue)](https://github.com/bartromb/YASAFlaskified/releases/latest)
+[![Release](https://img.shields.io/badge/release-v0.15.0-blue)](https://github.com/bartromb/YASAFlaskified/releases/latest)
 
 ## Demo
 
