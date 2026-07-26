@@ -1909,6 +1909,101 @@ _PDF_PHENO_VB = {
 }
 TRANSLATIONS.update(_PDF_PHENO_VB)
 
+# v0.15.0 — AASM v3 clinician-report enrichments (dual AHI, aetiology, flags, conclusion)
+_PDF_AASM_V3 = {
+    "pdf_severity": {"nl": "Ernst", "fr": "Sévérité", "en": "Severity", "de": "Schweregrad"},
+    "pdf_ahi_dual_hdr": {
+        "nl": "AHI volgens hypopneu-criterium (AASM v3)",
+        "fr": "IAH selon le critère d'hypopnée (AASM v3)",
+        "en": "AHI by hypopnea criterion (AASM v3)",
+        "de": "AHI nach Hypopnoe-Kriterium (AASM v3)"},
+    "pdf_ahi_rule1a": {
+        "nl": "Regel 1A — ≥30% flow + (≥3% desat óf arousal)",
+        "fr": "Règle 1A — ≥30% débit + (≥3% désat ou micro-éveil)",
+        "en": "Rule 1A — ≥30% flow + (≥3% desat or arousal)",
+        "de": "Regel 1A — ≥30% Fluss + (≥3% Desat oder Arousal)"},
+    "pdf_ahi_rule1b": {
+        "nl": "Regel 1B / CMS — ≥30% flow + ≥4% desat",
+        "fr": "Règle 1B / CMS — ≥30% débit + ≥4% désat",
+        "en": "Rule 1B / CMS — ≥30% flow + ≥4% desat",
+        "de": "Regel 1B / CMS — ≥30% Fluss + ≥4% Desat"},
+    "pdf_ahi_ref_scale": {
+        "nl": "AHI-ernst: &lt;5 normaal · 5–15 mild · 15–30 matig · &gt;30 ernstig",
+        "fr": "Sévérité IAH : &lt;5 normal · 5–15 léger · 15–30 modéré · &gt;30 sévère",
+        "en": "AHI severity: &lt;5 normal · 5–15 mild · 15–30 moderate · &gt;30 severe",
+        "de": "AHI-Schweregrad: &lt;5 normal · 5–15 leicht · 15–30 mittel · &gt;30 schwer"},
+    "pdf_resp_arousal_index": {
+        "nl": "Respiratoire arousal-index", "fr": "Index de micro-éveils respiratoires",
+        "en": "Respiratory arousal index", "de": "Respiratorischer Arousal-Index"},
+    "pdf_spont_arousal_index": {
+        "nl": "Spontane arousal-index", "fr": "Index de micro-éveils spontanés",
+        "en": "Spontaneous arousal index", "de": "Spontaner Arousal-Index"},
+    "pdf_plm_arousal_index": {
+        "nl": "PLM arousal-index", "fr": "Index de micro-éveils PLM",
+        "en": "PLM arousal index", "de": "PLM-Arousal-Index"},
+    "pdf_arousal_ref": {"nl": "&lt; 10–15/u", "fr": "&lt; 10–15/h",
+                        "en": "&lt; 10–15/h", "de": "&lt; 10–15/h"},
+    "pdf_vb_experimental": {
+        "nl": "(experimenteel — schaal nog te kalibreren)",
+        "fr": "(expérimental — échelle à calibrer)",
+        "en": "(experimental — scale not yet calibrated)",
+        "de": "(experimentell — Skala noch zu kalibrieren)"},
+    # Auto conclusion (B1)
+    "pdf_concl_auto_hdr": {
+        "nl": "Geautomatiseerde samenvatting (ter info — besluit door de arts)",
+        "fr": "Résumé automatisé (à titre indicatif — conclusion par le médecin)",
+        "en": "Automated summary (informational — conclusion by the physician)",
+        "de": "Automatische Zusammenfassung (informativ — Beurteilung durch den Arzt)"},
+    "pdf_concl_none": {
+        "nl": "Geen significante slaapapneu (AHI &lt; 5/u).",
+        "fr": "Pas d'apnée du sommeil significative (IAH &lt; 5/h).",
+        "en": "No significant sleep apnea (AHI &lt; 5/h).",
+        "de": "Keine signifikante Schlafapnoe (AHI &lt; 5/h)."},
+    "pdf_concl_positional": {"nl": "positioneel", "fr": "positionnel",
+                             "en": "positional", "de": "lageabhängig"},
+    "pdf_concl_rem": {"nl": "REM-predominant", "fr": "à prédominance REM",
+                      "en": "REM-predominant", "de": "REM-prädominant"},
+    "pdf_concl_central": {"nl": "met centrale component", "fr": "avec composante centrale",
+                          "en": "with a central component", "de": "mit zentraler Komponente"},
+    "pdf_concl_hypoxemia": {"nl": "significante nachtelijke hypoxemie",
+                            "fr": "hypoxémie nocturne significative",
+                            "en": "significant nocturnal hypoxemia",
+                            "de": "signifikante nächtliche Hypoxämie"},
+    # Clinical flags (B5)
+    "pdf_flags_hdr": {
+        "nl": "Aandachtspunten (beschrijvend — geen medisch advies)",
+        "fr": "Points d'attention (descriptif — pas un avis médical)",
+        "en": "Points of attention (descriptive — not medical advice)",
+        "de": "Aufmerksamkeitspunkte (beschreibend — keine medizinische Beratung)"},
+    "pdf_flag_positional": {
+        "nl": "Positioneel OSAS — kandidaat voor positietherapie",
+        "fr": "SAOS positionnel — candidat à la thérapie positionnelle",
+        "en": "Positional OSA — positional-therapy candidate",
+        "de": "Lageabhängige OSA — Kandidat für Lagetherapie"},
+    "pdf_flag_rem": {"nl": "REM-predominant OSAS", "fr": "SAOS à prédominance REM",
+                     "en": "REM-predominant OSA", "de": "REM-prädominante OSA"},
+    "pdf_flag_central": {"nl": "Centrale component aanwezig",
+                         "fr": "Composante centrale présente",
+                         "en": "Central component present",
+                         "de": "Zentrale Komponente vorhanden"},
+    "pdf_flag_hypoxemia": {
+        "nl": "Significante nachtelijke hypoxemie (T90 {pct}%)",
+        "fr": "Hypoxémie nocturne significative (T90 {pct}%)",
+        "en": "Significant nocturnal hypoxemia (T90 {pct}%)",
+        "de": "Signifikante nächtliche Hypoxämie (T90 {pct}%)"},
+    "pdf_flag_arousal": {
+        "nl": "Verhoogde arousal-index ({ai}/u)",
+        "fr": "Index de micro-éveils élevé ({ai}/h)",
+        "en": "Elevated arousal index ({ai}/h)",
+        "de": "Erhöhter Arousal-Index ({ai}/h)"},
+    "pdf_flag_csr": {
+        "nl": "Cheyne-Stokes-ademhaling (voldoet aan AASM-criteria)",
+        "fr": "Respiration de Cheyne-Stokes (critères AASM remplis)",
+        "en": "Cheyne-Stokes breathing (AASM criteria met)",
+        "de": "Cheyne-Stokes-Atmung (AASM-Kriterien erfüllt)"},
+}
+TRANSLATIONS.update(_PDF_AASM_V3)
+
 def t(key: str, lang: str = None) -> str:
     """Alias voor get_translation — handig in Python-code."""
     return get_translation(key, lang)

@@ -1,5 +1,33 @@
 # Changelog — YASAFlaskified
 
+## v0.15.0 — 2026-07-26  *(clinician-focused PDF report; AASM v3 enrichments; removals)*
+
+Requires **psgscoring 0.11.0** (pin bumped). PDF report reworked for the clinician;
+no change to scoring numerics.
+
+**Added (PDF report)**
+- **Auto-generated conclusion** (informational; never overrides the physician's manual
+  diagnosis) — one structured sentence: severity + syndrome + phenotype + burden qualifiers.
+- **Dual AHI** table — AASM v3 Rule 1A (≥3% desat *or* arousal) vs Rule 1B / CMS (≥4% desat),
+  side by side with per-rule severity (from psgscoring `summary["ahi_dual"]`).
+- **AASM AHI severity reference scale** (&lt;5 / 5–15 / 15–30 / &gt;30) under the AHI bar.
+- **Page-1 phenotype line** (POSA / REM-predominant) and a **"Aandachtspunten" box**
+  (descriptive attention points — explicitly *not* medical advice).
+- **Arousal aetiology** as per-hour indices (respiratory / spontaneous / PLM arousal index).
+- **Ventilatory burden** now labelled *experimental — scale not yet calibrated*.
+
+**Removed (from the clinical PDF, per site request)**
+- **Signal-quality & confidence-review section** (7b) and the page-1 warning banners
+  (near-constantly graded "unusable"; still available in the web app).
+- **OSAS severity profile** — the strict/standard/sensitive scoring-profile comparison
+  table, the AHI-robustness interval, the OAHI 3-point confidence sweep, and the O-S-A-S
+  severity-score table (not validated as severity instruments). ESS is kept.
+
+**Fixed**
+- KPI syndrome label + apnea-type breakdown line resolved to an empty summary
+  (`results["respiratory"]` never existed → generic "SAS"); now read the canonical
+  `pneumo["respiratory"]["summary"]`, so the header shows OSAS/CSAS correctly.
+
 ## v0.14.0 — 2026-07-25  *(clinical phenotypes + ventilatory burden in the report)*
 
 - **New clinical findings in the report** (from psgscoring 0.10.0; pin `0.9.0 → 0.10.0`):

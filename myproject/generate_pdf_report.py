@@ -215,6 +215,103 @@ def _apnea_breakdown_line(rsum, lang="nl"):
             + lab_m + " " + str(n_m) + " (" + str(pct_m) + "%)")
 
 
+# ── v0.15.0: clinician-report enrichments (B1 conclusion, B4 phenotypes, B5 flags) ──
+
+def _phenotype_summary_line(rsum, lang="nl"):
+    """B4: compact one-line phenotype summary for page 1 (POSA / REM-predominant)."""
+    ph = (rsum or {}).get("phenotypes") or {}
+    tags = []
+    posa = ph.get("positional_osa")
+    if posa and posa.get("flag"):
+        s = t("pdf_pheno_posa", lang)
+        if posa.get("ahi_supine") is not None and posa.get("ahi_non_supine") is not None:
+            s += f" (supine {posa['ahi_supine']} vs non-supine {posa['ahi_non_supine']}/u)"
+        tags.append(s)
+    remp = ph.get("rem_predominant")
+    if remp and remp.get("flag"):
+        s = t("pdf_pheno_rem", lang)
+        if remp.get("rem_ahi") is not None and remp.get("nrem_ahi") is not None:
+            s += f" (REM {remp['rem_ahi']} vs NREM {remp['nrem_ahi']}/u)"
+        tags.append(s)
+    if not tags:
+        return None
+    return "<b>" + t("pdf_pheno_hdr", lang) + ":</b> " + "  ·  ".join(tags)
+
+
+def _central_component_present(rsum, pneumo):
+    """True when a clinically relevant central component is present."""
+    try:
+        n_o = (rsum or {}).get("n_obstructive", 0) or 0
+        n_c = (rsum or {}).get("n_central", 0) or 0
+        n_m = (rsum or {}).get("n_mixed", 0) or 0
+        total = n_o + n_c + n_m
+        if total and (n_c / total) > 0.5:
+            return True
+    except Exception:
+        pass
+    return bool((pneumo.get("cheyne_stokes") or {}).get("criteria_met"))
+
+
+def _clinical_flags(rsum, pneumo, ss, asum, lang="nl"):
+    """B5: descriptive clinician attention points (NOT medical advice)."""
+    flags = []
+    ph = (rsum or {}).get("phenotypes") or {}
+    posa = ph.get("positional_osa")
+    if posa and posa.get("flag") and posa.get("positional_therapy_candidate"):
+        flags.append(t("pdf_flag_positional", lang))
+    remp = ph.get("rem_predominant")
+    if remp and remp.get("flag"):
+        flags.append(t("pdf_flag_rem", lang))
+    if (pneumo.get("cheyne_stokes") or {}).get("criteria_met"):
+        flags.append(t("pdf_flag_csr", lang))
+    elif _central_component_present(rsum, pneumo):
+        flags.append(t("pdf_flag_central", lang))
+    try:
+        t90 = ss.get("pct_below_90")
+        if t90 is not None and float(t90) >= 10:
+            flags.append(t("pdf_flag_hypoxemia", lang).format(pct=f"{float(t90):.0f}"))
+    except Exception:
+        pass
+    try:
+        ai = asum.get("arousal_index")
+        if ai is not None and float(ai) >= 25:
+            flags.append(t("pdf_flag_arousal", lang).format(ai=f"{float(ai):.0f}"))
+    except Exception:
+        pass
+    return flags
+
+
+def _auto_conclusion(rsum, pneumo, ss, lang="nl"):
+    """B1: descriptive auto-generated impression (informational; the physician's
+    manual diagnosis always takes precedence). Combines severity+syndrome with
+    phenotype and burden qualifiers into one sentence."""
+    try:
+        ahi = float(rsum.get("ahi_total", 0) or 0)
+    except Exception:
+        return None
+    if ahi < 5:
+        return t("pdf_concl_none", lang)
+    sev = _sev_with_syndrome(ahi, rsum, lang)          # e.g. "Matig OSAS"
+    quals = []
+    ph = (rsum or {}).get("phenotypes") or {}
+    if (ph.get("positional_osa") or {}).get("flag"):
+        quals.append(t("pdf_concl_positional", lang))
+    if (ph.get("rem_predominant") or {}).get("flag"):
+        quals.append(t("pdf_concl_rem", lang))
+    if _central_component_present(rsum, pneumo):
+        quals.append(t("pdf_concl_central", lang))
+    try:
+        if ss.get("pct_below_90") is not None and float(ss["pct_below_90"]) >= 10:
+            quals.append(t("pdf_concl_hypoxemia", lang))
+    except Exception:
+        pass
+    txt = f"{sev} (AHI {ahi:.1f}/u"
+    if quals:
+        txt += ", " + ", ".join(quals)
+    txt += ")."
+    return txt
+
+
 # ── Componenten ────────────────────────────────────────────────
 def _hdr(title,color=None):
     bg=color or NAVY
@@ -976,7 +1073,11 @@ def generate_pdf_report(results:dict, output_path:str,
     ahi_v=_f(rsum,"ahi_total"); ahi_s=f"{ahi_v:.1f}" if ahi_v is not None else "—"
     # v0.8.22: Label afhankelijk van studietype
     # v0.8.43: syndroom-label dynamisch op basis van apnoe-type distributie
-    _rsum_for_sev = (results.get("respiratory") or {}).get("summary") or {}
+    # v0.15.0 fix: the results dict has no top-level "respiratory" key (respiratory
+    # lives under results["pneumo"]), so this used to resolve to {} — making the KPI
+    # syndrome label fall back to generic "SAS" and hiding the apnea-breakdown line.
+    # Point it at the canonical summary instead.
+    _rsum_for_sev = rsum or (results.get("respiratory") or {}).get("summary") or {}
     if is_polygraphy:
         ahi_label = f"REI  ({_sev_with_syndrome(ahi_v, _rsum_for_sev, lang)})"
     elif is_titration:
@@ -1006,55 +1107,39 @@ def generate_pdf_report(results:dict, output_path:str,
         story.append(Paragraph(_apnea_line, _apnea_style))
         sp(0.1)
 
-    # ── v0.8.22: Prominente waarschuwing bij slechte signaalkwaliteit ──
-    sig_q = results.get("signal_quality", {})
-    conf_rev = results.get("confidence_review", {})
-    sq_grade = sig_q.get("overall_grade", "unknown")
-    pct_low_conf = conf_rev.get("pct_low_confidence", 0) or 0
-    _warnings = []
-    if sq_grade == "poor":
-        _n_unusable = sum(1 for ch in (sig_q.get("channels") or [])
-                         if ch.get("quality_grade") == "unusable")
-        if _n_unusable > 0:
-            _warnings.append(t("pdf_warn_sq_unusable", lang).format(n=_n_unusable))
-    if pct_low_conf >= 20:
-        _warnings.append(t("pdf_warn_low_conf", lang).format(pct=f"{pct_low_conf:.0f}"))
-    if _warnings:
-        _warn_style = ParagraphStyle("WarnBanner", fontName="Helvetica-Bold",
-                                      fontSize=7.5, textColor=colors.white,
-                                      backColor=colors.HexColor("#e74c3c"),
-                                      leading=10, spaceBefore=1, spaceAfter=0,
-                                      leftIndent=4, rightIndent=4)
-        for _w in _warnings:
-            story.append(Paragraph(_w, _warn_style))
+    # ── v0.15.0 (B4): page-1 clinical phenotype summary (POSA / REM-predominant) ──
+    # (Signal-quality/confidence banners and the strict/std/sensitive AHI-robustness
+    #  banner were removed from the PDF in v0.15.0 — see CHANGES.md.)
+    _p1_pheno = _phenotype_summary_line(rsum, lang)
+    if _p1_pheno:
+        story.append(Paragraph(_p1_pheno, ParagraphStyle(
+            "P1Pheno", fontName="Helvetica", fontSize=8,
+            textColor=colors.HexColor("#1a3a5c"), alignment=TA_CENTER,
+            leading=11, spaceBefore=1, spaceAfter=1)))
+        sp(0.06)
 
-    # ── v0.8.37: AHI robustness grade on page 1 (compact) ────
-    _rob_grade = None
-    try:
-        _ahi_iv = pneumo.get("ahi_interval", {})
-        _rob_grade = _ahi_iv.get("robustness_grade")
-        if _rob_grade:
-            _rob_colors = {
-                "A": ("#166534", "#f0fdf4"),
-                "B": ("#92400e", "#fffbeb"),
-                "C": ("#991b1b", "#fef2f2"),
-            }
-            _rc_fg, _rc_bg = _rob_colors.get(_rob_grade, ("#475569", "#f8fafc"))
-            _strict_v = _ahi_iv.get("strict", {}).get("ahi", "—")
-            _std_v = _ahi_iv.get("standard", {}).get("ahi", "—")
-            _sens_v = _ahi_iv.get("sensitive", {}).get("ahi", "—")
-            _rob_text = (f"AHI Interval: [{_strict_v} – {_std_v} – {_sens_v}] /u  ·  "
-                         f"Robustness: {_rob_grade}")
-            story.append(Paragraph(_rob_text, ParagraphStyle(
-                "RobBanner", fontName="Helvetica-Bold",
-                fontSize=7, textColor=colors.HexColor(_rc_fg),
-                backColor=colors.HexColor(_rc_bg),
-                leading=9, spaceBefore=1, spaceAfter=0,
-                leftIndent=4, rightIndent=4)))
-    except Exception:
-        pass  # never break PDF generation for a cosmetic banner
-
-    if _warnings or _rob_grade:
+    # ── v0.15.0 (B5): page-1 "Aandachtspunten" box (descriptive — not advice) ──
+    _p1_flags = _clinical_flags(
+        rsum, pneumo,
+        pneumo.get("spo2", {}).get("summary", {}),
+        pneumo.get("arousal", {}).get("summary", {}), lang)
+    if _p1_flags:
+        _fl_hdr = ParagraphStyle("FlagHdr", fontName="Helvetica-Bold", fontSize=7.5,
+                                 textColor=colors.HexColor("#7a5c00"), leading=10)
+        _fl_body = ParagraphStyle("FlagBody", fontName="Helvetica", fontSize=7.5,
+                                  textColor=colors.HexColor("#5c4600"), leading=10,
+                                  leftIndent=6)
+        _fl_cells = [[Paragraph(t("pdf_flags_hdr", lang), _fl_hdr)]]
+        for _f_ln in _p1_flags:
+            _fl_cells.append([Paragraph("• " + _f_ln, _fl_body)])
+        _fl_tbl = Table(_fl_cells, colWidths=[CW])
+        _fl_tbl.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#fff8e1")),
+            ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#e0c060")),
+            ("TOPPADDING", (0, 0), (-1, -1), 2), ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+            ("LEFTPADDING", (0, 0), (-1, -1), 6),
+        ]))
+        story.append(_fl_tbl)
         sp(0.08)
 
     # ══════════════════════════════════════════════════════════════
@@ -1340,7 +1425,9 @@ def generate_pdf_report(results:dict, output_path:str,
     sq_channels = sig_q.get("channels", {})
     sq_warnings = sig_q.get("montage_warnings", [])
     sq_grade = sig_q.get("overall_grade", "unknown")
-    has_sq = (sq_grade != "unknown" and sq_channels) or conf_rev.get("n_low_confidence", 0) > 0
+    # v0.15.0: signal-quality & confidence-review section removed from the clinical
+    # PDF (per site request — near-constantly graded "unusable"; kept in the web app).
+    has_sq = False
 
     if has_sq:
         story.append(_hdr(t("rpt_sec7b", lang),color=colors.HexColor("#e67e22"))); sp(0.1)
@@ -1443,6 +1530,31 @@ def generate_pdf_report(results:dict, output_path:str,
         ]))
         story.append(ab); sp(0.1)
 
+        # ── v0.15.0 (B2): dual AHI — AASM v3 Rule 1A vs Rule 1B/CMS (4%) ──────
+        _dual = rsum.get("ahi_dual") or {}
+        if _dual.get("rule_1a") and _dual.get("rule_1b_4pct"):
+            _1a = _dual["rule_1a"]; _1b = _dual["rule_1b_4pct"]
+            _dual_rows = [
+                [t("pdf_ahi_rule1a", lang),
+                 f"{_1a.get('ahi')} /u",
+                 _sev_with_syndrome(_1a.get("ahi"), rsum, lang)],
+                [t("pdf_ahi_rule1b", lang),
+                 f"{_1b.get('ahi')} /u",
+                 _sev_with_syndrome(_1b.get("ahi"), rsum, lang)],
+            ]
+            story.append(KeepTogether([_tbl(
+                [t("pdf_ahi_dual_hdr", lang), "AHI", t("pdf_severity", lang)],
+                _dual_rows, [8, 3, 3])]))
+            sp(0.05)
+
+        # ── v0.15.0 (B3): AASM AHI severity reference scale ──────────────────
+        story.append(Paragraph(
+            f"<i>{t('pdf_ahi_ref_scale', lang)}</i>",
+            ParagraphStyle("AHIRef", fontName="Helvetica", fontSize=7,
+                           textColor=colors.HexColor("#6b7a99"), leading=9,
+                           spaceAfter=2)))
+        sp(0.08)
+
         # ── Hoofdtabel: events per type met confidence-kolom ────────────
         # Kolommen: Parameter | Aantal | Index /u | Hoog≥0.85 | Mat.0.60-0.84 | Grens 0.40-0.59 | Laag<0.40
 
@@ -1508,58 +1620,10 @@ def generate_pdf_report(results:dict, output_path:str,
         story.append(KeepTogether([_tbl(hdr_conf, conf_rows, [5.0,1.2,1.5,1.5,1.8,1.8,1.5])]))
         sp(0.12)
 
-        # ── v0.9.0: OAHI confidence sweep (3-punt) + robustness grade ────
-        sweep = rsum.get("oahi_sweep") or {}
-        sweep_width = rsum.get("oahi_sweep_width", 0) or 0
-        grade = rsum.get("robustness_grade", "?") or "?"
-        story.append(_hdr(t("pdf_oahi_uncertainty_hdr", lang), color=BLUE)); sp(0.1)
-
-        # Robustness label
-        if grade == "A":
-            grade_text = t("pdf_grade_a_robust", lang)
-        elif grade == "B":
-            grade_text = t("pdf_grade_b_likely", lang)
-        elif grade == "C":
-            grade_text = t("pdf_grade_c_uncertain", lang)
-        else:
-            grade_text = "—"
-
-        story.append(Paragraph(
-            t("pdf_robust_line", lang).format(
-                avg=avg_s, oahi=oahi_all, grade=grade, desc=grade_text),
-            styles["SM"])); sp(0.1)
-
-        if sweep:
-            sweep_rows = [
-                [t("pdf_sweep_lenient", lang),
-                 f"{sweep.get('lenient', 0):.1f}",
-                 _sev(sweep.get('lenient') or 0, lang),
-                 t("pdf_sweep_lenient_desc", lang)],
-                [t("pdf_sweep_primary", lang),
-                 f"{sweep.get('primary', 0):.1f}",
-                 _sev(sweep.get('primary') or 0, lang),
-                 t("pdf_sweep_primary_desc", lang)],
-                [t("pdf_sweep_strict", lang),
-                 f"{sweep.get('strict', 0):.1f}",
-                 _sev(sweep.get('strict') or 0, lang),
-                 t("pdf_sweep_strict_desc", lang)],
-                [t("pdf_sweep_spread", lang),
-                 f"{sweep_width:.1f}/u", "",
-                 t("pdf_sweep_grade_desc", lang)],
-            ]
-            story.append(KeepTogether([_tbl(
-                [t("pdf_sweep_col_threshold", lang),
-                 t("pdf_sweep_col_oahi", lang),
-                 t("pdf_sweep_col_severity", lang),
-                 t("pdf_sweep_col_note", lang)],
-                sweep_rows,
-                [6.5, 2.5, 3.0, 4.0])]))
-            sp(0.15)
-        else:
-            # Fallback for older psgscoring without oahi_sweep
-            story.append(Paragraph(
-                t("pdf_sweep_unavailable", lang).format(oahi=oahi_all),
-                styles["SM"])); sp(0.1)
+        # v0.15.0: the OAHI 3-point confidence sweep + robustness grade (the
+        # threshold-severity "OSAS severity profile") was removed from the clinical
+        # PDF (not validated as a severity instrument). The official OAHI is already
+        # shown in the classification bar and events table above.
 
         # ── v0.8.22: RERA, RDI, REM/NREM AHI ──────────────────────────
         rera_n   = rsum.get("n_rera", 0) or 0
@@ -1724,14 +1788,28 @@ def generate_pdf_report(results:dict, output_path:str,
         if not is_polygraphy and arous.get("success") and asum:
             story.append(_hdr(t("rpt_sec8b", lang),color=BLUE)); sp(0.1)
             rdi=_f(asum,"rdi")
-            story.append(_tbl([t("pdf_param",lang),t("pdf_value",lang)],[
-                [t("pdf_arousal_index", lang),       f"{asum.get('arousal_index','—')} /u"],
+            # v0.15.0 (B6): arousal aetiology as per-hour indices (AASM V.A Note 4)
+            _ar_rows = [
+                [t("pdf_arousal_index", lang),
+                 f"{asum.get('arousal_index','—')} /u  ({t('pdf_arousal_ref', lang)})"],
+            ]
+            if asum.get("respiratory_arousal_index") is not None:
+                _ar_rows.append([t("pdf_resp_arousal_index", lang),
+                                 f"{asum.get('respiratory_arousal_index')} /u"])
+            if asum.get("spontaneous_arousal_index") is not None:
+                _ar_rows.append([t("pdf_spont_arousal_index", lang),
+                                 f"{asum.get('spontaneous_arousal_index')} /u"])
+            if asum.get("plm_arousal_index") is not None:
+                _ar_rows.append([t("pdf_plm_arousal_index", lang),
+                                 f"{asum.get('plm_arousal_index')} /u"])
+            _ar_rows += [
                 [t("pdf_resp_arousals",lang),    str(asum.get("n_respiratory_arousals","—"))],
                 [t("pdf_spont_arousals",lang),        str(asum.get("n_spontaneous_arousals","—"))],
                 ["RERA's",                   str(asum.get("n_reras","—"))],
                 ["RERA-index",               f"{asum.get('rera_index','—')} /u"],
                 ["RDI (AHI + RERA)",         f"{rdi:.1f} /u" if rdi else "—"],
-            ],[9,8])); sp(0.1)
+            ]
+            story.append(_tbl([t("pdf_param",lang),t("pdf_value",lang)], _ar_rows,[9,8])); sp(0.1)
     else:
         story.append(Paragraph(f"{t('pdf_not_available', lang)}: {resp.get('error','—')}",styles["SM"]))
     sp(0.12)
@@ -1813,14 +1891,17 @@ def generate_pdf_report(results:dict, output_path:str,
             ("TOPPADDING",    (0,0), (-1,-1), 2),
             ("BOTTOMPADDING", (0,0), (-1,-1), 2),
         ]))
-        story.append(_prof_tbl)
-        sp(0.12)
+        # v0.15.0: strict/standard/sensitive "OSAS severity profile" comparison table
+        # removed from the clinical PDF (not validated as a severity instrument). The
+        # active profile is still named in the classification bar; the validated dual
+        # AHI (Rule 1A vs 1B) is shown above.
+        # story.append(_prof_tbl); sp(0.12)   # intentionally not rendered
 
         # v0.2.8: AHI Confidence Interval + Robustness Score
         _ahi_intv = pneumo.get("ahi_interval", {})
         _intv = _ahi_intv.get("interval")
         _grade = _ahi_intv.get("robustness_grade", "")
-        if _intv and _grade:
+        if False and _intv and _grade:  # v0.15.0: AHI-robustness interval removed from PDF
             _grade_colors = {"A": "#27ae60", "B": "#f39c12", "C": "#e74c3c"}
             _gcol = _grade_colors.get(_grade, "#95a5a6")
             _sev_strict = _ahi_intv.get("strict", {}).get("severity", "?")
@@ -1880,7 +1961,8 @@ def generate_pdf_report(results:dict, output_path:str,
             ["Hypoxic burden",   f"{ss.get('hypoxic_burden','—')} %·min/h", "< 20"],
             [t("pdf_ventilatory_burden", lang),
              (f"{rsum.get('ventilatory_burden')} %·min/h"
-              if rsum.get('ventilatory_burden') is not None else "—"), ""],
+              if rsum.get('ventilatory_burden') is not None else "—"),
+             t("pdf_vb_experimental", lang)],   # v0.15.0 (B7): mark experimental
         ],[8,4.5,4.5]))
         ts=spo2.get("timeseries")
         if ts and len(ts)>10:
@@ -1989,13 +2071,34 @@ def generate_pdf_report(results:dict, output_path:str,
     manual_diag = pat.get("diagnosis", "").strip()
     manual_comment = pat.get("comments", "").strip()
 
-    # v0.8.22: Besluit wordt NIET meer automatisch gegenereerd.
-    # De arts vult het besluit manueel in via de rapport-editor.
+    # De arts vult het besluit manueel in via de rapport-editor; de auto-samenvatting
+    # (v0.15.0, B1) is louter informatief en overschrijft de manuele diagnose nooit.
     if manual_diag:
         story.append(Paragraph(f"<b>{t('concl_diagnosis', lang)}:</b> {manual_diag}", styles["B"]))
     else:
         story.append(Paragraph(
             f"<i>{t('concl_empty', lang)}</i>", styles["SM"]))
+
+    # v0.15.0 (B1): auto-generated descriptive impression (informational only)
+    _auto = _auto_conclusion(rsum, pneumo, ss, lang)
+    if _auto:
+        _auto_cells = [
+            [Paragraph(f"<b>{t('pdf_concl_auto_hdr', lang)}</b>", ParagraphStyle(
+                "AutoHdr", fontName="Helvetica-Bold", fontSize=7.5,
+                textColor=colors.HexColor("#33465e"), leading=10))],
+            [Paragraph(_auto, ParagraphStyle(
+                "AutoBody", fontName="Helvetica", fontSize=8.5,
+                textColor=TXT, leading=12))],
+        ]
+        _auto_tbl = Table(_auto_cells, colWidths=[CW])
+        _auto_tbl.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f5f8fc")),
+            ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#c6d2e3")),
+            ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ("LEFTPADDING", (0, 0), (-1, -1), 8),
+        ]))
+        story.append(Spacer(1, 0.1 * cm))
+        story.append(_auto_tbl)
 
     sp(0.1)
     if manual_comment:
