@@ -1,5 +1,16 @@
 # Changelog — YASAFlaskified
 
+## v0.16.1 — 2026-07-26  *(ventilatory burden made breath-based)*
+
+Requires **psgscoring 0.12.1** (pin bumped). No report-code change — VB already renders
+as a bounded `%` with reference ≤ 25 %.
+
+- **Ventilatory burden is now breath-based** (psgscoring 0.12.1): the proportion of
+  breaths whose peak amplitude is < 50 % of the eupneic baseline. v0.16.0 showed the
+  time-fraction over the flow envelope, which over-counted inter-breath troughs and gave
+  implausible values (e.g. 82.9 % on a severe recording). The displayed `%` is now the
+  correct, bounded metric.
+
 ## v0.16.0 — 2026-07-26  *(VB recalibration + saturation bands + arousal-aetiology fix)*
 
 Requires **psgscoring 0.12.0** (pin bumped). Three fixes found while verifying a real
