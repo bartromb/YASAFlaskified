@@ -326,6 +326,14 @@ def validate_password_strength(password):
     return True, "Password is strong"
 
 
+# file_id komt rechtstreeks van de browser en wordt in bestandsnamen
+# geïnterpoleerd. Alleen deze tekens toelaten houdt "../" (en nulbytes,
+# absolute paden, spaties) buiten elk afgeleid pad. Dekt beide vormen die
+# de frontend genereert: crypto.randomUUID() en het
+# `${Date.now()}-${Math.random().toString(36)}`-alternatief.
+_FILE_ID_RE = re.compile(r"[A-Za-z0-9_-]{1,64}\Z")
+
+
 class FileUploadHandler:
     """Chunked upload — volledig origineel bewaard."""
 
@@ -334,8 +342,16 @@ class FileUploadHandler:
         self.redis_conn = redis_connection
         os.makedirs(upload_dir, exist_ok=True)
 
+    def _safe_path(self, name):
+        """Los `name` op binnen upload_dir en weiger alles wat eruit ontsnapt."""
+        base = os.path.realpath(self.upload_dir)
+        p    = os.path.realpath(os.path.join(base, name))
+        if p != base and not p.startswith(base + os.sep):
+            raise UploadError("Invalid path")
+        return p
+
     def validate_chunk_params(self, file_id, chunk_index, total_chunks, original_filename):
-        if not file_id or not isinstance(file_id, str):
+        if not file_id or not isinstance(file_id, str) or not _FILE_ID_RE.match(file_id):
             raise UploadError("Invalid file_id")
         if not isinstance(chunk_index, int) or chunk_index < 0:
             raise UploadError("Invalid chunk_index")
@@ -359,7 +375,7 @@ class FileUploadHandler:
         return filename
 
     def save_chunk(self, file_id, chunk_index, chunk_file):
-        chunk_path = os.path.join(self.upload_dir, f"{file_id}_chunk_{chunk_index}")
+        chunk_path = self._safe_path(f"{file_id}_chunk_{chunk_index}")
         try:
             chunk_file.save(chunk_path)
             logger.info(f"Saved chunk {chunk_index} for file_id {file_id}")
@@ -369,19 +385,18 @@ class FileUploadHandler:
             raise UploadError(f"Failed to save chunk: {str(e)}")
 
     def assemble_file(self, file_id, total_chunks, final_filename):
-        assembled_path = os.path.join(self.upload_dir, f"{file_id}_assembled.edf")
-        final_path     = os.path.join(self.upload_dir, final_filename)
+        assembled_path = self._safe_path(f"{file_id}_assembled.edf")
+        final_path     = self._safe_path(final_filename)
         if os.path.exists(final_path):
             timestamp  = int(time.time())
-            final_path = os.path.join(
-                self.upload_dir,
+            final_path = self._safe_path(
                 f"{os.path.splitext(final_filename)[0]}_{timestamp}.edf",
             )
             logger.warning(f"File exists, using new name: {final_path}")
         try:
             with open(assembled_path, "wb") as af:
                 for i in range(total_chunks):
-                    chunk_path = os.path.join(self.upload_dir, f"{file_id}_chunk_{i}")
+                    chunk_path = self._safe_path(f"{file_id}_chunk_{i}")
                     if not os.path.exists(chunk_path):
                         raise FileNotFoundError(f"Missing chunk {i}")
                     with open(chunk_path, "rb") as cf:
@@ -394,12 +409,12 @@ class FileUploadHandler:
             if os.path.exists(assembled_path):
                 os.remove(assembled_path)
             for i in range(total_chunks):
-                cp = os.path.join(self.upload_dir, f"{file_id}_chunk_{i}")
-                if os.path.exists(cp):
-                    try:
+                try:
+                    cp = self._safe_path(f"{file_id}_chunk_{i}")
+                    if os.path.exists(cp):
                         os.remove(cp)
-                    except Exception:
-                        pass
+                except Exception:
+                    pass
             logger.error(f"Assembly failed: {e}")
             raise UploadError(f"Failed to assemble file: {str(e)}")
 
