@@ -11,9 +11,14 @@ Idempotent: bestaande rijen worden nooit gedupliceerd. Herhaald draaien bij
 elke deploy is veilig — dat is precies hoe deploy.sh het aanroept.
 
 Draaien:
-    docker compose exec app python -m myproject.backfill_jobs
-    python -m backfill_jobs            # vanuit myproject/ (container WORKDIR)
-    python myproject/backfill_jobs.py
+    docker compose exec app python -m backfill_jobs     # in de container
+    make backfill                                       # idem, vanaf de host
+    python myproject/backfill_jobs.py                   # vanuit de repo-root
+
+Let op: `python -m myproject.backfill_jobs` werkt NIET in de container. De
+image heeft WORKDIR /data/slaapkliniek/myproject en daarbinnen bestaat geen
+myproject-package (er is ook geen __init__.py) — vandaar de platte vorm, die
+aansluit bij hoe de app zelf start (gunicorn app:app).
 
 Exit-code 0 bij succes, 1 als er niets ingelezen kon worden.
 """
