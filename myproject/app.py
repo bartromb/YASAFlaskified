@@ -819,8 +819,41 @@ def _load_results(job_id: str) -> dict:
 # v0.8.11: MULTI-SITE TOEGANGSCONTROLE
 # ═══════════════════════════════════════════════════════════════
 
+def _job_access_strict() -> bool:
+    """
+    Fail closed of niet.
+
+    "0" (default tijdens de overgang): een job zónder Job-rij valt terug op
+    de oude JSON-lezing en logt 'job access fallback'. Zodra die
+    waarschuwingen wegblijven — d.w.z. de backfill heeft alles te pakken —
+    mag dit op "1": geen rij = 404.
+    """
+    return str(_cfg("JOB_ACCESS_STRICT", "0")).lower() in ("1", "true", "yes", "on")
+
+
+def _get_job(job_id: str):
+    """De Job-rij, of None. Autorisatiebron sinds de job-registry bestaat."""
+    try:
+        return Job.query.filter_by(job_id=job_id).first()
+    except Exception as e:
+        logger.error("Job-lookup mislukt voor %s: %s", job_id, e)
+        return None
+
+
 def _get_job_site_id(job_id: str) -> int | None:
-    """Haal site_id op voor een job (uit results.json of config.json)."""
+    """
+    site_id van een job — eerst uit de Job-tabel, anders uit de JSON.
+
+    Blijft bestaan voor logging en voor de overgangsfallback.
+    """
+    row = _get_job(job_id)
+    if row is not None and row.site_id is not None:
+        return row.site_id
+    return _get_job_site_id_from_disk(job_id)
+
+
+def _get_job_site_id_from_disk(job_id: str) -> int | None:
+    """Legacy: site_id uit results.json of config.json."""
     upload_folder = app.config["UPLOAD_FOLDER"]
     for suffix in ("_results.json", "_config.json"):
         path = os.path.join(upload_folder, f"{job_id}{suffix}")
@@ -831,59 +864,120 @@ def _get_job_site_id(job_id: str) -> int | None:
                 sid = data.get("site_id")
                 if sid is not None:
                     return int(sid)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Kon %s niet lezen voor site_id: %s", path, e)
     return None
+
+
+def _access_allowed(owner_username, site_id) -> bool:
+    """
+    De toegangsregel, op losse velden zodat DB-rij en JSON-fallback
+    exact dezelfde semantiek gebruiken.
+
+      admin                                  → toegang
+      eigenaar                               → toegang
+      zelfde site (site_id niet None)        → toegang
+      anders                                 → geen toegang
+    """
+    if not current_user.is_authenticated:
+        return False
+    if current_user.role == "admin":
+        return True
+    if owner_username and owner_username == current_user.username:
+        return True
+    if (site_id is not None
+            and current_user.site_id is not None
+            and int(site_id) == current_user.site_id):
+        return True
+    return False
+
+
+def _check_job_access_from_disk(job_id: str) -> bool:
+    """Overgangsfallback: dezelfde regel, maar op de JSON-bestanden."""
+    upload_folder = app.config["UPLOAD_FOLDER"]
+    owner, site_id = None, None
+    for suffix in ("_results.json", "_config.json"):
+        path = os.path.join(upload_folder, f"{job_id}{suffix}")
+        if not os.path.exists(path):
+            continue
+        try:
+            with open(path) as f:
+                data = json.load(f)
+        except Exception as e:
+            logger.warning("Kon %s niet lezen voor toegangscontrole: %s", path, e)
+            continue
+        if owner is None:
+            owner = data.get("owner_username") or None
+        if site_id is None:
+            site_id = data.get("site_id")
+    return _access_allowed(owner, site_id)
 
 
 def _check_job_access(job_id: str) -> bool:
     """
     Controleer of current_user toegang heeft tot job_id.
 
-    Regels (v0.8.11):
-      admin  → altijd toegang (alle sites)
-      site   → alleen als job.site_id == user.site_id
-      user   → alleen als job.site_id == user.site_id OF zelf aangemaakt
+    Sinds de job-registry is de Job-tabel de bron. Bestaat er geen rij, dan
+    hangt het van JOB_ACCESS_STRICT af: strict → geweigerd (de aanroeper
+    maakt er 404 van), anders de JSON-fallback met een waarschuwing.
     """
     if not current_user.is_authenticated:
         return False
-    if current_user.role == "admin":
-        return True
 
-    job_site = _get_job_site_id(job_id)
+    row = _get_job(job_id)
+    if row is not None:
+        return _access_allowed(row.owner_username, row.site_id)
 
-    # Als job geen site_id heeft (legacy data van voor multi-site)
-    # v0.8.11 FIX: enkel admin of de eigenaar heeft toegang
-    if job_site is None:
-        if current_user.role == "admin":
-            return True
-        # Check of de user de eigenaar is
-        try:
-            result_path = os.path.join(
-                app.config["UPLOAD_FOLDER"], f"{job_id}_results.json")
-            if os.path.exists(result_path):
-                with open(result_path) as f:
-                    data = json.load(f)
-                if data.get("owner_username") == current_user.username:
-                    return True
-        except Exception:
-            pass
+    if _job_access_strict():
         return False
 
-    # Site-admin of user: alleen eigen site
-    if current_user.site_id is not None and job_site == current_user.site_id:
-        return True
-
-    return False
+    logger.warning(
+        "job access fallback: geen Job-rij voor %s (user %s) — "
+        "draai de backfill; met JOB_ACCESS_STRICT=1 zou dit 404 zijn",
+        job_id, getattr(current_user, "username", "?"),
+    )
+    return _check_job_access_from_disk(job_id)
 
 
 def _require_job_access(job_id: str):
-    """Abort 403 als current_user geen toegang heeft tot job_id."""
+    """
+    Abort als current_user geen toegang heeft tot job_id.
+
+    404 (niet 403) wanneer de job onbekend is in strict-modus: het bestaan
+    van een job_id is zelf al informatie.
+    """
+    if not current_user.is_authenticated:
+        abort(403, description="Geen toegang tot deze studie.")
+
+    if _get_job(job_id) is None and _job_access_strict():
+        logger.warning("Onbekende job %s opgevraagd door %s (strict)",
+                       job_id, current_user.username)
+        abort(404, description="Studie niet gevonden.")
+
     if not _check_job_access(job_id):
         logger.warning("Toegang geweigerd: %s probeert job %s te openen (site %s vs %s)",
                        current_user.username, job_id,
                        current_user.site_id, _get_job_site_id(job_id))
         abort(403, description="Geen toegang tot deze studie.")
+
+
+def job_access_required(view):
+    """
+    Toegangscontrole voor elke route met een <job_id>.
+
+    Volgorde: @app.route → @login_required → @job_access_required.
+    `_job_access` markeert de view voor de meta-test die bewaakt dat er geen
+    onbeschermde job-route bijkomt.
+    """
+    @wraps(view)
+    def wrapper(*args, **kwargs):
+        job_id = kwargs.get("job_id")
+        if job_id is None:
+            abort(400)
+        _require_job_access(job_id)
+        return view(*args, **kwargs)
+    wrapper._job_access = True
+    return wrapper
 
 
 def _filter_studies_for_user(json_files: list) -> list:
@@ -1701,6 +1795,7 @@ def serve_logo(filename):
 
 @app.route("/channel-select/<job_id>")
 @login_required
+@job_access_required
 def channel_select(job_id):
     """
     Kanaalkeuze-pagina na EDF-upload.
@@ -1991,6 +2086,7 @@ def start_analysis():
 
 @app.route("/status/<job_id>")
 @login_required
+@job_access_required
 def job_status(job_id):
     """Polling-pagina voor lopende uitgebreide analyses."""
     return render_template("job_status.html", job_id=job_id)
@@ -1998,6 +2094,7 @@ def job_status(job_id):
 
 @app.route("/api/status/<job_id>")
 @login_required
+@job_access_required
 @csrf.exempt
 def api_job_status(job_id):
     """AJAX JSON-endpoint voor job-statuspolling."""
@@ -2070,6 +2167,7 @@ def api_job_status(job_id):
 
 @app.route("/results/<job_id>")
 @login_required
+@job_access_required
 def show_results(job_id):
     """Uitgebreide resultatenpagina: YASA-tabs + pneumo-sectie."""
     _require_job_access(job_id)
@@ -2115,6 +2213,7 @@ def _serve_fresh_report(job_id, path, gen_fn, download_name, mimetype, kind):
 
 @app.route("/results/<job_id>/pdf")
 @login_required
+@job_access_required
 def download_pdf(job_id):
     """Download PDF-rapport. (Re)genereert wanneer verouderd t.o.v. results."""
     _require_job_access(job_id)
@@ -2133,6 +2232,7 @@ def download_pdf(job_id):
 
 @app.route("/results/<job_id>/excel")
 @login_required
+@job_access_required
 def download_excel(job_id):
     """Download Excel-rapport. (Re)genereert wanneer verouderd t.o.v. results."""
     _require_job_access(job_id)
@@ -2151,6 +2251,7 @@ def download_excel(job_id):
 
 @app.route("/results/<job_id>/psg")
 @login_required
+@job_access_required
 def download_psg(job_id):
     """
     PSG-rapport = zelfde als PDF-rapport (portrait A4, AASM-conform).
@@ -2162,6 +2263,7 @@ def download_psg(job_id):
 
 @app.route("/results/<job_id>/delete", methods=["POST"])
 @login_required
+@job_access_required
 def delete_study(job_id):
     """Verwijder een studie en alle bijhorende bestanden.
     Admin: mag alles verwijderen.
@@ -2284,6 +2386,7 @@ def studies_bulk():
 
 @app.route("/results/<job_id>/reanalyze")
 @login_required
+@job_access_required
 def reanalyze_study(job_id):
     """
     Her-analyse van een bestaande studie.
@@ -2331,6 +2434,7 @@ def reanalyze_study(job_id):
 
 @app.route("/results/<job_id>/edfplus")
 @login_required
+@job_access_required
 def download_edfplus(job_id):
     """Download gescoord EDF+ bestand. Genereert on-the-fly als niet aanwezig."""
     _require_job_access(job_id)
@@ -2392,6 +2496,7 @@ def download_edfplus(job_id):
 
 @app.route("/api/edfplus/<job_id>/status")
 @login_required
+@job_access_required
 @csrf.exempt
 def api_edfplus_status(job_id):
     """Check of EDF+ bestand beschikbaar is."""
@@ -2455,6 +2560,7 @@ STANDARD_CONCLUSIONS = {
 
 @app.route("/api/results/<job_id>/conclusion")
 @login_required
+@job_access_required
 @csrf.exempt
 def api_get_conclusion(job_id):
     """Haal conclusie-data op: auto-suggestie + huidige manuele tekst."""
@@ -2533,6 +2639,7 @@ def api_get_conclusion(job_id):
 
 @app.route("/api/results/<job_id>/conclusion", methods=["POST"])
 @login_required
+@job_access_required
 @csrf.exempt
 def api_save_conclusion(job_id):
     """Sla manuele conclusie op en regenereer PDF."""
@@ -2576,6 +2683,7 @@ def api_save_conclusion(job_id):
 
 @app.route("/results/<job_id>/edit")
 @login_required
+@job_access_required
 def edit_report(job_id):
     """Rapport-editor pagina."""
     _require_job_access(job_id)
@@ -2584,6 +2692,7 @@ def edit_report(job_id):
 
 @app.route("/api/results/<job_id>/report")
 @login_required
+@job_access_required
 @csrf.exempt
 def api_get_report(job_id):
     """Haal alle bewerkbare rapportgegevens op."""
@@ -2608,6 +2717,7 @@ def api_get_report(job_id):
 
 @app.route("/api/results/<job_id>/report", methods=["POST"])
 @login_required
+@job_access_required
 @csrf.exempt
 def api_save_report(job_id):
     """
@@ -2719,6 +2829,7 @@ def api_save_report(job_id):
 
 @app.route("/api/results/<job_id>/pneumo")
 @login_required
+@job_access_required
 @csrf.exempt
 def api_pneumo_results(job_id):
     """JSON API — enkel pneumologische analyseresultaten."""
@@ -2729,6 +2840,7 @@ def api_pneumo_results(job_id):
 
 @app.route("/api/results/<job_id>/channels")
 @login_required
+@job_access_required
 @csrf.exempt
 def api_detected_channels(job_id):
     """
@@ -2745,6 +2857,7 @@ def api_detected_channels(job_id):
 
 @app.route("/api/results/<job_id>")
 @login_required
+@job_access_required
 @csrf.exempt
 def api_results(job_id):
     """JSON API — volledige analyseresultaten."""
@@ -2961,6 +3074,7 @@ def dashboard():
 
 @app.route("/results/<job_id>/fhir")
 @login_required
+@job_access_required
 def download_fhir(job_id):
     """FHIR R4 DiagnosticReport export als JSON."""
     _require_job_access(job_id)
@@ -2984,6 +3098,7 @@ def download_fhir(job_id):
 
 @app.route("/score/<job_id>")
 @login_required
+@job_access_required
 def score_editor(job_id):
     """Epoch-per-epoch scorer zonder EDF-viewer (v10)."""
     data = _load_results(job_id)
@@ -3009,6 +3124,7 @@ def score_editor(job_id):
 
 @app.route("/score_v12/<job_id>")
 @login_required
+@job_access_required
 def score_v12(job_id):
     """Gecombineerde scorer + EDF-viewer + event-overlay (v12)."""
     _require_job_access(job_id)
@@ -3054,6 +3170,7 @@ def score_v12(job_id):
 
 @app.route("/api/scoring/<job_id>/save", methods=["POST"])
 @login_required
+@job_access_required
 @csrf.exempt
 def api_save_scoring(job_id):
     """Sla manuele hypnogram-correcties op en start herberekening."""
@@ -3093,6 +3210,7 @@ def api_save_scoring(job_id):
 
 @app.route("/api/scoring/<job_id>/status")
 @login_required
+@job_access_required
 @csrf.exempt
 def api_scoring_status(job_id):
     try:
@@ -3115,6 +3233,7 @@ def api_scoring_status(job_id):
 
 @app.route("/api/edf/<job_id>/info")
 @login_required
+@job_access_required
 @csrf.exempt
 def api_edf_info(job_id):
     _require_job_access(job_id)
@@ -3130,6 +3249,7 @@ def api_edf_info(job_id):
 
 @app.route("/api/edf/<job_id>/epoch/<int:epoch_idx>")
 @login_required
+@job_access_required
 @csrf.exempt
 def api_edf_epoch(job_id, epoch_idx):
     _require_job_access(job_id)
@@ -3150,6 +3270,7 @@ def api_edf_epoch(job_id, epoch_idx):
 
 @app.route("/api/edf/<job_id>/epochs/<int:start>/<int:end>")
 @login_required
+@job_access_required
 @csrf.exempt
 def api_edf_epochs(job_id, start, end):
     _require_job_access(job_id)
@@ -3172,6 +3293,7 @@ def api_edf_epochs(job_id, start, end):
 
 @app.route("/api/edf/<job_id>/events/<int:epoch_idx>")
 @login_required
+@job_access_required
 @csrf.exempt
 def api_edf_events_epoch(job_id, epoch_idx):
     _require_job_access(job_id)
@@ -3186,6 +3308,7 @@ def api_edf_events_epoch(job_id, epoch_idx):
 
 @app.route("/api/edf/<job_id>/events/all")
 @login_required
+@job_access_required
 @csrf.exempt
 def api_edf_events_all(job_id):
     _require_job_access(job_id)
@@ -3203,6 +3326,7 @@ def api_edf_events_all(job_id):
 
 @app.route("/api/edf/<job_id>/events/toggle", methods=["POST"])
 @login_required
+@job_access_required
 @csrf.exempt
 def api_edf_events_toggle(job_id):
     _require_job_access(job_id)

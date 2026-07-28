@@ -14,6 +14,8 @@ work; nothing here may import `app` itself.
 import os
 import tempfile
 
+import pytest
+
 _TMP = tempfile.mkdtemp(prefix="yasaflaskified-tests-")
 
 os.environ.setdefault("YASAFLASKIFIED_UPLOAD_FOLDER", os.path.join(_TMP, "uploads"))
@@ -24,3 +26,16 @@ os.environ.setdefault(
     "sqlite:///" + os.path.join(_TMP, "instance", "users.db"),
 )
 os.environ.setdefault("YASAFLASKIFIED_SECRET_KEY", "test-secret-key-not-for-production")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _disable_rate_limiting():
+    """
+    flask-limiter gebruikt Redis als storage en raakt het bij élk verzoek;
+    in een testrun is er geen Redis. Het moet via het Limiter-object:
+    YASAFLASKIFIED_ENABLE_RATE_LIMITING=0 werkt niet, want _cfg() geeft de
+    string "0" terug en die is truthy.
+    """
+    from app import limiter
+    limiter.enabled = False
+
