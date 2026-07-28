@@ -92,7 +92,8 @@ from flask_wtf.csrf import CSRFError, CSRFProtect
 from pneumo_analysis import detect_channels as pneumo_detect_channels
 from redis import Redis
 from rq import Queue
-from rq.job import Job, NoSuchJobError
+from rq.job import Job as RQJob  # `Job` is de DB-tabel; dit is de RQ-job
+from rq.job import NoSuchJobError
 from sqlalchemy import text
 from version import PSGSCORING_VERSION
 from version import __version__ as APP_VERSION
@@ -293,6 +294,72 @@ class User(UserMixin, db.Model):
     @property
     def site_config(self):
         return self.site.to_config_dict() if self.site else None
+
+
+# Sentinel: onderscheidt "geen site_id meegegeven" van "site_id is None"
+# (None is een geldige waarde — een user zonder site).
+_UNSET = object()
+
+
+class Job(db.Model):
+    """
+    Job-registry: de autorisatiebron voor alles met een <job_id>.
+
+    Vóór deze tabel leefde die informatie uitsluitend in
+    {job_id}_results.json / {job_id}_config.json op schijf, waardoor elke
+    toegangscontrole een best-effort bestandslezing was. De JSON-velden
+    blijven ongewijzigd bestaan — deze tabel staat ernaast, niet in de plaats.
+
+    Single writer: alleen de webapp schrijft hier. De RQ-workers (tasks.py)
+    raken de DB niet aan; dat voorkomt SQLite-lockcontentie met 8 workers.
+
+    `archived` staat hier voor toekomstig gebruik; archiveren gebeurt nog
+    steeds via het {job_id}.archived markerbestand.
+    """
+    id             = db.Column(db.Integer, primary_key=True)
+    job_id         = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    owner_id       = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    owner_username = db.Column(db.String(150), nullable=True)   # gedenormaliseerd, legacy-compat
+    site_id        = db.Column(db.Integer, db.ForeignKey("site.id"), nullable=True, index=True)
+    filename       = db.Column(db.String(300), default="")
+    status         = db.Column(db.String(30), default="submitted")
+    archived       = db.Column(db.Boolean, default=False, nullable=False)
+    created_at     = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    def __repr__(self):
+        return f"<Job {self.job_id} owner={self.owner_username} site={self.site_id}>"
+
+
+def _register_job(job_id, user, filename="", status="submitted", site_id=_UNSET):
+    """
+    Maak of werk de Job-rij bij. Idempotent: bestaat de rij al, dan worden
+    alleen lege velden aangevuld en de status bijgewerkt.
+
+    Faalt nooit hard — een DB-probleem mag een upload niet blokkeren; de
+    toegangscontrole valt dan terug op de JSON-fallback (JOB_ACCESS_STRICT=0).
+    """
+    try:
+        row = Job.query.filter_by(job_id=job_id).first()
+        if row is None:
+            row = Job(job_id=job_id)
+            db.session.add(row)
+        if user is not None and getattr(user, "is_authenticated", False):
+            row.owner_id       = user.id
+            row.owner_username = user.username
+            if site_id is _UNSET:
+                row.site_id = user.site_id
+        if site_id is not _UNSET:
+            row.site_id = site_id
+        if filename:
+            row.filename = filename[:300]
+        if status:
+            row.status = status
+        db.session.commit()
+        return row
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Job-registratie mislukt voor %s: %s", job_id, e)
+        return None
 
 
 @login_manager.user_loader
@@ -1407,6 +1474,10 @@ def parse_file():
             job_id = str(uuid.uuid4())
             redis_conn.set(f"{job_id}_filepath", filepath, ex=7200)       # 2 uur
             redis_conn.set(f"{job_id}_orig_file_id", file_id, ex=7200)
+            # Job-registry: hier al vastleggen, niet pas bij /analyze.
+            # /channel-select/<job_id> komt hiertussen en heeft de rij nodig.
+            _register_job(job_id, current_user,
+                          filename=os.path.basename(filepath), status="parsed")
             logger.info(f"job_id {job_id} gekoppeld aan {filepath}")
 
             return jsonify({
@@ -1500,7 +1571,7 @@ def processing():
 
     for file_info in processed_files:
         try:
-            job = Job.fetch(file_info["job_id"], connection=redis_conn)
+            job = RQJob.fetch(file_info["job_id"], connection=redis_conn)
             if job.is_failed:
                 job_statuses.append({"filename": file_info["filename"], "status": "Failed"})
             elif not job.is_finished:
@@ -1890,6 +1961,11 @@ def start_analysis():
     with open(cfg_path, "w") as f:
         json.dump(cfg, f)
 
+    # Job-registry bijwerken: dezelfde eigenaar/site als in de config-JSON.
+    _register_job(job_id, current_user,
+                  filename=os.path.basename(filepath), status="submitted",
+                  site_id=current_user.site_id)
+
     # RQ-job starten
     try:
         rq_job = queue.enqueue(
@@ -1930,9 +2006,9 @@ def api_job_status(job_id):
         rq_id = redis_conn.get(f"{job_id}_rq_id")
         if rq_id:
             rq_id = rq_id.decode("utf-8") if isinstance(rq_id, bytes) else rq_id
-            job    = Job.fetch(rq_id, connection=redis_conn)
+            job    = RQJob.fetch(rq_id, connection=redis_conn)
         else:
-            job    = Job.fetch(job_id, connection=redis_conn)  # fallback
+            job    = RQJob.fetch(job_id, connection=redis_conn)  # fallback
         status = job.get_status()
 
         # Lees echte voortgang uit Redis (geschreven door worker)
@@ -3024,7 +3100,7 @@ def api_scoring_status(job_id):
         if not rq_id_b:
             return jsonify({"status": "none", "done": False})
         rq_id  = rq_id_b.decode() if isinstance(rq_id_b, bytes) else rq_id_b
-        job    = Job.fetch(rq_id, connection=redis_conn)
+        job    = RQJob.fetch(rq_id, connection=redis_conn)
         status = str(job.get_status())
         return jsonify({"status": status, "done": status=="finished", "failed": status=="failed"})
     except NoSuchJobError:
