@@ -153,6 +153,23 @@ Maak ook het `.env` bestand aan (vereist door docker-compose):
 echo "SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_hex(32))')" > .env
 ```
 
+#### Toegangscontrole bij een verse installatie
+
+Twee vlaggen uit `config.json.example` zijn relevant:
+
+```json
+  "SESSION_COOKIE_SECURE":  "1",
+  "JOB_ACCESS_STRICT":      "1",
+```
+
+- `SESSION_COOKIE_SECURE`: `"1"` zodra u achter HTTPS draait, `"0"` bij lokale
+  HTTP-ontwikkeling. Het moet de **string** `"1"` zijn — een JSON `true` zet de
+  vlag niet aan.
+- `JOB_ACCESS_STRICT`: bij een **verse** installatie mag dit meteen op `"1"`.
+  De vlag bestaat alleen voor bestaande installaties, waar studies van vóór de
+  `job`-tabel eerst met de backfill ingelezen moeten worden; op een lege
+  installatie is die backfill leeg en is er dus niets om permissief voor te zijn.
+
 ### 3.4 Starten
 
 ```bash

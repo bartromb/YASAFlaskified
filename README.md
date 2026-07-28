@@ -50,7 +50,7 @@ Upload an anonymised EDF recording via browser → receive a complete PSG analys
 - **12 bias corrections** — systematic over- and under-counting correction with per-fix event counters
 - **Configurable scoring profiles** — strict / standard / sensitive
 - **Interactive EDF browser** — event overlay with epoch navigation
-- **Multi-site access control** — data isolation per clinical centre
+- **Multi-site access control** — data isolation per clinical centre, enforced from a `job` table in the database on every job route ([details](MULTI_SITE_GUIDE.md#toegangsmodel-klinische-sites-binnen-één-stack))
 - **Representative epoch examples** — signal snapshots in PDF report for clinical review
 
 ## Validation

@@ -71,6 +71,27 @@ sudo certbot --nginx -d sleepai.be -d www.sleepai.be
 ### Stap 6: DNS
 Bij Gandi: A-record voor slaapkliniek.be → Hetzner server IP
 
+## Job-registry (sinds de job-tabel)
+
+Toegangscontrole op studies draait op de `job`-tabel in de database, niet meer op
+de JSON-bestanden. De tabel wordt bij het opstarten aangemaakt; bestaande studies
+moeten er eenmalig in worden gezet:
+
+```bash
+docker compose exec app python -m backfill_jobs   # idempotent, herhaalbaar
+```
+
+`deploy.sh` doet dit automatisch (stap 10/11). Twee vlaggen in
+`instance/config.json`:
+
+| Vlag | Betekenis |
+|---|---|
+| `"JOB_ACCESS_STRICT"` | `"0"` = job zonder rij valt terug op de JSON + logt `job access fallback`; `"1"` = 404. Pas op `"1"` zetten als de backfill geslaagd is. |
+| `"SESSION_COOKIE_SECURE"` | `"1"` achter HTTPS, `"0"` voor lokale HTTP-ontwikkeling. Let op: de **string** `"1"`, een JSON `true` zet de vlag níét aan. |
+
+De volledige productievolgorde staat in **[DEPLOY_RUNBOOK.md](DEPLOY_RUNBOOK.md)**
+§5b — dat document is leidend voor dagelijkse operaties.
+
 ## Analyse volgen
 
 ```bash
