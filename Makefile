@@ -1,4 +1,4 @@
-.PHONY: help install test lint docker-build docker-up docker-down clean
+.PHONY: help install test lint docker-build docker-up docker-down backfill clean
 
 help:
 	@echo "YASAFlaskified — make targets"
@@ -8,6 +8,7 @@ help:
 	@echo "  make docker-build Build the Docker image"
 	@echo "  make docker-up    Start the full stack (compose up -d)"
 	@echo "  make docker-down  Stop the stack"
+	@echo "  make backfill     Fill the job registry from existing studies (idempotent)"
 	@echo "  make clean        Remove build / cache artefacts"
 
 install:
@@ -28,6 +29,9 @@ docker-up:
 
 docker-down:
 	docker compose down
+
+backfill:
+	docker compose exec app python -m backfill_jobs
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} +

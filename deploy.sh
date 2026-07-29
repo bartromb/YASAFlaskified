@@ -25,7 +25,8 @@
 #   7. Configures Nginx reverse proxy
 #   8. Configures UFW firewall
 #   9. Builds and starts Docker containers
-#  10. (Optional) Obtains Let's Encrypt SSL certificate
+#  10. Backfills the job registry (idempotent)
+#  11. (Optional) Obtains Let's Encrypt SSL certificate
 #
 # ═══════════════════════════════════════════════════════════════
 
@@ -86,7 +87,7 @@ if ! grep -qiE "ubuntu|debian" /etc/os-release 2>/dev/null; then
 fi
 
 # ══════════════════════════════════════════════════════════════
-step "1/10  Creating user '${APP_USER}'"
+step "1/11  Creating user '${APP_USER}'"
 # ══════════════════════════════════════════════════════════════
 
 if id "${APP_USER}" &>/dev/null; then
@@ -97,7 +98,7 @@ else
 fi
 
 # ══════════════════════════════════════════════════════════════
-step "2/10  Installing Docker"
+step "2/11  Installing Docker"
 # ══════════════════════════════════════════════════════════════
 
 if command -v docker &>/dev/null; then
@@ -128,7 +129,7 @@ else
 fi
 
 # ══════════════════════════════════════════════════════════════
-step "3/10  Installing Nginx + Certbot"
+step "3/11  Installing Nginx + Certbot"
 # ══════════════════════════════════════════════════════════════
 
 apt-get install -y -qq nginx certbot python3-certbot-nginx
@@ -140,7 +141,7 @@ systemctl start nginx
 log "Nginx installed and started"
 
 # ══════════════════════════════════════════════════════════════
-step "4/10  Creating directory structure"
+step "4/11  Creating directory structure"
 # ══════════════════════════════════════════════════════════════
 
 mkdir -p "${APP_DIR}"
@@ -148,7 +149,7 @@ chown "${APP_USER}:${APP_USER}" "${APP_DIR}"
 log "Created ${APP_DIR}"
 
 # ══════════════════════════════════════════════════════════════
-step "5/10  Deploying YASAFlaskified"
+step "5/11  Deploying YASAFlaskified"
 # ══════════════════════════════════════════════════════════════
 
 if [ -f "${APP_DIR}/docker-compose.yml" ]; then
@@ -185,7 +186,7 @@ chown -R "${APP_USER}:${APP_USER}" "${APP_DIR}"
 log "YASAFlaskified deployed to ${APP_DIR}"
 
 # ══════════════════════════════════════════════════════════════
-step "6/10  Generating .env and instance/config.json"
+step "6/11  Generating .env and instance/config.json"
 # ══════════════════════════════════════════════════════════════
 #
 # In the current layout SECRET_KEY and ADMIN_PASSWORD live in
@@ -263,7 +264,7 @@ else
 fi
 
 # ══════════════════════════════════════════════════════════════
-step "7/10  Configuring Nginx reverse proxy"
+step "7/11  Configuring Nginx reverse proxy"
 # ══════════════════════════════════════════════════════════════
 
 NGINX_CONF="/etc/nginx/sites-available/yasaflaskified"
@@ -312,7 +313,7 @@ fi
 log "Nginx configured → http://$(hostname -I | awk '{print $1}'):80"
 
 # ══════════════════════════════════════════════════════════════
-step "8/10  Configuring firewall (UFW)"
+step "8/11  Configuring firewall (UFW)"
 # ══════════════════════════════════════════════════════════════
 
 if command -v ufw &>/dev/null; then
@@ -326,7 +327,7 @@ else
 fi
 
 # ══════════════════════════════════════════════════════════════
-step "9/10  Building and starting Docker containers"
+step "9/11  Building and starting Docker containers"
 # ══════════════════════════════════════════════════════════════
 
 cd "${APP_DIR}"
@@ -367,7 +368,32 @@ else
 fi
 
 # ══════════════════════════════════════════════════════════════
-step "10/10  SSL Certificate (Let's Encrypt)"
+step "10/11  Job-registry backfill"
+# ══════════════════════════════════════════════════════════════
+#
+# Fills the job table from the *_results.json / *_config.json files that
+# predate it, so access control can run on the database. Idempotent, so
+# running it on every deploy is safe. Non-fatal on purpose: a failed
+# backfill must not abort a deployment, it only means access control stays
+# on the permissive JSON fallback.
+
+#
+# `python -m backfill_jobs`, not `-m myproject.backfill_jobs`: the image's
+# WORKDIR is /data/slaapkliniek/myproject and there is no myproject package
+# inside it, so the dotted form raises ModuleNotFoundError. This matches how
+# the app itself is started (gunicorn app:app) — flat imports, no package.
+
+cd "${APP_DIR}"
+if sudo -u "${APP_USER}" docker compose exec -T app \
+     python -m backfill_jobs; then
+    log "Job backfill completed"
+else
+    warn "Job backfill failed — inspect: docker compose logs --tail 50 app"
+    warn "Access control stays permissive (JOB_ACCESS_STRICT=0) until this succeeds."
+fi
+
+# ══════════════════════════════════════════════════════════════
+step "11/11  SSL Certificate (Let's Encrypt)"
 # ══════════════════════════════════════════════════════════════
 
 if [ -n "${DOMAIN}" ]; then
@@ -399,6 +425,10 @@ echo "    docker compose logs -f app       # Flask logs"
 echo "    docker compose logs -f worker    # Analysis worker"
 echo "    docker compose restart           # Restart all"
 echo "    docker compose down              # Stop all"
+echo ""
+echo "  Job registry:"
+echo "    docker compose exec app python -m backfill_jobs   # herhaalbaar"
+echo "    docker compose logs app | grep 'job access fallback'        # resterende legacy jobs"
 echo ""
 echo "  Update to latest version:"
 echo "    cd ${APP_DIR}"

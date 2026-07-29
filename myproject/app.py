@@ -92,7 +92,8 @@ from flask_wtf.csrf import CSRFError, CSRFProtect
 from pneumo_analysis import detect_channels as pneumo_detect_channels
 from redis import Redis
 from rq import Queue
-from rq.job import Job, NoSuchJobError
+from rq.job import Job as RQJob  # `Job` is de DB-tabel; dit is de RQ-job
+from rq.job import NoSuchJobError
 from sqlalchemy import text
 from version import PSGSCORING_VERSION
 from version import __version__ as APP_VERSION
@@ -295,6 +296,72 @@ class User(UserMixin, db.Model):
         return self.site.to_config_dict() if self.site else None
 
 
+# Sentinel: onderscheidt "geen site_id meegegeven" van "site_id is None"
+# (None is een geldige waarde — een user zonder site).
+_UNSET = object()
+
+
+class Job(db.Model):
+    """
+    Job-registry: de autorisatiebron voor alles met een <job_id>.
+
+    Vóór deze tabel leefde die informatie uitsluitend in
+    {job_id}_results.json / {job_id}_config.json op schijf, waardoor elke
+    toegangscontrole een best-effort bestandslezing was. De JSON-velden
+    blijven ongewijzigd bestaan — deze tabel staat ernaast, niet in de plaats.
+
+    Single writer: alleen de webapp schrijft hier. De RQ-workers (tasks.py)
+    raken de DB niet aan; dat voorkomt SQLite-lockcontentie met 8 workers.
+
+    `archived` staat hier voor toekomstig gebruik; archiveren gebeurt nog
+    steeds via het {job_id}.archived markerbestand.
+    """
+    id             = db.Column(db.Integer, primary_key=True)
+    job_id         = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    owner_id       = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    owner_username = db.Column(db.String(150), nullable=True)   # gedenormaliseerd, legacy-compat
+    site_id        = db.Column(db.Integer, db.ForeignKey("site.id"), nullable=True, index=True)
+    filename       = db.Column(db.String(300), default="")
+    status         = db.Column(db.String(30), default="submitted")
+    archived       = db.Column(db.Boolean, default=False, nullable=False)
+    created_at     = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    def __repr__(self):
+        return f"<Job {self.job_id} owner={self.owner_username} site={self.site_id}>"
+
+
+def _register_job(job_id, user, filename="", status="submitted", site_id=_UNSET):
+    """
+    Maak of werk de Job-rij bij. Idempotent: bestaat de rij al, dan worden
+    alleen lege velden aangevuld en de status bijgewerkt.
+
+    Faalt nooit hard — een DB-probleem mag een upload niet blokkeren; de
+    toegangscontrole valt dan terug op de JSON-fallback (JOB_ACCESS_STRICT=0).
+    """
+    try:
+        row = Job.query.filter_by(job_id=job_id).first()
+        if row is None:
+            row = Job(job_id=job_id)
+            db.session.add(row)
+        if user is not None and getattr(user, "is_authenticated", False):
+            row.owner_id       = user.id
+            row.owner_username = user.username
+            if site_id is _UNSET:
+                row.site_id = user.site_id
+        if site_id is not _UNSET:
+            row.site_id = site_id
+        if filename:
+            row.filename = filename[:300]
+        if status:
+            row.status = status
+        db.session.commit()
+        return row
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Job-registratie mislukt voor %s: %s", job_id, e)
+        return None
+
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -326,6 +393,14 @@ def validate_password_strength(password):
     return True, "Password is strong"
 
 
+# file_id komt rechtstreeks van de browser en wordt in bestandsnamen
+# geïnterpoleerd. Alleen deze tekens toelaten houdt "../" (en nulbytes,
+# absolute paden, spaties) buiten elk afgeleid pad. Dekt beide vormen die
+# de frontend genereert: crypto.randomUUID() en het
+# `${Date.now()}-${Math.random().toString(36)}`-alternatief.
+_FILE_ID_RE = re.compile(r"[A-Za-z0-9_-]{1,64}\Z")
+
+
 class FileUploadHandler:
     """Chunked upload — volledig origineel bewaard."""
 
@@ -334,8 +409,16 @@ class FileUploadHandler:
         self.redis_conn = redis_connection
         os.makedirs(upload_dir, exist_ok=True)
 
+    def _safe_path(self, name):
+        """Los `name` op binnen upload_dir en weiger alles wat eruit ontsnapt."""
+        base = os.path.realpath(self.upload_dir)
+        p    = os.path.realpath(os.path.join(base, name))
+        if p != base and not p.startswith(base + os.sep):
+            raise UploadError("Invalid path")
+        return p
+
     def validate_chunk_params(self, file_id, chunk_index, total_chunks, original_filename):
-        if not file_id or not isinstance(file_id, str):
+        if not file_id or not isinstance(file_id, str) or not _FILE_ID_RE.match(file_id):
             raise UploadError("Invalid file_id")
         if not isinstance(chunk_index, int) or chunk_index < 0:
             raise UploadError("Invalid chunk_index")
@@ -359,7 +442,7 @@ class FileUploadHandler:
         return filename
 
     def save_chunk(self, file_id, chunk_index, chunk_file):
-        chunk_path = os.path.join(self.upload_dir, f"{file_id}_chunk_{chunk_index}")
+        chunk_path = self._safe_path(f"{file_id}_chunk_{chunk_index}")
         try:
             chunk_file.save(chunk_path)
             logger.info(f"Saved chunk {chunk_index} for file_id {file_id}")
@@ -369,19 +452,18 @@ class FileUploadHandler:
             raise UploadError(f"Failed to save chunk: {str(e)}")
 
     def assemble_file(self, file_id, total_chunks, final_filename):
-        assembled_path = os.path.join(self.upload_dir, f"{file_id}_assembled.edf")
-        final_path     = os.path.join(self.upload_dir, final_filename)
+        assembled_path = self._safe_path(f"{file_id}_assembled.edf")
+        final_path     = self._safe_path(final_filename)
         if os.path.exists(final_path):
             timestamp  = int(time.time())
-            final_path = os.path.join(
-                self.upload_dir,
+            final_path = self._safe_path(
                 f"{os.path.splitext(final_filename)[0]}_{timestamp}.edf",
             )
             logger.warning(f"File exists, using new name: {final_path}")
         try:
             with open(assembled_path, "wb") as af:
                 for i in range(total_chunks):
-                    chunk_path = os.path.join(self.upload_dir, f"{file_id}_chunk_{i}")
+                    chunk_path = self._safe_path(f"{file_id}_chunk_{i}")
                     if not os.path.exists(chunk_path):
                         raise FileNotFoundError(f"Missing chunk {i}")
                     with open(chunk_path, "rb") as cf:
@@ -394,12 +476,12 @@ class FileUploadHandler:
             if os.path.exists(assembled_path):
                 os.remove(assembled_path)
             for i in range(total_chunks):
-                cp = os.path.join(self.upload_dir, f"{file_id}_chunk_{i}")
-                if os.path.exists(cp):
-                    try:
+                try:
+                    cp = self._safe_path(f"{file_id}_chunk_{i}")
+                    if os.path.exists(cp):
                         os.remove(cp)
-                    except Exception:
-                        pass
+                except Exception:
+                    pass
             logger.error(f"Assembly failed: {e}")
             raise UploadError(f"Failed to assemble file: {str(e)}")
 
@@ -737,8 +819,41 @@ def _load_results(job_id: str) -> dict:
 # v0.8.11: MULTI-SITE TOEGANGSCONTROLE
 # ═══════════════════════════════════════════════════════════════
 
+def _job_access_strict() -> bool:
+    """
+    Fail closed of niet.
+
+    "0" (default tijdens de overgang): een job zónder Job-rij valt terug op
+    de oude JSON-lezing en logt 'job access fallback'. Zodra die
+    waarschuwingen wegblijven — d.w.z. de backfill heeft alles te pakken —
+    mag dit op "1": geen rij = 404.
+    """
+    return str(_cfg("JOB_ACCESS_STRICT", "0")).lower() in ("1", "true", "yes", "on")
+
+
+def _get_job(job_id: str):
+    """De Job-rij, of None. Autorisatiebron sinds de job-registry bestaat."""
+    try:
+        return Job.query.filter_by(job_id=job_id).first()
+    except Exception as e:
+        logger.error("Job-lookup mislukt voor %s: %s", job_id, e)
+        return None
+
+
 def _get_job_site_id(job_id: str) -> int | None:
-    """Haal site_id op voor een job (uit results.json of config.json)."""
+    """
+    site_id van een job — eerst uit de Job-tabel, anders uit de JSON.
+
+    Blijft bestaan voor logging en voor de overgangsfallback.
+    """
+    row = _get_job(job_id)
+    if row is not None and row.site_id is not None:
+        return row.site_id
+    return _get_job_site_id_from_disk(job_id)
+
+
+def _get_job_site_id_from_disk(job_id: str) -> int | None:
+    """Legacy: site_id uit results.json of config.json."""
     upload_folder = app.config["UPLOAD_FOLDER"]
     for suffix in ("_results.json", "_config.json"):
         path = os.path.join(upload_folder, f"{job_id}{suffix}")
@@ -749,59 +864,120 @@ def _get_job_site_id(job_id: str) -> int | None:
                 sid = data.get("site_id")
                 if sid is not None:
                     return int(sid)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Kon %s niet lezen voor site_id: %s", path, e)
     return None
+
+
+def _access_allowed(owner_username, site_id) -> bool:
+    """
+    De toegangsregel, op losse velden zodat DB-rij en JSON-fallback
+    exact dezelfde semantiek gebruiken.
+
+      admin                                  → toegang
+      eigenaar                               → toegang
+      zelfde site (site_id niet None)        → toegang
+      anders                                 → geen toegang
+    """
+    if not current_user.is_authenticated:
+        return False
+    if current_user.role == "admin":
+        return True
+    if owner_username and owner_username == current_user.username:
+        return True
+    if (site_id is not None
+            and current_user.site_id is not None
+            and int(site_id) == current_user.site_id):
+        return True
+    return False
+
+
+def _check_job_access_from_disk(job_id: str) -> bool:
+    """Overgangsfallback: dezelfde regel, maar op de JSON-bestanden."""
+    upload_folder = app.config["UPLOAD_FOLDER"]
+    owner, site_id = None, None
+    for suffix in ("_results.json", "_config.json"):
+        path = os.path.join(upload_folder, f"{job_id}{suffix}")
+        if not os.path.exists(path):
+            continue
+        try:
+            with open(path) as f:
+                data = json.load(f)
+        except Exception as e:
+            logger.warning("Kon %s niet lezen voor toegangscontrole: %s", path, e)
+            continue
+        if owner is None:
+            owner = data.get("owner_username") or None
+        if site_id is None:
+            site_id = data.get("site_id")
+    return _access_allowed(owner, site_id)
 
 
 def _check_job_access(job_id: str) -> bool:
     """
     Controleer of current_user toegang heeft tot job_id.
 
-    Regels (v0.8.11):
-      admin  → altijd toegang (alle sites)
-      site   → alleen als job.site_id == user.site_id
-      user   → alleen als job.site_id == user.site_id OF zelf aangemaakt
+    Sinds de job-registry is de Job-tabel de bron. Bestaat er geen rij, dan
+    hangt het van JOB_ACCESS_STRICT af: strict → geweigerd (de aanroeper
+    maakt er 404 van), anders de JSON-fallback met een waarschuwing.
     """
     if not current_user.is_authenticated:
         return False
-    if current_user.role == "admin":
-        return True
 
-    job_site = _get_job_site_id(job_id)
+    row = _get_job(job_id)
+    if row is not None:
+        return _access_allowed(row.owner_username, row.site_id)
 
-    # Als job geen site_id heeft (legacy data van voor multi-site)
-    # v0.8.11 FIX: enkel admin of de eigenaar heeft toegang
-    if job_site is None:
-        if current_user.role == "admin":
-            return True
-        # Check of de user de eigenaar is
-        try:
-            result_path = os.path.join(
-                app.config["UPLOAD_FOLDER"], f"{job_id}_results.json")
-            if os.path.exists(result_path):
-                with open(result_path) as f:
-                    data = json.load(f)
-                if data.get("owner_username") == current_user.username:
-                    return True
-        except Exception:
-            pass
+    if _job_access_strict():
         return False
 
-    # Site-admin of user: alleen eigen site
-    if current_user.site_id is not None and job_site == current_user.site_id:
-        return True
-
-    return False
+    logger.warning(
+        "job access fallback: geen Job-rij voor %s (user %s) — "
+        "draai de backfill; met JOB_ACCESS_STRICT=1 zou dit 404 zijn",
+        job_id, getattr(current_user, "username", "?"),
+    )
+    return _check_job_access_from_disk(job_id)
 
 
 def _require_job_access(job_id: str):
-    """Abort 403 als current_user geen toegang heeft tot job_id."""
+    """
+    Abort als current_user geen toegang heeft tot job_id.
+
+    404 (niet 403) wanneer de job onbekend is in strict-modus: het bestaan
+    van een job_id is zelf al informatie.
+    """
+    if not current_user.is_authenticated:
+        abort(403, description="Geen toegang tot deze studie.")
+
+    if _get_job(job_id) is None and _job_access_strict():
+        logger.warning("Onbekende job %s opgevraagd door %s (strict)",
+                       job_id, current_user.username)
+        abort(404, description="Studie niet gevonden.")
+
     if not _check_job_access(job_id):
         logger.warning("Toegang geweigerd: %s probeert job %s te openen (site %s vs %s)",
                        current_user.username, job_id,
                        current_user.site_id, _get_job_site_id(job_id))
         abort(403, description="Geen toegang tot deze studie.")
+
+
+def job_access_required(view):
+    """
+    Toegangscontrole voor elke route met een <job_id>.
+
+    Volgorde: @app.route → @login_required → @job_access_required.
+    `_job_access` markeert de view voor de meta-test die bewaakt dat er geen
+    onbeschermde job-route bijkomt.
+    """
+    @wraps(view)
+    def wrapper(*args, **kwargs):
+        job_id = kwargs.get("job_id")
+        if job_id is None:
+            abort(400)
+        _require_job_access(job_id)
+        return view(*args, **kwargs)
+    wrapper._job_access = True
+    return wrapper
 
 
 def _filter_studies_for_user(json_files: list) -> list:
@@ -1392,6 +1568,10 @@ def parse_file():
             job_id = str(uuid.uuid4())
             redis_conn.set(f"{job_id}_filepath", filepath, ex=7200)       # 2 uur
             redis_conn.set(f"{job_id}_orig_file_id", file_id, ex=7200)
+            # Job-registry: hier al vastleggen, niet pas bij /analyze.
+            # /channel-select/<job_id> komt hiertussen en heeft de rij nodig.
+            _register_job(job_id, current_user,
+                          filename=os.path.basename(filepath), status="parsed")
             logger.info(f"job_id {job_id} gekoppeld aan {filepath}")
 
             return jsonify({
@@ -1485,7 +1665,7 @@ def processing():
 
     for file_info in processed_files:
         try:
-            job = Job.fetch(file_info["job_id"], connection=redis_conn)
+            job = RQJob.fetch(file_info["job_id"], connection=redis_conn)
             if job.is_failed:
                 job_statuses.append({"filename": file_info["filename"], "status": "Failed"})
             elif not job.is_finished:
@@ -1615,6 +1795,7 @@ def serve_logo(filename):
 
 @app.route("/channel-select/<job_id>")
 @login_required
+@job_access_required
 def channel_select(job_id):
     """
     Kanaalkeuze-pagina na EDF-upload.
@@ -1875,6 +2056,11 @@ def start_analysis():
     with open(cfg_path, "w") as f:
         json.dump(cfg, f)
 
+    # Job-registry bijwerken: dezelfde eigenaar/site als in de config-JSON.
+    _register_job(job_id, current_user,
+                  filename=os.path.basename(filepath), status="submitted",
+                  site_id=current_user.site_id)
+
     # RQ-job starten
     try:
         rq_job = queue.enqueue(
@@ -1900,6 +2086,7 @@ def start_analysis():
 
 @app.route("/status/<job_id>")
 @login_required
+@job_access_required
 def job_status(job_id):
     """Polling-pagina voor lopende uitgebreide analyses."""
     return render_template("job_status.html", job_id=job_id)
@@ -1907,6 +2094,7 @@ def job_status(job_id):
 
 @app.route("/api/status/<job_id>")
 @login_required
+@job_access_required
 @csrf.exempt
 def api_job_status(job_id):
     """AJAX JSON-endpoint voor job-statuspolling."""
@@ -1915,9 +2103,9 @@ def api_job_status(job_id):
         rq_id = redis_conn.get(f"{job_id}_rq_id")
         if rq_id:
             rq_id = rq_id.decode("utf-8") if isinstance(rq_id, bytes) else rq_id
-            job    = Job.fetch(rq_id, connection=redis_conn)
+            job    = RQJob.fetch(rq_id, connection=redis_conn)
         else:
-            job    = Job.fetch(job_id, connection=redis_conn)  # fallback
+            job    = RQJob.fetch(job_id, connection=redis_conn)  # fallback
         status = job.get_status()
 
         # Lees echte voortgang uit Redis (geschreven door worker)
@@ -1979,6 +2167,7 @@ def api_job_status(job_id):
 
 @app.route("/results/<job_id>")
 @login_required
+@job_access_required
 def show_results(job_id):
     """Uitgebreide resultatenpagina: YASA-tabs + pneumo-sectie."""
     _require_job_access(job_id)
@@ -2024,6 +2213,7 @@ def _serve_fresh_report(job_id, path, gen_fn, download_name, mimetype, kind):
 
 @app.route("/results/<job_id>/pdf")
 @login_required
+@job_access_required
 def download_pdf(job_id):
     """Download PDF-rapport. (Re)genereert wanneer verouderd t.o.v. results."""
     _require_job_access(job_id)
@@ -2042,6 +2232,7 @@ def download_pdf(job_id):
 
 @app.route("/results/<job_id>/excel")
 @login_required
+@job_access_required
 def download_excel(job_id):
     """Download Excel-rapport. (Re)genereert wanneer verouderd t.o.v. results."""
     _require_job_access(job_id)
@@ -2060,6 +2251,7 @@ def download_excel(job_id):
 
 @app.route("/results/<job_id>/psg")
 @login_required
+@job_access_required
 def download_psg(job_id):
     """
     PSG-rapport = zelfde als PDF-rapport (portrait A4, AASM-conform).
@@ -2071,6 +2263,7 @@ def download_psg(job_id):
 
 @app.route("/results/<job_id>/delete", methods=["POST"])
 @login_required
+@job_access_required
 def delete_study(job_id):
     """Verwijder een studie en alle bijhorende bestanden.
     Admin: mag alles verwijderen.
@@ -2193,6 +2386,7 @@ def studies_bulk():
 
 @app.route("/results/<job_id>/reanalyze")
 @login_required
+@job_access_required
 def reanalyze_study(job_id):
     """
     Her-analyse van een bestaande studie.
@@ -2240,6 +2434,7 @@ def reanalyze_study(job_id):
 
 @app.route("/results/<job_id>/edfplus")
 @login_required
+@job_access_required
 def download_edfplus(job_id):
     """Download gescoord EDF+ bestand. Genereert on-the-fly als niet aanwezig."""
     _require_job_access(job_id)
@@ -2301,6 +2496,7 @@ def download_edfplus(job_id):
 
 @app.route("/api/edfplus/<job_id>/status")
 @login_required
+@job_access_required
 @csrf.exempt
 def api_edfplus_status(job_id):
     """Check of EDF+ bestand beschikbaar is."""
@@ -2364,6 +2560,7 @@ STANDARD_CONCLUSIONS = {
 
 @app.route("/api/results/<job_id>/conclusion")
 @login_required
+@job_access_required
 @csrf.exempt
 def api_get_conclusion(job_id):
     """Haal conclusie-data op: auto-suggestie + huidige manuele tekst."""
@@ -2442,6 +2639,7 @@ def api_get_conclusion(job_id):
 
 @app.route("/api/results/<job_id>/conclusion", methods=["POST"])
 @login_required
+@job_access_required
 @csrf.exempt
 def api_save_conclusion(job_id):
     """Sla manuele conclusie op en regenereer PDF."""
@@ -2485,6 +2683,7 @@ def api_save_conclusion(job_id):
 
 @app.route("/results/<job_id>/edit")
 @login_required
+@job_access_required
 def edit_report(job_id):
     """Rapport-editor pagina."""
     _require_job_access(job_id)
@@ -2493,6 +2692,7 @@ def edit_report(job_id):
 
 @app.route("/api/results/<job_id>/report")
 @login_required
+@job_access_required
 @csrf.exempt
 def api_get_report(job_id):
     """Haal alle bewerkbare rapportgegevens op."""
@@ -2517,6 +2717,7 @@ def api_get_report(job_id):
 
 @app.route("/api/results/<job_id>/report", methods=["POST"])
 @login_required
+@job_access_required
 @csrf.exempt
 def api_save_report(job_id):
     """
@@ -2628,6 +2829,7 @@ def api_save_report(job_id):
 
 @app.route("/api/results/<job_id>/pneumo")
 @login_required
+@job_access_required
 @csrf.exempt
 def api_pneumo_results(job_id):
     """JSON API — enkel pneumologische analyseresultaten."""
@@ -2638,6 +2840,7 @@ def api_pneumo_results(job_id):
 
 @app.route("/api/results/<job_id>/channels")
 @login_required
+@job_access_required
 @csrf.exempt
 def api_detected_channels(job_id):
     """
@@ -2654,6 +2857,7 @@ def api_detected_channels(job_id):
 
 @app.route("/api/results/<job_id>")
 @login_required
+@job_access_required
 @csrf.exempt
 def api_results(job_id):
     """JSON API — volledige analyseresultaten."""
@@ -2870,6 +3074,7 @@ def dashboard():
 
 @app.route("/results/<job_id>/fhir")
 @login_required
+@job_access_required
 def download_fhir(job_id):
     """FHIR R4 DiagnosticReport export als JSON."""
     _require_job_access(job_id)
@@ -2893,6 +3098,7 @@ def download_fhir(job_id):
 
 @app.route("/score/<job_id>")
 @login_required
+@job_access_required
 def score_editor(job_id):
     """Epoch-per-epoch scorer zonder EDF-viewer (v10)."""
     data = _load_results(job_id)
@@ -2918,6 +3124,7 @@ def score_editor(job_id):
 
 @app.route("/score_v12/<job_id>")
 @login_required
+@job_access_required
 def score_v12(job_id):
     """Gecombineerde scorer + EDF-viewer + event-overlay (v12)."""
     _require_job_access(job_id)
@@ -2963,6 +3170,7 @@ def score_v12(job_id):
 
 @app.route("/api/scoring/<job_id>/save", methods=["POST"])
 @login_required
+@job_access_required
 @csrf.exempt
 def api_save_scoring(job_id):
     """Sla manuele hypnogram-correcties op en start herberekening."""
@@ -3002,6 +3210,7 @@ def api_save_scoring(job_id):
 
 @app.route("/api/scoring/<job_id>/status")
 @login_required
+@job_access_required
 @csrf.exempt
 def api_scoring_status(job_id):
     try:
@@ -3009,7 +3218,7 @@ def api_scoring_status(job_id):
         if not rq_id_b:
             return jsonify({"status": "none", "done": False})
         rq_id  = rq_id_b.decode() if isinstance(rq_id_b, bytes) else rq_id_b
-        job    = Job.fetch(rq_id, connection=redis_conn)
+        job    = RQJob.fetch(rq_id, connection=redis_conn)
         status = str(job.get_status())
         return jsonify({"status": status, "done": status=="finished", "failed": status=="failed"})
     except NoSuchJobError:
@@ -3024,6 +3233,7 @@ def api_scoring_status(job_id):
 
 @app.route("/api/edf/<job_id>/info")
 @login_required
+@job_access_required
 @csrf.exempt
 def api_edf_info(job_id):
     _require_job_access(job_id)
@@ -3039,6 +3249,7 @@ def api_edf_info(job_id):
 
 @app.route("/api/edf/<job_id>/epoch/<int:epoch_idx>")
 @login_required
+@job_access_required
 @csrf.exempt
 def api_edf_epoch(job_id, epoch_idx):
     _require_job_access(job_id)
@@ -3059,6 +3270,7 @@ def api_edf_epoch(job_id, epoch_idx):
 
 @app.route("/api/edf/<job_id>/epochs/<int:start>/<int:end>")
 @login_required
+@job_access_required
 @csrf.exempt
 def api_edf_epochs(job_id, start, end):
     _require_job_access(job_id)
@@ -3081,6 +3293,7 @@ def api_edf_epochs(job_id, start, end):
 
 @app.route("/api/edf/<job_id>/events/<int:epoch_idx>")
 @login_required
+@job_access_required
 @csrf.exempt
 def api_edf_events_epoch(job_id, epoch_idx):
     _require_job_access(job_id)
@@ -3095,6 +3308,7 @@ def api_edf_events_epoch(job_id, epoch_idx):
 
 @app.route("/api/edf/<job_id>/events/all")
 @login_required
+@job_access_required
 @csrf.exempt
 def api_edf_events_all(job_id):
     _require_job_access(job_id)
@@ -3112,6 +3326,7 @@ def api_edf_events_all(job_id):
 
 @app.route("/api/edf/<job_id>/events/toggle", methods=["POST"])
 @login_required
+@job_access_required
 @csrf.exempt
 def api_edf_events_toggle(job_id):
     _require_job_access(job_id)

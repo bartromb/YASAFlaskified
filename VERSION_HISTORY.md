@@ -313,3 +313,14 @@
 - New output field: `n_ecg_reclassified_central`
 - **psgscoring v0.2.4** with `ecg_effort` module
 - All version references updated to v0.8.23
+
+---
+
+## v0.17.0 — Job Registry & Security Hardening
+
+- **Path traversal fixed** in the chunked EDF upload: `file_id` allowlist (`[A-Za-z0-9_-]{1,64}`) plus containment of every derived path inside the upload directory
+- **`job` table** as the authorisation source, replacing best-effort reads of `{job_id}_results.json`; written only by the web app, never by the RQ workers
+- **`@job_access_required` on all 30 `<job_id>` routes** (8 previously had no check), guarded by a meta-test over `app.url_map`
+- **Access rule:** admin, owner (also cross-site), or same `site_id`
+- **`JOB_ACCESS_STRICT`** transition flag + idempotent `backfill_jobs.py`, run automatically by `deploy.sh`
+- No scoring change — AHI, events and reported values identical

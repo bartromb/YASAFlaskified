@@ -74,6 +74,9 @@ git clone --branch "${BRANCH}" "${REPO}" "${SRC_DIR}"
 log "cloned ${BRANCH} → ${SRC_DIR} ($(cd "${SRC_DIR}" && git rev-parse --short HEAD))"
 
 # ── 4. Fresh install via deploy.sh ────────────────────────────
+# deploy.sh brings the stack up AND runs the job-registry backfill
+# (step 10/11). No separate backfill call here: this script has just wiped
+# ${APP_DIR}, so there are no pre-existing studies to import anyway.
 step "4/4  Running deploy.sh (fresh install)"
 cd "${SRC_DIR}"
 YASA_USER="${APP_USER}" bash deploy.sh

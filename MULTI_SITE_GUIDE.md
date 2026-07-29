@@ -18,6 +18,84 @@ Hetzner Server (1 machine)
         app exposed: 127.0.0.1:8071
 ```
 
+> **Twee betekenissen van "site".** Hierboven gaat het over **hostingstacks**:
+> twee losse Docker-stacks met eigen database en eigen volumes op één machine.
+> Daarnaast kent één stack **klinische sites** (de `site`-tabel): meerdere
+> centra binnen dezelfde installatie, die elkaars studies niet mogen zien. Dat
+> tweede model staat hieronder en is puur applicatielogica.
+
+## Toegangsmodel (klinische sites binnen één stack)
+
+Elke studie heeft een `job_id`. Wie die mag openen wordt bepaald door de
+**`job`-tabel in de database** — niet langer door de JSON-bestanden op schijf.
+
+### De regel
+
+Toegang tot een `job_id` als **één** van deze klopt:
+
+| Voorwaarde | Toegang |
+|---|---|
+| `current_user.role == "admin"` | ja — alle sites |
+| `job.owner_username == current_user.username` | ja — ook als de job bij een andere site hoort |
+| `job.site_id == current_user.site_id` (en niet `None`) | ja — zelfde centrum |
+| geen van bovenstaande | nee |
+
+De eigenaar behoudt dus toegang tot zijn eigen studies, ook na een overstap
+naar een andere site. Dat sluit aan bij wat het dashboard altijd al toonde
+(`_filter_studies_for_user`); vóór deze wijziging kon een studie wél in de
+lijst staan maar 403 geven bij openen.
+
+### Waar het wordt afgedwongen
+
+Elke route met een `<job_id>` draagt `@job_access_required`:
+
+```python
+@app.route("/results/<job_id>")
+@login_required
+@job_access_required
+def show_results(job_id):
+    ...
+```
+
+Dat zijn ze **alle 30** — niet alleen de routes die het rapport tonen, maar ook
+`/channel-select/`, `/status/`, de scoring-API's en de EDF-browser-endpoints.
+Een testcase loopt over `app.url_map` en faalt zodra er een `<job_id>`-route
+bijkomt zonder de decorator, zodat dit niet stil kan wegzakken.
+
+### Waarom een tabel en niet de JSON
+
+`_get_job_site_id()` opende `{job_id}_results.json`, parste JSON en had een
+`except Exception: pass` die stil `None` teruggaf. Elke controle was daarmee
+best-effort: onleesbare of ontbrekende metadata leidde niet tot weigeren maar
+tot een onbepaalde uitkomst. De JSON-velden blijven bestaan (de workers
+schrijven ze), maar autorisatie hangt er niet meer aan.
+
+De `job`-rij wordt **alleen door de webapp** geschreven — bij `parse_file()`
+(zodra het `job_id` ontstaat) en bijgewerkt bij `/analyze`. De RQ-workers raken
+de database niet aan; dat voorkomt SQLite-lockcontentie met 8 workers.
+
+### JOB_ACCESS_STRICT
+
+Overgangsvlag in `instance/config.json` (of als `YASAFLASKIFIED_JOB_ACCESS_STRICT`):
+
+| Waarde | Job zonder rij in de `job`-tabel |
+|---|---|
+| `"0"` (default) | terugvallen op de JSON-bestanden, mét een `job access fallback`-waarschuwing in het log |
+| `"1"` | `404` |
+
+De volgorde is: deployen → backfill draaien → logs volgen tot er geen
+fallback-waarschuwingen meer zijn → pas dán `"1"`. De fallback gebruikt exact
+dezelfde toegangsregel, dus de overgang maakt geen gat: hij is permissief over
+het *bestaan* van de rij, niet over wie er binnen mag.
+
+```bash
+# resterende legacy studies zichtbaar maken
+docker compose logs app | grep 'job access fallback'
+
+# ontbrekende rijen alsnog aanmaken (idempotent)
+docker compose exec app python -m backfill_jobs
+```
+
 ## Stap 1: Directory structuur
 
 ```bash

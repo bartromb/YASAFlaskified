@@ -153,6 +153,60 @@ Expected route codes: `/`=200, login-gated routes=302, POST-only routes=405 on G
 
 ---
 
+## 5b. One-off: the job-registry release
+
+> Step-by-step checklist with the exact commands: **[RELEASE_v0.17.0.md](RELEASE_v0.17.0.md)**.
+
+Only for the deploy that first ships the `job` table. After that the backfill is
+just an idempotent step in `deploy.sh` and needs no attention.
+
+The order matters: the access check is only as good as the table it reads, and
+the table starts empty.
+
+1. **Back up before anything else** — this release adds a table and starts
+   writing to it:
+   ```bash
+   ssh root@65.108.230.243 'cd /data/slaapkliniek && \
+     cp instance/users.db instance/users.db.bak-$(date +%F) && \
+     tar czf /root/uploads-$(date +%F).tgz uploads'
+   ```
+2. **Deploy** as in §2. `initialize_database()` runs at container start and
+   `db.create_all()` creates the `job` table; no manual migration, no Alembic.
+3. **Run the backfill** and keep the output — it lists exactly which studies had
+   no traceable owner:
+   ```bash
+   cd /data/slaapkliniek && docker compose exec -T app python -m backfill_jobs
+   ```
+   (`python -m backfill_jobs`, not `-m myproject.backfill_jobs` — the image's
+   WORKDIR is `/data/slaapkliniek/myproject` and there is no `myproject` package
+   inside it.)
+4. **Watch the logs for a few days.** Every job still falling back to the JSON
+   logs a warning with its `job_id`:
+   ```bash
+   docker compose logs app | grep 'job access fallback'
+   ```
+   Re-running the backfill is safe and fixes anything that appears here.
+5. **Only when that stays empty**, tighten: set `"JOB_ACCESS_STRICT": "1"` in
+   `instance/config.json` and `docker compose restart app`. From then on an
+   unknown `job_id` is a `404`.
+6. **Rollback** for this step alone: set it back to `"0"` and restart — the JSON
+   fallback resumes immediately. No data change is involved either way.
+
+**Known edge case:** a study that was uploaded but not yet submitted for
+analysis at the moment of the restart has no `job` row *and* no config JSON yet,
+so its owner is denied on `/channel-select/<job_id>`. The backfill cannot repair
+this (there is nothing on disk to read). The window is the restart itself; the
+fix is to upload again.
+
+**Unrelated but worth doing in the same maintenance window:**
+`instance/config.json` on production likely has `"SESSION_COOKIE_SECURE": true`
+(a JSON boolean copied from the old template). The app tests
+`_cfg("SESSION_COOKIE_SECURE", "0") == "1"`, so a boolean leaves the secure flag
+**off**. Change it to the string `"1"` and restart. `deploy.sh` never overwrites
+an existing `instance/config.json`, so shipping code does not fix this.
+
+---
+
 ## 6. Rollback
 
 The previous image is kept until you `docker rmi` it. To roll back:

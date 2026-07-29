@@ -1,5 +1,40 @@
 # Changelog — YASAFlaskified
 
+## v0.17.0 — 2026-07-29  *(job registry + upload/access hardening)*
+
+Security and architecture. **No scoring change: AHI, events and every reported
+value are identical.** The `psgscoring` pin is unchanged (0.12.1).
+
+- **Path traversal in the chunked upload closed.** `file_id` came straight from
+  the browser and was interpolated into filenames with an f-string, so it was
+  never a separate `os.path.join` component and `../` escaped the upload
+  directory (`file_id="../../../tmp/evil"` → `/tmp/evil_chunk_0`). Verified
+  exploitable by any logged-in user. `file_id` is now restricted to
+  `[A-Za-z0-9_-]{1,64}` (which covers both shapes the frontend generates), and
+  every derived path — chunks, `_assembled.edf`, the final filename, the
+  collision rename and the cleanup unlink — is resolved against
+  `realpath(upload_dir)` and rejected if it lands outside.
+- **Job access control moved to the database.** Authorisation used to be read
+  from `{job_id}_results.json` with an `except Exception: pass` that silently
+  returned `None`, which made every check best-effort. A new `job` table
+  (`job_id`, owner, `site_id`, filename, status, timestamps) is now the source,
+  and `@job_access_required` is applied to **all 30** `<job_id>` routes — eight
+  of which had no check at all (`api_get_conclusion`, `api_save_conclusion`,
+  `api_save_scoring`, `score_editor`, `channel_select`, `api_scoring_status`,
+  `job_status`, `api_job_status`). A test over `app.url_map` fails if a new job
+  route ever ships without it.
+- **Access rule.** Admin, or the owner, or the same `site_id`. The owner rule now
+  also applies cross-site, matching what the dashboard listing always did — a
+  study could previously appear in someone's list and still 403 on opening.
+- **Transition.** `JOB_ACCESS_STRICT` (default `"0"`) lets a job without a row
+  fall back to the JSON while logging `job access fallback` with its `job_id`;
+  `"1"` makes it a 404. `backfill_jobs.py` imports existing studies and is
+  idempotent, and `deploy.sh` runs it on every deploy (new step 10/11).
+- **`SESSION_COOKIE_SECURE`** in `config.json.example` was the JSON boolean
+  `true` while the app tests `== "1"`, so the secure flag was silently off. The
+  template is now the string `"1"`. **Existing installations must change this in
+  their own `instance/config.json`** — `deploy.sh` never overwrites it.
+
 ## v0.16.5 — 2026-07-26  *(hide VB reference for central-dominant studies)*
 
 Content-only. The ventilatory-burden reference (≤ 25 %) is now hidden when > 50 % of
