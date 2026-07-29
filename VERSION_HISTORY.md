@@ -316,7 +316,7 @@
 
 ---
 
-## Unreleased — Job Registry & Security Hardening
+## v0.17.0 — Job Registry & Security Hardening
 
 - **Path traversal fixed** in the chunked EDF upload: `file_id` allowlist (`[A-Za-z0-9_-]{1,64}`) plus containment of every derived path inside the upload directory
 - **`job` table** as the authorisation source, replacing best-effort reads of `{job_id}_results.json`; written only by the web app, never by the RQ workers

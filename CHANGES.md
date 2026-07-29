@@ -1,10 +1,9 @@
 # Changelog — YASAFlaskified
 
-## Unreleased — 2026-07-29  *(job registry + upload/access hardening)*
+## v0.17.0 — 2026-07-29  *(job registry + upload/access hardening)*
 
 Security and architecture. **No scoring change: AHI, events and every reported
-value are identical.** No version bump yet, so this entry is not tied to a
-release tag.
+value are identical.** The `psgscoring` pin is unchanged (0.12.1).
 
 - **Path traversal in the chunked upload closed.** `file_id` came straight from
   the browser and was interpolated into filenames with an f-string, so it was
