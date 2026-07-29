@@ -155,6 +155,8 @@ Expected route codes: `/`=200, login-gated routes=302, POST-only routes=405 on G
 
 ## 5b. One-off: the job-registry release
 
+> Step-by-step checklist with the exact commands: **[RELEASE_v0.17.0.md](RELEASE_v0.17.0.md)**.
+
 Only for the deploy that first ships the `job` table. After that the backfill is
 just an idempotent step in `deploy.sh` and needs no attention.
 
