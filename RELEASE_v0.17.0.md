@@ -144,6 +144,13 @@ treedt meteen weer in werking. Geen datawijziging, in geen van beide richtingen.
 
 ## 8. Handmatig, los van de deploy: SESSION_COOKIE_SECURE
 
+> **Let op bij een HTTP-only host.** Een Secure-cookie wordt niet over
+> `http://` meegestuurd, dus met `"1"` op een host zonder TLS mislukt élke
+> login — en dat ziet er precies uit als een fout wachtwoord. `deploy.sh`
+> zet de vlag daarom op `"0"` wanneer er geen `DOMAIN` is (geen SSL) en op
+> `"1"` wanneer die er wel is. Productie draait achter HTTPS en hoort dus
+> `"1"` te hebben.
+
 `instance/config.json` op productie heeft vermoedelijk `"SESSION_COOKIE_SECURE": true`
 (JSON-boolean, overgenomen uit de oude template). De app test
 `_cfg("SESSION_COOKIE_SECURE", "0") == "1"`, dus een boolean laat de vlag

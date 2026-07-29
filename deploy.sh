@@ -253,6 +253,21 @@ else
     sed -i "s#VERANDER_DIT_NAAR_EEN_LANGE_WILLEKEURIGE_STRING#${SECRET_KEY}#" "${CONFIG_FILE}"
     sed -i "s#VERANDER_DIT_WACHTWOORD#${ADMIN_PASSWORD}#" "${CONFIG_FILE}"
 
+    # SESSION_COOKIE_SECURE moet volgen of er TLS is. Een Secure-cookie wordt
+    # door de browser niet over http:// meegestuurd, dus met "1" op een
+    # HTTP-only host mislukt élke login — niet te onderscheiden van een fout
+    # wachtwoord. SSL wordt pas in stap 11/11 geregeld en alleen als DOMAIN
+    # gezet is, dus koppelen we de vlag daaraan.
+    if [ -n "${DOMAIN}" ]; then
+        SECURE_COOKIE="1"
+    else
+        SECURE_COOKIE="0"
+        warn "No DOMAIN set — SESSION_COOKIE_SECURE=0 so login works over HTTP."
+        warn "Set it to \"1\" in instance/config.json once TLS is in place."
+    fi
+    sed -i -E "s|(\"SESSION_COOKIE_SECURE\"[[:space:]]*:[[:space:]]*)\"[^\"]*\"|\1\"${SECURE_COOKIE}\"|" "${CONFIG_FILE}"
+    log "SESSION_COOKIE_SECURE=${SECURE_COOKIE} (DOMAIN=${DOMAIN:-none})"
+
     # Belt-and-braces: confirm no placeholder is left behind.
     if grep -q "VERANDER_DIT" "${CONFIG_FILE}"; then
         err "Placeholder substitution incomplete in ${CONFIG_FILE} — refusing to ship a half-configured file."
