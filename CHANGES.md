@@ -1,5 +1,34 @@
 # Changelog — YASAFlaskified
 
+## v0.17.1 — 2026-08-01  *(psgscoring 0.13.0 — breath-graded profile selectable)*
+
+Dependency bump: `psgscoring[ml]` 0.12.1 → **0.13.0**.
+
+**New in the scoring-profile menu: “AASM v3 — Rule 1A, breath-graded”.**
+It scores hypopneas with the *breath* as the unit rather than the sample,
+calibrates the baseline and that patient's own SpO₂ delay in two passes, and
+grades the AASM criteria instead of applying them as hard thresholds. Every
+event it produces carries the contribution of each criterion.
+
+**It is not selected by default.** This application passes
+`scoring_profile="standard"` explicitly, so unless a user picks the new
+profile the analysis is unchanged. No template or route change was needed —
+`channel_select.html` builds the menu from the psgscoring registry.
+
+**Scoring changes to be aware of when comparing to earlier runs:**
+
+- **Nasal-pressure sensor assignment is corrected.** A channel named `Pres`
+  (NSRR/MESA convention) was claimed by the `pulse` role, so hypopneas were
+  scored from the thermistor. It is now recognised as nasal pressure.
+  Recordings whose channels were already resolved correctly are unaffected;
+  ordinary clinical PSGs without a channel called `Pres` see no change.
+  NSRR/MESA recordings do change (mesa-sleep-2408: AHI 30.4 → 22.0).
+- **Arousals reach the EDF+ export and the event API again** (psgscoring
+  issue #16 — they were detected but never surfaced). This is additive:
+  scoring for existing profiles is byte-identical, because *acting* on the
+  repaired arousal list is a per-profile choice that only the new profile
+  enables.
+
 ## v0.17.0 — 2026-07-29  *(job registry + upload/access hardening)*
 
 Security and architecture. **No scoring change: AHI, events and every reported
