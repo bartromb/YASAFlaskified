@@ -1,5 +1,30 @@
 # Changelog — YASAFlaskified
 
+## v0.17.3 — 2026-08-02  *(the restored event fields now reach the report)*
+
+v0.17.2 restored `min_spo2` and the hypopnea subtyping to the *event records*
+but not to the PDF. This puts them in the report, where they are of use to
+whoever signs it. No scoring change.
+
+- **"Lowest SpO₂ during an event"** joins the saturation table. It is
+  deliberately a separate line from the night minimum directly above it:
+  that minimum can come from an artefact or from a dip outside every event,
+  while this value is attributable to a scored event. Shown only when at
+  least one event carries a nadir.
+- **Hypopnea subtyping** appears as indented `↳ of which central` /
+  `↳ of which mixed` rows beneath the hypopnea row, with the same star
+  columns. Shown only when such events exist — in a purely obstructive study
+  they would be two zero rows of noise, and in a central picture they are the
+  most interesting thing in the table.
+
+Both in nl/fr/en/de.
+
+**How this was verified**, because the previous release claimed a rendering
+that did not exist: `myproject/tests/test_pdf_event_fields.py` generates the
+actual PDF, reads its text layer back, and asserts each row is present when
+it should be *and absent when it should not*. It also pins the confidence-band
+caption. The same test would have caught the v0.17.2 mis-statement.
+
 ## v0.17.2 — 2026-08-02  *(psgscoring 0.13.1 + honest labelling of the confidence bands)*
 
 Dependency bump: `psgscoring[ml]` 0.13.0 → **0.13.1**. **No scoring change** —

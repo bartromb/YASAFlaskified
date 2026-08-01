@@ -1627,11 +1627,37 @@ def generate_pdf_report(results:dict, output_path:str,
              str(_hyp_conf("moderate")),
              str(_hyp_conf("borderline")),
              str(_hyp_conf("low"))],
+        ]
+        # Hypopnee-subtypering, alleen wanneer er iets te tonen valt. In een
+        # overwegend obstructief onderzoek zijn deze rijen nul en dus ruis;
+        # bij een centraal beeld zijn ze juist het interessantste van de
+        # tabel. De labels van psgscoring zijn hypopnea_central/_mixed.
+        def _hyp_sub_conf(sub, band):
+            lo = {"high": 0.85, "moderate": 0.60, "borderline": 0.40, "low": 0.0}
+            hi = {"high": 2.00, "moderate": 0.85, "borderline": 0.60, "low": 0.40}
+            return sum(
+                1 for e in resp.get("events", [])
+                if (e.get("type") or "") == f"hypopnea_{sub}"
+                and lo[band] <= (e.get("confidence") or 0) < hi[band]
+            )
+
+        for _sub, _key in (("central", "pdf_hyp_sub_central"),
+                           ("mixed", "pdf_hyp_sub_mixed")):
+            _n = rsum.get(f"n_hypopnea_{_sub}", 0) or 0
+            if not _n:
+                continue
+            conf_rows.append([
+                f"     ↳ {t(_key, lang)}", str(_n), "",
+                str(_hyp_sub_conf(_sub, "high")),
+                str(_hyp_sub_conf(_sub, "moderate")),
+                str(_hyp_sub_conf(_sub, "borderline")),
+                str(_hyp_sub_conf(_sub, "low"))])
+
+        conf_rows.append(
             ["A+H totaal",
              str(rsum.get("n_ah_total","—")),
              _v(rsum,"ahi_total",fmt="{:.1f}"),
-             "", "", "", ""],
-        ]
+             "", "", "", ""])
         story.append(KeepTogether([_tbl(hdr_conf, conf_rows, [5.0,1.2,1.5,1.5,1.8,1.8,1.5])]))
         # De sterrenkoppen tonen kale getallen ("★★★ ≥0.85"), wat als een
         # percentage gelezen wordt. Het is een rangschikking, geen kans:
@@ -1972,10 +1998,19 @@ def generate_pdf_report(results:dict, output_path:str,
     spo2=pneumo.get("spo2",{}); ss=spo2.get("summary",{})
     story.append(_hdr(t("rpt_sec9", lang))); sp(0.1)
     if spo2.get("success") and ss:
+        # De laagste saturatie die bij een respiratoir event hoort. Het
+        # nachtminimum een regel hoger kan van een artefact komen of van een
+        # dip buiten elk event; dit getal is toewijsbaar aan een event.
+        _ev_nadirs = [e.get("min_spo2") for e
+                      in pneumo.get("respiratory", {}).get("events", [])
+                      if isinstance(e.get("min_spo2"), (int, float))]
+        _ev_nadir_row = ([[t("pdf_event_spo2_nadir", lang),
+                           f"{min(_ev_nadirs):.0f} %", ""]] if _ev_nadirs else [])
         story.append(_tbl([t("pdf_param",lang),t("pdf_value",lang),"Ref"],[
             [t('pdf_mean_spo2', lang),  f"{ss.get('mean_spo2', ss.get('avg_spo2','—'))} %", "≥ 95%"],
             [t('pdf_baseline_spo2', lang),    f"{ss.get('baseline_spo2','—')} %",  ""],
             [t('pdf_min_spo2', lang),   f"{ss.get('min_spo2','—')} %",  ""],
+            *_ev_nadir_row,
             [t("pdf_time_below90",lang),       f"{ss.get('pct_below_90','—')} %","< 1%"],
             ["ODI 3%",           f"{ss.get('odi_3pct','—')} /u",    "< 5/u"],
             ["ODI 4%",           f"{ss.get('odi_4pct','—')} /u",    "< 5/u"],
