@@ -1,5 +1,28 @@
 # Changelog — YASAFlaskified
 
+## v0.17.2 — 2026-08-02  *(psgscoring 0.13.1 + honest labelling of the confidence bands)*
+
+Dependency bump: `psgscoring[ml]` 0.13.0 → **0.13.1**. **No scoring change** —
+every profile is byte-identical, verified by the psgscoring golden harness.
+
+**The ★ columns in the respiratory table now carry a caption**, and that is
+the point of this release. The header reads `★★★ ≥0.85`, a bare number that a
+reader naturally takes for a percentage. It is not one. Measured against the
+twelve independent scorers of PSG-IPA, the score correlates with the fraction
+of scorers marking an event at only **r = 0.19**, and sits over 30 percentage
+points too high — an event shown as `★★★ ≥0.85` is marked by about 44% of
+scorers. The caption now states what the score is: a ranking of events by how
+well they satisfy the AASM criteria, not a probability. Added in nl/fr/en/de.
+
+Two report fields return from psgscoring 0.13.1, both of which the
+breath-graded profile silently dropped:
+
+- **`min_spo2`** — the saturation nadir per event, previously blank.
+- **`hypopnea_central` / `hypopnea_mixed`** — hypopnea subtyping. The
+  breath detector does no effort-based classification of its own; the label is
+  now inherited from the overlapping envelope event, which was classified on
+  the same window using effort, ECG and flattening.
+
 ## v0.17.1 — 2026-08-01  *(psgscoring 0.13.0 — breath-graded profile selectable)*
 
 Dependency bump: `psgscoring[ml]` 0.12.1 → **0.13.0**.

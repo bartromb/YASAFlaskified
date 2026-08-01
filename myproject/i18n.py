@@ -861,6 +861,15 @@ TRANSLATIONS = {
 
     # ── PDF RAPPORT: flow-reductie index (FRI) ────────────────────────────
     "pdf_fri_count":        {"nl": "Flow-reducties zonder criteria", "fr": "Réductions de flux sans critères", "en": "Flow Reductions Without Criteria"},
+    # De sterrenkolommen tonen een score van 0 tot 1. Die score rangschikt
+    # events naar hoe goed ze aan de AASM-criteria voldoen; hij is GEEN kans
+    # dat een scorer het event zou markeren. Gemeten tegen twaalf scorers per
+    # opname (PSG-IPA) is de correlatie r = 0,19 en ligt het niveau ruim 30
+    # procentpunt te hoog. Zonder deze voetnoot leest "★★★ ≥0,85" als 85%.
+    "pdf_conf_bands_note":  {"nl": "Score 0–1 voor hoe goed het event aan de AASM-criteria voldoet. Bedoeld om events onderling te rangschikken, niet als kans dat een scorer het event zou markeren.",
+                             "fr": "Score 0–1 indiquant dans quelle mesure l'événement satisfait aux critères AASM. Destiné à classer les événements entre eux, non à exprimer la probabilité qu'un scoreur le marque.",
+                             "en": "Score 0–1 for how well the event satisfies the AASM criteria. Intended to rank events relative to each other, not as the probability that a scorer would mark it.",
+                             "de": "Score 0–1 dafür, wie gut das Ereignis die AASM-Kriterien erfüllt. Zum Ordnen der Ereignisse untereinander gedacht, nicht als Wahrscheinlichkeit, dass ein Auswerter es markieren würde."},
     "pdf_fri_index":        {"nl": "FRI (flow-reductie-index)", "fr": "IFR (indice de réduction de flux)", "en": "FRI (Flow Reduction Index)"},
     "pdf_fri_r1b":          {"nl": "Waarvan hersteld via Rule 1B (arousal)", "fr": "Dont restaurés via Rule 1B (arousal)", "en": "Of which reinstated via Rule 1B (arousal)"},
     "pdf_fri_note":         {"nl": "Flow-reducties (≥30%, ≥10s) die niet voldoen aan hypopnea-criteria: geen ≥3% desaturatie en geen arousal. Geen onderdeel van AHI. Klinische relevantie bij UARS/RDI-evaluatie.",

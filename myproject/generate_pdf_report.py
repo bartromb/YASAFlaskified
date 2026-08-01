@@ -1633,6 +1633,12 @@ def generate_pdf_report(results:dict, output_path:str,
              "", "", "", ""],
         ]
         story.append(KeepTogether([_tbl(hdr_conf, conf_rows, [5.0,1.2,1.5,1.5,1.8,1.8,1.5])]))
+        # De sterrenkoppen tonen kale getallen ("★★★ ≥0.85"), wat als een
+        # percentage gelezen wordt. Het is een rangschikking, geen kans:
+        # tegen twaalf scorers per opname is de correlatie r = 0,19 en ligt
+        # het niveau ruim 30 procentpunt te hoog.
+        story.append(Paragraph(
+            f"<i>{t('pdf_conf_bands_note', lang)}</i>", styles["SM"]))
         sp(0.12)
 
         # v0.15.0: the OAHI 3-point confidence sweep + robustness grade (the
