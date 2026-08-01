@@ -14,7 +14,7 @@ points too high — an event shown as `★★★ ≥0.85` is marked by about 44%
 scorers. The caption now states what the score is: a ranking of events by how
 well they satisfy the AASM criteria, not a probability. Added in nl/fr/en/de.
 
-Two report fields return from psgscoring 0.13.1, both of which the
+Two **event-record** fields return from psgscoring 0.13.1, both of which the
 breath-graded profile silently dropped:
 
 - **`min_spo2`** — the saturation nadir per event, previously blank.
@@ -22,6 +22,16 @@ breath-graded profile silently dropped:
   breath detector does no effort-based classification of its own; the label is
   now inherited from the overlapping envelope event, which was classified on
   the same window using effort, ECG and flattening.
+
+**Correction to how this was first written.** These reach the *event records*
+— the EDF viewer and the `/api/edf/<job_id>/events/…` endpoints — and **not
+the PDF report**. The PDF's "min SpO₂" is the whole-night minimum from the
+SpO₂ summary, a different quantity, and the respiratory table has no subtype
+rows for hypopneas. Verified by regenerating a real study on 0.17.2: the only
+textual change anywhere in the six-page report is the two-line caption above.
+Every clinical value — AHI 32.5, Rule 1B 13.0, RERA 75, RDI 52.0, REM/NREM
+AHI, artefact count — is identical to the 0.17.1 output, which is the
+byte-identity claim holding on real data.
 
 ## v0.17.1 — 2026-08-01  *(psgscoring 0.13.0 — breath-graded profile selectable)*
 
