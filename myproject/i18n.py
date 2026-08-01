@@ -870,6 +870,20 @@ TRANSLATIONS = {
                              "fr": "Score 0–1 indiquant dans quelle mesure l'événement satisfait aux critères AASM. Destiné à classer les événements entre eux, non à exprimer la probabilité qu'un scoreur le marque.",
                              "en": "Score 0–1 for how well the event satisfies the AASM criteria. Intended to rank events relative to each other, not as the probability that a scorer would mark it.",
                              "de": "Score 0–1 dafür, wie gut das Ereignis die AASM-Kriterien erfüllt. Zum Ordnen der Ereignisse untereinander gedacht, nicht als Wahrscheinlichkeit, dass ein Auswerter es markieren würde."},
+    # Subtypering van hypopnees. Alleen getoond wanneer er centrale of
+    # gemengde hypopnees zijn; anders is het ruis in een rapport waarin
+    # vrijwel alles obstructief is.
+    "pdf_hyp_sub_central":  {"nl": "waarvan centraal", "fr": "dont centrales",
+                             "en": "of which central", "de": "davon zentral"},
+    "pdf_hyp_sub_mixed":    {"nl": "waarvan gemengd", "fr": "dont mixtes",
+                             "en": "of which mixed", "de": "davon gemischt"},
+    # De laagste saturatie TIJDENS een respiratoir event. Niet hetzelfde als
+    # het nachtminimum daarboven: dat kan van een artefact of een dip buiten
+    # elk event komen.
+    "pdf_event_spo2_nadir": {"nl": "Laagste SpO2 tijdens een event",
+                             "fr": "SpO2 la plus basse pendant un événement",
+                             "en": "Lowest SpO2 during an event",
+                             "de": "Niedrigste SpO2 während eines Ereignisses"},
     "pdf_fri_index":        {"nl": "FRI (flow-reductie-index)", "fr": "IFR (indice de réduction de flux)", "en": "FRI (Flow Reduction Index)"},
     "pdf_fri_r1b":          {"nl": "Waarvan hersteld via Rule 1B (arousal)", "fr": "Dont restaurés via Rule 1B (arousal)", "en": "Of which reinstated via Rule 1B (arousal)"},
     "pdf_fri_note":         {"nl": "Flow-reducties (≥30%, ≥10s) die niet voldoen aan hypopnea-criteria: geen ≥3% desaturatie en geen arousal. Geen onderdeel van AHI. Klinische relevantie bij UARS/RDI-evaluatie.",
