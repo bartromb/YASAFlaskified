@@ -1647,7 +1647,11 @@ def generate_pdf_report(results:dict, output_path:str,
             if not _n:
                 continue
             conf_rows.append([
-                f"     ↳ {t(_key, lang)}", str(_n), "",
+                # Geen ↳ of └: die glyphs zitten niet in het lettertype en
+                # ReportLab zet er een zwart blokje voor in de plaats — dat
+                # botst met ■, dat in dit rapport de legenda-kleurmarkering is.
+                # De middenpunt wordt elders in het rapport al gebruikt.
+                f"     · {t(_key, lang)}", str(_n), "",
                 str(_hyp_sub_conf(_sub, "high")),
                 str(_hyp_sub_conf(_sub, "moderate")),
                 str(_hyp_sub_conf(_sub, "borderline")),

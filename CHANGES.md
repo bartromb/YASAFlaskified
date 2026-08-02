@@ -1,5 +1,17 @@
 # Changelog — YASAFlaskified
 
+## v0.17.4 — 2026-08-02  *(fix: the subtype row printed a black box)*
+
+The `↳` introduced in v0.17.3 is not in the report font, so ReportLab
+substituted a black box. That is worse than a missing character here: `■` is
+this report's legend swatch (`■ W ■ N1`, `■ OA obstructief`), so the row read
+as a third meaning of the same mark. Replaced with `·`, which the report
+already uses elsewhere. Caught on a real study, not in review.
+
+`test_subtype_rows_use_a_glyph_the_font_actually_has` now asserts the
+rendered line contains neither `■` nor `↳` — it catches any glyph that
+triggers the font fallback, not just this one.
+
 ## v0.17.3 — 2026-08-02  *(the restored event fields now reach the report)*
 
 v0.17.2 restored `min_spo2` and the hypopnea subtyping to the *event records*
