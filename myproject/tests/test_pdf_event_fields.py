@@ -103,6 +103,25 @@ def test_hypopnea_subtypes_appear_when_present(tmp_path):
     assert t("pdf_hyp_sub_mixed", "nl") in txt
 
 
+def test_subtype_rows_use_a_glyph_the_font_actually_has(tmp_path):
+    """↳ ontbreekt in het lettertype en werd een zwart blokje in productie.
+
+    Erger nog: ■ is in dit rapport de legenda-kleurmarkering (■ W ■ N1,
+    ■ OA obstructief), dus het las als een derde betekenis van hetzelfde
+    teken. Deze test vangt elke glyph die de font-fallback triggert.
+    """
+    events = [_event(100.0, "hypopnea", nadir=90.0),
+              _event(200.0, "hypopnea_central", conf=0.7, nadir=89.0)]
+    out = tmp_path / "r.pdf"
+    generate_pdf_report(_results(events, n_central=1), str(out), lang="nl")
+    txt = _pdf_text(out)
+    line = next(ln for ln in txt.splitlines()
+                if t("pdf_hyp_sub_central", "nl") in ln)
+    assert "■" not in line, f"font-fallback in de subtyperij: {line!r}"
+    assert "↳" not in line
+    assert "·" in line, line
+
+
 def test_subtype_rows_stay_out_of_a_purely_obstructive_study(tmp_path):
     """Nulrijen zijn ruis in een rapport waarin alles obstructief is."""
     events = [_event(100.0, "hypopnea", nadir=90.0),
