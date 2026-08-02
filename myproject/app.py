@@ -1988,8 +1988,12 @@ def start_analysis():
     rec_start = request.form.get("recording_start") or None
 
     # ── Pneumo-kanalen (v7.1) ──
+    # flow_thermistor + flow_pressure zijn de twee AASM-sensoren (apneu resp.
+    # hypopneu). Ze stonden niet in deze lijst, dus ze kwamen uitsluitend uit
+    # auto-detectie en waren voor de gebruiker onbereikbaar.
     pneumo_channels = {}
-    for ch_type in ["flow", "thorax", "abdomen", "spo2", "pulse",
+    for ch_type in ["flow", "flow_pressure", "flow_thermistor",
+                    "thorax", "abdomen", "spo2", "pulse",
                     "ecg", "position", "snore", "leg_l", "leg_r"]:
         val = request.form.get(f"pneumo_{ch_type}") or None
         if val:

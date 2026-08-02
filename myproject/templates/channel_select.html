@@ -60,6 +60,16 @@
             <span class="autodetect-table__check">{% if pneumo_auto.get('flow') %}✓{% else %}—{% endif %}</span>
           </div>
           <div class="autodetect-table__row">
+            <span class="autodetect-table__label">{{ t('channel_flow_therm') }}</span>
+            <span class="autodetect-table__value">{{ pneumo_auto.get('flow_thermistor') or t('channel_not_detected') }}</span>
+            <span class="autodetect-table__check">{% if pneumo_auto.get('flow_thermistor') %}✓{% else %}—{% endif %}</span>
+          </div>
+          <div class="autodetect-table__row">
+            <span class="autodetect-table__label">{{ t('channel_flow_press') }}</span>
+            <span class="autodetect-table__value">{{ pneumo_auto.get('flow_pressure') or t('channel_not_detected') }}</span>
+            <span class="autodetect-table__check">{% if pneumo_auto.get('flow_pressure') %}✓{% else %}—{% endif %}</span>
+          </div>
+          <div class="autodetect-table__row">
             <span class="autodetect-table__label">{{ t('channel_thoracic') }}</span>
             <span class="autodetect-table__value">{{ pneumo_auto.get('thorax') or t('channel_not_detected') }}</span>
             <span class="autodetect-table__check">{% if pneumo_auto.get('thorax') %}✓{% else %}—{% endif %}</span>
@@ -203,7 +213,13 @@
       </div>
       <div class="card-body py-2">
         <div class="row g-2">
+          {# AASM scoort apneus op de thermistor en hypopneeën op de nasale
+             druk. Die twee rollen waren niet instelbaar en kwamen uitsluitend
+             uit auto-detectie; bij montages waar die faalt (bv. Somnomedics
+             "Flow Th.") kon de gebruiker dat nergens corrigeren. #}
           {% set pneumo_types = [
+            ("flow_thermistor", t("ch_flow_therm_label"),    t("ch_flow_therm_desc")),
+            ("flow_pressure",   t("ch_flow_pressure_label"), t("ch_flow_pressure_desc")),
             ("flow",     t("ch_flow_label"),     t("ch_flow_desc")),
             ("thorax",   t("ch_thorax_label"),   t("ch_thorax_desc")),
             ("abdomen",  t("ch_abdomen_label"),  t("ch_abdomen_desc")),

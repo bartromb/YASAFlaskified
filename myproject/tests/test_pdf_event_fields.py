@@ -133,6 +133,44 @@ def test_subtype_rows_stay_out_of_a_purely_obstructive_study(tmp_path):
     assert t("pdf_hyp_sub_mixed", "nl") not in txt
 
 
+def _results_with_sensors(dual, apnea_ch, hypop_ch):
+    r = _results([_event(100.0, "hypopnea", nadir=90.0)])
+    r["pneumo"]["respiratory"]["dual_sensor"] = dual
+    # sectie 8c wordt alleen gerenderd bij een breath_analysis met ademteugen
+    r["pneumo"]["respiratory"]["breath_analysis"] = {
+        "n_breaths": 12000, "n_bb_apneas": 40, "n_bb_hypopneas": 120,
+        "avg_flattening": 0.22}
+    r["pneumo"]["meta"] = {"flow_channels": {
+        "apnea_sensor": apnea_ch, "hypopnea_sensor": hypop_ch,
+        "dual_sensor": dual}}
+    return r
+
+
+def test_two_sensors_state_that_aasm_was_followed(tmp_path):
+    out = tmp_path / "r.pdf"
+    generate_pdf_report(_results_with_sensors(True, "Flow Th.", "Pressure Flow"),
+                        str(out), lang="nl")
+    txt = _pdf_text(out).replace("\n", " ")
+    assert "Dual-sensor" in txt
+    assert "Eén flowkanaal" not in txt
+
+
+def test_one_sensor_says_so_and_names_the_channel(tmp_path):
+    """Het geval dat zweeg is juist het geval dat iets moet melden.
+
+    Apneus op nasale druk overdetecteren t.o.v. de thermistor; de AASM
+    schrijft de thermistor daar juist om voor.
+    """
+    out = tmp_path / "r.pdf"
+    generate_pdf_report(_results_with_sensors(False, "Pressure Flow", "Pressure Flow"),
+                        str(out), lang="nl")
+    txt = _pdf_text(out).replace("\n", " ")
+    assert "Eén flowkanaal" in txt
+    assert "Pressure Flow" in txt
+    assert "overdetectie" in txt
+    assert "Dual-sensor" not in txt
+
+
 def test_confidence_band_caption_is_present(tmp_path):
     """De sterrenkoppen zijn een rangschikking, geen kans — dat moet erbij staan."""
     events = [_event(100.0, "hypopnea", nadir=90.0)]

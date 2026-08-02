@@ -1884,9 +1884,21 @@ def generate_pdf_report(results:dict, output_path:str,
                 rows.append([t("pdf_mean_flattening", lang), f"{flat_val:.2f} ({flat_label})"])
             story.append(_tbl([t("pdf_param", lang), t("pdf_value", lang)], rows, [9, 8])); sp(0.15)
 
+        # Twee sensoren: melden dat AASM gevolgd is. Eén sensor: melden dat
+        # dat NIET zo is. Dat tweede ontbrak, terwijl juist dat geval de
+        # lezer iets moet vertellen — apneus op nasale druk overdetecteren
+        # ten opzichte van de thermistor, en de AASM schrijft de thermistor
+        # daar juist om voor.
         if resp.get("dual_sensor"):
             story.append(Paragraph(
                 t("pdf_dual_sensor_note", lang),
+                styles["SM"]))
+        else:
+            _fc = pneumo.get("meta", {}).get("flow_channels", {}) or {}
+            _ap = _fc.get("apnea_sensor") or "—"
+            _hy = _fc.get("hypopnea_sensor") or "—"
+            story.append(Paragraph(
+                t("pdf_single_sensor_note", lang).format(apnea=_ap, hypopnea=_hy),
                 styles["SM"]))
 
         # ── Scoring profielen tabel ───────────────────────────────
