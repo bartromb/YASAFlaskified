@@ -1,5 +1,44 @@
 # Changelog — YASAFlaskified
 
+## v0.17.5 — 2026-08-02  *(both AASM flow sensors, selectable and shown)*
+
+`psgscoring[ml]` 0.13.1 → **0.13.2**, which makes the AASM two-sensor rule
+fire: **apneas on the oronasal thermistor, hypopneas on nasal pressure.**
+
+**This changes scoring on any recording carrying a thermistor the previous
+version did not recognise** — Somnomedics `Flow Th.` in particular. Apneas
+were being scored on nasal pressure, which drops more readily on partial
+obstruction and mouth breathing and therefore over-detects; the AASM
+specifies the thermistor for apneas to avoid exactly that. Existing reports
+are unaffected, but re-running an EDF will give different apnea counts than
+before.
+
+**The two sensors are now selectable and visible.** The channel form offered
+only a generic `flow`; the two AASM roles came purely from auto-detection and
+could not be corrected when it failed. Now:
+
+- `🌡️ Thermistor (apnea)` and `🌬️ Nasal pressure (hypopnea)` are their own
+  fields, with the generic `flow` beneath them relabelled as what it is — a
+  fallback when both are missing.
+- Both appear in the auto-detected overview at the top, so a missing
+  thermistor is visible before the analysis starts rather than inferable from
+  the report afterwards.
+
+**The single-sensor case no longer stays silent.** When only one flow channel
+is available the report now names it and states the consequence, mirroring
+the existing dual-sensor note:
+
+> *One flow channel available: apnea and hypopnea both scored on {channel}.
+> The AASM specifies apnea on the oronasal thermistor and hypopnea on nasal
+> pressure; scoring apneas on nasal pressure may over-detect.*
+
+That note previously appeared only for the two-sensor case, and it appeared
+wrongly — psgscoring's `dual_sensor` flag meant "a hypopnea channel exists",
+not "two sensors", so the report claimed AASM dual-sensor methodology on
+single-channel studies. Fixed in 0.13.2.
+
+All new strings in nl/fr/en/de.
+
 ## v0.17.4 — 2026-08-02  *(fix: the subtype row printed a black box)*
 
 The `↳` introduced in v0.17.3 is not in the report font, so ReportLab

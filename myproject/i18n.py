@@ -438,6 +438,10 @@ TRANSLATIONS = {
     "channel_eog":          {'nl': 'EOG',  'fr': 'EOG',  'en': 'EOG',  'de': 'EOG'},
     "channel_emg_chin":     {'nl': 'EMG kin',     'fr': 'EMG menton',  'en': 'EMG chin',     'de': 'EMG Kinn'},
     "channel_flow":         {'nl': 'Luchtstroom', 'fr': 'Débit aérien','en': 'Airflow',      'de': 'Atemstrom'},
+    # De twee AASM-sensoren apart, zodat de gebruiker in een oogopslag ziet
+    # of ze allebei gevonden zijn — apneu hoort op de thermistor.
+    "channel_flow_therm":   {'nl': 'Thermistor (apneu)', 'fr': 'Thermistance (apnée)', 'en': 'Thermistor (apnea)', 'de': 'Thermistor (Apnoe)'},
+    "channel_flow_press":   {'nl': 'Nasale druk (hypopneu)', 'fr': 'Pression nasale (hypopnée)', 'en': 'Nasal pressure (hypopnea)', 'de': 'Nasendruck (Hypopnoe)'},
     "channel_thoracic":     {'nl': 'Thoracale RIP','fr':'RIP thoracique','en':'Thoracic RIP','de':'Thorakal RIP'},
     "channel_abdominal":    {'nl': 'Abdominale RIP','fr':'RIP abdominal','en':'Abdominal RIP','de':'Abdominal RIP'},
     "channel_spo2":         {'nl': 'SpO₂',         'fr': 'SpO₂',        'en': 'SpO₂',         'de': 'SpO₂'},
@@ -2593,6 +2597,15 @@ _V0102_PDF = {
     },
     "pdf_conf_signal_noise": {"nl": "conf&lt;0.40 = signaalruis", "fr": "conf&lt;0,40 = bruit du signal", "en": "conf&lt;0.40 = signal noise", "de": "Konfidenz&lt;0,40 = Signalrauschen"},
     "pdf_max_apnea_dur":     {"nl": "Max. apnea-duur", "fr": "Durée max. d'apnée", "en": "Max apnea duration", "de": "Max. Apnoe-Dauer"},
+    # Spiegelnoot: bij EEN sensor moet het rapport zeggen dat de
+    # AASM-methodiek niet gevolgd kon worden. Apneus op nasale druk
+    # overdetecteren t.o.v. de thermistor; dat mag niet stil blijven.
+    "pdf_single_sensor_note": {
+        "nl": "<i>Eén flowkanaal beschikbaar: apneu en hypopneu beide gescoord op {apnea}. De AASM vraagt apneu op de oronasale thermistor en hypopneu op de nasale druk; scoren van apneus op nasale druk kan tot overdetectie leiden.</i>",
+        "fr": "<i>Un seul canal de flux disponible : apnée et hypopnée toutes deux scorées sur {apnea}. L'AASM demande l'apnée sur la thermistance oronasale et l'hypopnée sur la pression nasale ; scorer les apnées sur la pression nasale peut entraîner une surdétection.</i>",
+        "en": "<i>Only one flow channel available: apnea and hypopnea both scored on {apnea}. The AASM specifies apnea on the oronasal thermistor and hypopnea on nasal pressure; scoring apneas on nasal pressure may over-detect.</i>",
+        "de": "<i>Nur ein Flusskanal verfügbar: Apnoe und Hypopnoe beide auf {apnea} gescort. Die AASM verlangt Apnoe am oronasalen Thermistor und Hypopnoe am Nasendruck; Apnoen am Nasendruck zu scoren kann zu Überdetektion führen.</i>",
+    },
     "pdf_dual_sensor_note":  {"nl": "<i>Dual-sensor scoring: apneu op thermistor, hypopneu op nasale druk (AASM).</i>", "fr": "<i>Scoring double capteur : apnée sur thermistance, hypopnée sur pression nasale (AASM).</i>", "en": "<i>Dual-sensor scoring: apnea on thermistor, hypopnea on nasal pressure (AASM).</i>", "de": "<i>Dual-Sensor-Scoring: Apnoe am Thermistor, Hypopnoe am Nasendruck (AASM).</i>"},
     # Flattening labels
     "pdf_flat_normal":   {"nl": "normaal",                "fr": "normal",                  "en": "normal",                  "de": "normal"},
@@ -2611,8 +2624,16 @@ TRANSLATIONS.update(_V0102_PDF)
 # ═══════════════════════════════════════════════════════════
 _V0103_ANALYSIS = {
     # Pneumo channel labels (channel_select.html L207-216)
-    "ch_flow_label":      {"nl": "🌬️ Flow (nasaal)",      "fr": "🌬️ Flux (nasal)",          "en": "🌬️ Flow (nasal)",          "de": "🌬️ Fluss (nasal)"},
-    "ch_flow_desc":       {"nl": "Nasale druk / thermistor", "fr": "Pression nasale / thermistance", "en": "Nasal pressure / thermistor", "de": "Nasendruck / Thermistor"},
+    "ch_flow_label":      {"nl": "🌬️ Flow (algemeen)",    "fr": "🌬️ Flux (général)",        "en": "🌬️ Flow (generic)",        "de": "🌬️ Fluss (allgemein)"},
+    "ch_flow_desc":       {"nl": "Terugval als de twee sensoren hieronder ontbreken", "fr": "Repli si les deux capteurs ci-dessous manquent", "en": "Fallback when the two sensors below are missing", "de": "Rückfall, wenn die beiden Sensoren unten fehlen"},
+    # AASM schrijft twee sensoren voor: apneus op de oronasale thermistor,
+    # hypopneeën op de nasale druk. Die twee rollen waren niet instelbaar —
+    # ze kwamen uitsluitend uit auto-detectie, en bij Somnomedics ("Flow Th.")
+    # faalde die, waarna apneus stilzwijgend op de neusdruk werden gescoord.
+    "ch_flow_pressure_label": {"nl": "🌬️ Nasale druk (hypopneu)", "fr": "🌬️ Pression nasale (hypopnée)", "en": "🌬️ Nasal pressure (hypopnea)", "de": "🌬️ Nasendruck (Hypopnoe)"},
+    "ch_flow_pressure_desc":  {"nl": "AASM-sensor voor hypopneeën", "fr": "Capteur AASM pour les hypopnées", "en": "AASM sensor for hypopneas", "de": "AASM-Sensor für Hypopnoen"},
+    "ch_flow_therm_label":    {"nl": "🌡️ Thermistor (apneu)", "fr": "🌡️ Thermistance (apnée)", "en": "🌡️ Thermistor (apnea)", "de": "🌡️ Thermistor (Apnoe)"},
+    "ch_flow_therm_desc":     {"nl": "AASM-sensor voor apneus", "fr": "Capteur AASM pour les apnées", "en": "AASM sensor for apneas", "de": "AASM-Sensor für Apnoen"},
     "ch_thorax_label":    {"nl": "📊 Thorax",                "fr": "📊 Thorax",                  "en": "📊 Thorax",                  "de": "📊 Thorax"},
     "ch_thorax_desc":     {"nl": "Thoracale effort",         "fr": "Effort thoracique",          "en": "Thoracic effort",            "de": "Thorakale Atemanstrengung"},
     "ch_abdomen_label":   {"nl": "📊 Abdomen",               "fr": "📊 Abdomen",                 "en": "📊 Abdomen",                 "de": "📊 Abdomen"},
