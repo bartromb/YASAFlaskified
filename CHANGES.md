@@ -1,5 +1,45 @@
 # Changelog — YASAFlaskified
 
+## v0.18.0 — 2026-08-03  *(the dual-sensor profile, and what it did or did not use)*
+
+`psgscoring[ml]` 0.13.1 → **0.14.0**.
+
+**v0.17.5 was rolled back on 2026-08-02.** It shipped psgscoring 0.13.2, which
+scored apneas on the thermistor wherever one was detected. On a real recording
+with human scoring apneas went from 93 to 0, AHI from 26.2 to 8.6, and the
+conclusion from *moderate CSAS* — confirmed by the human scorer — to *mild SAS*.
+Production and the VM were returned to v0.17.4 / psgscoring 0.13.1 the same day.
+
+**Default scoring in this release is that rolled-back-to behaviour, unchanged.**
+`aasm_v3_rec` stays the default profile and is byte-identical. What is new is a
+second algorithm you can *choose*.
+
+### Choosing the algorithm and the channels
+
+- **`AASM v3 — Rule 1A, dual-sensor apneas` appears in the scoring-profile
+  dropdown.** It detects apneas on *both* flow sensors and merges them, so
+  neither channel can veto the other. The list is built from
+  `psgscoring.list_profiles()`, so it populated itself.
+- The two flow channels each keep their own dropdown — `🌡️ Thermistor (apnea)`
+  and `🌬️ Nasal pressure (hypopnea)` — with auto-detection as the default and a
+  ★ marking what was detected. Same recording, two algorithms, from the web UI.
+
+### What the report now says
+
+- **Corroboration columns.** Under the dual profile each apnea shows whether it
+  was seen by both sensors, the thermistor only, or nasal pressure only. The
+  note under the table states plainly that single-sensor events are **not
+  rejected** — the column is information, not a filter. The columns stay away
+  from single-sensor runs, where they would be three empty columns.
+- **Dual scoring requested but not performed** now lands in the *Aandachtspunten*
+  box, naming the channel that was used instead. A silently single-sensor run was
+  the failure mode that made v0.17.5 hard to see.
+- The single-flow-channel note names the channel and says apneas on nasal
+  pressure over-detect relative to the thermistor.
+
+Translations for all of it in nl/fr/en/de. 113 tests pass, including ones that
+render the PDF and read the text back.
+
 ## v0.17.5 — 2026-08-02  *(both AASM flow sensors, selectable and shown)*
 
 `psgscoring[ml]` 0.13.1 → **0.13.2**, which makes the AASM two-sensor rule
