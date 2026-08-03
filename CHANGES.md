@@ -1,5 +1,65 @@
 # Changelog — YASAFlaskified
 
+## v0.18.1 — 2026-08-03  *(twee rapportgetallen die het verkeerde lazen)*
+
+`psgscoring[ml]` 0.14.0 → **0.14.1**. Geen template- of routewijziging; de
+scoringprofiel-dropdown vult zich uit de psgscoring-registry, dus het nieuwe
+profiel verschijnt vanzelf in de v3-groep.
+
+Beide fouten kwamen aan het licht door twee rapporten van één opname naast
+elkaar te leggen — `aasm_v3_rec` op v0.13.1 tegen `aasm_v3_dual` op v0.14.0.
+**De kop was in beide runs stabiel** (severe CSAS, mild OSA, hetzelfde
+automatische besluit). Dit zijn de getallen eronder.
+
+### De rij "Rule 1B / CMS — ≥30% flow + ≥4% desat" was geen 4%-getal
+
+Dat veld vulde zich met de AHI van de `strict`-arm uit de robuustheidssweep.
+Maar `aasm_v3_strict` is een *conservatieve variant van Rule 1A*: het houdt
+`desat_or_arousal` met een drempel van 3% aan en verschilt in het
+stabiliteitsfilter, breath-level-detectie en het nadirvenster. Er is dus
+**nooit een 4%-criterium toegepast** op het getal onder die kop — in geen enkel
+rapport sinds het veld in v0.15.0 verscheen.
+
+Het oude getal kon beide kanten op fout zijn: op de aanleidende opname stond er
+10,3/u terwijl er 78 apneus waren (apneu-index 21,2/u), en op een testgeval
+37,9/u tegenover Rule 1A 31,6/u — méér events onder een strenger criterium.
+Rule 1B komt nu uit de eventlijst zelf en kan noch boven Rule 1A, noch onder de
+apneu-index uitkomen. Zonder geslaagde SpO₂-analyse verdwijnt de rij in plaats
+van te vervallen tot "alleen apneus".
+
+**Dit verandert geen scoring** — de kop-AHI, de OAHI, de ernstgradatie, het
+automatische besluit en de eventtellingen lezen dit veld niet. Het is één rij.
+
+### Vijf analyses lazen het apneukanaal terwijl ze flow wilden
+
+De AHI-sweep, de anker-basislijn, de arousal/RERA-koppeling, de
+Cheyne-Stokes-detectie en de ventilatory burden nemen alle vijf een flowsignaal
+zonder apneus te detecteren — en namen alle vijf het *apneukanaal*. Onder
+`aasm_v3_dual` is dat de thermistor, bewust ook wanneer die de kwaliteitstoets
+niet haalt, omdat de tweede detectiepas hem onschadelijk maakt vóór de
+apneutelling. Die vijf kennen die tweede pas niet.
+
+Op de aanleidende opname las de ventilatory burden daardoor **20,4% in plaats
+van 42,6%** — onder de ≤25%-referentie — bij een patiënt die 94,7% van de nacht
+onder 90% saturatie lag.
+
+### Nieuw in de dropdown: `AASM v3 — Rule 1A, nasal-pressure reference`
+
+Dezelfde correctie als los kiesbaar algoritme, zodat je op een echte opname
+kunt zien wat de referentiekeuze doet los van de dual-sensordetectie.
+
+| profiel | apneus | afgeleide analyses |
+|---|---|---|
+| `AASM v3 — Recommended` | thermistor¹ | thermistor¹ |
+| **`AASM v3 — nasal-pressure reference`** | thermistor¹ | **neusdruk** |
+| `AASM v3 — dual-sensor apneas` | **beide, samengevoegd** | neusdruk |
+
+¹ als die de kwaliteitstoets haalt; anders neusdruk.
+
+Identiek aan `Recommended` op elke montage zonder bruikbare thermistor — dat
+zijn de meeste klinische montages, en alle Somnomedics-opnames waarop dit
+gevonden is.
+
 ## v0.18.0 — 2026-08-03  *(the dual-sensor profile, and what it did or did not use)*
 
 `psgscoring[ml]` 0.13.1 → **0.14.0**.
