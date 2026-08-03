@@ -178,3 +178,62 @@ def test_confidence_band_caption_is_present(tmp_path):
     generate_pdf_report(_results(events), str(out), lang="nl")
     txt = _pdf_text(out).replace("\n", " ")
     assert "niet als kans" in txt
+
+
+# ─────────────────────────────────────────────────────────────────
+#  Dual-sensor: corroboratiekolommen en de terugvalmelding
+# ─────────────────────────────────────────────────────────────────
+
+def _dual_results(with_corrob=True, fallback=False):
+    events = [
+        {**_event(100.0, "obstructive", nadir=88.0), "corroboration": "both"},
+        {**_event(200.0, "obstructive", nadir=87.0),
+         "corroboration": "thermistor_only"},
+        {**_event(300.0, "central", nadir=86.0), "corroboration": "pressure_only"},
+        _event(400.0, "hypopnea", nadir=90.0),
+    ]
+    r = _results(events)
+    rs = r["pneumo"]["respiratory"]
+    rs["summary"].update({"n_obstructive": 2, "n_central": 1, "n_mixed": 0})
+    rs["breath_analysis"] = {"n_breaths": 9000, "n_bb_apneas": 20,
+                             "n_bb_hypopneas": 40, "avg_flattening": 0.2}
+    if with_corrob:
+        rs["dual_sensor_apnea"] = {"n_both": 1, "n_thermistor_only": 1,
+                                   "n_pressure_only": 1, "n_kept": 3}
+    r["pneumo"]["meta"] = {"dual_sensor_fallback": {
+        "requested": True, "performed": not fallback,
+        "channel": "Pressure Flow" if fallback else None}}
+    return r
+
+
+def test_corroboration_columns_appear_for_the_dual_profile(tmp_path):
+    out = tmp_path / "r.pdf"
+    generate_pdf_report(_dual_results(), str(out), lang="nl")
+    txt = _pdf_text(out).replace("\n", " ")
+    for key in ("pdf_corrob_both", "pdf_corrob_therm", "pdf_corrob_press"):
+        head = t(key, "nl").replace("\n", " ")
+        assert head.split()[0] in txt, key
+    assert "niet afgewezen" in txt, "de noot onder de tabel hoort erbij"
+
+
+def test_corroboration_columns_stay_away_for_a_single_sensor_run(tmp_path):
+    """Bij een enkele sensor zouden het drie lege kolommen zijn."""
+    out = tmp_path / "r.pdf"
+    generate_pdf_report(_dual_results(with_corrob=False), str(out), lang="nl")
+    assert "niet afgewezen" not in _pdf_text(out).replace("\n", " ")
+
+
+def test_the_fallback_warning_lands_in_the_attention_box(tmp_path):
+    """Gevraagd algoritme niet uitgevoerd mag niet stilzwijgend gebeuren."""
+    out = tmp_path / "r.pdf"
+    generate_pdf_report(_dual_results(with_corrob=False, fallback=True),
+                        str(out), lang="nl")
+    txt = _pdf_text(out).replace("\n", " ")
+    assert "Dual-sensor scoring gevraagd maar niet uitgevoerd" in txt
+    assert "Pressure Flow" in txt
+
+
+def test_no_fallback_warning_when_the_dual_run_succeeded(tmp_path):
+    out = tmp_path / "r.pdf"
+    generate_pdf_report(_dual_results(fallback=False), str(out), lang="nl")
+    assert "niet uitgevoerd" not in _pdf_text(out).replace("\n", " ")

@@ -2018,6 +2018,27 @@ _PDF_AASM_V3 = {
         "fr": "Hypoxémie nocturne significative (T90 {pct}%)",
         "en": "Significant nocturnal hypoxemia (T90 {pct}%)",
         "de": "Signifikante nächtliche Hypoxämie (T90 {pct}%)"},
+    # Het dual-sensor algoritme is gevraagd maar er was maar een
+    # flowkanaal. De analyse levert wel een resultaat, maar niet het
+    # algoritme dat de gebruiker koos - en dat hoort hij te weten.
+    # Corroboratiekolommen: per eventtype hoeveel apneus door BEIDE
+    # flowsensoren gezien zijn, en hoeveel maar door een. Alleen
+    # getoond wanneer het dual-sensor algoritme gedraaid heeft.
+    "pdf_corrob_both":  {"nl": "beide\nsensoren", "fr": "deux\ncapteurs", "en": "both\nsensors", "de": "beide\nSensoren"},
+    "pdf_corrob_therm": {"nl": "alleen\nthermistor", "fr": "thermistance\nseule", "en": "thermistor\nonly", "de": "nur\nThermistor"},
+    "pdf_corrob_press": {"nl": "alleen\nneusdruk", "fr": "pression\nseule", "en": "pressure\nonly", "de": "nur\nNasendruck"},
+    "pdf_corrob_note":  {
+        "nl": "Apneus zijn op beide flowsensoren gedetecteerd en ontdubbeld op overlap. Een event dat maar \u00e9\u00e9n sensor ziet wordt behouden, niet afgewezen.",
+        "fr": "Les apn\u00e9es sont d\u00e9tect\u00e9es sur les deux capteurs de flux et d\u00e9doublonn\u00e9es par recouvrement. Un \u00e9v\u00e9nement vu par un seul capteur est conserv\u00e9, non rejet\u00e9.",
+        "en": "Apneas are detected on both flow sensors and de-duplicated on overlap. An event seen by only one sensor is kept, not rejected.",
+        "de": "Apnoen werden auf beiden Flusssensoren erkannt und bei \u00dcberlappung entdoppelt. Ein Ereignis, das nur ein Sensor sieht, bleibt erhalten und wird nicht verworfen.",
+    },
+    "pdf_flag_dual_fallback": {
+        "nl": "Dual-sensor scoring gevraagd maar niet uitgevoerd: slechts \u00e9\u00e9n flowkanaal beschikbaar ({channel}). Apneus en hypopnees zijn beide op dat kanaal gescoord.",
+        "fr": "Scoring double capteur demand\u00e9 mais non effectu\u00e9 : un seul canal de flux disponible ({channel}). Apn\u00e9es et hypopn\u00e9es ont toutes deux \u00e9t\u00e9 scor\u00e9es sur ce canal.",
+        "en": "Dual-sensor scoring requested but not performed: only one flow channel available ({channel}). Apneas and hypopneas were both scored on that channel.",
+        "de": "Dual-Sensor-Scoring angefordert, aber nicht durchgef\u00fchrt: nur ein Flusskanal verf\u00fcgbar ({channel}). Apnoen und Hypopnoen wurden beide auf diesem Kanal gescort.",
+    },
     "pdf_flag_arousal": {
         "nl": "Verhoogde arousal-index ({ai}/u)",
         "fr": "Index de micro-éveils élevé ({ai}/h)",

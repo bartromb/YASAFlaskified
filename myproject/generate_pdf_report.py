@@ -293,6 +293,12 @@ def _clinical_flags(rsum, pneumo, ss, asum, lang="nl"):
             flags.append(t("pdf_flag_arousal", lang).format(ai=f"{float(ai):.0f}"))
     except Exception:
         pass
+    # Het dual-sensor algoritme is gevraagd maar niet uitvoerbaar: dat mag
+    # niet stilzwijgend een ander algoritme opleveren dan de gebruiker koos.
+    _dsf = (pneumo.get("meta", {}) or {}).get("dual_sensor_fallback") or {}
+    if _dsf.get("requested") and not _dsf.get("performed"):
+        flags.append(t("pdf_flag_dual_fallback", lang).format(
+            channel=_dsf.get("channel") or "—"))
     return flags
 
 
@@ -1597,36 +1603,63 @@ def generate_pdf_report(results:dict, output_path:str,
         n_mixed = rsum.get("n_mixed",       0) or 0
         n_hyp   = rsum.get("n_hypopnea",    0) or 0
 
+        # Corroboratie: alleen tonen wanneer het dual-sensor algoritme
+        # daadwerkelijk gedraaid heeft. Bij een enkele sensor zouden het drie
+        # lege kolommen zijn.
+        _dsa = resp.get("dual_sensor_apnea") or {}
+        _show_corrob = bool(_dsa)
+
+        def _corrob(ev_type, bucket):
+            """Aantal apneus van dit type in dit corroboratievakje."""
+            return sum(
+                1 for e in resp.get("events", [])
+                if e.get("type") == ev_type
+                and (e.get("corroboration") or "") == bucket
+            )
+
         hdr_conf = [
             t("pdf_param", lang), "n", "/u",
             "★★★\n≥0.85", "★★\n0.60–0.84",
             "~\n0.40–0.59", "?\n<0.40"
         ]
+        if _show_corrob:
+            hdr_conf += [t("pdf_corrob_both", lang),
+                         t("pdf_corrob_therm", lang),
+                         t("pdf_corrob_press", lang)]
         conf_rows = [
             [t("pdf_obstructive",lang),
              str(n_obstr), _v(rsum, "obstructive_index", fmt="{:.1f}"),
              str(_ev_conf("obstructive","high")),
              str(_ev_conf("obstructive","moderate")),
              str(_ev_conf("obstructive","borderline")),
-             str(_ev_conf("obstructive","low"))],
+             str(_ev_conf("obstructive","low"))]
+            + ([str(_corrob("obstructive", "both")),
+                str(_corrob("obstructive", "thermistor_only")),
+                str(_corrob("obstructive", "pressure_only"))] if _show_corrob else []),
             [t("pdf_central",lang),
              str(n_centr), _v(rsum, "central_index", fmt="{:.1f}"),
              str(_ev_conf("central","high")),
              str(_ev_conf("central","moderate")),
              str(_ev_conf("central","borderline")),
-             str(_ev_conf("central","low"))],
+             str(_ev_conf("central","low"))]
+            + ([str(_corrob("central", "both")),
+                str(_corrob("central", "thermistor_only")),
+                str(_corrob("central", "pressure_only"))] if _show_corrob else []),
             [t("pdf_mixed",lang),
              str(n_mixed), _v(rsum, "mixed_index", fmt="{:.1f}"),
              str(_ev_conf("mixed","high")),
              str(_ev_conf("mixed","moderate")),
              str(_ev_conf("mixed","borderline")),
-             str(_ev_conf("mixed","low"))],
+             str(_ev_conf("mixed","low"))]
+            + ([str(_corrob("mixed", "both")),
+                str(_corrob("mixed", "thermistor_only")),
+                str(_corrob("mixed", "pressure_only"))] if _show_corrob else []),
             ["Hypopnea (Rule 1A/B)",
              str(n_hyp), _v(rsum, "hypopnea_index", fmt="{:.1f}"),
              str(_hyp_conf("high")),
              str(_hyp_conf("moderate")),
              str(_hyp_conf("borderline")),
-             str(_hyp_conf("low"))],
+             str(_hyp_conf("low"))] + (["", "", ""] if _show_corrob else []),
         ]
         # Hypopnee-subtypering, alleen wanneer er iets te tonen valt. In een
         # overwegend obstructief onderzoek zijn deze rijen nul en dus ruis;
@@ -1655,14 +1688,20 @@ def generate_pdf_report(results:dict, output_path:str,
                 str(_hyp_sub_conf(_sub, "high")),
                 str(_hyp_sub_conf(_sub, "moderate")),
                 str(_hyp_sub_conf(_sub, "borderline")),
-                str(_hyp_sub_conf(_sub, "low"))])
+                str(_hyp_sub_conf(_sub, "low"))]
+                + (["", "", ""] if _show_corrob else []))
 
         conf_rows.append(
             ["A+H totaal",
              str(rsum.get("n_ah_total","—")),
              _v(rsum,"ahi_total",fmt="{:.1f}"),
-             "", "", "", ""])
-        story.append(KeepTogether([_tbl(hdr_conf, conf_rows, [5.0,1.2,1.5,1.5,1.8,1.8,1.5])]))
+             "", "", "", ""] + (["", "", ""] if _show_corrob else []))
+        _w = ([3.4,1.0,1.1,1.2,1.4,1.4,1.2,1.3,1.5,1.4] if _show_corrob
+              else [5.0,1.2,1.5,1.5,1.8,1.8,1.5])
+        story.append(KeepTogether([_tbl(hdr_conf, conf_rows, _w)]))
+        if _show_corrob:
+            story.append(Paragraph(
+                f"<i>{t('pdf_corrob_note', lang)}</i>", styles["SM"]))
         # De sterrenkoppen tonen kale getallen ("★★★ ≥0.85"), wat als een
         # percentage gelezen wordt. Het is een rangschikking, geen kans:
         # tegen twaalf scorers per opname is de correlatie r = 0,19 en ligt
