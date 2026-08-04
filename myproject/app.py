@@ -1720,59 +1720,29 @@ def _sas_type(ahi, central_ahi):
     return "CSAS" if ahi > 0 and (cai / ahi) >= 0.5 else "OSAS"
 
 
+def _fmt1(value):
+    """Eén decimaal, of '—' als het getal er niet is."""
+    try:
+        return f"{float(value):.1f}"
+    except (TypeError, ValueError):
+        return "—"
+
+
 @app.route("/results")
 @login_required
 def results():
-    """Geschiedenispagina: gefilterd op site-toegang (v0.8.11)."""
-    import glob
-    upload_folder = app.config["UPLOAD_FOLDER"]
-    json_files = sorted(
-        glob.glob(os.path.join(upload_folder, "*_results.json")),
-        key=os.path.getmtime, reverse=True
-    )
+    """Geschiedenis — samengevoegd met het overzicht (v0.18.3).
 
-    # v0.8.11: filter op site-toegang
-    accessible = _filter_studies_for_user(json_files)
+    Er waren twee views op dezelfde studies, met net andere kolommen: de
+    geschiedenis had OAHI, centrale index en het OSAS/CSAS-onderscheid, het
+    overzicht had grade, ODI, PLMi, signaalkwaliteit, archief en het
+    site-filter. Wie een getal zocht moest weten in welke van de twee het
+    stond. Beide kolomsets staan nu in één chronologische lijst.
 
-    studies = []
-    for job_id, data, jf in accessible:
-        # v0.12.0: gearchiveerde studies niet tonen in list-view
-        if _is_archived(job_id):
-            continue
-        try:
-            meta = data.get("meta", {})
-            pat = data.get("patient_info", {})
-            stats = data.get("sleep_statistics", {}).get("stats", {})
-            pneumo = data.get("pneumo", {}).get("respiratory", {}).get("summary", {})
-            mtime = os.path.getmtime(jf)
-            from datetime import datetime as _dt
-            analyse_date = _dt.fromtimestamp(mtime).strftime("%d-%m-%Y %H:%M")
-
-            studies.append({
-                "job_id":       job_id,
-                "patient_name": pat.get("patient_name", "—"),
-                "patient_firstname": pat.get("patient_firstname", ""),
-                "patient_id":   pat.get("patient_id", "—"),
-                "date":         analyse_date,
-                "duration_min": meta.get("duration_min", "—"),
-                "eeg_ch":       meta.get("eeg_channel", "—"),
-                "tst":          stats.get("TST", "—"),
-                "se":           stats.get("SE", "—"),
-                "ahi":          pneumo.get("ahi_total", "—"),
-                "oahi":         pneumo.get("oahi", "—"),
-                "central":      pneumo.get("central_index", "—"),
-                "sas_type":     _sas_type(pneumo.get("ahi_total"),
-                                          pneumo.get("central_index")),
-                "severity":     pneumo.get("severity", "—"),
-                "has_pdf":      os.path.exists(os.path.join(upload_folder, f"{job_id}_rapport.pdf")),
-                "has_excel":    os.path.exists(os.path.join(upload_folder, f"{job_id}_rapport.xlsx")),
-                "has_psg":      os.path.exists(os.path.join(upload_folder, f"{job_id}_rapport.pdf")),
-                "has_edfplus":  os.path.exists(os.path.join(upload_folder, f"{job_id}_scored.edf")),
-            })
-        except Exception as e:
-            logger.warning(f"Kon {jf} niet laden: {e}")
-
-    return render_template("results_history.html", studies=studies)
+    Deze route blijft bestaan als doorverwijzing: er staan bladwijzers naar
+    /results en de sneltoets `g h` gaat hierheen.
+    """
+    return redirect(url_for("dashboard"))
 
 
 @app.route("/download/<path:filename>")
@@ -1964,7 +1934,58 @@ def channel_select(job_id):
         recording_start  = recording_start,
         patient_prefill  = patient_prefill,  # EDF-header patiëntdata
         available_profiles = available_profiles,  # v0.9.0: 8 historische profielen
+        header_ids       = _header_identifiers(filepath),  # v0.18.3: anonimisatie
     )
+
+
+# ═══════════════════════════════════════════════════════════════
+# EDF-ANONIMISATIE — tweede route: na het opladen, hier ter plekke
+# ═══════════════════════════════════════════════════════════════
+# De eerste route zit in de browser (upload.html + static/edf_anonymize.js):
+# daar verlaat de identificeerbare header deze computer nooit. Wie dat niet
+# gekozen heeft, kan het hier alsnog doen — met de velden erbij, zodat hij ziet
+# wat hij weggooit. Beide routes volgen dezelfde regels uit edf_anonymize.py.
+
+def _header_identifiers(filepath: str):
+    """Wat er nu in de EDF-header staat, of None als het niet te lezen is."""
+    try:
+        from edf_anonymize import read_identifiers
+        return read_identifiers(filepath)
+    except Exception as e:  # noqa: BLE001 — de pagina mag hier niet op vallen
+        logger.warning("EDF-header niet te lezen voor anonimisatie: %s", e)
+        return None
+
+
+@app.route("/anonymize/<job_id>", methods=["POST"])
+@login_required
+@job_access_required
+def anonymize_job_edf(job_id):
+    """Herschrijf de EDF-header van een reeds geüploade opname.
+
+    Schrijft 256 bytes op offset 0 en raakt de signaaldata niet aan. Er wordt
+    bewust geen kopie gemaakt: een half geslaagde kopieeractie op een bestand
+    van enkele GB is een groter risico dan deze ene write, en het origineel
+    hoort hier juist NIET te blijven staan.
+    """
+    filepath_bytes = redis_conn.get(f"{job_id}_filepath")
+    if not filepath_bytes:
+        flash(get_translation("session_expired", session.get("lang", "en")), "danger")
+        return redirect(url_for("upload_file"))
+
+    filepath = filepath_bytes.decode("utf-8")
+    study_code = request.form.get("study_code", "")
+    try:
+        from edf_anonymize import anonymize_file_in_place
+        after = anonymize_file_in_place(filepath, study_code=study_code)
+        # Nooit de oude waarden loggen — dat is precies de PHI die weg moet.
+        logger.info("EDF-header geanonimiseerd voor job %s (code=%s)",
+                    job_id, after.patient.split(" ")[0] if after.patient else "?")
+        flash(get_translation("anon_done", session.get("lang", "en")), "success")
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Anonimisatie mislukt voor job %s: %s", job_id, e)
+        flash(get_translation("anon_failed", session.get("lang", "en")), "danger")
+
+    return redirect(url_for("channel_select", job_id=job_id))
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -3043,6 +3064,14 @@ def dashboard():
                 "ahi":               f"{ahi_f:.1f}" if ahi_f is not None else "—",
                 "ahi_sev":           rsum.get("severity", "—"),
                 "sev_cls":           sev_cls,
+                # v0.18.3: uit de losse geschiedenislijst hierheen. Die lijst
+                # toonde dezelfde studies met net andere kolommen, dus je moest
+                # weten in welke van de twee views je moest kijken.
+                "oahi":              _fmt1(rsum.get("oahi")),
+                "central":           _fmt1(rsum.get("central_index")),
+                "sas_type":          _sas_type(rsum.get("ahi_total"),
+                                               rsum.get("central_index")),
+                "eeg_ch":            meta.get("eeg_channel", "—"),
                 "scorer":            scorer or "—",
                 "status":            "klaar",
                 "archived":          show_archived,  # v0.12.0

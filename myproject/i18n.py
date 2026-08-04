@@ -2365,9 +2365,9 @@ _V0102_FRONT = {
     "fp_nav_credits":  {"nl": "Credits", "fr": "Crédits", "en": "Credits", "de": "Credits"},
     "fp_nav_login":    {"nl": "Inloggen", "fr": "Connexion", "en": "Login", "de": "Anmelden"},
 
-    "fp_badge": {"nl": "AASM v3 · geautomatiseerde slaapstadiëring + respiratoire scoring", "fr": "AASM v3 · stadification du sommeil + scoring respiratoire automatisés", "en": "AASM v3 · automated sleep staging + respiratory scoring", "de": "AASM v3 · automatisierte Schlafstadien- + Atmungs-Scoring"},
-    "fp_hero_title_1": {"nl": "Slaapanalyse,", "fr": "Analyse du sommeil,", "en": "Sleep Analysis,", "de": "Schlafanalyse,"},
-    "fp_hero_title_2": {"nl": "Heruitgevonden", "fr": "Réinventée", "en": "Reimagined", "de": "Neu gedacht"},
+    "fp_badge": {"nl": "AASM v3 · geautomatiseerde slaapstadiëring + respiratoire scoring · screening, geen diagnose", "fr": "AASM v3 · stadification du sommeil + scoring respiratoire automatisés", "en": "AASM v3 · automated sleep staging + respiratory scoring · screening, not diagnosis", "de": "AASM v3 · automatisierte Schlafstadien- + Atmungs-Scoring · Screening, keine Diagnose"},
+    "fp_hero_title_1": {"nl": "Automatische slaapanalyse,", "fr": "Analyse du sommeil automatisée,", "en": "Automated sleep analysis,", "de": "Automatisierte Schlafanalyse,"},
+    "fp_hero_title_2": {"nl": "door de arts nagekeken", "fr": "vérifiée par le médecin", "en": "verified by the physician", "de": "vom Arzt überprüft"},
     "fp_hero_sub": {
         "nl": "YASAFlaskified brengt de YASA slaapstadiëringsmotor naar een klinisch webplatform — upload uw EDF, verkrijg directe hypnogrammen, spindle- en slow-wave-rapporten en volledige statistische samenvattingen.",
         "fr": "YASAFlaskified apporte la puissance du moteur de stadification du sommeil YASA dans une plateforme web de niveau clinique — téléchargez votre EDF, obtenez des hypnogrammes immédiats, des rapports de spindles et d'ondes lentes, et des résumés statistiques complets.",
@@ -2387,10 +2387,10 @@ _V0102_FRONT = {
     "fp_y_tag":   {"nl": "// Over de engine", "fr": "// À propos du moteur", "en": "// About the engine", "de": "// Über die Engine"},
     "fp_y_title": {"nl": "Wat is YASA?", "fr": "Qu'est-ce que YASA ?", "en": "What is YASA?", "de": "Was ist YASA?"},
     "fp_y_lead": {
-        "nl": "YASA (Yet Another Spindle Algorithm) is een open-source Python-bibliotheek voor geautomatiseerde analyse van polysomnografische opnames, ontwikkeld door Raphael Vallat. Ze levert state-of-the-art, machine-learning-gebaseerde slaapstadiëring rechtstreeks vanuit ruwe EEG-signalen.",
-        "fr": "YASA (Yet Another Spindle Algorithm) est une bibliothèque Python open source pour l'analyse automatisée d'enregistrements polysomnographiques, développée par Raphael Vallat. Elle fournit une stadification du sommeil à la pointe, basée sur l'apprentissage automatique, directement à partir des signaux EEG bruts.",
-        "en": "YASA (Yet Another Spindle Algorithm) is an open-source Python library for automated analysis of polysomnographic recordings, developed by Raphael Vallat. It delivers state-of-the-art, machine-learning–powered sleep staging directly from raw EEG signals.",
-        "de": "YASA (Yet Another Spindle Algorithm) ist eine Open-Source-Python-Bibliothek zur automatisierten Analyse polysomnographischer Aufzeichnungen, entwickelt von Raphael Vallat. Sie liefert hochmoderne, auf maschinellem Lernen basierende Schlafstadien-Erkennung direkt aus EEG-Rohdaten.",
+        "nl": "YASA (Yet Another Spindle Algorithm) is een open-source Python-bibliotheek voor geautomatiseerde analyse van polysomnografische opnames, ontwikkeld door Raphael Vallat. Ze stadieert slaap met een machine-learning-model rechtstreeks vanuit ruwe EEG-signalen.",
+        "fr": "YASA (Yet Another Spindle Algorithm) est une bibliothèque Python open source pour l'analyse automatisée d'enregistrements polysomnographiques, développée par Raphael Vallat. Elle stadifie le sommeil à l'aide d'un modèle d'apprentissage automatique, directement à partir des signaux EEG bruts.",
+        "en": "YASA (Yet Another Spindle Algorithm) is an open-source Python library for automated analysis of polysomnographic recordings, developed by Raphael Vallat. It stages sleep with a machine-learning model directly from raw EEG signals.",
+        "de": "YASA (Yet Another Spindle Algorithm) ist eine Open-Source-Python-Bibliothek zur automatisierten Analyse polysomnographischer Aufzeichnungen, entwickelt von Raphael Vallat. Sie erkennt Schlafstadien mit einem Machine-Learning-Modell direkt aus EEG-Rohdaten.",
     },
     "fp_y_feat1_title": {"nl": "Geautomatiseerde slaapstadiëring", "fr": "Stadification automatique du sommeil", "en": "Automated sleep staging", "de": "Automatisierte Schlafstadien-Erkennung"},
     "fp_y_feat1_body":  {"nl": "— classificeert epochs van 30 s in Wake, N1, N2, N3 en REM met een gradient-boosting-classifier getraind op duizenden PSG-opnames.", "fr": "— classe les époques de 30 s en Wake, N1, N2, N3 et REM à l'aide d'un classifieur gradient-boosting entraîné sur des milliers d'enregistrements PSG.", "en": "— classifies 30-second epochs into Wake, N1, N2, N3, and REM using a gradient-boosting classifier trained on thousands of PSG recordings.", "de": "— klassifiziert 30-Sekunden-Epochen in Wake, N1, N2, N3 und REM mit einem Gradient-Boosting-Klassifikator, der auf Tausenden von PSG-Aufzeichnungen trainiert wurde."},
@@ -2409,10 +2409,10 @@ _V0102_FRONT = {
     "fp_a_tag":   {"nl": "// De webapplicatie", "fr": "// L'application web", "en": "// The web application", "de": "// Die Webanwendung"},
     "fp_a_title": {"nl": "Wat is YASAFlaskified?", "fr": "Qu'est-ce que YASAFlaskified ?", "en": "What is YASAFlaskified?", "de": "Was ist YASAFlaskified?"},
     "fp_a_lead": {
-        "nl": "YASAFlaskified verpakt de YASA-engine in een productieklare Flask-applicatie, zodat clinici en onderzoekers volledige slaapanalyses kunnen draaien via een browser — geen Python-kennis vereist. Jobs lopen asynchroon, resultaten worden opgeslagen en rapporten worden binnen seconden geleverd.",
-        "fr": "YASAFlaskified encapsule le moteur YASA dans une application Flask de niveau production, permettant aux cliniciens et chercheurs d'exécuter des analyses complètes du sommeil via un navigateur — aucune connaissance de Python requise. Les tâches s'exécutent de façon asynchrone, les résultats sont stockés et les rapports sont livrés en quelques secondes.",
-        "en": "YASAFlaskified wraps the YASA engine in a production-grade Flask application, letting clinicians and researchers run full sleep analyses through a browser — no Python knowledge required. Jobs run asynchronously, results are stored, and reports are delivered in seconds.",
-        "de": "YASAFlaskified verpackt die YASA-Engine in eine produktionsreife Flask-Anwendung, sodass Klinikerinnen und Forschende vollständige Schlafanalysen über den Browser ausführen können — keine Python-Kenntnisse erforderlich. Jobs laufen asynchron, Ergebnisse werden gespeichert und Berichte stehen in Sekunden bereit.",
+        "nl": "YASAFlaskified draait de YASA-engine achter een Flask-applicatie, zodat clinici en onderzoekers een slaapanalyse via de browser kunnen starten zonder Python te schrijven. Jobs lopen asynchroon; een volledige opname is doorgaans in enkele minuten klaar, met PDF- en Excel-rapport. De uitkomst is een voorstel dat door een arts nagekeken moet worden.",
+        "fr": "YASAFlaskified fait tourner le moteur YASA derrière une application Flask, permettant aux cliniciens et chercheurs de lancer une analyse via le navigateur sans écrire de Python. Les tâches sont asynchrones ; un enregistrement complet est généralement prêt en quelques minutes, avec rapport PDF et Excel. Le résultat est une proposition qui doit être vérifiée par un médecin.",
+        "en": "YASAFlaskified runs the YASA engine behind a Flask application, so clinicians and researchers can start an analysis from the browser without writing Python. Jobs run asynchronously; a full recording is usually ready in a few minutes, with a PDF and Excel report. The output is a proposal that a physician must review.",
+        "de": "YASAFlaskified betreibt die YASA-Engine hinter einer Flask-Anwendung, sodass Klinikerinnen und Forschende eine Analyse im Browser starten können, ohne Python zu schreiben. Jobs laufen asynchron; eine vollständige Aufnahme ist meist in wenigen Minuten fertig, mit PDF- und Excel-Bericht. Das Ergebnis ist ein Vorschlag, der ärztlich geprüft werden muss.",
     },
     "fp_a_c1_title": {"nl": "EDF-upload", "fr": "Téléversement EDF", "en": "EDF Upload", "de": "EDF-Upload"},
     "fp_a_c1_body":  {"nl": "Drag-and-drop of selecteer een EDF-bestand uit uw PSG-systeem. De app valideert de opname, extraheert beschikbare kanalen en plaatst de job onmiddellijk in de wachtrij.", "fr": "Glissez-déposez ou sélectionnez un fichier EDF de votre système PSG. L'application valide l'enregistrement, extrait les canaux disponibles et met immédiatement la tâche en file d'attente.", "en": "Drag-and-drop or select any EDF file from your PSG system. The app validates the recording, extracts available channels, and queues the job immediately.", "de": "Per Drag-and-Drop oder Auswahl einer EDF-Datei aus Ihrem PSG-System. Die App validiert die Aufnahme, extrahiert die verfügbaren Kanäle und stellt den Job sofort in die Warteschlange."},
@@ -2647,6 +2647,33 @@ _V0102_PDF = {
         "en": "<i>Note: no apnea was corroborated by the thermistor — all apneas come from nasal pressure. Review the thermistor trace visually if in doubt.</i>",
         "de": "<i>Hinweis: keine Apnoe wurde vom Thermistor bestätigt — alle Apnoen stammen vom Nasendruck. Im Zweifel das Thermistor-Signal visuell prüfen.</i>",
     },
+    # Kolommen die uit de losse geschiedenislijst naar de ene lijst zijn
+    # meegekomen (v0.18.3).
+    "col_oahi_tooltip": {"nl": "Obstructieve apneu-hypopneu-index: obstructieve en gemengde apneus plus obstructieve hypopneeën per uur slaap.", "fr": "Index d'apnées-hypopnées obstructives : apnées obstructives et mixtes plus hypopnées obstructives par heure de sommeil.", "en": "Obstructive apnea-hypopnea index: obstructive and mixed apneas plus obstructive hypopneas per hour of sleep.", "de": "Obstruktiver Apnoe-Hypopnoe-Index: obstruktive und gemischte Apnoen plus obstruktive Hypopnoen pro Stunde Schlaf."},
+    "col_type":         {"nl": "Type", "fr": "Type", "en": "Type", "de": "Typ"},
+    "col_type_tooltip": {"nl": "CSAS wanneer de helft of meer van de apneus centraal is, anders OSAS.", "fr": "SACS lorsque la moitié ou plus des apnées sont centrales, sinon SAOS.", "en": "CSAS when half or more of the apneas are central, otherwise OSAS.", "de": "CSAS, wenn die Hälfte oder mehr der Apnoen zentral sind, sonst OSAS."},
+    # ── EDF-anonimisatie: twee routes, en het verschil is waar de
+    # identificeerbare header terechtkomt.
+    "anon_title":        {"nl": "Anonimisatie", "fr": "Anonymisation", "en": "Anonymisation", "de": "Anonymisierung"},
+    "anon_client":       {"nl": "Anoniem opladen", "fr": "Téléverser anonymisé", "en": "Upload anonymised", "de": "Anonymisiert hochladen"},
+    "anon_client_desc":  {"nl": "De header wordt in uw browser herschreven vóór verzenden. Naam, geboortedatum, patiënt-ID, ziekenhuis en technicus verlaten deze computer niet. De signaaldata blijft ongewijzigd.", "fr": "L'en-tête est réécrit dans votre navigateur avant l'envoi. Nom, date de naissance, identifiant, hôpital et technicien ne quittent pas cet ordinateur. Les données du signal restent inchangées.", "en": "The header is rewritten in your browser before sending. Name, date of birth, patient ID, hospital and technician never leave this computer. The signal data is unchanged.", "de": "Der Header wird im Browser vor dem Senden überschrieben. Name, Geburtsdatum, Patienten-ID, Klinik und Techniker verlassen diesen Rechner nicht. Die Signaldaten bleiben unverändert."},
+    "anon_server":       {"nl": "Opladen zoals het is, daarna anonimiseren", "fr": "Téléverser tel quel, anonymiser ensuite", "en": "Upload as is, anonymise afterwards", "de": "Unverändert hochladen, danach anonymisieren"},
+    "anon_server_desc":  {"nl": "Het bestand komt ongewijzigd op de server; op de volgende pagina ziet u de headervelden en kunt u ze daar wissen. Kies dit alleen wanneer u de header eerst wilt kunnen nakijken.", "fr": "Le fichier arrive inchangé sur le serveur ; à la page suivante vous voyez les champs d'en-tête et pouvez les effacer. À ne choisir que si vous devez d'abord vérifier l'en-tête.", "en": "The file reaches the server unchanged; on the next page you see the header fields and can clear them there. Choose this only when you need to inspect the header first.", "de": "Die Datei erreicht den Server unverändert; auf der nächsten Seite sehen Sie die Header-Felder und können sie dort löschen. Nur wählen, wenn Sie den Header zuerst prüfen müssen."},
+    "anon_code_label":   {"nl": "Studienummer of label (optioneel)", "fr": "Numéro d'étude ou libellé (facultatif)", "en": "Study number or label (optional)", "de": "Studiennummer oder Label (optional)"},
+    "anon_code_placeholder": {"nl": "bv. AZORG-2026-014", "fr": "p. ex. AZORG-2026-014", "en": "e.g. AZORG-2026-014", "de": "z. B. AZORG-2026-014"},
+    "anon_code_hint":    {"nl": "Komt in het bestand te staan in plaats van de patiëntgegevens. Gebruik géén naam of geboortedatum. Laat leeg voor een automatische code die voor dezelfde opname altijd hetzelfde is.", "fr": "Sera inscrit dans le fichier à la place des données patient. N'utilisez ni nom ni date de naissance. Laissez vide pour un code automatique, identique pour un même enregistrement.", "en": "Goes into the file in place of the patient data. Do not use a name or date of birth. Leave empty for an automatic code that is always the same for the same recording.", "de": "Steht in der Datei anstelle der Patientendaten. Verwenden Sie weder Name noch Geburtsdatum. Leer lassen für einen automatischen Code, der für dieselbe Aufnahme stets gleich ist."},
+    "anon_before":       {"nl": "Stond in de header:", "fr": "Dans l'en-tête :", "en": "Was in the header:", "de": "Stand im Header:"},
+    "anon_after":        {"nl": "Wordt verzonden als:", "fr": "Sera envoyé comme :", "en": "Will be sent as:", "de": "Wird gesendet als:"},
+    "anon_current_header": {"nl": "Nu in de header:", "fr": "Actuellement dans l'en-tête :", "en": "Currently in the header:", "de": "Aktuell im Header:"},
+    "anon_failed":       {"nl": "Anonimisatie mislukt — er is niets verzonden of gewijzigd", "fr": "Échec de l'anonymisation — rien n'a été envoyé ni modifié", "en": "Anonymisation failed — nothing was sent or changed", "de": "Anonymisierung fehlgeschlagen — nichts wurde gesendet oder geändert"},
+    "anon_server_pending": {"nl": "Wordt ongewijzigd opgeladen; anonimiseren kan op de volgende pagina", "fr": "Téléversé tel quel ; anonymisation possible à la page suivante", "en": "Uploaded unchanged; you can anonymise on the next page", "de": "Unverändert hochgeladen; Anonymisierung auf der nächsten Seite möglich"},
+    "anon_panel_title":  {"nl": "EDF-header", "fr": "En-tête EDF", "en": "EDF header", "de": "EDF-Header"},
+    "anon_present":      {"nl": "identificeerbaar", "fr": "identifiable", "en": "identifiable", "de": "identifizierbar"},
+    "anon_clean":        {"nl": "anoniem", "fr": "anonyme", "en": "anonymous", "de": "anonym"},
+    "anon_clean_desc":   {"nl": "Deze header bevat geen naam, geboortedatum of patiënt-ID meer.", "fr": "Cet en-tête ne contient plus de nom, date de naissance ni identifiant.", "en": "This header no longer contains a name, date of birth or patient ID.", "de": "Dieser Header enthält keinen Namen, kein Geburtsdatum und keine Patienten-ID mehr."},
+    "anon_do_now":       {"nl": "Anonimiseer dit bestand nu", "fr": "Anonymiser ce fichier maintenant", "en": "Anonymise this file now", "de": "Diese Datei jetzt anonymisieren"},
+    "anon_irreversible": {"nl": "Dit herschrijft het bestand op de server en is niet terug te draaien.", "fr": "Ceci réécrit le fichier sur le serveur et est irréversible.", "en": "This rewrites the file on the server and cannot be undone.", "de": "Dies überschreibt die Datei auf dem Server und ist nicht rückgängig zu machen."},
+    "anon_done":         {"nl": "EDF-header geanonimiseerd. De signaaldata is ongewijzigd.", "fr": "En-tête EDF anonymisé. Les données du signal sont inchangées.", "en": "EDF header anonymised. The signal data is unchanged.", "de": "EDF-Header anonymisiert. Die Signaldaten sind unverändert."},
     # Herkomstblok: welk kanaal voedde welke analyse. Zonder dit beschrijft het
     # rapport de methode in plaats van de uitvoering, en zijn twee runs van
     # dezelfde nacht niet te vergelijken zonder de logs erbij.
@@ -2903,6 +2930,15 @@ _V0110_FRONT_LIGHT = {
         "en": "Clinical sleep analysis from a single EDF file — automated staging, respiratory events, signal quality, and PDF report.",
         "de": "Klinische Schlafanalyse aus einer einzigen EDF-Datei — automatisches Staging, respiratorische Ereignisse, Signalqualität und PDF-Bericht.",
     },
+    # De beperkingen horen op de eerste pagina te staan, niet alleen in de
+    # disclaimer onderaan. Voor een extern onderzoeker is dit bovendien
+    # geloofwaardiger dan een superlatief.
+    "fp_hero_limits": {
+        "nl": "Screeningsinstrument en second opinion. Geen medisch hulpmiddel, geen diagnose: elke uitkomst is een voorstel dat door een arts nagekeken moet worden.",
+        "fr": "Outil de dépistage et second avis. Ni dispositif médical, ni diagnostic : chaque résultat est une proposition qui doit être vérifiée par un médecin.",
+        "en": "A screening tool and second opinion. Not a medical device and not a diagnosis: every result is a proposal that a physician must review.",
+        "de": "Screening-Instrument und Zweitmeinung. Kein Medizinprodukt und keine Diagnose: Jedes Ergebnis ist ein Vorschlag, der ärztlich geprüft werden muss.",
+    },
     "fp_login_card_title": {
         "nl": "Aanmelden",
         "fr": "Connexion",
@@ -2931,8 +2967,8 @@ _V0110_FRONT_LIGHT = {
     # New tech / pipeline stats for the hero panel
     "fp_stat_languages":   {"nl": "4 talen UI + rapport", "fr": "4 langues UI + rapport",
                             "en": "4 languages UI + report", "de": "4 Sprachen UI + Bericht"},
-    "fp_stat_aasm":        {"nl": "AASM v3-compliant scoring", "fr": "Scoring conforme AASM v3",
-                            "en": "AASM v3-compliant scoring",  "de": "AASM-v3-konformes Scoring"},
+    "fp_stat_aasm":        {"nl": "Scoring volgens AASM v3", "fr": "Scoring selon l'AASM v3",
+                            "en": "Scored to AASM v3",  "de": "Scoring nach AASM v3"},
     "fp_stat_pipeline":    {"nl": "12-kanaals pipeline", "fr": "Pipeline 12 canaux",
                             "en": "12-channel pipeline", "de": "12-Kanal-Pipeline"},
 

@@ -1,5 +1,74 @@
 # Changelog — YASAFlaskified
 
+## v0.18.3 — 2026-08-04  *(platform en rapport — punt 3 uit het backlog)*
+
+### EDF anoniem verwerken via de GUI — twee routes
+
+Het verschil tussen de twee zit in waar de identificeerbare header terechtkomt.
+
+**Anoniem opladen.** De browser herschrijft de header vóór verzenden
+(`static/edf_anonymize.js`). Naam, geboortedatum, patiënt-ID, ziekenhuis en
+technicus verlaten die computer niet. De signaaldata blijft ongemoeid: er wordt
+een Blob gebouwd van `[nieuwe header, file.slice(256)]`, en die slice is een
+luie verwijzing — er wordt niets van de gigabytes gekopieerd. De bestandsnaam
+gaat mee, want die draagt in de praktijk vaker een naam dan de header.
+
+**Anonimiseren na het opladen.** Op de kanaalkeuzepagina staat een paneel met
+de headervelden zoals ze nu zijn, en een knop die ze ter plekke wist
+(`POST /anonymize/<job_id>`). Wie ziet dat de naam van zijn patiënt in het
+bestand staat, doet het de volgende keer vooraf.
+
+Beide routes laten een eigen **studienummer of label** toe. Leeg gelaten valt
+het terug op een deterministisch pseudoniem, zodat twee analyses van dezelfde
+nacht koppelbaar blijven zonder de naam terug te halen. Het patiëntnummerveld op
+de kanaalkeuzepagina leest daarna gewoon die code uit de header.
+
+Twee implementaties van dezelfde regels is een uitnodiging om uiteen te lopen,
+en het gevolg zou onzichtbaar zijn: dezelfde opname zou via de twee routes een
+andere code krijgen en de analyses zouden niet meer aan elkaar te koppelen zijn,
+terwijl beide resultaten op zichzelf correct ogen. Daarom draait er een test die
+het echte JavaScript in Node uitvoert en de uitvoer veld voor veld met Python
+vergelijkt. Zonder Node wordt die overgeslagen — met een skip-reden die zegt dat
+de gelijkheid dan onbewaakt is.
+
+De harde eis staat apart vastgelegd: de header is een blok van vaste lengte, en
+één byte erbij verschuift elke sample-offset in het bestand.
+
+### Landingspagina zonder superlatieven
+
+"Heruitgevonden" is een claim die niemand kan nakijken. De titel zegt nu wat het
+doet en meteen de belangrijkste beperking: *Automatische slaapanalyse, door de
+arts nagekeken*. "AASM v3-compliant" — een conformiteitsclaim die hier niemand
+heeft getoetst — werd "scoring volgens AASM v3". "State-of-the-art" verdween uit
+de YASA-beschrijving. En "rapporten binnen seconden" was gewoon onjuist: een
+volledige PSG-analyse duurt minuten.
+
+Nieuw boven de vouw, niet alleen in de disclaimer onderaan: screeningsinstrument
+en second opinion, geen medisch hulpmiddel, geen diagnose — elke uitkomst is een
+voorstel dat een arts moet nakijken. Voor een externe onderzoeker is dat
+bovendien geloofwaardiger dan een superlatief.
+
+### Geschiedenis en overzicht samengevoegd
+
+Er waren twee views op dezelfde studies met net andere kolommen: de geschiedenis
+had OAHI, centrale index en het OSAS/CSAS-onderscheid, het overzicht had grade,
+ODI, PLMi, signaalkwaliteit, archief en het site-filter. Wie een getal zocht
+moest weten in welke van de twee het stond.
+
+Eén chronologische lijst nu, met beide kolomsets. `/results` blijft bestaan als
+doorverwijzing — er staan bladwijzers naar die URL en de sneltoets `g h` gaat
+erheen — en de navigatie heeft één ingang in plaats van twee. `results_history.html`
+en de bijbehorende directory-scan zijn verwijderd; zodra de `Job`-tabel de scan
+vervangt, is deze lijst een query.
+
+### BMI
+
+Rekent zichzelf uit lengte en gewicht, en wijkt voor een handmatige invoer.
+Buiten 10–80 kg/m² blijft het veld leeg — dan is er vrijwel zeker een eenheid
+verwisseld.
+
+**45 nieuwe tests, 191 groen.**
+
 ## v0.18.2 — 2026-08-04  *(het rapport zei de methode, niet de uitvoering)*
 
 `psgscoring[ml]` 0.14.1 → **0.14.2**.

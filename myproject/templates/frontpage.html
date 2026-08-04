@@ -88,7 +88,12 @@
   .hero-left h1 em { font-style: italic; color: var(--accent); }
   .hero-tag {
     font-size: 1.05rem; color: var(--text-soft);
+    max-width: 540px; margin: 0 0 .9rem;
+  }
+  .hero-limits {
+    font-size: .88rem; color: var(--text-soft); opacity: .85;
     max-width: 540px; margin: 0 0 2rem;
+    padding-left: .8rem; border-left: 2px solid rgba(127,127,127,.35);
   }
   .hero-stats {
     display: flex; gap: 1.5rem; flex-wrap: wrap; margin: 0 0 1rem;
@@ -454,6 +459,8 @@
     <div class="section-tag">{{ t('fp_badge') }}</div>
     <h1>{{ t('fp_hero_title_1') }}<br><em>{{ t('fp_hero_title_2') }}</em></h1>
     <p class="hero-tag">{{ t('fp_hero_tagline') }}</p>
+    {# De beperkingen boven de vouw, niet alleen in de disclaimer onderaan. #}
+    <p class="hero-limits">{{ t('fp_hero_limits') }}</p>
     <div class="hero-stats">
       <span class="stat-pill"><span class="dot"></span>{{ t('fp_stat_aasm') }}</span>
       <span class="stat-pill green"><span class="dot"></span>{{ t('fp_stat_pipeline') }}</span>

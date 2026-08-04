@@ -90,9 +90,11 @@
             <a class="nav-link {% if request.endpoint == 'upload_file' %}active{% endif %}"
                href="{{ url_for('upload_file') }}"><i class="bi bi-upload me-1"></i>{{ t('upload') }}</a>
           </li>
+          {# v0.18.3: "Geschiedenis" en "Overzicht" waren twee views op dezelfde
+             studies, met net andere kolommen. Eén ingang, één lijst. #}
           <li class="nav-item">
-            <a class="nav-link {% if request.endpoint == 'results' %}active{% endif %}"
-               href="/results"><i class="bi bi-clock-history me-1"></i>{{ t('history') }}</a>
+            <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}"
+               href="{{ url_for('dashboard') }}"><i class="bi bi-clock-history me-1"></i>{{ t('history') }}</a>
           </li>
         </ul>
         <ul class="navbar-nav ms-auto">
@@ -126,13 +128,9 @@
           </li>
           {# Gebruikersmenu #}
           {% if current_user.is_authenticated %}
-              {% if current_user.is_site_manager %}
-              <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">
-                  <i class="bi bi-grid-3x3-gap me-1"></i>{{ t('dashboard') }}
-                </a>
-              </li>
-              {% endif %}
+              {# De aparte "Overzicht"-ingang wees sinds v0.18.3 naar dezelfde
+                 lijst als "Geschiedenis" hierboven; twee knoppen naar één
+                 pagina is geen keuze maar een raadsel. #}
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
               <i class="bi bi-person-circle me-1"></i>{{ current_user.username }}

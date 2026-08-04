@@ -156,6 +156,47 @@ body { font-family: var(--sans); background: #f0f4f8; }
 .file-badge.visible { display: inline-flex; }
 .file-badge-icon { color: var(--pulse); font-size: 1rem; }
 
+/* ── ANONIMISATIEKEUZE ── */
+.anon-choice {
+  margin-top: 1.5rem;
+  border: 1px solid rgba(0,0,0,.10);
+  border-radius: 10px;
+  padding: .9rem 1rem;
+}
+.anon-choice__head { margin-bottom: .55rem; }
+.anon-choice__title { font-weight: 600; font-size: .92rem; }
+.anon-opt {
+  display: flex;
+  gap: .6rem;
+  align-items: flex-start;
+  padding: .4rem 0;
+  cursor: pointer;
+}
+.anon-opt input { margin-top: .25rem; flex: 0 0 auto; }
+.anon-opt strong { display: block; font-size: .88rem; font-weight: 600; }
+.anon-opt small { display: block; font-size: .78rem; opacity: .72; line-height: 1.35; }
+.anon-code { margin: .5rem 0 .2rem; }
+.anon-code__label { display: block; font-size: .82rem; font-weight: 600; margin-bottom: .25rem; }
+.anon-code__input {
+  width: 100%;
+  padding: .4rem .6rem;
+  border: 1px solid rgba(0,0,0,.18);
+  border-radius: 7px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .85rem;
+}
+.anon-code__hint { display: block; font-size: .75rem; opacity: .7; margin-top: .25rem; }
+.anon-preview {
+  margin-top: .6rem;
+  padding: .55rem .7rem;
+  border-radius: 8px;
+  background: rgba(0,0,0,.04);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .74rem;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
 /* ── PROGRESS AREA ── */
 .progress-area {
   display: none;
@@ -382,6 +423,46 @@ body { font-family: var(--sans); background: #f0f4f8; }
         <div class="edf-pill">EOG: <span id="metaEOG">—</span></div>
       </div>
 
+      {# ── Anonimisatie ──────────────────────────────────────────────
+         Twee routes, en het verschil is waar de identificeerbare header
+         terechtkomt. Vóór verzenden: hij verlaat deze computer nooit. Na het
+         opladen: hij staat even op de server en de gebruiker wist hem daar
+         zelf, op de volgende pagina, met de velden erbij zodat hij ziet wat
+         hij weggooit. De eerste is veiliger, de tweede is soms nodig — bij
+         een montage waar de kanaalnamen pas ná het parsen te controleren
+         zijn, of wanneer de header nog geverifieerd moet worden. #}
+      <div class="anon-choice" id="anonChoice">
+        <div class="anon-choice__head">
+          <span class="anon-choice__title">{{ t('anon_title') }}</span>
+        </div>
+        <label class="anon-opt">
+          <input type="radio" name="anonMode" value="client" checked>
+          <span>
+            <strong>{{ t('anon_client') }}</strong>
+            <small>{{ t('anon_client_desc') }}</small>
+          </span>
+        </label>
+        <label class="anon-opt">
+          <input type="radio" name="anonMode" value="server">
+          <span>
+            <strong>{{ t('anon_server') }}</strong>
+            <small>{{ t('anon_server_desc') }}</small>
+          </span>
+        </label>
+        {# Een eigen nummer is het gebruikelijke geval bij een studie: de
+           koppeling naar de patiënt hoort in het studieregister, niet in het
+           bestand. Leeg laten geeft een afgeleide code die voor dezelfde
+           opname altijd hetzelfde is, zodat twee analyses koppelbaar blijven. #}
+        <div class="anon-code" id="anonCodeRow">
+          <label class="anon-code__label" for="anonCode">{{ t('anon_code_label') }}</label>
+          <input type="text" id="anonCode" class="anon-code__input" maxlength="40"
+                 autocomplete="off" spellcheck="false"
+                 placeholder="{{ t('anon_code_placeholder') }}">
+          <small class="anon-code__hint">{{ t('anon_code_hint') }}</small>
+        </div>
+        <div class="anon-preview" id="anonPreview" hidden></div>
+      </div>
+
       {# Voortgang #}
       <div class="progress-area" id="progressArea">
         <div class="progress-label">
@@ -438,6 +519,9 @@ body { font-family: var(--sans); background: #f0f4f8; }
   </div>{# /upload-card #}
 </div>
 
+{# Spiegel van myproject/edf_anonymize.py — dezelfde velden en hetzelfde
+   pseudoniem, zodat beide routes op dezelfde code uitkomen. #}
+<script src="{{ url_for('static', filename='edf_anonymize.js') }}"></script>
 <script>
 // ═══════════════════════════════════════════════════════
 // CONFIGURATIE
@@ -511,6 +595,7 @@ function setFile(file) {
 
   uploadBtn.disabled = false;
   log(`Bestand geselecteerd: ${file.name} (${mbStr} MB)`, 'log-ok');
+  previewSelectedHeader();
 }
 
 edfInput.addEventListener('change', () => {
@@ -554,6 +639,46 @@ function getCsrfToken() {
 }
 
 // ═══════════════════════════════════════════════════════
+// ANONIMISATIE
+// ═══════════════════════════════════════════════════════
+// Tonen wat er weggaat, niet alleen dát er iets weggaat. Wie ziet dat de naam
+// van zijn patiënt in het bestand stond, doet het de volgende keer vooraf.
+function showAnonPreview(before, after, filename) {
+  const box = document.getElementById('anonPreview');
+  if (!box) return;
+  const esc = (s) => String(s || '—').replace(/[<>&]/g, (c) =>
+    ({'<': '&lt;', '>': '&gt;', '&': '&amp;'}[c]));
+  box.innerHTML =
+    `<div><b>{{ t('anon_before') }}</b></div>` +
+    `<div>patiënt : ${esc(before.patient)}</div>` +
+    `<div>opname&nbsp;&nbsp;: ${esc(before.recording)}</div>` +
+    `<div style="margin-top:.4rem"><b>{{ t('anon_after') }}</b></div>` +
+    `<div>patiënt : ${esc(after.patient)}</div>` +
+    `<div>opname&nbsp;&nbsp;: ${esc(after.recording)}</div>` +
+    `<div>bestand : ${esc(filename)}</div>`;
+  box.hidden = false;
+}
+
+// Zodra er een bestand gekozen is: laten zien wat er in de header staat.
+// Dat is het moment waarop de vraag "moet dit weg?" zichzelf beantwoordt.
+async function previewSelectedHeader() {
+  const box = document.getElementById('anonPreview');
+  if (!selectedFile || !box) return;
+  try {
+    const ids = await EdfAnonymize.readIdentifiers(selectedFile);
+    const esc = (s) => String(s || '—').replace(/[<>&]/g, (c) =>
+      ({'<': '&lt;', '>': '&gt;', '&': '&amp;'}[c]));
+    box.innerHTML =
+      `<div><b>{{ t('anon_current_header') }}</b></div>` +
+      `<div>patiënt : ${esc(ids.patient)}</div>` +
+      `<div>opname&nbsp;&nbsp;: ${esc(ids.recording)}</div>`;
+    box.hidden = false;
+  } catch (err) {
+    box.hidden = true;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
 // HOOFD UPLOAD FLOW
 // ═══════════════════════════════════════════════════════
 async function startUpload() {
@@ -565,7 +690,31 @@ async function startUpload() {
   uploadBtn.classList.add('loading');
   btnText.textContent = '{{ t("upload_btn_uploading") }}';
 
-  const file         = selectedFile;
+  // ── STAP 0: eventueel anonimiseren vóór verzenden ────
+  // De header wordt hier herschreven en pas daarna gesneden, dus de
+  // identificeerbare versie verlaat deze computer nooit. De rest van het
+  // bestand is een luie slice: er wordt niets van de gigabytes gekopieerd.
+  let source   = selectedFile;              // File of Blob
+  let sendName = selectedFile.name;
+  const anonMode = (document.querySelector('input[name="anonMode"]:checked') || {}).value;
+  if (anonMode === 'client') {
+    try {
+      const code = (document.getElementById('anonCode') || {}).value || '';
+      const res  = await EdfAnonymize.anonymizeFile(selectedFile, { studyCode: code });
+      source   = res.blob;
+      // De naam draagt in de praktijk vaker een naam dan de header.
+      sendName = EdfAnonymize.safeFilename(res.after.patient.split(/\s+/)[0]);
+      showAnonPreview(res.before, res.after, sendName);
+      log(`Header geanonimiseerd vóór verzenden → ${sendName}`, 'log-ok');
+    } catch (err) {
+      log(`❌ {{ t('anon_failed') }}: ${err.message || err}`, 'log-err');
+      resetUpload(); return;
+    }
+  } else {
+    log('{{ t("anon_server_pending") }}');
+  }
+
+  const file         = source;
   const fileId       = crypto.randomUUID ? crypto.randomUUID()
                        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const totalChunks  = Math.ceil(file.size / CHUNK_SIZE);
@@ -583,8 +732,8 @@ async function startUpload() {
     fd.append('file_id',           fileId);
     fd.append('chunk_index',       i);
     fd.append('total_chunks',      totalChunks);
-    fd.append('original_filename', file.name);
-    fd.append('edf_file',          chunk, file.name);
+    fd.append('original_filename', sendName);
+    fd.append('edf_file',          chunk, sendName);
 
     let resp, data;
     try {

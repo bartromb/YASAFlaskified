@@ -174,6 +174,11 @@
               <th>ID</th>
               <th>{{ t('date_of_birth') }}</th>
               <th class="text-center">AHI</th>
+              {# v0.18.3: uit de geschiedenislijst hierheen gehaald. Twee
+                 views van dezelfde studies betekende dat je moest weten in
+                 welke van de twee het getal stond dat je zocht. #}
+              <th class="text-center" title="{{ t('col_oahi_tooltip') }}">OAHI</th>
+              <th class="text-center" title="{{ t('col_type_tooltip') }}">{{ t('col_type') }}</th>
               <th class="text-center" title="{{ t('grade_tooltip') }}">{{ t('grade') }}</th>
               <th class="text-center" title="{{ t('odi_tooltip') }}">ODI₃</th>
               <th class="text-center" title="{{ t('plmi_tooltip') }}">PLMi</th>
@@ -221,6 +226,14 @@
               {# AHI — severity strip (v0.10.0) #}
               <td class="text-center">
                 {{ sev_strip(s.ahi, s.ahi_sev) }}
+              </td>
+
+              {# OAHI + obstructief/centraal — voorheen alleen in /results #}
+              <td class="text-center numeric small">{{ s.oahi }}</td>
+              <td class="text-center small">
+                {% if s.sas_type and s.sas_type != '—' %}
+                  <span class="badge rounded-pill bg-{{ 'info text-dark' if s.sas_type == 'CSAS' else 'secondary' }}">{{ s.sas_type }}</span>
+                {% else %}—{% endif %}
               </td>
 
               {# Grade A/B/C (AHI confidence) #}

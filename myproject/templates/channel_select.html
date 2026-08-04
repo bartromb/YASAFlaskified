@@ -19,6 +19,55 @@
     </p>
   </div>
 
+  {# ── Anonimisatie na het opladen ──────────────────────────────────
+     De tweede van de twee routes: wie bij het opladen niet voor
+     browser-anonimisatie koos, kan het hier alsnog doen. Het paneel toont de
+     headervelden zoals ze nu zijn — wie ziet dat de naam van zijn patiënt in
+     het bestand staat, doet het de volgende keer vooraf. Staat er niets
+     identificeerbaars meer in, dan bevestigt het paneel dat en verdwijnt de
+     knop. Dit formulier staat bewust BUITEN het analyseformulier: het is een
+     eigen POST naar /anonymize/<job_id>. #}
+  {% if header_ids %}
+  <div class="card card-quiet mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span><span class="mono-letter">🔒</span>{{ t('anon_panel_title') }}</span>
+      {% if header_ids.has_identifiers %}
+        <span class="badge bg-warning text-dark">{{ t('anon_present') }}</span>
+      {% else %}
+        <span class="badge bg-success">{{ t('anon_clean') }}</span>
+      {% endif %}
+    </div>
+    <div class="card-body py-2">
+      <div class="small text-muted mb-2" style="font-family:ui-monospace,monospace">
+        <div>patiënt : {{ header_ids.patient or '—' }}</div>
+        <div>opname&nbsp;&nbsp;: {{ header_ids.recording or '—' }}</div>
+      </div>
+      {% if header_ids.has_identifiers %}
+      <form method="POST" action="{{ url_for('anonymize_job_edf', job_id=job_id) }}"
+            class="row g-2 align-items-end">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="col-md-6">
+          <label class="form-label small mb-0" for="anonStudyCode">{{ t('anon_code_label') }}</label>
+          <input type="text" class="form-control form-control-sm" id="anonStudyCode"
+                 name="study_code" maxlength="40" autocomplete="off"
+                 placeholder="{{ t('anon_code_placeholder') }}">
+        </div>
+        <div class="col-md-6">
+          <button type="submit" class="btn btn-sm btn-outline-danger w-100">
+            {{ t('anon_do_now') }}
+          </button>
+        </div>
+        <div class="col-12">
+          <small class="text-muted">{{ t('anon_code_hint') }} {{ t('anon_irreversible') }}</small>
+        </div>
+      </form>
+      {% else %}
+      <small class="text-muted">{{ t('anon_clean_desc') }}</small>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
   <form method="POST" action="/analyze" id="channelForm">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="job_id" value="{{ job_id }}">

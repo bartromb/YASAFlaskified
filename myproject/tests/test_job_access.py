@@ -56,6 +56,9 @@ JOB_ROUTES = [
     ("GET", "/api/edf/{jid}/events/0"),
     ("GET", "/api/edf/{jid}/events/all"),
     ("POST", "/api/edf/{jid}/events/toggle"),
+    # v0.18.3: herschrijft de EDF-header van andermans opname als hij niet
+    # afgeschermd is — dat is de PHI zelf, niet alleen een resultaat.
+    ("POST", "/anonymize/{jid}"),
 ]
 
 JOB_A = "job-of-alice"
