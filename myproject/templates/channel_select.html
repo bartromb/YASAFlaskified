@@ -23,15 +23,30 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="job_id" value="{{ job_id }}">
 
-    {# ── v0.10.0 (Voorstel 3): auto-detected channel summary ── #}
-    {% set _ns = namespace(eog=none, emg=none) %}
+    {# ── v0.10.0 (Voorstel 3): auto-detected channel summary ──
+       Deze twee waarden zijn de ENIGE bron voor zowel dit overzicht als de
+       radioknoppen verderop. Daarvoor toonde het overzicht de eerste match en
+       verstuurde het formulier de laatste: elk matchend kanaal kreeg
+       `checked`, en bij radio's met dezelfde name wint de laatste. Bij een
+       montage met EMG1/EMG2/EMG3 stond er "EMG1" in het rapport terwijl
+       EMG3 de staging voedde — en veranderde de kanaalinhoud van de export,
+       dan verschoof die stille keuze mee (en daarmee het hypnogram).
+
+       Been-EMG wordt uitgesloten: YASA's REM-detectie steunt op kin-atonie,
+       en tibialis anterior is daar geen vervanging voor. Een expliciet
+       kin-kanaal wint van een generiek EMG-kanaal. #}
+    {% set _ns = namespace(eog=none, emg=none, emg_chin=none) %}
     {% for ch in channels %}
       {% set _u = ch | upper %}
+      {% set _is_leg = 'PLM' in _u or 'LEG' in _u or 'TIB' in _u
+                       or 'BEIN' in _u or 'JAMBE' in _u %}
       {% if not _ns.eog and ('EOG' in _u or 'LOC' in _u or 'ROC' in _u) %}{% set _ns.eog = ch %}{% endif %}
-      {% if not _ns.emg and ('EMG' in _u or 'CHIN' in _u) %}{% set _ns.emg = ch %}{% endif %}
+      {% if not _ns.emg_chin and ('CHIN' in _u or 'SUBMENT' in _u
+                                  or 'MENTON' in _u or 'KINN' in _u) %}{% set _ns.emg_chin = ch %}{% endif %}
+      {% if not _ns.emg and ('EMG' in _u or 'CHIN' in _u) and not _is_leg %}{% set _ns.emg = ch %}{% endif %}
     {% endfor %}
     {% set _eog_auto = _ns.eog %}
-    {% set _emg_auto = _ns.emg %}
+    {% set _emg_auto = _ns.emg_chin or _ns.emg %}
     <div class="card card-quiet mb-3">
       <div class="card-header d-flex justify-content-between align-items-center">
         <span><span class="mono-letter">A</span>{{ t('autodetected_channels') }}</span>
@@ -132,7 +147,8 @@
       <div class="card-body">
         <div class="mb-2">
           <input class="btn-check" type="radio" name="eog_ch"
-                 id="eog_none" value="">
+                 id="eog_none" value=""
+                 {% if not _eog_auto %}checked{% endif %}>
           <label class="btn btn-outline-secondary" for="eog_none">
             {{ t("not_available") }}
           </label>
@@ -142,7 +158,7 @@
           <div class="col">
             <input class="btn-check" type="radio" name="eog_ch"
                    id="eog_{{ loop.index }}" value="{{ ch }}"
-                   {% if 'EOG' in ch.upper() or 'LOC' in ch.upper() or 'ROC' in ch.upper() %}checked{% endif %}>
+                   {% if ch == _eog_auto %}checked{% endif %}>
             <label class="btn btn-outline-warning w-100 text-start"
                    for="eog_{{ loop.index }}">{{ ch }}</label>
           </div>
@@ -160,7 +176,8 @@
       <div class="card-body">
         <div class="mb-2">
           <input class="btn-check" type="radio" name="emg_ch"
-                 id="emg_none" value="" checked>
+                 id="emg_none" value=""
+                 {% if not _emg_auto %}checked{% endif %}>
           <label class="btn btn-outline-secondary" for="emg_none">
             {{ t("not_available") }}
           </label>
@@ -170,7 +187,7 @@
           <div class="col">
             <input class="btn-check" type="radio" name="emg_ch"
                    id="emg_{{ loop.index }}" value="{{ ch }}"
-                   {% if 'EMG' in ch.upper() or 'CHIN' in ch.upper() %}checked{% endif %}>
+                   {% if ch == _emg_auto %}checked{% endif %}>
             <label class="btn btn-outline-danger w-100 text-start"
                    for="emg_{{ loop.index }}">{{ ch }}</label>
           </div>
@@ -321,16 +338,22 @@
         <div class="row g-2 mb-2">
           <div class="col-md-4">
             <label class="form-label small mb-0">BMI</label>
-            <input type="number" step="0.1" name="bmi" class="form-control form-control-sm"
-                   placeholder="kg/m²">
+            {# Vult zich uit lengte en gewicht, maar blijft overschrijfbaar:
+               wie het zelf intypt houdt zijn waarde. BMI is een van de
+               subgroepvariabelen in het studieprotocol, dus hem met de hand
+               laten uitrekenen is een onnodige foutenbron. #}
+            <input type="number" step="0.1" name="bmi" id="bmi_field"
+                   class="form-control form-control-sm" placeholder="kg/m²">
           </div>
           <div class="col-md-4">
             <label class="form-label small mb-0">{{ t('weight_kg') }}</label>
-            <input type="number" step="0.1" name="weight_kg" class="form-control form-control-sm">
+            <input type="number" step="0.1" name="weight_kg" id="weight_field"
+                   class="form-control form-control-sm">
           </div>
           <div class="col-md-4">
             <label class="form-label small mb-0">{{ t('height_cm') }}</label>
-            <input type="number" name="height_cm" class="form-control form-control-sm">
+            <input type="number" name="height_cm" id="height_field"
+                   class="form-control form-control-sm">
           </div>
         </div>
         <div class="row g-2 mb-2">
@@ -483,6 +506,28 @@ function autoSelectEeg() {
     c.checked = v.includes('EEG') || ['C3','C4','F3','F4','O1','O2'].some(s => v.startsWith(s));
   });
 }
+
+// BMI uit lengte en gewicht. Een handmatig ingevulde BMI wordt niet
+// overschreven — de gebruiker mag altijd het laatste woord hebben.
+(function () {
+  const w = document.getElementById('weight_field');
+  const h = document.getElementById('height_field');
+  const b = document.getElementById('bmi_field');
+  if (!w || !h || !b) return;
+  let manual = false;
+  b.addEventListener('input', function () { manual = b.value !== ''; });
+  function recompute() {
+    if (manual) return;
+    const kg = parseFloat(w.value), cm = parseFloat(h.value);
+    if (!isFinite(kg) || !isFinite(cm) || kg <= 0 || cm <= 0) { b.value = ''; return; }
+    const m = cm / 100;
+    const bmi = kg / (m * m);
+    // Buiten dit bereik is er vrijwel zeker een eenheid verwisseld (cm/m, lb/kg).
+    b.value = (bmi >= 10 && bmi <= 80) ? bmi.toFixed(1) : '';
+  }
+  w.addEventListener('input', recompute);
+  h.addEventListener('input', recompute);
+})();
 
 // Submit-knop feedback
 document.getElementById('channelForm').addEventListener('submit', function() {

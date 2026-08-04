@@ -1,5 +1,81 @@
 # Changelog — YASAFlaskified
 
+## v0.18.2 — 2026-08-04  *(het rapport zei de methode, niet de uitvoering)*
+
+`psgscoring[ml]` 0.14.1 → **0.14.2**.
+
+De YF-wijzigingen hieronder lezen alleen data die psgscoring al meelevert en
+raken de scoring niet. **Wat wél verschuift, komt uit psgscoring 0.14.2:** de
+samenvatting wordt herberekend ná de CSR-herklassificatie, dus `oahi` en de
+apneutype-tellingen kunnen afwijken van een rapport op 0.14.1 — en daarmee de
+OSAS-gradatie — zonder dat er één event verschoven is. `ahi_total`, de
+eventtelling en alle andere indices blijven gelijk. Zie de psgscoring-changelog
+(issue #18).
+
+### De kanaalkeuze in de UI was niet wat het overzicht toonde
+
+In `channel_select.html` kreeg binnen één radiogroep **elk** matchend kanaal het
+attribuut `checked` — bij EOG (`'EOG' in naam`) en bij EMG (`'EMG'` of
+`'CHIN'`). Bij radio's met dezelfde `name` wint de laatste, terwijl de
+auto-detect-tabel erboven de **eerste** match toont. Op een montage met
+EMG1/EMG2/EMG3 stond er dus "EMG1" in het overzicht terwijl **EMG3** de
+slaapstaging voedde; bij twee EOG-kanalen idem.
+
+Dat is niet cosmetisch. De staging leest precies drie kanalen
+(`tasks.py:166-170`), dus wie het EMG of EOG verschuift, verschuift het
+hypnogram — en daarmee TST, en daarmee de AHI. Twee runs van dezelfde nacht met
+een iets andere exportmontage kregen zo verschillende getallen zonder dat er
+iets aan de scoring veranderd was.
+
+Nu vinken het overzicht en het formulier hetzelfde kanaal aan (één bron:
+`_eog_auto` / `_emg_auto`), wordt been-EMG (`PLM`, `LEG`, `TIB`, `BEIN`,
+`JAMBE`) uitgesloten van de EMG-autokeuze — YASA's REM-detectie steunt op
+kin-atonie, en tibialis anterior is daar geen vervanging voor — en wint een
+expliciet kin-kanaal van een generiek EMG-kanaal.
+
+### Nieuw: herkomstblok onder de kanaallijst
+
+Welk kanaal welke analyse voedde: staging-EEG/EOG/EMG, apneu- en
+hypopneukanaal, de flow-referentie van de vijf afgeleide analyses (alleen
+getoond wanneer die afwijkt), thermistorstatus met de overeenstemmingswaarde,
+profiel en beide softwareversies. Daarmee is een rapport zonder logs te
+reproduceren en zijn twee runs mechanisch te vergelijken — en het is de
+provenance die de externe centra vragen.
+
+### De sensornoot volgt nu de feiten, niet het profiel
+
+Drie gevallen in plaats van twee. Nieuw is het middelste: een thermistor die
+wél in het bestand zit maar de kwaliteitstoets niet haalt. Het rapport meldde
+dan "één flowkanaal beschikbaar" terwijl de kanaallijst erboven er twee
+toonde — het sprak zichzelf tegen. Afwezig en afgekeurd is niet hetzelfde, en
+de lezer hoort het verschil te zien, inclusief de envelope-overeenstemming die
+tot de afwijzing leidde.
+
+Bij twee bruikbare sensoren komt er een waarschuwing bij wanneer de duale pas
+liep en **geen enkele** apneu door de thermistor bevestigd is: de noot claimt
+"apneu op thermistor", en de corroboratiekolom sprak dat in een echt rapport
+tegen.
+
+De keuze zit nu in `flow_sensor_notes()` en `provenance_rows()` — losse
+functies met eigen tests, niet meer verstopt in de PDF-opbouw.
+
+### Minimale hartfrequentie wordt niet meer getoond als hij de filtergrens is
+
+Drie opnames rapporteerden een minimum van 20,2 · 32,6 · 20,0 bpm. Twee daarvan
+liggen exact op de ondergrens van het plausibiliteitsfilter in psgscoring — de
+signatuur van een oximeter die even loslaat, niet van bradycardie. Markeert
+psgscoring de hartfrequentie als onbetrouwbaar, dan toont het rapport de 1e en
+99e percentiel in plaats van de extremen, met de reden erbij.
+
+### Noot bij de hypoxic burden boven T90 > 30%
+
+HB meet event-gerelateerde desaturatie *ten opzichte van de baseline*. Bij
+aanhoudende hypoxemie ligt die baseline al laag en ogen de dips klein: één
+patiënt zat 94,6% van de nacht tussen 80 en 90% met een baseline van 85% en
+kreeg HB 21,6 — net boven de laagrisicodrempel. Het getal klopt, de indruk niet.
+
+29 nieuwe tests; 142 in totaal groen.
+
 ## v0.18.1 — 2026-08-03  *(twee rapportgetallen die het verkeerde lazen)*
 
 `psgscoring[ml]` 0.14.0 → **0.14.1**. Geen template- of routewijziging; de

@@ -2628,6 +2628,59 @@ _V0102_PDF = {
         "de": "<i>Nur ein Flusskanal verfügbar: Apnoe und Hypopnoe beide auf {apnea} gescort. Die AASM verlangt Apnoe am oronasalen Thermistor und Hypopnoe am Nasendruck; Apnoen am Nasendruck zu scoren kann zu Überdetektion führen.</i>",
     },
     "pdf_dual_sensor_note":  {"nl": "<i>Dual-sensor scoring: apneu op thermistor, hypopneu op nasale druk (AASM).</i>", "fr": "<i>Scoring double capteur : apnée sur thermistance, hypopnée sur pression nasale (AASM).</i>", "en": "<i>Dual-sensor scoring: apnea on thermistor, hypopnea on nasal pressure (AASM).</i>", "de": "<i>Dual-Sensor-Scoring: Apnoe am Thermistor, Hypopnoe am Nasendruck (AASM).</i>"},
+    # Derde geval: de thermistor zat WEL in het bestand, maar is door de
+    # kwaliteitstoets afgewezen. Het rapport zei dan "een flowkanaal
+    # beschikbaar" terwijl de kanaallijst erboven twee kanalen toonde —
+    # het sprak zichzelf tegen. Afwezig en afgekeurd is niet hetzelfde.
+    "pdf_thermistor_rejected_note": {
+        "nl": "<i>Thermistor ({therm}) aanwezig maar afgekeurd door de kwaliteitscontrole (envelope-overeenstemming met de neusdruk: {agreement}); apneu en hypopneu zijn beide op {apnea} gescoord. De AASM vraagt apneu op de oronasale thermistor; scoren van apneus op nasale druk kan tot overdetectie leiden.</i>",
+        "fr": "<i>Thermistance ({therm}) présente mais rejetée par le contrôle qualité (concordance d'enveloppe avec la pression nasale : {agreement}) ; apnée et hypopnée toutes deux scorées sur {apnea}. L'AASM demande l'apnée sur la thermistance oronasale ; scorer les apnées sur la pression nasale peut entraîner une surdétection.</i>",
+        "en": "<i>Thermistor ({therm}) present but rejected by the quality check (envelope agreement with nasal pressure: {agreement}); apnea and hypopnea both scored on {apnea}. The AASM specifies apnea on the oronasal thermistor; scoring apneas on nasal pressure may over-detect.</i>",
+        "de": "<i>Thermistor ({therm}) vorhanden, aber von der Qualitätsprüfung abgelehnt (Hüllkurven-Übereinstimmung mit dem Nasendruck: {agreement}); Apnoe und Hypopnoe beide auf {apnea} gescort. Die AASM verlangt Apnoe am oronasalen Thermistor; Apnoen am Nasendruck zu scoren kann zu Überdetektion führen.</i>",
+    },
+    # De duale noot claimt apneus op de thermistor. Draaide de duale pas en
+    # heeft de thermistor geen enkele apneu bevestigd, dan spreekt de
+    # corroboratiekolom die claim tegen; dat hoort er expliciet bij.
+    "pdf_dual_sensor_no_corrob": {
+        "nl": "<i>Let op: geen enkele apneu is door de thermistor bevestigd — alle apneus komen van de nasale druk. Beoordeel de thermistortracé bij twijfel visueel.</i>",
+        "fr": "<i>Attention : aucune apnée n'a été confirmée par la thermistance — toutes proviennent de la pression nasale. En cas de doute, examinez visuellement le tracé de la thermistance.</i>",
+        "en": "<i>Note: no apnea was corroborated by the thermistor — all apneas come from nasal pressure. Review the thermistor trace visually if in doubt.</i>",
+        "de": "<i>Hinweis: keine Apnoe wurde vom Thermistor bestätigt — alle Apnoen stammen vom Nasendruck. Im Zweifel das Thermistor-Signal visuell prüfen.</i>",
+    },
+    # Herkomstblok: welk kanaal voedde welke analyse. Zonder dit beschrijft het
+    # rapport de methode in plaats van de uitvoering, en zijn twee runs van
+    # dezelfde nacht niet te vergelijken zonder de logs erbij.
+    "rpt_sec_provenance": {"nl": "Herkomst — welk kanaal voedde welke analyse", "fr": "Provenance — quel canal a alimenté quelle analyse", "en": "Provenance — which channel fed which analysis", "de": "Herkunft — welcher Kanal welche Analyse gespeist hat"},
+    "prov_staging_eeg":  {"nl": "Slaapstaging — EEG",  "fr": "Stades du sommeil — EEG", "en": "Sleep staging — EEG", "de": "Schlafstadien — EEG"},
+    "prov_staging_eog":  {"nl": "Slaapstaging — EOG",  "fr": "Stades du sommeil — EOG", "en": "Sleep staging — EOG", "de": "Schlafstadien — EOG"},
+    "prov_staging_emg":  {"nl": "Slaapstaging — EMG",  "fr": "Stades du sommeil — EMG", "en": "Sleep staging — EMG", "de": "Schlafstadien — EMG"},
+    "prov_apnea":        {"nl": "Apneudetectie",       "fr": "Détection des apnées",    "en": "Apnea detection",     "de": "Apnoe-Detektion"},
+    "prov_hypopnea":     {"nl": "Hypopneudetectie",    "fr": "Détection des hypopnées", "en": "Hypopnea detection",  "de": "Hypopnoe-Detektion"},
+    "prov_reference":    {"nl": "Afgeleide analyses (AHI-spreiding, baseline, arousal-koppeling, CSR, ventilatoire last)", "fr": "Analyses dérivées (dispersion IAH, ligne de base, couplage micro-éveils, CSR, charge ventilatoire)", "en": "Derived analyses (AHI sweep, baseline, arousal coupling, CSR, ventilatory burden)", "de": "Abgeleitete Analysen (AHI-Streuung, Baseline, Arousal-Kopplung, CSR, ventilatorische Last)"},
+    "prov_thermistor":   {"nl": "Thermistor",          "fr": "Thermistance",            "en": "Thermistor",          "de": "Thermistor"},
+    "prov_therm_usable":   {"nl": "bruikbaar",         "fr": "utilisable",              "en": "usable",              "de": "brauchbar"},
+    "prov_therm_rejected": {"nl": "afgekeurd door kwaliteitscontrole", "fr": "rejetée par le contrôle qualité", "en": "rejected by quality check", "de": "von der Qualitätsprüfung abgelehnt"},
+    "prov_therm_absent":   {"nl": "niet in montage",   "fr": "absente du montage",      "en": "not in montage",      "de": "nicht in der Montage"},
+    "prov_profile":      {"nl": "Scoringsprofiel",     "fr": "Profil de scoring",       "en": "Scoring profile",     "de": "Scoring-Profil"},
+    "prov_software":     {"nl": "Software",            "fr": "Logiciel",                "en": "Software",            "de": "Software"},
+    "prov_note":         {"nl": "<i>De kanaalkeuze bepaalt het resultaat. Wijkt een van deze regels af van wat u verwachtte, dan is het rapport niet vergelijkbaar met een run waarin de keuze anders was.</i>", "fr": "<i>Le choix des canaux détermine le résultat. Si l'une de ces lignes diffère de ce que vous attendiez, ce rapport n'est pas comparable à une analyse avec un autre choix.</i>", "en": "<i>The channel selection determines the result. If any row differs from what you expected, this report is not comparable to a run with a different selection.</i>", "de": "<i>Die Kanalauswahl bestimmt das Ergebnis. Weicht eine Zeile von der Erwartung ab, ist dieser Bericht nicht mit einem Lauf mit anderer Auswahl vergleichbar.</i>"},
+    # Hartfrequentie: robuuste tegenhangers van min/max, plus de reden waarom
+    # het extremum niet getoond wordt.
+    "pdf_hr_p1":  {"nl": "Hartfrequentie p1",  "fr": "Fréquence cardiaque p1",  "en": "Heart rate p1",  "de": "Herzfrequenz p1"},
+    "pdf_hr_p99": {"nl": "Hartfrequentie p99", "fr": "Fréquence cardiaque p99", "en": "Heart rate p99", "de": "Herzfrequenz p99"},
+    "pdf_hr_unreliable": {
+        "nl": "<i>Minimum en maximum zijn hier niet betrouwbaar te bepalen ({reason}); getoond zijn de 1e en 99e percentiel. Een gerapporteerd minimum ligt in dat geval op de ondergrens van het plausibiliteitsfilter en niet bij de patiënt.</i>",
+        "fr": "<i>Le minimum et le maximum ne sont pas fiables ici ({reason}) ; les 1er et 99e percentiles sont affichés. Un minimum rapporté correspond alors à la limite inférieure du filtre de plausibilité, pas au patient.</i>",
+        "en": "<i>Minimum and maximum cannot be determined reliably here ({reason}); the 1st and 99th percentiles are shown instead. A reported minimum in that case sits at the lower bound of the plausibility filter, not at the patient.</i>",
+        "de": "<i>Minimum und Maximum sind hier nicht zuverlässig bestimmbar ({reason}); gezeigt werden das 1. und 99. Perzentil. Ein berichtetes Minimum liegt dann an der Untergrenze des Plausibilitätsfilters, nicht beim Patienten.</i>",
+    },
+    # Hypoxic burden bij aanhoudende hypoxemie.
+    "pdf_hb_sustained_hypoxemia": {
+        "nl": "<i>Bij aanhoudende hypoxemie onderschat de hypoxic burden de totale zuurstoflast: hij meet event-gerelateerde desaturatie ten opzichte van de baseline, en die ligt hier al laag. Beoordeel samen met T90 en baseline-SpO₂.</i>",
+        "fr": "<i>En cas d'hypoxémie soutenue, la charge hypoxique sous-estime la charge totale en oxygène : elle mesure la désaturation liée aux événements par rapport à la ligne de base, déjà basse ici. À interpréter avec le T90 et la SpO₂ de base.</i>",
+        "en": "<i>Under sustained hypoxemia the hypoxic burden underestimates the total oxygen load: it measures event-related desaturation relative to baseline, and that baseline is already low here. Interpret together with T90 and baseline SpO₂.</i>",
+        "de": "<i>Bei anhaltender Hypoxämie unterschätzt die hypoxische Last die gesamte Sauerstofflast: sie misst ereignisbezogene Entsättigung relativ zur Baseline, und diese liegt hier bereits niedrig. Zusammen mit T90 und Baseline-SpO₂ beurteilen.</i>",
+    },
     # Flattening labels
     "pdf_flat_normal":   {"nl": "normaal",                "fr": "normal",                  "en": "normal",                  "de": "normal"},
     "pdf_flat_elevated": {"nl": "verhoogd",               "fr": "élevé",                   "en": "elevated",                "de": "erhöht"},

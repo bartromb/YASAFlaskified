@@ -9,6 +9,7 @@ from datetime import date
 
 import matplotlib
 from i18n import t
+from version import PSGSCORING_VERSION as _PSGSCORING_VERSION
 from version import __version__ as _APP_VERSION
 
 matplotlib.use("Agg")
@@ -236,6 +237,112 @@ def _phenotype_summary_line(rsum, lang="nl"):
     if not tags:
         return None
     return "<b>" + t("pdf_pheno_hdr", lang) + ":</b> " + "  ·  ".join(tags)
+
+
+def provenance_rows(results, lang="nl"):
+    """Welk kanaal voedde welke analyse — als ``[[label, waarde], ...]``.
+
+    Drie fouten in de rapporten van augustus 2026 waren allemaal hetzelfde
+    soort fout: het rapport beschreef de METHODE in plaats van de UITVOERING.
+    Welk EMG de staging voedde stond nergens (en week af van wat het
+    kanaaloverzicht toonde), de sensornoot volgde het profiel in plaats van de
+    afgekeurde thermistor, en dat de vijf afgeleide analyses een ander
+    flowkanaal lezen dan de apneudetectie was onzichtbaar. Twee runs van
+    dezelfde nacht waren daardoor niet te vergelijken zonder de logs erbij.
+
+    Deze tabel maakt elk van die drie zichtbaar op de plek waar de lezer ze
+    nodig heeft, en is meteen de provenance die externe centra vragen.
+    """
+    results = results or {}
+    meta    = results.get("meta") or {}
+    pneumo  = results.get("pneumo") or {}
+    pmeta   = pneumo.get("meta") or {}
+    fc      = pmeta.get("flow_channels") or {}
+    dash    = "—"
+
+    def _lbl(key, fallback):
+        try:
+            return t(key, lang) or fallback
+        except Exception:
+            return fallback
+
+    rows = [
+        [_lbl("prov_staging_eeg", "Staging — EEG"), meta.get("eeg_channel") or dash],
+        [_lbl("prov_staging_eog", "Staging — EOG"), meta.get("eog_channel") or dash],
+        [_lbl("prov_staging_emg", "Staging — EMG"), meta.get("emg_channel") or dash],
+        [_lbl("prov_apnea", "Apneu"), fc.get("apnea_sensor") or dash],
+        [_lbl("prov_hypopnea", "Hypopneu"), fc.get("hypopnea_sensor") or dash],
+    ]
+
+    # De vijf afgeleide analyses (AHI-sweep, baseline, arousal-koppeling, CSR,
+    # ventilatoire last) lezen sinds psgscoring 0.14.1 een eigen referentie.
+    # Alleen tonen wanneer die afwijkt van het apneukanaal — anders is het ruis.
+    ref = fc.get("reference_sensor")
+    if ref and ref != fc.get("apnea_sensor"):
+        rows.append([_lbl("prov_reference", "Afgeleide analyses"), ref])
+
+    # Thermistor: afwezig, afgekeurd of bruikbaar zijn drie verschillende
+    # dingen, en het rapport toonde ze als één.
+    rejected = fc.get("thermistor_rejected")
+    check    = fc.get("thermistor_check") or {}
+    agree    = check.get("agreement")
+    agree_s  = f" ({agree:.2f})" if isinstance(agree, (int, float)) else ""
+    if rejected:
+        rows.append([_lbl("prov_thermistor", "Thermistor"),
+                     f"{rejected} — {_lbl('prov_therm_rejected', 'afgekeurd')}{agree_s}"])
+    elif fc.get("dual_sensor"):
+        rows.append([_lbl("prov_thermistor", "Thermistor"),
+                     f"{fc.get('apnea_sensor') or dash} — "
+                     f"{_lbl('prov_therm_usable', 'bruikbaar')}{agree_s}"])
+    else:
+        rows.append([_lbl("prov_thermistor", "Thermistor"),
+                     _lbl("prov_therm_absent", "niet in montage")])
+
+    rows.append([_lbl("prov_profile", "Scoringsprofiel"),
+                 pmeta.get("scoring_profile") or dash])
+    rows.append([_lbl("prov_software", "Software"),
+                 f"psgscoring {_PSGSCORING_VERSION} · YASAFlaskified {_APP_VERSION}"])
+    return rows
+
+
+def flow_sensor_notes(resp, pneumo):
+    """Welke sensornoot hoort onder de respiratoire tabel?
+
+    Retourneert ``[(i18n_key, format_kwargs), ...]`` — de tekst zelf blijft in
+    i18n, de keuze is hier en is los testbaar.
+
+    De noot volgde het PROFIEL ("dual-sensor gevraagd") in plaats van wat er
+    feitelijk gebeurde. Twee gevolgen in échte rapporten: een duaal rapport
+    claimde "apneu op thermistor" terwijl de corroboratiekolom liet zien dat
+    geen enkele apneu van de thermistor kwam, en een rapport meldde "één
+    flowkanaal beschikbaar" terwijl de kanaallijst erboven er twee toonde —
+    de thermistor zat in het bestand maar was door de kwaliteitstoets
+    afgewezen. Afwezig en afgekeurd is niet hetzelfde, en dat verschil hoort
+    de lezer te zien.
+    """
+    resp   = resp or {}
+    fc     = ((pneumo or {}).get("meta") or {}).get("flow_channels") or {}
+    apnea  = fc.get("apnea_sensor") or "—"
+    hypop  = fc.get("hypopnea_sensor") or "—"
+    rejected = fc.get("thermistor_rejected")
+    agree    = (fc.get("thermistor_check") or {}).get("agreement")
+    agree_s  = f"{agree:.2f}" if isinstance(agree, (int, float)) else "—"
+
+    # Geval 1: twee sensoren, elk in hun AASM-rol.
+    if resp.get("dual_sensor") and apnea != hypop:
+        notes = [("pdf_dual_sensor_note", {})]
+        dsa = resp.get("dual_sensor_apnea") or {}
+        if dsa and not (dsa.get("n_both") or dsa.get("n_thermistor_only")):
+            notes.append(("pdf_dual_sensor_no_corrob", {}))
+        return notes
+
+    # Geval 2: thermistor aanwezig maar afgekeurd.
+    if rejected:
+        return [("pdf_thermistor_rejected_note",
+                 {"therm": rejected, "apnea": apnea, "agreement": agree_s})]
+
+    # Geval 3: werkelijk één flowkanaal.
+    return [("pdf_single_sensor_note", {"apnea": apnea, "hypopnea": hypop})]
 
 
 def _central_component_present(rsum, pneumo):
@@ -1209,6 +1316,18 @@ def generate_pdf_report(results:dict, output_path:str,
             f"<i>{len(all_ch)} {t('pdf_ch_total', lang)}</i>",
             styles["SM"])); sp(0.1)
 
+    # ── 0a-bis. Herkomst: welk kanaal voedde welke analyse ─────
+    # Direct onder de kanaallijst, want dat is waar de lezer de vraag stelt.
+    try:
+        _prov = provenance_rows(results, lang)
+        if _prov:
+            story.append(_hdr(t("rpt_sec_provenance", lang))); sp(0.1)
+            story.append(_tbl([t("pdf_param", lang), t("pdf_value", lang)],
+                              _prov, [8, 9], stripe=True)); sp(0.1)
+            story.append(Paragraph(t("prov_note", lang), styles["SM"])); sp(0.15)
+    except Exception:
+        pass
+
     # ── 0b. Visueel overzicht ─────────────────────────────────
     story.append(_hdr(t("rpt_sec0b", lang))); sp(0.1)
 
@@ -1928,17 +2047,8 @@ def generate_pdf_report(results:dict, output_path:str,
         # lezer iets moet vertellen — apneus op nasale druk overdetecteren
         # ten opzichte van de thermistor, en de AASM schrijft de thermistor
         # daar juist om voor.
-        if resp.get("dual_sensor"):
-            story.append(Paragraph(
-                t("pdf_dual_sensor_note", lang),
-                styles["SM"]))
-        else:
-            _fc = pneumo.get("meta", {}).get("flow_channels", {}) or {}
-            _ap = _fc.get("apnea_sensor") or "—"
-            _hy = _fc.get("hypopnea_sensor") or "—"
-            story.append(Paragraph(
-                t("pdf_single_sensor_note", lang).format(apnea=_ap, hypopnea=_hy),
-                styles["SM"]))
+        for _key, _kw in flow_sensor_notes(resp, pneumo):
+            story.append(Paragraph(t(_key, lang).format(**_kw), styles["SM"]))
 
         # ── Scoring profielen tabel ───────────────────────────────
         _active_profile = pneumo.get("meta", {}).get("scoring_profile", "standard")
@@ -2077,6 +2187,20 @@ def generate_pdf_report(results:dict, output_path:str,
              # the VB norm is OBSTRUCTIVE-OSA-derived and not calibrated for central apnea.
              ("" if _is_central_dominant(rsum) else "≤ 25%")],
         ],[8,4.5,4.5]))
+        # De hypoxic burden meet de oppervlakte van event-gerelateerde
+        # desaturaties TEN OPZICHTE VAN de baseline. Bij aanhoudende hypoxemie
+        # ligt die baseline al laag en ogen de dips klein: één patiënt zat
+        # 94,6% van de nacht tussen 80 en 90% met een baseline van 85% en kreeg
+        # HB 21,6 — net boven de laagrisicodrempel. Het getal klopt, de indruk
+        # niet. HB is ontworpen voor intermitterende OSA-desaturaties.
+        try:
+            _t90 = ss.get("pct_below_90")
+            if (_t90 is not None and float(_t90) > 30
+                    and ss.get("hypoxic_burden") is not None):
+                story.append(Paragraph(t("pdf_hb_sustained_hypoxemia", lang),
+                                       styles["SM"])); sp(0.1)
+        except (TypeError, ValueError):
+            pass
         ts=spo2.get("timeseries")
         if ts and len(ts)>10:
             sp(0.15)
@@ -2146,11 +2270,25 @@ def generate_pdf_report(results:dict, output_path:str,
         _hr_rows = [
             [t("pdf_param", lang), t("pdf_value", lang), "Ref"],
         ]
+        # psgscoring 0.14.2 zet er een oordeel bij. Een minimum van 20,0 bpm is
+        # de ondergrens van het plausibiliteitsfilter en niet de patiënt; bij
+        # sensoruitval tonen we de robuuste percentielen en zeggen we erbij
+        # waarom. Ontbreekt het veld (oudere psgscoring), dan blijft alles zoals
+        # het was.
+        _hr_ok = _hr_sum.get("hr_reliable", True)
         _hr_data = [
             [t('pdf_mean_hr', lang),    f"{_hr_sum.get('avg_hr', '—')} bpm",  "60–100"],
-            [t('pdf_min_hr', lang),     f"{_hr_sum.get('min_hr', '—')} bpm",  ""],
-            [t('pdf_max_hr', lang),     f"{_hr_sum.get('max_hr', '—')} bpm",  ""],
         ]
+        if _hr_ok:
+            _hr_data += [
+                [t('pdf_min_hr', lang), f"{_hr_sum.get('min_hr', '—')} bpm", ""],
+                [t('pdf_max_hr', lang), f"{_hr_sum.get('max_hr', '—')} bpm", ""],
+            ]
+        else:
+            _hr_data += [
+                [t('pdf_hr_p1', lang),  f"{_hr_sum.get('hr_p1', '—')} bpm", ""],
+                [t('pdf_hr_p99', lang), f"{_hr_sum.get('hr_p99', '—')} bpm", ""],
+            ]
         if _hr_sum.get("bradycardia_episodes"):
             _hr_data.append([t('pdf_bradycardia', lang), str(_hr_sum["bradycardia_episodes"]), ""])
         if _hr_sum.get("tachycardia_episodes"):
@@ -2158,6 +2296,11 @@ def generate_pdf_report(results:dict, output_path:str,
         story.append(_tbl(
             [t("pdf_param", lang), t("pdf_value", lang), "Ref"],
             _hr_data, [8, 4.5, 4.5])); sp(0.15)
+        if not _hr_ok:
+            story.append(Paragraph(
+                t('pdf_hr_unreliable', lang).format(
+                    reason=_hr_sum.get("hr_unreliable_reason") or "—"),
+                styles["SM"])); sp(0.1)
 
     # ── 11. BESLUIT (gestandaardiseerd AASM) ────────────────────
     story.append(_hdr(t("rpt_sec11", lang))); sp(0.1)
