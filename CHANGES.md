@@ -1,5 +1,43 @@
 # Changelog — YASAFlaskified
 
+## v0.19.0 — 2026-08-05  *(scoringsprofiel per gebruiker)*
+
+Geen psgscoring-wijziging (blijft 0.14.4).
+
+De slaaptechnici gaan profielen naast elkaar testen. Zonder dit moet ieder van
+hen bij élke opname dezelfde dropdown opnieuw goed zetten, en één vergeten klik
+maakt een vergelijking stil ongeldig — precies het soort fout dat je pas ziet
+als je twee rapporten naast elkaar legt.
+
+**Nieuw:** `User.default_profile`. Een admin of site-manager zet per gebruiker
+welk profiel voorgeselecteerd staat; in de gebruikersbeheerpagina staat er een
+kolom bij en een eigen formulier per rij.
+
+**De keuze blijft een keuze.** Er verschuift alleen het `selected`-attribuut;
+de dropdown op de kanaalkeuzepagina bevat onverkort alle profielen en de
+technicus kan per opname iets anders kiezen. Vier tests dwingen dat af,
+waaronder één die controleert dat er precies één optie voorgeselecteerd staat —
+meerdere `selected` in één `<select>` is stil gedrag waarbij de browser de
+laatste houdt, en dat was de radiogroep-bug van 4 augustus.
+
+**Terugvallen doet het naar de applicatiestandaard**, niet naar niets: leeg
+gelaten of een profiel dat niet meer in de psgscoring-registry zit geeft
+`aasm_v3_rec`. De keuzelijst komt uit die registry, dus een nieuw profiel
+verschijnt vanzelf en een verdwenen profiel valt vanzelf weg.
+`mesa_shhs` en `chicago_1999` staan er niet in — die bestaan om gepubliceerde
+cijfers te reproduceren, niet om patiënten mee te scoren.
+
+**Toegang** volgt de bestaande regel: een site-manager mag alleen zijn eigen
+site-gebruikers aanpassen, net als bij wachtwoord resetten en verwijderen.
+
+**Migratie.** De kolom komt er via het bestaande lichte SQLite-migratiepad bij
+het opstarten, zonder default — NULL betekent applicatiestandaard, en dat is
+exact het gedrag van vóór deze versie. Vooraf drooggedraaid op een kopie van de
+productiedatabase: 6 gebruikers, 3 sites en 15 jobs behouden, alle bestaande
+gebruikers op NULL, wachtwoordhashes ongemoeid.
+
+15 nieuwe tests, 209 groen.
+
 ## v0.18.5 — 2026-08-05  *(het herkomstblok sprak zichzelf tegen)*
 
 Geen psgscoring-wijziging (blijft 0.14.4).
@@ -1205,6 +1243,44 @@ because clinical profiles (`aasm_v3_*`, `aasm_v2_rec`, `aasm_v1_rec`,
 - Bundled psgscoring 0.3.1 → 0.4.1 (parameter integration fix)
 
 # Changelog — YASAFlaskified
+
+## v0.19.0 — 2026-08-05  *(scoringsprofiel per gebruiker)*
+
+Geen psgscoring-wijziging (blijft 0.14.4).
+
+De slaaptechnici gaan profielen naast elkaar testen. Zonder dit moet ieder van
+hen bij élke opname dezelfde dropdown opnieuw goed zetten, en één vergeten klik
+maakt een vergelijking stil ongeldig — precies het soort fout dat je pas ziet
+als je twee rapporten naast elkaar legt.
+
+**Nieuw:** `User.default_profile`. Een admin of site-manager zet per gebruiker
+welk profiel voorgeselecteerd staat; in de gebruikersbeheerpagina staat er een
+kolom bij en een eigen formulier per rij.
+
+**De keuze blijft een keuze.** Er verschuift alleen het `selected`-attribuut;
+de dropdown op de kanaalkeuzepagina bevat onverkort alle profielen en de
+technicus kan per opname iets anders kiezen. Vier tests dwingen dat af,
+waaronder één die controleert dat er precies één optie voorgeselecteerd staat —
+meerdere `selected` in één `<select>` is stil gedrag waarbij de browser de
+laatste houdt, en dat was de radiogroep-bug van 4 augustus.
+
+**Terugvallen doet het naar de applicatiestandaard**, niet naar niets: leeg
+gelaten of een profiel dat niet meer in de psgscoring-registry zit geeft
+`aasm_v3_rec`. De keuzelijst komt uit die registry, dus een nieuw profiel
+verschijnt vanzelf en een verdwenen profiel valt vanzelf weg.
+`mesa_shhs` en `chicago_1999` staan er niet in — die bestaan om gepubliceerde
+cijfers te reproduceren, niet om patiënten mee te scoren.
+
+**Toegang** volgt de bestaande regel: een site-manager mag alleen zijn eigen
+site-gebruikers aanpassen, net als bij wachtwoord resetten en verwijderen.
+
+**Migratie.** De kolom komt er via het bestaande lichte SQLite-migratiepad bij
+het opstarten, zonder default — NULL betekent applicatiestandaard, en dat is
+exact het gedrag van vóór deze versie. Vooraf drooggedraaid op een kopie van de
+productiedatabase: 6 gebruikers, 3 sites en 15 jobs behouden, alle bestaande
+gebruikers op NULL, wachtwoordhashes ongemoeid.
+
+15 nieuwe tests, 209 groen.
 
 ## v0.18.5 — 2026-08-05  *(het herkomstblok sprak zichzelf tegen)*
 

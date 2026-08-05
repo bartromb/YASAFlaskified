@@ -278,6 +278,12 @@ class User(UserMixin, db.Model):
     role     = db.Column(db.String(20),  nullable=False, default="user")
     site_id  = db.Column(db.Integer, db.ForeignKey("site.id"), nullable=True)
     language = db.Column(db.String(5),   nullable=False, default="en")
+    # v0.19.0: welk scoringsprofiel deze gebruiker voorgeselecteerd krijgt.
+    # NULL = de applicatiestandaard. Bewust nullable en zonder DB-default: een
+    # bestaande gebruiker mag hier niets van merken, en een profiel dat later
+    # uit psgscoring verdwijnt mag geen kapotte selectie achterlaten — dat
+    # wordt bij het renderen afgevangen.
+    default_profile = db.Column(db.String(64), nullable=True)
 
     @property
     def is_admin(self):
@@ -1264,7 +1270,8 @@ def admin_users():
         # Site-manager: alleen users van eigen site
         users = User.query.filter_by(site_id=current_user.site_id).order_by(User.id).all()
         sites = [current_user.site] if current_user.site else []
-    return render_template("admin_users.html", users=users, sites=sites)
+    return render_template("admin_users.html", users=users, sites=sites,
+                           profile_choices=available_profile_choices())
 
 
 @app.route("/admin/users/add", methods=["POST"])
@@ -1367,6 +1374,57 @@ def admin_set_role(user_id):
     db.session.commit()
     logger.info(f"Admin updated {user.username}: role={new_role}, site={site_id}")
     flash(f"{user.username}: " + get_translation("user_updated", session.get("lang","en")), "success")
+    return redirect(url_for("admin_users"))
+
+
+def available_profile_choices():
+    """(naam, weergavenaam) voor elk profiel dat een gebruiker mag krijgen.
+
+    Uit de psgscoring-registry, zodat een nieuw profiel vanzelf verschijnt en
+    een verdwenen profiel vanzelf uit de keuzelijst valt. De reproductie- en
+    legacy-profielen blijven eruit: `mesa_shhs` en `chicago_1999` bestaan om
+    gepubliceerde cijfers te reproduceren, niet om patiënten mee te scoren.
+    """
+    try:
+        from psgscoring.profiles import PROFILES
+        return [(n, p.display_name) for n, p in PROFILES.items()
+                if p.family in ("clinical", "exploratory")]
+    except Exception as e:  # noqa: BLE001 — de pagina mag hier niet op vallen
+        logger.warning("Profiellijst niet op te halen: %s", e)
+        return []
+
+
+@app.route("/admin/users/<int:user_id>/profile", methods=["POST"])
+@login_required
+@requires_role("admin", "site")
+def admin_set_default_profile(user_id):
+    """Stel het voorgeselecteerde scoringsprofiel van één gebruiker in.
+
+    Aanleiding: de slaaptechnici testen profielen naast elkaar. Zonder dit
+    moet ieder van hen bij elke opname dezelfde dropdown opnieuw goed zetten,
+    en één vergeten klik maakt een vergelijking stil ongeldig.
+
+    Leeg = de applicatiestandaard, en dat blijft het gedrag voor iedereen die
+    niets ingesteld heeft.
+    """
+    user = User.query.get_or_404(user_id)
+    # Site-managers mogen enkel hun eigen site-users aanpassen — zelfde regel
+    # als bij wachtwoord resetten en verwijderen.
+    if current_user.role == "site" and user.site_id != current_user.site_id:
+        abort(403)
+
+    choice = (request.form.get("default_profile") or "").strip()
+    valid = {n for n, _ in available_profile_choices()}
+    if choice and choice not in valid:
+        flash(get_translation("profile_invalid", session.get("lang", "en")), "danger")
+        return redirect(url_for("admin_users"))
+
+    user.default_profile = choice or None
+    db.session.commit()
+    logger.info("Admin zette default-profiel van %s op %s",
+                user.username, choice or "(applicatiestandaard)")
+    flash(f"{user.username}: " + get_translation("profile_saved",
+                                                 session.get("lang", "en")), "success")
     return redirect(url_for("admin_users"))
 
 
@@ -3476,6 +3534,10 @@ def initialize_database():
                 ("role",      "VARCHAR(20) DEFAULT 'user'"),
                 ("site_id",   "INTEGER"),
                 ("language",  "VARCHAR(5) DEFAULT 'nl'"),
+                # v0.19.0: per-gebruiker voorgeselecteerd scoringsprofiel.
+                # Geen DEFAULT: NULL betekent "de applicatiestandaard", en dat
+                # is precies wat elke bestaande gebruiker moet houden.
+                ("default_profile", "VARCHAR(64)"),
             ]:
                 if cols and col not in cols:
                     try:

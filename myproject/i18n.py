@@ -2687,6 +2687,12 @@ _V0102_PDF = {
     "prov_thermistor":   {"nl": "Thermistor",          "fr": "Thermistance",            "en": "Thermistor",          "de": "Thermistor"},
     "prov_therm_usable":   {"nl": "bruikbaar",         "fr": "utilisable",              "en": "usable",              "de": "brauchbar"},
     "prov_therm_rejected": {"nl": "afgekeurd door kwaliteitscontrole", "fr": "rejetée par le contrôle qualité", "en": "rejected by quality check", "de": "von der Qualitätsprüfung abgelehnt"},
+    # v0.19.0: per-gebruiker voorgeselecteerd scoringsprofiel.
+    "default_profile":      {"nl": "Standaardprofiel", "fr": "Profil par défaut", "en": "Default profile", "de": "Standardprofil"},
+    "default_profile_hint": {"nl": "Dit profiel staat voorgeselecteerd bij elke nieuwe analyse van deze gebruiker. Hij kan het per opname nog altijd wijzigen.", "fr": "Ce profil est présélectionné pour chaque nouvelle analyse de cet utilisateur. Il reste modifiable par enregistrement.", "en": "This profile is preselected for every new analysis by this user. It can still be changed per recording.", "de": "Dieses Profil ist bei jeder neuen Analyse dieses Benutzers vorausgewählt. Pro Aufnahme weiterhin änderbar."},
+    "profile_app_default":  {"nl": "applicatiestandaard", "fr": "valeur par défaut de l'application", "en": "application default", "de": "Anwendungsstandard"},
+    "profile_saved":        {"nl": "standaardprofiel opgeslagen", "fr": "profil par défaut enregistré", "en": "default profile saved", "de": "Standardprofil gespeichert"},
+    "profile_invalid":      {"nl": "onbekend scoringsprofiel — niets gewijzigd", "fr": "profil de scoring inconnu — rien n'a été modifié", "en": "unknown scoring profile — nothing changed", "de": "unbekanntes Scoring-Profil — nichts geändert"},
     # Vierde geval: onder de drempel maar behouden omdat het profiel additief
     # is. "Bruikbaar" noemen was fout — het rapport sprak zichzelf tegen met de
     # corroboratiekolom, die liet zien dat de sensor niets had bijgedragen.

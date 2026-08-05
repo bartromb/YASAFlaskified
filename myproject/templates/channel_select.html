@@ -465,21 +465,30 @@
         <h6 class="card-title mb-3 display-font" style="color:var(--accent-ochre)">
           <span class="mono-letter mono-letter--ochre">P</span>{{ t('scoring_profile_title') }}
         </h6>
+        {# v0.19.0: het voorgeselecteerde profiel komt uit de gebruiker, met
+           aasm_v3_rec als terugval. Zo hoeft een technicus die een profiel
+           test die keuze niet bij elke opname opnieuw te maken — één vergeten
+           klik maakt een vergelijking stil ongeldig. Staat het ingestelde
+           profiel niet meer in de registry, dan valt hij terug op de
+           standaard in plaats van op niets. #}
+        {% set _user_prof = current_user.default_profile if current_user.is_authenticated else None %}
+        {% set _known = available_profiles | map(attribute=0) | list %}
+        {% set _sel = _user_prof if _user_prof in _known else 'aasm_v3_rec' %}
         <select name="scoring_profile" class="form-select" id="scoringProfile">
           {% if available_profiles %}
             <optgroup label="AASM v3 (2023, current)">
               {% for name, display_name, aasm_ver in available_profiles if 'v3' in aasm_ver %}
-                <option value="{{ name }}"{% if name == 'aasm_v3_rec' %} selected{% endif %}>{{ display_name }}</option>
+                <option value="{{ name }}"{% if name == _sel %} selected{% endif %}>{{ display_name }}</option>
               {% endfor %}
             </optgroup>
             <optgroup label="Historical AASM versions">
               {% for name, display_name, aasm_ver in available_profiles if 'v2' in aasm_ver or 'v1' in aasm_ver %}
-                <option value="{{ name }}">{{ display_name }}</option>
+                <option value="{{ name }}"{% if name == _sel %} selected{% endif %}>{{ display_name }}</option>
               {% endfor %}
             </optgroup>
             <optgroup label="Dataset-specific">
               {% for name, display_name, aasm_ver in available_profiles if 'v3' not in aasm_ver and 'v2' not in aasm_ver and 'v1' not in aasm_ver %}
-                <option value="{{ name }}">{{ display_name }}</option>
+                <option value="{{ name }}"{% if name == _sel %} selected{% endif %}>{{ display_name }}</option>
               {% endfor %}
             </optgroup>
           {% else %}

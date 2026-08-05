@@ -34,6 +34,11 @@
             <th class="text-center">{{ t('role') }}</th>
             <th>{{ t('sites') }}</th>
             <th>{{ t('language') }}</th>
+            {# v0.19.0: de technici testen profielen naast elkaar; zonder deze
+               kolom moet ieder van hen bij elke opname dezelfde dropdown
+               opnieuw goed zetten, en één vergeten klik maakt een vergelijking
+               stil ongeldig. #}
+            <th title="{{ t('default_profile_hint') }}">{{ t('default_profile') }}</th>
             <th class="text-center">{{ t('actions') }}</th>
           </tr>
         </thead>
@@ -58,8 +63,18 @@
               {% else %}<span class="text-warning small">{{ t('no_site') }}</span>{% endif %}
             </td>
             <td class="text-center"><span class="text-muted small">{{ user.language or 'nl' }}</span></td>
+            <td>
+              {% if user.default_profile %}
+                <code class="small">{{ user.default_profile }}</code>
+              {% else %}
+                <span class="text-muted small fst-italic">{{ t('profile_app_default') }}</span>
+              {% endif %}
+            </td>
             <td class="text-center">
               <div class="d-flex gap-1 justify-content-center flex-wrap">
+                <button class="btn btn-outline-success btn-sm py-0 px-2" data-bs-toggle="collapse"
+                        data-bs-target="#profile-{{ user.id }}" title="{{ t('default_profile') }}">
+                  <i class="bi bi-sliders"></i></button>
                 {% if user.username != 'admin' and current_user.role == 'admin' %}
                 <button class="btn btn-outline-primary btn-sm py-0 px-2" data-bs-toggle="collapse"
                         data-bs-target="#edit-{{ user.id }}" title="{{ t('edit') }}">
@@ -112,6 +127,25 @@
                 </form>
               </div>
               {% endif %}
+              {# Eigen formulier, eigen route: het profiel mag óók door een
+                 site-manager gezet worden, terwijl rol en site admin-only zijn. #}
+              <div class="collapse mt-2" id="profile-{{ user.id }}">
+                <form method="POST" action="{{ url_for('admin_set_default_profile', user_id=user.id) }}"
+                      class="card card-body p-2 bg-light">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <label class="form-label small mb-1 text-start">{{ t('default_profile') }}</label>
+                  <div class="d-flex gap-1">
+                    <select name="default_profile" class="form-select form-select-sm" style="font-size:.8rem">
+                      <option value="">{{ t('profile_app_default') }}</option>
+                      {% for name, label in profile_choices %}
+                        <option value="{{ name }}" {{ 'selected' if user.default_profile == name }}>{{ label }}</option>
+                      {% endfor %}
+                    </select>
+                    <button class="btn btn-success btn-sm">{{ t('save') }}</button>
+                  </div>
+                  <small class="text-muted mt-1 text-start">{{ t('default_profile_hint') }}</small>
+                </form>
+              </div>
               <div class="collapse mt-2" id="reset-{{ user.id }}">
                 <form method="POST" action="{{ url_for('admin_reset_password', user_id=user.id) }}" class="d-flex gap-1">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
