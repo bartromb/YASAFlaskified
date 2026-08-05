@@ -1,5 +1,27 @@
 # Changelog — YASAFlaskified
 
+## v0.18.4 — 2026-08-05  *(twee experimentele profielen erbij)*
+
+`psgscoring[ml]` 0.14.3 → **0.14.4**. Geen YF-codewijziging.
+
+Twee nieuwe profielen verschijnen in de v3-groep van de dropdown, allebei met
+**(experimental)** in hun naam omdat ze dat zijn:
+
+- **`aasm_v3_prob`** — de arousal-as van de ademteug-detector was als enige nog
+  een drempel: `p_arousal` sprong naar 0,90 zodra er een arousal in het venster
+  lag, waardoor de bevestiging nooit onder 0,90 kwam hoe klein de desaturatie
+  ook was. Nu gewogen (0,70) en gegradeerd op koppelingslatentie. Op PSG-IPA
+  (n = 5): F1 0,453 tegen 0,434, precisie 0,72 → 0,79, en het aantal events dat
+  géén van de twaalf scoorders markeerde daalt van 69 naar 47.
+- **`aasm_v3_fusion`** — de sensorovereenstemming tussen thermistor en neusdruk
+  telt als gewicht in plaats van als poort. Elke apneu draagt
+  `sensor_agreement`, en een apneu waarvan de thermistor de enige steun is
+  krijgt zijn confidence daarmee geschaald. **Niet gevalideerd**: die as is op
+  PSG-IPA principieel niet te meten, want die montage heeft één flowkanaal.
+
+Beide staan in de familie `exploratory` en veranderen niets tenzij iemand ze
+kiest. Elk bestaand profiel is byte-identiek.
+
 ## v0.18.3 — 2026-08-04  *(platform en rapport — punt 3 uit het backlog)*
 
 ### EDF anoniem verwerken via de GUI — twee routes
@@ -1155,6 +1177,28 @@ because clinical profiles (`aasm_v3_*`, `aasm_v2_rec`, `aasm_v1_rec`,
 - Bundled psgscoring 0.3.1 → 0.4.1 (parameter integration fix)
 
 # Changelog — YASAFlaskified
+
+## v0.18.4 — 2026-08-05  *(twee experimentele profielen erbij)*
+
+`psgscoring[ml]` 0.14.3 → **0.14.4**. Geen YF-codewijziging.
+
+Twee nieuwe profielen verschijnen in de v3-groep van de dropdown, allebei met
+**(experimental)** in hun naam omdat ze dat zijn:
+
+- **`aasm_v3_prob`** — de arousal-as van de ademteug-detector was als enige nog
+  een drempel: `p_arousal` sprong naar 0,90 zodra er een arousal in het venster
+  lag, waardoor de bevestiging nooit onder 0,90 kwam hoe klein de desaturatie
+  ook was. Nu gewogen (0,70) en gegradeerd op koppelingslatentie. Op PSG-IPA
+  (n = 5): F1 0,453 tegen 0,434, precisie 0,72 → 0,79, en het aantal events dat
+  géén van de twaalf scoorders markeerde daalt van 69 naar 47.
+- **`aasm_v3_fusion`** — de sensorovereenstemming tussen thermistor en neusdruk
+  telt als gewicht in plaats van als poort. Elke apneu draagt
+  `sensor_agreement`, en een apneu waarvan de thermistor de enige steun is
+  krijgt zijn confidence daarmee geschaald. **Niet gevalideerd**: die as is op
+  PSG-IPA principieel niet te meten, want die montage heeft één flowkanaal.
+
+Beide staan in de familie `exploratory` en veranderen niets tenzij iemand ze
+kiest. Elk bestaand profiel is byte-identiek.
 
 ## v0.8.39 (2026-04-19)
 
