@@ -2687,6 +2687,10 @@ _V0102_PDF = {
     "prov_thermistor":   {"nl": "Thermistor",          "fr": "Thermistance",            "en": "Thermistor",          "de": "Thermistor"},
     "prov_therm_usable":   {"nl": "bruikbaar",         "fr": "utilisable",              "en": "usable",              "de": "brauchbar"},
     "prov_therm_rejected": {"nl": "afgekeurd door kwaliteitscontrole", "fr": "rejetée par le contrôle qualité", "en": "rejected by quality check", "de": "von der Qualitätsprüfung abgelehnt"},
+    # Vierde geval: onder de drempel maar behouden omdat het profiel additief
+    # is. "Bruikbaar" noemen was fout — het rapport sprak zichzelf tegen met de
+    # corroboratiekolom, die liet zien dat de sensor niets had bijgedragen.
+    "prov_therm_additive": {"nl": "onder de kwaliteitsdrempel, additief gebruikt — mag events toevoegen, niet afwijzen", "fr": "sous le seuil de qualité, utilisée en additif — peut ajouter des événements, pas en rejeter", "en": "below the quality threshold, used additively — may add events, never reject them", "de": "unter der Qualitätsschwelle, additiv genutzt — darf Ereignisse hinzufügen, nicht verwerfen"},
     "prov_therm_absent":   {"nl": "niet in montage",   "fr": "absente du montage",      "en": "not in montage",      "de": "nicht in der Montage"},
     "prov_profile":      {"nl": "Scoringsprofiel",     "fr": "Profil de scoring",       "en": "Scoring profile",     "de": "Scoring-Profil"},
     "prov_software":     {"nl": "Software",            "fr": "Logiciel",                "en": "Software",            "de": "Software"},

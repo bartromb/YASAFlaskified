@@ -281,22 +281,34 @@ def provenance_rows(results, lang="nl"):
     if ref and ref != fc.get("apnea_sensor"):
         rows.append([_lbl("prov_reference", "Afgeleide analyses"), ref])
 
-    # Thermistor: afwezig, afgekeurd of bruikbaar zijn drie verschillende
-    # dingen, en het rapport toonde ze als één.
+    # Thermistor: VIER gevallen, niet drie. Het vierde ontbrak en dat leverde
+    # een tegenspraak binnen één rapport op: bij een additief profiel wordt een
+    # thermistor die de kwaliteitstoets NIET haalt toch behouden — de tweede
+    # detectiepas maakt hem onschadelijk — en dit blok noemde hem dan
+    # "bruikbaar", terwijl de corroboratiekolom twee bladzijden verderop toonde
+    # dat hij 0 van de 95 apneus had bijgedragen. De overeenstemming was 0,23
+    # tegen een drempel van 0,40. Behouden omdat het profiel additief is, is
+    # iets anders dan bruikbaar.
     rejected = fc.get("thermistor_rejected")
     check    = fc.get("thermistor_check") or {}
     agree    = check.get("agreement")
+    usable   = check.get("usable")
     agree_s  = f" ({agree:.2f})" if isinstance(agree, (int, float)) else ""
+    label    = _lbl("prov_thermistor", "Thermistor")
+    name     = rejected or fc.get("apnea_sensor") or dash
     if rejected:
-        rows.append([_lbl("prov_thermistor", "Thermistor"),
-                     f"{rejected} — {_lbl('prov_therm_rejected', 'afgekeurd')}{agree_s}"])
+        rows.append([label,
+                     f"{name} — {_lbl('prov_therm_rejected', 'afgekeurd')}{agree_s}"])
+    elif fc.get("dual_sensor") and usable is False:
+        # Aanwezig, onder de drempel, tóch gebruikt omdat het profiel additief
+        # is. Het getal erbij, zodat de lezer ziet hoe zwak de steun is.
+        rows.append([label,
+                     f"{name} — {_lbl('prov_therm_additive', 'onder de kwaliteitsdrempel, additief gebruikt')}{agree_s}"])
     elif fc.get("dual_sensor"):
-        rows.append([_lbl("prov_thermistor", "Thermistor"),
-                     f"{fc.get('apnea_sensor') or dash} — "
-                     f"{_lbl('prov_therm_usable', 'bruikbaar')}{agree_s}"])
+        rows.append([label,
+                     f"{name} — {_lbl('prov_therm_usable', 'bruikbaar')}{agree_s}"])
     else:
-        rows.append([_lbl("prov_thermistor", "Thermistor"),
-                     _lbl("prov_therm_absent", "niet in montage")])
+        rows.append([label, _lbl("prov_therm_absent", "niet in montage")])
 
     rows.append([_lbl("prov_profile", "Scoringsprofiel"),
                  pmeta.get("scoring_profile") or dash])

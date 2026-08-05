@@ -115,3 +115,43 @@ def test_every_provenance_label_is_translated_in_all_four_languages():
     for key in keys:
         for lang in ("nl", "fr", "en", "de"):
             assert TRANSLATIONS[key][lang].strip(), f"{key}/{lang} ontbreekt"
+
+
+def test_a_thermistor_below_the_threshold_is_not_called_usable():
+    """Het vierde geval, dat ontbrak.
+
+    Bij een additief profiel wordt een thermistor die de kwaliteitstoets NIET
+    haalt tóch behouden — de tweede detectiepas maakt hem onschadelijk. Het
+    blok noemde hem dan "bruikbaar", terwijl de corroboratiekolom in hetzelfde
+    rapport liet zien dat hij 0 van de 95 apneus had bijgedragen. De
+    overeenstemming was 0,23 tegen een drempel van 0,40.
+    """
+    results = _results(agreement=0.23)
+    results["pneumo"]["meta"]["flow_channels"]["thermistor_check"]["usable"] = False
+    val = _as_dict(provenance_rows(results))[TRANSLATIONS["prov_thermistor"]["nl"]]
+    assert TRANSLATIONS["prov_therm_usable"]["nl"] not in val
+    assert TRANSLATIONS["prov_therm_additive"]["nl"] in val
+    assert "0.23" in val
+
+
+def test_a_thermistor_above_the_threshold_is_still_called_usable():
+    results = _results(agreement=0.71)
+    results["pneumo"]["meta"]["flow_channels"]["thermistor_check"]["usable"] = True
+    val = _as_dict(provenance_rows(results))[TRANSLATIONS["prov_thermistor"]["nl"]]
+    assert TRANSLATIONS["prov_therm_usable"]["nl"] in val and "0.71" in val
+
+
+def test_the_four_thermistor_cases_are_all_distinct():
+    """Afwezig, afgekeurd, onder de drempel en bruikbaar zijn vier dingen."""
+    def _val(**kw):
+        r = _results(**{k: v for k, v in kw.items() if k != "usable"})
+        chk = r["pneumo"]["meta"]["flow_channels"].get("thermistor_check")
+        if chk is not None and "usable" in kw:
+            chk["usable"] = kw["usable"]
+        return _as_dict(provenance_rows(r))[TRANSLATIONS["prov_thermistor"]["nl"]]
+
+    absent   = _val(apnea="Pressure Flow", dual=False)
+    rejected = _val(apnea="Pressure Flow", dual=False, rejected="Flow Th.", agreement=0.32)
+    additive = _val(agreement=0.23, usable=False)
+    usable   = _val(agreement=0.71, usable=True)
+    assert len({absent, rejected, additive, usable}) == 4

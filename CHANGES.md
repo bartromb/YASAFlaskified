@@ -1,5 +1,33 @@
 # Changelog — YASAFlaskified
 
+## v0.18.5 — 2026-08-05  *(het herkomstblok sprak zichzelf tegen)*
+
+Geen psgscoring-wijziging (blijft 0.14.4).
+
+Het herkomstblok kende drie thermistor-gevallen — afwezig, afgekeurd, bruikbaar
+— en er zijn er vier. Bij een **additief** profiel (`aasm_v3_dual`,
+`aasm_v3_fusion`) wordt een thermistor die de kwaliteitstoets níet haalt tóch
+behouden, omdat de tweede detectiepas hem onschadelijk maakt vóór de
+apneutelling. Het blok noemde hem dan "bruikbaar".
+
+Gevonden door twee rapporten van één opname naast elkaar te leggen. Het blok
+meldde *"Flow Th. — bruikbaar (0.23)"* terwijl de drempel op 0,40 ligt en de
+corroboratiekolom twee bladzijden verderop toonde dat diezelfde sensor **0 van
+de 95 apneus** had bijgedragen. Het rapport sprak zichzelf tegen — precies het
+soort tegenspraak dat dit blok moest wegnemen.
+
+Nu vier gevallen, met het getal erbij zodat de lezer ziet hoe zwak de steun is:
+
+| situatie | tekst |
+|---|---|
+| geen thermistor | *niet in montage* |
+| afgekeurd, vervangen door de neusdruk | *afgekeurd door kwaliteitscontrole (0.32)* |
+| onder de drempel, additief behouden | *onder de kwaliteitsdrempel, additief gebruikt — mag events toevoegen, niet afwijzen (0.23)* |
+| boven de drempel | *bruikbaar (0.71)* |
+
+Drie nieuwe tests, waaronder één die afdwingt dat de vier gevallen verschillende
+tekst opleveren. 194 tests groen.
+
 ## v0.18.4 — 2026-08-05  *(twee experimentele profielen erbij)*
 
 `psgscoring[ml]` 0.14.3 → **0.14.4**. Geen YF-codewijziging.
@@ -1177,6 +1205,34 @@ because clinical profiles (`aasm_v3_*`, `aasm_v2_rec`, `aasm_v1_rec`,
 - Bundled psgscoring 0.3.1 → 0.4.1 (parameter integration fix)
 
 # Changelog — YASAFlaskified
+
+## v0.18.5 — 2026-08-05  *(het herkomstblok sprak zichzelf tegen)*
+
+Geen psgscoring-wijziging (blijft 0.14.4).
+
+Het herkomstblok kende drie thermistor-gevallen — afwezig, afgekeurd, bruikbaar
+— en er zijn er vier. Bij een **additief** profiel (`aasm_v3_dual`,
+`aasm_v3_fusion`) wordt een thermistor die de kwaliteitstoets níet haalt tóch
+behouden, omdat de tweede detectiepas hem onschadelijk maakt vóór de
+apneutelling. Het blok noemde hem dan "bruikbaar".
+
+Gevonden door twee rapporten van één opname naast elkaar te leggen. Het blok
+meldde *"Flow Th. — bruikbaar (0.23)"* terwijl de drempel op 0,40 ligt en de
+corroboratiekolom twee bladzijden verderop toonde dat diezelfde sensor **0 van
+de 95 apneus** had bijgedragen. Het rapport sprak zichzelf tegen — precies het
+soort tegenspraak dat dit blok moest wegnemen.
+
+Nu vier gevallen, met het getal erbij zodat de lezer ziet hoe zwak de steun is:
+
+| situatie | tekst |
+|---|---|
+| geen thermistor | *niet in montage* |
+| afgekeurd, vervangen door de neusdruk | *afgekeurd door kwaliteitscontrole (0.32)* |
+| onder de drempel, additief behouden | *onder de kwaliteitsdrempel, additief gebruikt — mag events toevoegen, niet afwijzen (0.23)* |
+| boven de drempel | *bruikbaar (0.71)* |
+
+Drie nieuwe tests, waaronder één die afdwingt dat de vier gevallen verschillende
+tekst opleveren. 194 tests groen.
 
 ## v0.18.4 — 2026-08-05  *(twee experimentele profielen erbij)*
 
