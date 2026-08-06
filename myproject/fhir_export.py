@@ -124,18 +124,19 @@ def results_to_fhir(results: dict, job_id: str,
     _interval = pneumo.get("ahi_interval", {})
     _intv_lo = _interval.get("interval", [None, None])[0]
     _intv_hi = _interval.get("interval", [None, None])[1]
-    _robust = _interval.get("robustness_grade", "")
-    _robust_label = _interval.get("robustness_label", "")
+    # De A/B/C-robuustheidsgraad stond hier ook in de conclusie. Verwijderd
+    # 2026-08-06: hij telde concordantie tussen strict/standard/sensitive en
+    # veronderstelde een ordening die op PSG-IPA aantoonbaar niet bestaat. Een
+    # letter die een ontvangend systeem als kwaliteitsoordeel kan lezen mag
+    # niet op zo'n aanname rusten. Het interval blijft: dat is min/max van drie
+    # getallen en veronderstelt geen volgorde.
 
     conclusion = (
         f"Automated PSG analysis (YASAFlaskified v{_APP_VERSION}, AASM). "
         f"AHI = {_fmt_val(ahi)} /h ({severity}). "
     )
     if _intv_lo is not None and _intv_hi is not None:
-        conclusion += (
-            f"AHI interval [{_intv_lo:.1f} – {_intv_hi:.1f}] /h "
-            f"(robustness: {_robust}). "
-        )
+        conclusion += f"AHI interval [{_intv_lo:.1f} – {_intv_hi:.1f}] /h. "
     conclusion += (
         f"TST = {_fmt_val(stats.get('TST'))} min, "
         f"SE = {_fmt_val(stats.get('SE'))} %. "

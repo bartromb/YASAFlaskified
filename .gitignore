@@ -86,3 +86,4 @@ step4_yasaflaskified_bundle_v0.3.1.sh
 *.bak
 .v091_backup_*/
 
+uv.lock

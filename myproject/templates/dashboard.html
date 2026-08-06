@@ -179,7 +179,6 @@
                  welke van de twee het getal stond dat je zocht. #}
               <th class="text-center" title="{{ t('col_oahi_tooltip') }}">OAHI</th>
               <th class="text-center" title="{{ t('col_type_tooltip') }}">{{ t('col_type') }}</th>
-              <th class="text-center" title="{{ t('grade_tooltip') }}">{{ t('grade') }}</th>
               <th class="text-center" title="{{ t('odi_tooltip') }}">ODI₃</th>
               <th class="text-center" title="{{ t('plmi_tooltip') }}">PLMi</th>
               <th class="text-center" title="{{ t('sq_tooltip_header') }}">{{ t('sq') }}</th>
@@ -236,18 +235,10 @@
                 {% else %}—{% endif %}
               </td>
 
-              {# Grade A/B/C (AHI confidence) #}
-              <td class="text-center numeric">
-                {% if s.grade %}
-                  <span class="badge bg-{{ 'success' if s.grade=='A' else 'warning text-dark' if s.grade=='B' else 'danger' }} rounded-pill px-2"
-                        style="min-width:26px"
-                        aria-label="Grade {{ s.grade }}">
-                    {{ s.grade }}
-                  </span>
-                {% else %}
-                  <span class="text-muted">—</span>
-                {% endif %}
-              </td>
+              {# De A/B/C-graad stond hier. Verwijderd 2026-08-06: hij rustte op
+                 een ordening strict <= standard <= sensitive die niet bestaat.
+                 Zie de toelichting bij de verwijderde _compute_ahi_grade in
+                 app.py. #}
 
               {# ODI 3% — severity strip (scale_max 40 since ODI tops earlier than AHI) #}
               <td class="text-center">

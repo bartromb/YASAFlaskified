@@ -1,5 +1,44 @@
 # Changelog — YASAFlaskified
 
+## v0.19.1 — 2026-08-06  *(de A/B/C-graad eruit; psgscoring 0.14.5)*
+
+**Verwijderd: de A/B/C-robuustheidsgraad**, uit de studielijst en uit de
+FHIR-export.
+
+Die graad telde hoeveel van `strict`, `standard` en `sensitive` dezelfde
+ernstklasse gaven, en veronderstelde daarmee dat die drie een ordening vormen:
+`strict <= standard <= sensitive`. Die ordening bestaat niet. Gemeten op
+PSG-IPA met een manueel hypnogram geeft `sensitive` op **5 van de 5** opnames
+minder events dan `standard`, en `strict` op **2 van de 5** meer — op SN2 17,1
+tegen 9,3. De oorzaak is aanwijsbaar: `strict` draait met
+`breath_level_detection=False`, en `sensitive` draagt `flow_smoothing_s=5.0`,
+dezelfde parameter die in v0.2.8 uit de standaard verdween omdat hij op SN1
++54 valse hypopnees veroorzaakte. De namen beschrijven de bedoeling, niet het
+gedrag.
+
+Uit het PDF-rapport was hij al weg (v0.15.0). Hij bleef staan op precies de
+twee plekken waar een lezer hem niet kan wegen: een gekleurd bolletje in de
+studielijst, dat leest als een kwaliteitsoordeel, en een letter in de
+FHIR-conclusie die een ontvangend systeem overneemt.
+
+**Het AHI-interval blijft.** Dat is `min()`/`max()` van drie getallen en
+veronderstelt geen volgorde; alleen de graad rustte op die aanname. psgscoring
+blijft `robustness_grade` gewoon berekenen — wie het wil gebruiken haalt het
+uit `pneumo.ahi_interval`.
+
+Negen regressietests voeren een resultaat *met* `robustness_grade: "C"` aan en
+controleren dat er niets van in de lijst of de bundel opduikt, dat AHI en OAHI
+blijven staan, en dat de vertaalsleutels weg zijn — dode labels zijn hoe een
+verwijderde kolom stilletjes terugkeert.
+
+**psgscoring 0.14.4 -> 0.14.5.** Twee nieuwe exploratieve profielen
+(`aasm_v3_breath_dual`, `aasm_v3_prob_dual`) en een per-kanaal thermistorpoort
+die alleen op die twee aanstaat. Elk klinisch profiel is byte-identiek. De
+profielkeuzelijst gaat van 13 naar 15, de per-gebruiker-standaard van 11 naar
+13.
+
+218 tests groen.
+
 ## v0.19.0 — 2026-08-05  *(scoringsprofiel per gebruiker)*
 
 Geen psgscoring-wijziging (blijft 0.14.4).

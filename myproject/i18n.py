@@ -2061,18 +2061,8 @@ def t(key: str, lang: str = None) -> str:
 # v0.8.39: Dashboard Grade/ODI/PLMi columns
 # ═══════════════════════════════════════════════════════════
 _DASHBOARD_V0839 = {
-    "grade": {
-        "nl": "Gr.",
-        "fr": "Gr.",
-        "en": "Gr.",
-        "de": "Gr.",
-    },
-    "grade_tooltip": {
-        "nl": "AHI robustheidsgraad (A=robuust, B=waarschijnlijk, C=onzeker)",
-        "fr": "Niveau de robustesse AHI (A=robuste, B=probable, C=incertain)",
-        "en": "AHI robustness grade (A=robust, B=probable, C=uncertain)",
-        "de": "AHI-Robustheitsgrad (A=robust, B=wahrscheinlich, C=unsicher)",
-    },
+    # "grade" / "grade_tooltip" stonden hier. Verwijderd 2026-08-06 samen met
+    # de A/B/C-kolom zelf; zie de toelichting in app.py.
     "odi_tooltip": {
         "nl": "Oxygen Desaturation Index (3%) \u2014 events/uur slaap",
         "fr": "Index de d\u00e9saturation en oxyg\u00e8ne (3%) \u2014 \u00e9v\u00e9nements/h sommeil",
@@ -2091,15 +2081,7 @@ TRANSLATIONS.update(_DASHBOARD_V0839)
 
 # v0.8.39: Dashboard Grade/ODI/PLMi columns
 _DASHBOARD_V0839 = {
-    "grade": {
-        "nl": "Gr.", "fr": "Gr.", "en": "Gr.", "de": "Gr.",
-    },
-    "grade_tooltip": {
-        "nl": "AHI robustheidsgraad (A=robuust, B=waarschijnlijk, C=onzeker)",
-        "fr": "Niveau de robustesse AHI (A=robuste, B=probable, C=incertain)",
-        "en": "AHI robustness grade (A=robust, B=probable, C=uncertain)",
-        "de": "AHI-Robustheitsgrad (A=robust, B=wahrscheinlich, C=unsicher)",
-    },
+    # idem — zie het blok hierboven.
     "odi_tooltip": {
         "nl": "Oxygen Desaturation Index (3%) — events/uur slaap",
         "fr": "Index de désaturation en oxygène (3%) — événements/h sommeil",

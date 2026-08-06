@@ -3020,21 +3020,27 @@ def _severity_class_plmi(value):
     return 'danger'
 
 
-def _compute_ahi_grade(data, ahi_standard=None):
-    """Extract pre-computed robustness grade from ahi_interval.
-
-    psgscoring computes this in pneumo.ahi_interval.robustness_grade.
-    Returns 'A' (robust, all profiles concordant),
-            'B' (probable), 'C' (uncertain), or None.
-    """
-    if not isinstance(data, dict):
-        return None
-    ai = data.get("pneumo", {}).get("ahi_interval", {})
-    if isinstance(ai, dict):
-        grade = ai.get("robustness_grade")
-        if grade in ("A", "B", "C"):
-            return grade
-    return None
+# De A/B/C-robuustheidsgraad is hier weggehaald (2026-08-06).
+#
+# Hij telde hoeveel van `strict`, `standard` en `sensitive` dezelfde
+# ernstklasse gaven, en veronderstelde daarmee dat die drie een ordening
+# vormen: strict <= standard <= sensitive. Die ordening bestaat niet. Gemeten
+# op PSG-IPA met een manueel hypnogram geeft `sensitive` op 5 van de 5
+# opnames MINDER events dan `standard`, en `strict` op 2 van de 5 MEER
+# (SN2: 17,1 tegen 9,3). De oorzaak is aanwijsbaar: `strict` draait met
+# breath_level_detection=False, en `sensitive` draagt flow_smoothing_s=5.0 —
+# dezelfde parameter die in v0.2.8 uit de standaard verdween omdat hij op
+# SN1 +54 valse hypopnees veroorzaakte. De namen beschrijven de bedoeling,
+# niet het gedrag.
+#
+# Uit het PDF-rapport was hij al verdwenen (v0.15.0). Hij bleef staan in de
+# studielijst en in de FHIR-export — precies de twee plekken waar niemand hem
+# kan wegen. Een gekleurd A/B/C-bolletje leest als een kwaliteitsoordeel.
+#
+# psgscoring blijft het veld berekenen; wie het wil gebruiken kan het uit
+# `pneumo.ahi_interval` halen. Het AHI-interval zelf blijft wel staan in de
+# FHIR-conclusie: dat is min/max van drie getallen en veronderstelt geen
+# ordening.
 
 
 @app.route("/dashboard")
@@ -3079,9 +3085,7 @@ def dashboard():
                           "orange"  if ahi_f < 30 else "danger"
             except Exception:
                 ahi_f = None; sev_cls = "secondary"
-            # ── v0.8.39: Grade + ODI + PLMi ────────────────
-            grade = _compute_ahi_grade(data, ahi_f)
-
+            # ── v0.8.39: ODI + PLMi ────────────────────────
             # ODI_3% (confirmed key: pneumo.spo2.summary.odi_3pct)
             odi_val = ssum.get("odi_3pct")
             try:
@@ -3137,8 +3141,7 @@ def dashboard():
                 "has_psg":     os.path.exists(os.path.join(upload_folder, f"{job_id}_rapport.pdf")),
                 "has_excel":   os.path.exists(os.path.join(upload_folder, f"{job_id}_rapport.xlsx")),
                 "has_edfplus": os.path.exists(os.path.join(upload_folder, f"{job_id}_scored.edf")),
-                # v0.8.39: Grade / ODI / PLMi
-                "grade":    grade,
+                # v0.8.39: ODI / PLMi
                 "odi":      odi_display,
                 "odi_cls":  odi_cls,
                 "plmi":     plmi_display,

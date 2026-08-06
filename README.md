@@ -10,7 +10,7 @@ AI-based sleep staging + AASM-compliant respiratory scoring + multilingual clini
 <!-- static release badge: the dynamic github/v/release endpoint intermittently
      fails with "Unable to select next GitHub token from pool" (shields.io token-pool
      rate limit). Bump the version here on each new release. -->
-[![Release](https://img.shields.io/badge/release-v0.19.0-blue)](https://github.com/bartromb/YASAFlaskified/releases/latest)
+[![Release](https://img.shields.io/badge/release-v0.19.1-blue)](https://github.com/bartromb/YASAFlaskified/releases/latest)
 
 ## Demo
 
@@ -46,7 +46,7 @@ Upload an anonymised EDF recording via browser → receive a complete PSG analys
 
 ### Key features
 
-- **AHI confidence interval** — every study scored at three stringency levels with robustness grade (A/B/C)
+- **AHI confidence interval** — every study scored at three stringency levels, reported as a range
 - **12 bias corrections** — systematic over- and under-counting correction with per-fix event counters
 - **Configurable scoring profiles** — strict / standard / sensitive
 - **Interactive EDF browser** — event overlay with epoch navigation
