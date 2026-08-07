@@ -1909,10 +1909,24 @@ def channel_select(job_id):
         # Fallback: eerste kanaal uit parsed EEG-lijst
         if not best_eeg and parsed.get("eeg"):
             best_eeg = parsed["eeg"][0]
-        # Ultieme fallback: eerste kanaal
+        # GEEN blinde terugval meer op het eerste kanaal.
+        #
+        # Hier stond `best_eeg = channels[0]`. Op een polygrafie is dat
+        # `Pressure Flow`, en dat kanaal stond dus voorgeselecteerd als EEG.
+        # De gebruiker hoefde alleen op "start" te drukken: YASA stageerde op
+        # de neusdruk, de artefactdetector keurde alle 1078 epochs af, en het
+        # rapport meldde REI 81000,0/u — Ernstig SAS — therapie CPAP.
+        #
+        # De patroonherkenning in psgscoring weigert dit al (_ROLE_MAY_NOT_TAKE
+        # verbiedt de eeg-rol elk flowkanaal); deze regel omzeilde die weigering
+        # door willekeurig het eerste kanaal te nemen. Geen EEG in de montage
+        # betekent geen EEG-keuze — niet "dan maar iets".
         if not best_eeg:
-            best_eeg = channels[0] if channels else None
-        logger.info("Beste EEG-kanaal: %s (uit %d kanalen)", best_eeg, len(channels))
+            logger.info("Geen EEG-kanaal herkend in %d kanalen — geen "
+                        "voorselectie (was: het eerste kanaal)", len(channels))
+        else:
+            logger.info("Beste EEG-kanaal: %s (uit %d kanalen)",
+                        best_eeg, len(channels))
 
         # Patiëntgegevens uit EDF-header (v0.8.22: eigen parser i.p.v. MNE)
         # MNE's subject_info is onbetrouwbaar: his_id bevat vaak patient_code
@@ -2065,6 +2079,19 @@ def start_analysis():
     emg_ch    = request.form.get("emg_ch") or None
     extra_eeg = request.form.getlist("extra_eeg_ch")
     rec_start = request.form.get("recording_start") or None
+
+    # Bij polygrafie bestaat er geen EEG, dus wordt er hier geen aangenomen —
+    # wat het formulier ook meestuurt. Het uitschakelen van de keuzelijsten in
+    # de browser is comfort; dit is de garantie. Een meegestuurd kanaal zou
+    # anders alsnog de staging voeden, en dat is precies de keten die
+    # "REI 81000,0/u — Ernstig SAS" opleverde.
+    from study_type import is_polygraphy
+    if is_polygraphy(request.form.get("study_type", "")):
+        if eeg_ch or eog_ch or emg_ch or extra_eeg:
+            logger.info("[analyze] Polygrafie: meegestuurde staging-kanalen "
+                        "genegeerd (eeg=%r eog=%r emg=%r extra=%d)",
+                        eeg_ch, eog_ch, emg_ch, len(extra_eeg))
+        eeg_ch, eog_ch, emg_ch, extra_eeg = None, None, None, []
 
     # ── Pneumo-kanalen (v7.1) ──
     # flow_thermistor + flow_pressure zijn de twee AASM-sensoren (apneu resp.

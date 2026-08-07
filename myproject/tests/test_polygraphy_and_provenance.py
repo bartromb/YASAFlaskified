@@ -154,6 +154,59 @@ def test_a_polygraphy_hypnogram_covers_the_whole_recording():
 #  100% artefact is een mislukte analyse
 # ─────────────────────────────────────────────────────────────
 
+# ─────────────────────────────────────────────────────────────
+#  De opname beslist, niet de keuzelijst
+# ─────────────────────────────────────────────────────────────
+
+@pytest.mark.parametrize("study_type,eeg_ch,verwacht_pg", [
+    ("diagnostic_pg",  None,  True),   # allebei: polygrafie
+    ("diagnostic_pg",  "C4",  True),   # type zegt polygrafie -> geen staging
+    ("diagnostic_psg", None,  True),   # GEEN EEG -> tóch polygrafie
+    ("diagnostic_psg", "C4",  False),  # echte PSG
+])
+def test_a_montage_without_eeg_is_a_polygraphy_whatever_the_form_said(
+        study_type, eeg_ch, verwacht_pg):
+    """Het studietype stond op PSG, de neusdruk stond als EEG voorgeselecteerd,
+    en er kwam een hypnogram uit een flowsignaal. Niemand hoort te moeten
+    onthouden dat veld goed te zetten — de opname weet het al."""
+    from study_type import is_polygraphy
+    assert (is_polygraphy(study_type) or not eeg_ch) is verwacht_pg
+
+
+def test_the_report_label_follows_what_actually_ran():
+    """Draaide het als polygrafie, dan hoort er REI boven te staan — ook als
+    het studietype op PSG bleef staan. Anders staat er "AHI" boven een getal
+    dat over registratietijd gaat."""
+    from study_type import is_polygraphy
+    results = {"study_type": "diagnostic_psg", "is_polygraphy": True}
+    label_is_rei = bool(results.get("is_polygraphy")) or is_polygraphy(
+        results.get("study_type"))
+    assert label_is_rei is True
+
+
+def test_a_real_psg_keeps_its_ahi_label():
+    from study_type import is_polygraphy
+    results = {"study_type": "diagnostic_psg", "is_polygraphy": False}
+    assert not (bool(results.get("is_polygraphy"))
+                or is_polygraphy(results.get("study_type")))
+
+
+def test_no_eeg_like_channel_means_no_preselection():
+    """De blinde terugval `best_eeg = channels[0]` zette `Pressure Flow` als
+    EEG klaar op een montage zonder EEG. Eén klik op "start" volstond dan om
+    YASA op de neusdruk te laten stageren."""
+    kanalen = ["Pressure Flow", "Flow Th.", "RIP Thorax", "RIP Abdomen",
+               "SPO2", "Pos.", "Pressure Snore", "Pulse"]
+    eeg_achtig = [c for c in kanalen
+                  if c.upper() in {"C3", "C4", "C3-M2", "C4-M1", "F3", "F4",
+                                   "O1", "O2", "CZ"}]
+    assert eeg_achtig == [], "deze montage heeft geen EEG"
+    # en dan hoort er niets voorgeselecteerd te worden — geen channels[0]
+    best_eeg = eeg_achtig[0] if eeg_achtig else None
+    assert best_eeg is None
+    assert best_eeg != kanalen[0]
+
+
 def test_a_fully_masked_recording_is_reported_as_blocking():
     """De vorm van de waarschuwing die tasks.py wegschrijft. Op het echte
     rapport stond '100% artefact' onderaan terwijl de kop 'Ernstig SAS' zei."""

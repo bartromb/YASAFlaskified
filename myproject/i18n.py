@@ -2661,6 +2661,8 @@ _V0102_PDF = {
     # rapport de methode in plaats van de uitvoering, en zijn twee runs van
     # dezelfde nacht niet te vergelijken zonder de logs erbij.
     "rpt_sec_provenance": {"nl": "Herkomst — welk kanaal voedde welke analyse", "fr": "Provenance — quel canal a alimenté quelle analyse", "en": "Provenance — which channel fed which analysis", "de": "Herkunft — welcher Kanal welche Analyse gespeist hat"},
+    "pdf_rec_time":      {"nl": "Registratietijd", "fr": "Temps d'enregistrement", "en": "Recording time", "de": "Aufzeichnungszeit"},
+    "pdf_rei_denominator": {"nl": "REI-noemer", "fr": "Dénominateur IER", "en": "REI denominator", "de": "REI-Nenner"},
     "prov_ch_absent":    {"nl": "niet in dit EDF-bestand", "fr": "absent de ce fichier EDF", "en": "not present in this EDF file", "de": "nicht in dieser EDF-Datei"},
     "prov_arousal_eeg":  {"nl": "Arousal-analyse — EEG", "fr": "Analyse des micro-éveils — EEG", "en": "Arousal analysis — EEG", "de": "Arousal-Analyse — EEG"},
     "prov_staging_eeg":  {"nl": "Slaapstaging — EEG",  "fr": "Stades du sommeil — EEG", "en": "Sleep staging — EEG", "de": "Schlafstadien — EEG"},

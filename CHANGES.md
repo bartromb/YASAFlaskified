@@ -1,5 +1,39 @@
 # Changelog — YASAFlaskified
 
+## v0.19.3 — 2026-08-07  *(polygrafie: de opname beslist, en het rapport toont geen slaap meer)*
+
+Geen psgscoring-wijziging (blijft 0.14.6).
+
+Vervolg op 0.19.2, na een tweede blik op hetzelfde rapport. Twee dingen bleven
+staan.
+
+**Het EEG-veld vulde zichzelf met de neusdruk.** Niet via de patroonherkenning —
+die weigert een flowkanaal correct als EEG — maar via een blinde terugval in
+`app.py`: *"Ultieme fallback: eerste kanaal"*. Op een polygrafiemontage is het
+eerste kanaal `Pressure Flow`, dus stond dat voorgeselecteerd en volstond één
+klik op "start". Die terugval is weg: geen EEG in de montage betekent geen
+voorselectie, niet "dan maar iets".
+
+**De opname beslist nu, niet de keuzelijst.** Zonder EEG-kanaal wordt een run
+als polygrafie behandeld, welk studietype er ook is aangevinkt. Dat vergeten was
+precies wat er gebeurde: het studietype stond op PSG, de neusdruk stond als EEG
+klaar, en er kwam een hypnogram uit een drukcurve. Bij polygrafie wordt de
+staging-EDF niet meer geladen, YASA draait niet, en het EEG-artefactmasker
+blijft leeg — dat oordeel kwam toch van een kanaal dat geen EEG is. Het rapport
+leest `results["is_polygraphy"]`, dus het label volgt wat er werkelijk gedraaid
+heeft: REI, niet AHI.
+
+**Alles wat op staging berust verdwijnt bij polygrafie:** de hypnogram-grafiek,
+sectie 1 Slaaparchitectuur, de stadiawissel-matrix en sectie 2 Slaapcycli. Ook
+de KPI-tegels: TST, slaapefficiëntie, inslaaplatentie en WASO zijn
+staging-uitkomsten en stonden er met TST 390 min en SE 72,3 % op grond van dat
+hypnogram uit een drukcurve. Daar staan nu **registratietijd** en **REI-noemer**
+— de twee getallen waarmee een lezer de REI kan narekenen.
+
+Een hypnogram met 11 slaapcycli en REM-latentie 6 minuten, gescoord op een
+drukcurve, is geen zwak hypnogram maar een betekenisloos hypnogram. Een grafiek
+die eruitziet als een hypnogram nodigt uit om hem te lezen.
+
 ## v0.19.2 — 2026-08-07  *(polygrafie: REI over registratietijd; psgscoring 0.14.6)*
 
 Aanleiding is één rapport met de kop **REI 81000,0/u — Ernstig SAS — therapie

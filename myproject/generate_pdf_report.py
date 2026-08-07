@@ -1173,7 +1173,11 @@ def generate_pdf_report(results:dict, output_path:str,
     # daar een AHI-label boven een REI-getal zetten. Zie study_type.py.
     from study_type import is_polygraphy as _is_pg, is_titration as _is_titr
     is_titration = _is_titr(study_type)
-    is_polygraphy = _is_pg(study_type)
+    # `results["is_polygraphy"]` draagt wat er werkelijk gedraaid heeft: de
+    # analyse merkt een montage zonder EEG zelf op, ook als het studietype op
+    # PSG bleef staan. Het label moet die werkelijkheid volgen, anders staat er
+    # "AHI" boven een getal dat over registratietijd gaat.
+    is_polygraphy = bool(results.get("is_polygraphy")) or _is_pg(study_type)
     therapy_label = ""
     if study_type == "titration_psg_cpap":
         title_txt = t("pdf_titration_cpap", lang)
@@ -1250,13 +1254,31 @@ def generate_pdf_report(results:dict, output_path:str,
         ahi_label = f"{t('pdf_residual',lang)} AHI  ({_sev_with_syndrome(ahi_v, _rsum_for_sev, lang)})"
     else:
         ahi_label = f"AHI  ({_sev_with_syndrome(ahi_v, _rsum_for_sev, lang)})"
-    story.append(_kpi([
-        (ahi_s, ahi_label, "/u", _sev_clr(ahi_v) if ahi_v else GR),
-        (_v(stats,"TST",fmt="{:.0f}"),  "TST", "min", NAVY),
-        (_v(stats,"SE",fmt="{:.1f}"),   t("pdf_se",lang),  "%",   NAVY),
-        (_v(stats,"SOL",fmt="{:.0f}"),  t("pdf_sol",lang),    "min", NAVY),
-        (_v(stats,"WASO",fmt="{:.0f}"), "WASO",                   "min", NAVY),
-    ])); sp(0.15)
+    # TST, slaapefficiëntie, inslaaplatentie en WASO zijn allemaal
+    # staging-uitkomsten. Zonder EEG bestaan ze niet, en ze tonen ze op grond
+    # van een hypnogram uit een drukcurve is geen benadering maar een
+    # verzinsel: op de opname die dit aan het licht bracht stond daar
+    # TST 390 min en SE 72,3 %. Bij polygrafie komt in plaats daarvan de
+    # registratietijd te staan, want dat is de noemer van de REI.
+    if is_polygraphy:
+        _rec_min = meta.get("duration_min")
+        _den_h = ((results.get("pneumo") or {}).get("respiratory") or {}) \
+            .get("summary", {}).get("index_denominator_h")
+        story.append(_kpi([
+            (ahi_s, ahi_label, "/u", _sev_clr(ahi_v) if ahi_v else GR),
+            (f"{_rec_min:.0f}" if isinstance(_rec_min, (int, float)) else "—",
+             t("pdf_rec_time", lang), "min", NAVY),
+            (f"{_den_h:.1f}" if isinstance(_den_h, (int, float)) else "—",
+             t("pdf_rei_denominator", lang), "u", NAVY),
+        ])); sp(0.15)
+    else:
+        story.append(_kpi([
+            (ahi_s, ahi_label, "/u", _sev_clr(ahi_v) if ahi_v else GR),
+            (_v(stats,"TST",fmt="{:.0f}"),  "TST", "min", NAVY),
+            (_v(stats,"SE",fmt="{:.1f}"),   t("pdf_se",lang),  "%",   NAVY),
+            (_v(stats,"SOL",fmt="{:.0f}"),  t("pdf_sol",lang),    "min", NAVY),
+            (_v(stats,"WASO",fmt="{:.0f}"), "WASO",                   "min", NAVY),
+        ])); sp(0.15)
 
     # v0.8.43: Apnoe-type breakdown regel (dominante type + percentages)
     from reportlab.lib.styles import ParagraphStyle as _PS_v0843
@@ -1374,8 +1396,13 @@ def generate_pdf_report(results:dict, output_path:str,
     n_epochs = len(timeline) if timeline else 0
     dur_h = n_epochs * 30 / 3600 if n_epochs > 0 else float(meta.get("duration_min", 480)) / 60
 
-    # Hypnogram
-    if timeline:
+    # Hypnogram — niet bij polygrafie.
+    #
+    # Zonder EEG bestaat er geen hypnogram. Wat er stond was gescoord op een
+    # drukcurve: 11 slaapcycli, REM-latentie 6 minuten, 118 minuten REM. Dat is
+    # geen zwak hypnogram maar een betekenisloos hypnogram, en een grafiek die
+    # er wel uitziet als een hypnogram nodigt uit om hem te lezen.
+    if timeline and not is_polygraphy:
         story.append(Paragraph("<b>HYPNO</b>", styles["SM"]))
         try:
             story.append(_hypno_ov(timeline, dur_h, hc=2.2, lang=lang))

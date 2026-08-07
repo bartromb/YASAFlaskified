@@ -161,35 +161,39 @@ def run_analysis_job(job_id: str) -> dict:
     if not os.path.exists(edf_path):
         raise FileNotFoundError(f"EDF niet gevonden: {edf_path}")
 
-    # ── Stap 1: Staging-raw laden (ENKEL primaire kanalen) ────
-    _set_progress(job_id, 2, 10, "EDF laden voor staging...")
-    staging_needed = list(dict.fromkeys(
-        ch for ch in [eeg_ch, eog_ch, emg_ch] if ch
-    ))
-    logger.info("STAGING EDF laden (%d kanalen)...", len(staging_needed))
-    raw_staging = _load_edf(edf_path, staging_needed, label="STAGING")
-
-    # ── Stap 2: Staging uitvoeren (snel: 3 kanalen) ───────────
-    _set_progress(job_id, 3, 10, "Slaapstaging (AI-model)...")
-    logger.info("YASA staging starten...")
-    staging_result = run_sleep_staging(raw_staging, eeg_ch, eog_ch, emg_ch)
-    hypno          = staging_result.get("hypnogram", [])
-    staging_ok     = bool(hypno) and any(s != "W" for s in hypno)
-
-    # ── Polygrafie: geen slaapstaging, indices over registratietijd ───────
-    # Een polygrafie heeft geen EEG. Draaide staging hier toch — op welk
-    # kanaal de gebruiker ook opgaf om het formulier voorbij te komen — dan
-    # ontstond een hypnogram uit een niet-EEG-signaal, keurde de
-    # artefactdetector alles af, en bleef er nul slaaptijd over als noemer.
+    # ── Polygrafie: geen EEG, dus geen staging-EDF en geen YASA ───────────
+    # Deze tak staat bewust VÓÓR het laden. Een polygrafie heeft geen
+    # EEG-kanaal, dus is er niets om een staging-raw uit op te bouwen en niets
+    # om YASA op te draaien. Stond hij erna, dan draaide de staging alsnog op
+    # welk kanaal er ook meekwam — precies de keten die "REI 81000,0/u —
+    # Ernstig SAS — therapie CPAP" opleverde bij 81 hypopnees.
     #
     # Alle epochs als "N2" tellen betekent: de noemer IS de registratietijd.
-    # Dat is precies wat het rapport al beweerde te tonen ("events per uur
+    # Dat is wat het rapport al beweerde te tonen ("events per uur
     # registratietijd (TIB) i.p.v. TST") maar nergens berekende.
     from study_type import is_polygraphy as _is_pg
-    is_polygraphy = _is_pg(cfg.get("study_type"))
+    # De DATA beslist, niet alleen de keuzelijst. Zonder EEG-kanaal is dit een
+    # polygrafie, welk studietype er ook is aangevinkt — en omgekeerd hoeft
+    # niemand te onthouden het veld goed te zetten. Dat vergeten was precies
+    # wat er gebeurde: het studietype stond op PSG, de neusdruk stond als EEG
+    # voorgeselecteerd, en er kwam een hypnogram uit een flowsignaal.
+    _pg_by_type = _is_pg(cfg.get("study_type"))
+    _pg_by_data = not eeg_ch
+    is_polygraphy = _pg_by_type or _pg_by_data
+    if is_polygraphy and not _pg_by_type:
+        logger.info("[task] Geen EEG-kanaal opgegeven — als polygrafie "
+                    "behandeld ondanks studietype %r", cfg.get("study_type"))
+
     if is_polygraphy:
-        n_epochs = int(raw_staging.times[-1] // 30) if raw_staging is not None else 0
+        _set_progress(job_id, 3, 10, "Polygrafie — geen slaapstaging...")
+        # De opnameduur komt uit de EDF-header; daar is geen kanaal voor nodig.
+        import mne as _mne
+        _hdr = _mne.io.read_raw_edf(edf_path, preload=False, verbose="ERROR")
+        n_epochs = int(_hdr.times[-1] // 30)
+        del _hdr
+        raw_staging = None
         hypno = ["N2"] * n_epochs
+        staging_ok = False
         staging_result = {
             "success":   False,
             "skipped":   True,
@@ -198,47 +202,80 @@ def run_analysis_job(job_id: str) -> dict:
             "reason":    ("polygrafie — geen EEG, dus geen slaapstaging; "
                           "indices per uur registratietijd (REI)"),
         }
-        staging_ok = False
         logger.info("[task] Polygrafie: staging overgeslagen, %d epochs "
                     "registratietijd als noemer", n_epochs)
-    elif staging_ok:
-        logger.info("Staging OK: %d epochs — %s",
-                    len(hypno), dict(Counter(hypno)))
     else:
-        logger.warning("Staging mislukt: %s — fallback N2", staging_result.get("error"))
-        n_epochs = int(raw_staging.times[-1] / 30)
-        hypno    = ["N2"] * n_epochs
-        staging_result["hypnogram"] = hypno
-        staging_result["fallback"]  = True
+        # ── Stap 1: Staging-raw laden (ENKEL primaire kanalen) ────
+        _set_progress(job_id, 2, 10, "EDF laden voor staging...")
+        staging_needed = list(dict.fromkeys(
+            ch for ch in [eeg_ch, eog_ch, emg_ch] if ch
+        ))
+        logger.info("STAGING EDF laden (%d kanalen)...", len(staging_needed))
+        raw_staging = _load_edf(edf_path, staging_needed, label="STAGING")
+
+        # ── Stap 2: Staging uitvoeren (snel: 3 kanalen) ───────────
+        _set_progress(job_id, 3, 10, "Slaapstaging (AI-model)...")
+        logger.info("YASA staging starten...")
+        staging_result = run_sleep_staging(raw_staging, eeg_ch, eog_ch, emg_ch)
+        hypno          = staging_result.get("hypnogram", [])
+        staging_ok     = bool(hypno) and any(s != "W" for s in hypno)
+
+        if staging_ok:
+            logger.info("Staging OK: %d epochs — %s",
+                        len(hypno), dict(Counter(hypno)))
+        else:
+            logger.warning("Staging mislukt: %s — fallback N2",
+                           staging_result.get("error"))
+            n_epochs = int(raw_staging.times[-1] / 30)
+            hypno    = ["N2"] * n_epochs
+            staging_result["hypnogram"] = hypno
+            staging_result["fallback"]  = True
 
     # ── Stap 3: Analyse-raw laden (alle EEG kanalen) ──────────
     _set_progress(job_id, 4, 10, "EEG-kanalen laden voor analyse...")
     analyse_needed = list(dict.fromkeys(
         ch for ch in [eeg_ch, eog_ch, emg_ch] + extra_eeg if ch
     ))
-    if set(analyse_needed) == set(staging_needed):
-        logger.info("Analyse-raw = staging-raw")
-        raw_analyse = raw_staging
+    if is_polygraphy or not analyse_needed:
+        # Geen EEG/EOG/EMG om te analyseren. Spindles, trage golven, REM en
+        # bandpower hebben geen invoer, en een leeg artefactmasker is hier het
+        # juiste antwoord: een EEG-artefactoordeel over een niet-EEG-kanaal
+        # veegde eerder de hele noemer weg. De respiratoire analyse hieronder
+        # draait op haar eigen kanalen en heeft hier niets van nodig.
+        logger.info("[task] Polygrafie: EEG-analyse overgeslagen")
+        raw_analyse  = None
+        yasa_results = {
+            "staging":          staging_result,
+            "sleep_statistics": {"success": False,
+                                 "error": "polygrafie — geen EEG, geen staging",
+                                 "stats": {}},
+            "artifacts":        {"success": False, "artifact_epochs": []},
+            "hypnogram_timeline": [],
+        }
     else:
-        logger.info("ANALYSE EDF laden (%d kanalen)...", len(analyse_needed))
-        raw_analyse = _load_edf(edf_path, analyse_needed, label="ANALYSE")
+        if set(analyse_needed) == set(staging_needed):
+            logger.info("Analyse-raw = staging-raw")
+            raw_analyse = raw_staging
+        else:
+            logger.info("ANALYSE EDF laden (%d kanalen)...", len(analyse_needed))
+            raw_analyse = _load_edf(edf_path, analyse_needed, label="ANALYSE")
 
-    _validate_channels(raw_analyse, eeg_ch, eog_ch, emg_ch, extra_eeg)
+        _validate_channels(raw_analyse, eeg_ch, eog_ch, emg_ch, extra_eeg)
 
-    # ── Stap 4: Volledige YASA analyse (met prefetched hypno) ─
-    _set_progress(job_id, 5, 10, "Spindles, slow waves, bandpower...")
-    logger.info("YASA volledige analyse starten...")
-    yasa_results = run_full_analysis(
-        raw              = raw_analyse,
-        eeg_ch           = eeg_ch,
-        eog_ch           = eog_ch,
-        emg_ch           = emg_ch,
-        all_eeg_channels = extra_eeg,
-        recording_start  = recording_start,
-        prefetched_hypno = hypno,
-    )
-    # Gebruik het reeds berekende staging-resultaat
-    yasa_results["staging"] = staging_result
+        # ── Stap 4: Volledige YASA analyse (met prefetched hypno) ─
+        _set_progress(job_id, 5, 10, "Spindles, slow waves, bandpower...")
+        logger.info("YASA volledige analyse starten...")
+        yasa_results = run_full_analysis(
+            raw              = raw_analyse,
+            eeg_ch           = eeg_ch,
+            eog_ch           = eog_ch,
+            emg_ch           = emg_ch,
+            all_eeg_channels = extra_eeg,
+            recording_start  = recording_start,
+            prefetched_hypno = hypno,
+        )
+        # Gebruik het reeds berekende staging-resultaat
+        yasa_results["staging"] = staging_result
 
     # ── Stap 5: Pneumo-kanalen detecteren en laden ────────────
     _set_progress(job_id, 6, 10, "Pneumo-kanalen laden...")
@@ -395,6 +432,10 @@ def run_analysis_job(job_id: str) -> dict:
         **yasa_results,
         "pneumo":           pneumo_results,
         "analysis_warnings": analysis_warnings,
+        # Wat er WERKELIJK gedraaid heeft, niet wat er aangevinkt stond. Het
+        # rapport moet "REI" boven een REI zetten, ook wanneer het studietype
+        # per ongeluk op PSG bleef staan.
+        "is_polygraphy":    is_polygraphy,
         "patient_info":     patient_info,
         "job_id":           job_id,
         "edf_path":         edf_path,              # v0.8.22: voor epoch-plots in PDF
