@@ -2099,7 +2099,19 @@ def start_analysis():
         "referring_physician": request.form.get("referring_physician", "").strip(),
     }
 
-    if not job_id or not eeg_ch:
+    # Een polygrafie heeft per definitie geen EEG. Zolang dit veld verplicht
+    # was, vulde de gebruiker er iets anders in om verder te kunnen — op een
+    # echte opname werd dat de neusdruk. YASA stageerde vervolgens op een
+    # flowsignaal, de artefactdetector keurde daarop ALLE 1078 epochs af, en
+    # daarmee viel de noemer van elke index weg: 81 hypopnees werden
+    # "REI 81000,0/u - Ernstig SAS - therapie CPAP".
+    #
+    # Bij polygrafie hoort er geen staging te draaien, dus hoort dit veld ook
+    # niet gevraagd te worden. De indices gaan dan over registratietijd (REI),
+    # precies zoals het rapport altijd al beweerde te doen.
+    from study_type import requires_eeg_channel
+    if not job_id or (not eeg_ch and requires_eeg_channel(
+            request.form.get("study_type", ""))):
         flash(get_translation("job_eeg_required", session.get("lang","en")), "danger")
         return redirect(url_for("upload_file"))
 

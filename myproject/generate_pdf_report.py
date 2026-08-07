@@ -266,13 +266,36 @@ def provenance_rows(results, lang="nl"):
         except Exception:
             return fallback
 
+    # De staging-rijen komen uit de JOBCONFIG — wat de gebruiker koos, niet
+    # wat het EDF bevat. Op een echte opname stonden hier EOG1 en EMG1 terwijl
+    # het bestand die kanalen niet had; het blok bevestigde dus een keuze in
+    # plaats van de uitvoering, en dat is precies de fout waartegen het bestaat.
+    # Toetsen tegen de werkelijke kanaallijst en het verschil benoemen.
+    present = set(pmeta.get("all_channels") or [])
+
+    def _staging_ch(name):
+        if not name:
+            return dash
+        if present and name not in present:
+            return f"{name} — {_lbl('prov_ch_absent', 'niet in dit EDF-bestand')}"
+        return name
+
     rows = [
-        [_lbl("prov_staging_eeg", "Staging — EEG"), meta.get("eeg_channel") or dash],
-        [_lbl("prov_staging_eog", "Staging — EOG"), meta.get("eog_channel") or dash],
-        [_lbl("prov_staging_emg", "Staging — EMG"), meta.get("emg_channel") or dash],
+        [_lbl("prov_staging_eeg", "Staging — EEG"), _staging_ch(meta.get("eeg_channel"))],
+        [_lbl("prov_staging_eog", "Staging — EOG"), _staging_ch(meta.get("eog_channel"))],
+        [_lbl("prov_staging_emg", "Staging — EMG"), _staging_ch(meta.get("emg_channel"))],
         [_lbl("prov_apnea", "Apneu"), fc.get("apnea_sensor") or dash],
         [_lbl("prov_hypopnea", "Hypopneu"), fc.get("hypopnea_sensor") or dash],
     ]
+
+    # Het EEG dat de arousal-analyse voedde is niet noodzakelijk het EEG dat
+    # de staging voedde: staging krijgt de kanaalkeuze van de gebruiker, de
+    # respiratoire pijplijn detecteert zijn eigen EEG-rol. Op een echte opname
+    # was dat C4 tegen C3 — twee kanalen in één run, en het rapport toonde er
+    # één. Alleen tonen wanneer ze verschillen, anders is het ruis.
+    _ar_eeg = (pmeta.get("channels_used") or {}).get("eeg")
+    if _ar_eeg and _ar_eeg != meta.get("eeg_channel"):
+        rows.append([_lbl("prov_arousal_eeg", "Arousal-analyse — EEG"), _ar_eeg])
 
     # De vijf afgeleide analyses (AHI-sweep, baseline, arousal-koppeling, CSR,
     # ventilatoire last) lezen sinds psgscoring 0.14.1 een eigen referentie.
@@ -1146,8 +1169,11 @@ def generate_pdf_report(results:dict, output_path:str,
 
     # ── TITEL (v0.8.22: studietype-afhankelijk) ──────────────────
     study_type = results.get("study_type", "diagnostic_psg")
-    is_titration = study_type.startswith("titration_")
-    is_polygraphy = "_pg_" in study_type
+    # Eén gedeelde regel: `"_pg_" in study_type` miste `diagnostic_pg` en zou
+    # daar een AHI-label boven een REI-getal zetten. Zie study_type.py.
+    from study_type import is_polygraphy as _is_pg, is_titration as _is_titr
+    is_titration = _is_titr(study_type)
+    is_polygraphy = _is_pg(study_type)
     therapy_label = ""
     if study_type == "titration_psg_cpap":
         title_txt = t("pdf_titration_cpap", lang)

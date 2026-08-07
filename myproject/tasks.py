@@ -176,7 +176,32 @@ def run_analysis_job(job_id: str) -> dict:
     hypno          = staging_result.get("hypnogram", [])
     staging_ok     = bool(hypno) and any(s != "W" for s in hypno)
 
-    if staging_ok:
+    # ── Polygrafie: geen slaapstaging, indices over registratietijd ───────
+    # Een polygrafie heeft geen EEG. Draaide staging hier toch — op welk
+    # kanaal de gebruiker ook opgaf om het formulier voorbij te komen — dan
+    # ontstond een hypnogram uit een niet-EEG-signaal, keurde de
+    # artefactdetector alles af, en bleef er nul slaaptijd over als noemer.
+    #
+    # Alle epochs als "N2" tellen betekent: de noemer IS de registratietijd.
+    # Dat is precies wat het rapport al beweerde te tonen ("events per uur
+    # registratietijd (TIB) i.p.v. TST") maar nergens berekende.
+    from study_type import is_polygraphy as _is_pg
+    is_polygraphy = _is_pg(cfg.get("study_type"))
+    if is_polygraphy:
+        n_epochs = int(raw_staging.times[-1] // 30) if raw_staging is not None else 0
+        hypno = ["N2"] * n_epochs
+        staging_result = {
+            "success":   False,
+            "skipped":   True,
+            "hypnogram": hypno,
+            "n_epochs":  n_epochs,
+            "reason":    ("polygrafie — geen EEG, dus geen slaapstaging; "
+                          "indices per uur registratietijd (REI)"),
+        }
+        staging_ok = False
+        logger.info("[task] Polygrafie: staging overgeslagen, %d epochs "
+                    "registratietijd als noemer", n_epochs)
+    elif staging_ok:
         logger.info("Staging OK: %d epochs — %s",
                     len(hypno), dict(Counter(hypno)))
     else:
@@ -272,6 +297,41 @@ def run_analysis_job(job_id: str) -> dict:
     except Exception as e:
         logger.debug("Clipping-check mislukt (niet-kritiek): %s", e)
 
+    # Blokkerende bevindingen die de gebruiker MOET zien, niet als voetnoot.
+    analysis_warnings: list[dict] = []
+
+    # ── Twee bewakingen op het artefactmasker ────────────────────────────
+    #
+    # (a) Bij polygrafie komt dit masker uit een EEG-artefactdetector die
+    #     naar een niet-EEG-kanaal keek. Dat oordeel zegt niets over de
+    #     ademhaling en mag de registratietijd niet wegvegen.
+    if is_polygraphy and art_epochs:
+        logger.info("[task] Polygrafie: %d EEG-artefact-epochs genegeerd — "
+                    "dat oordeel komt niet van een EEG", len(art_epochs))
+        art_epochs = []
+
+    # (b) Keurt de detector ALLES af, dan is dat geen resultaat maar een
+    #     mislukte analyse. Het masker blijft staan — psgscoring geeft dan
+    #     indices als None terug met de reden erbij, en dat is eerlijker dan
+    #     een getal uit een lege noemer. Maar het hoort wel zichtbaar te zijn
+    #     in plaats van als voetnoot: op de opname die dit aan het licht
+    #     bracht stond 100% artefact ergens onderaan het rapport terwijl de
+    #     kop "Ernstig SAS" meldde.
+    _n_ep = len(hypno) or 1
+    _art_frac = len(set(art_epochs)) / _n_ep
+    if _art_frac >= 1.0:
+        logger.error("[task] ALLE %d epochs als artefact gemarkeerd — de "
+                     "indices zijn niet berekenbaar. Kanaalkeuze controleren.",
+                     _n_ep)
+        analysis_warnings.append({
+            "code": "all_epochs_artefact",
+            "severity": "blocking",
+            "message": (f"Alle {_n_ep} epochs zijn als artefact gemarkeerd. "
+                        "Er blijft geen slaaptijd over om indices op te "
+                        "baseren. Controleer of het opgegeven EEG-kanaal "
+                        "werkelijk een EEG is."),
+        })
+
     logger.info("Artefact-epochs voor pneumo exclusie: %d", len(art_epochs))
 
     # v0.9.8: per-job toggle for the ML arousal re-classifier. The
@@ -334,6 +394,7 @@ def run_analysis_job(job_id: str) -> dict:
     combined = {
         **yasa_results,
         "pneumo":           pneumo_results,
+        "analysis_warnings": analysis_warnings,
         "patient_info":     patient_info,
         "job_id":           job_id,
         "edf_path":         edf_path,              # v0.8.22: voor epoch-plots in PDF

@@ -404,6 +404,7 @@ TRANSLATIONS = {
     "scoring_profile_title": {'nl': 'Scoring profiel', 'fr': 'Profil de scoring', 'en': 'Scoring Profile'},
     "study_type_title":      {"nl": "Studietype", "fr": "Type d'étude", "en": "Study type"},
     "study_diagnostic_psg":  {"nl": "Diagnostische PSG", "fr": "PSG diagnostique", "en": "Diagnostic PSG"},
+    "study_diagnostic_pg":   {"nl": "Diagnostische polygrafie", "fr": "Polygraphie diagnostique", "en": "Diagnostic polygraphy", "de": "Diagnostische Polygraphie"},
     "study_titration_psg_cpap": {"nl": "Titratie PSG — CPAP", "fr": "PSG de titration — PPC", "en": "Titration PSG — CPAP"},
     "study_titration_pg_cpap":  {"nl": "Titratie polygrafie — CPAP", "fr": "Polygraphie de titration — PPC", "en": "Titration polygraphy — CPAP"},
     "study_titration_pg_mra":   {"nl": "Titratie polygrafie — MRA", "fr": "Polygraphie de titration — OAM", "en": "Titration polygraphy — MAD"},
@@ -2660,6 +2661,8 @@ _V0102_PDF = {
     # rapport de methode in plaats van de uitvoering, en zijn twee runs van
     # dezelfde nacht niet te vergelijken zonder de logs erbij.
     "rpt_sec_provenance": {"nl": "Herkomst — welk kanaal voedde welke analyse", "fr": "Provenance — quel canal a alimenté quelle analyse", "en": "Provenance — which channel fed which analysis", "de": "Herkunft — welcher Kanal welche Analyse gespeist hat"},
+    "prov_ch_absent":    {"nl": "niet in dit EDF-bestand", "fr": "absent de ce fichier EDF", "en": "not present in this EDF file", "de": "nicht in dieser EDF-Datei"},
+    "prov_arousal_eeg":  {"nl": "Arousal-analyse — EEG", "fr": "Analyse des micro-éveils — EEG", "en": "Arousal analysis — EEG", "de": "Arousal-Analyse — EEG"},
     "prov_staging_eeg":  {"nl": "Slaapstaging — EEG",  "fr": "Stades du sommeil — EEG", "en": "Sleep staging — EEG", "de": "Schlafstadien — EEG"},
     "prov_staging_eog":  {"nl": "Slaapstaging — EOG",  "fr": "Stades du sommeil — EOG", "en": "Sleep staging — EOG", "de": "Schlafstadien — EOG"},
     "prov_staging_emg":  {"nl": "Slaapstaging — EMG",  "fr": "Stades du sommeil — EMG", "en": "Sleep staging — EMG", "de": "Schlafstadien — EMG"},

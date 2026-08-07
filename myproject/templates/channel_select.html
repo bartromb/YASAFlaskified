@@ -451,6 +451,10 @@
         </h6>
         <select name="study_type" class="form-select" id="studyType">
           <option value="diagnostic_psg" selected>{{ t('study_diagnostic_psg') }}</option>
+          {# Ontbrak tot 2026-08-07. Wie een diagnostische polygrafie deed moest
+             daarom "Diagnostische PSG" kiezen, dat een EEG-kanaal eist — en gaf
+             dan de neusdruk op om verder te kunnen. Zie tasks.py, polygrafie. #}
+          <option value="diagnostic_pg">{{ t('study_diagnostic_pg') }}</option>
           <option value="titration_psg_cpap">{{ t('study_titration_psg_cpap') }}</option>
           <option value="titration_pg_cpap">{{ t('study_titration_pg_cpap') }}</option>
           <option value="titration_pg_mra">{{ t('study_titration_pg_mra') }}</option>

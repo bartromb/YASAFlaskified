@@ -1,5 +1,43 @@
 # Changelog — YASAFlaskified
 
+## v0.19.2 — 2026-08-07  *(polygrafie: REI over registratietijd; psgscoring 0.14.6)*
+
+Aanleiding is één rapport met de kop **REI 81000,0/u — Ernstig SAS — therapie
+CPAP** bij 81 hypopnees. Vijf defecten in één keten; de zesde schakel zat in
+psgscoring en is daar gerepareerd (0.14.6).
+
+**1. Polygrafie eist geen EEG-kanaal meer.** Zolang dat wel zo was, vulde de
+gebruiker er iets anders in om verder te kunnen — hier de neusdruk. YASA
+stageerde daarop, de artefactdetector keurde alle 1078 epochs af (terecht, hij
+keek naar hetzelfde niet-EEG-kanaal), en daarmee viel de noemer van elke index
+weg. En er WAS geen keuze "diagnostische polygrafie": wie er een deed moest
+`diagnostic_psg` nemen, dat een EEG eist. Die optie staat er nu.
+
+**2. Bij polygrafie gaat de index over registratietijd.** De staging wordt
+overgeslagen en elke epoch telt mee, zodat de noemer de registratietijd ís. Dat
+is wat het rapport altijd al beweerde te tonen ("events per uur registratietijd
+(TIB) i.p.v. TST") maar nergens berekende. Voor deze opname: 81 / 8,98 u =
+**9,0/u — mild**.
+
+**3. 100 % artefact is een blokkerende bevinding.** Bij polygrafie wordt het
+EEG-artefactmasker genegeerd — dat oordeel komt niet van een EEG. Keurt de
+detector op een echte PSG alles af, dan komt er een `blocking`-waarschuwing in
+`analysis_warnings` in plaats van een voetnoot onderaan het rapport.
+
+**4. Het herkomstblok toetst zichzelf.** Het toonde `EOG1` en `EMG1` terwijl die
+kanalen niet in het EDF zaten: het rapporteerde de KEUZE uit de jobconfig, niet
+de UITVOERING — precies de fout waartegen het blok bestaat. Kanalen die niet in
+het bestand voorkomen worden nu als zodanig gemarkeerd. En het arousal-EEG komt
+erbij te staan wanneer het afwijkt van het staging-EEG: op deze opname C3 tegen
+C4, twee EEG-kanalen in één run waarvan het rapport er één toonde.
+
+**5. Eén gedeelde regel voor het studietype.** `"_pg_" in study_type` stond op
+drie plaatsen en mist `diagnostic_pg` — geen sluitende underscore. Nu
+`myproject/study_type.py`, met een toets op hele woorden en een test dat
+`titration_psg_cpap` niet per ongeluk als polygrafie gelezen wordt.
+
+234 tests groen.
+
 ## v0.19.1 — 2026-08-06  *(de A/B/C-graad eruit; psgscoring 0.14.5)*
 
 **Verwijderd: de A/B/C-robuustheidsgraad**, uit de studielijst en uit de
