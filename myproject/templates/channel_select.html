@@ -72,6 +72,30 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="job_id" value="{{ job_id }}">
 
+    {# ── Studietype — BOVENAAN, want het bepaalt de rest ──────────────
+       Dit stond onder de kanaalkeuze, dus je koos kanalen voordat je zei wat
+       voor onderzoek het was. Bij een polygrafie hoort er dan al geen
+       EEG/EOG/EMG-keuze meer te zijn. De volgorde was omgekeerd aan de
+       afhankelijkheid, en dat is hoe de neusdruk als EEG kon meegaan. #}
+    <div class="card card-quiet mb-4">
+      <div class="card-body">
+        <h6 class="card-title mb-3 display-font" style="color:var(--accent-navy)">
+          <span class="mono-letter">S</span>{{ t('study_type_title') }}
+        </h6>
+        <select name="study_type" class="form-select" id="studyType">
+          <option value="diagnostic_psg" selected>{{ t('study_diagnostic_psg') }}</option>
+          {# Ontbrak tot 2026-08-07. Wie een diagnostische polygrafie deed moest
+             daarom "Diagnostische PSG" kiezen, dat een EEG-kanaal eist — en gaf
+             dan de neusdruk op om verder te kunnen. Zie tasks.py, polygrafie. #}
+          <option value="diagnostic_pg">{{ t('study_diagnostic_pg') }}</option>
+          <option value="titration_psg_cpap">{{ t('study_titration_psg_cpap') }}</option>
+          <option value="titration_pg_cpap">{{ t('study_titration_pg_cpap') }}</option>
+          <option value="titration_pg_mra">{{ t('study_titration_pg_mra') }}</option>
+        </select>
+        <div class="form-text mt-2">{{ t('study_type_hint') }}</div>
+      </div>
+    </div>
+
     {# ── v0.10.0 (Voorstel 3): auto-detected channel summary ──
        Deze twee waarden zijn de ENIGE bron voor zowel dit overzicht als de
        radioknoppen verderop. Daarvoor toonde het overzicht de eerste match en
@@ -163,18 +187,31 @@
     <div class="collapse" id="manualOverride">
 
     {# ── EEG primair kanaal ── #}
-    <div class="card card-quiet mb-3">
+    <div class="card card-quiet mb-3" id="eegCard">
       <div class="card-header">
         <span class="mono-letter">E</span>{{ t('eeg_primary') }} <span class="text-warning">*</span>
         <small class="text-muted ms-2">{{ t('eeg_primary_desc') }}</small>
       </div>
       <div class="card-body">
+        {# "Niet beschikbaar" ontbrak hier, terwijl EOG en EMG hem wel hadden.
+           Een radiogroep zonder gekozen optie toont en verstuurt de EERSTE —
+           op een polygrafiemontage is dat `Pressure Flow`. Er was dus geen
+           manier om "geen EEG" te kiezen, en de neusdruk ging als EEG mee. #}
+        <div class="mb-2">
+          <input class="btn-check" type="radio" name="eeg_ch"
+                 id="eeg_none" value=""
+                 {% if not best_eeg %}checked{% endif %}>
+          <label class="btn btn-outline-secondary" for="eeg_none">
+            {{ t("not_available") }}
+          </label>
+          <small class="text-muted ms-2">{{ t('eeg_none_hint') }}</small>
+        </div>
         <div class="row row-cols-2 row-cols-md-3 g-2">
           {% for ch in channels %}
           <div class="col">
             <input class="btn-check" type="radio" name="eeg_ch"
                    id="eeg_{{ loop.index }}" value="{{ ch }}"
-                   {% if ch == best_eeg %}checked{% endif %} required>
+                   {% if ch == best_eeg %}checked{% endif %}>
             <label class="btn btn-outline-primary w-100 text-start channel-btn"
                    for="eeg_{{ loop.index }}">
               <span class="ch-type-badge me-1">{{ ch | channel_type_badge | safe }}</span>
@@ -188,7 +225,7 @@
     </div>
 
     {# ── EOG kanaal ── #}
-    <div class="card card-quiet card-quiet--ochre mb-3">
+    <div class="card card-quiet card-quiet--ochre mb-3" id="eogCard">
       <div class="card-header">
         <span class="mono-letter mono-letter--ochre">O</span>{{ t('eog_channel') }}
         <small class="text-muted ms-2">{{ t('eog_desc') }} ({{ t('optional') }})</small>
@@ -217,7 +254,7 @@
     </div>
 
     {# ── EMG kanaal ── #}
-    <div class="card card-quiet card-quiet--claret mb-3">
+    <div class="card card-quiet card-quiet--claret mb-3" id="emgCard">
       <div class="card-header">
         <span class="mono-letter mono-letter--claret">M</span>{{ t('emg_channel') }}
         <small class="text-muted ms-2">{{ t('emg_desc') }} ({{ t('optional') }})</small>
@@ -443,26 +480,6 @@
       </div>
     </div>
 
-    {# ── Studietype (v0.8.19) ── #}
-    <div class="card card-quiet mb-4">
-      <div class="card-body">
-        <h6 class="card-title mb-3 display-font" style="color:var(--accent-navy)">
-          <span class="mono-letter">S</span>{{ t('study_type_title') }}
-        </h6>
-        <select name="study_type" class="form-select" id="studyType">
-          <option value="diagnostic_psg" selected>{{ t('study_diagnostic_psg') }}</option>
-          {# Ontbrak tot 2026-08-07. Wie een diagnostische polygrafie deed moest
-             daarom "Diagnostische PSG" kiezen, dat een EEG-kanaal eist — en gaf
-             dan de neusdruk op om verder te kunnen. Zie tasks.py, polygrafie. #}
-          <option value="diagnostic_pg">{{ t('study_diagnostic_pg') }}</option>
-          <option value="titration_psg_cpap">{{ t('study_titration_psg_cpap') }}</option>
-          <option value="titration_pg_cpap">{{ t('study_titration_pg_cpap') }}</option>
-          <option value="titration_pg_mra">{{ t('study_titration_pg_mra') }}</option>
-        </select>
-        <div class="form-text mt-2">{{ t('study_type_hint') }}</div>
-      </div>
-    </div>
-
     {# ── Scoring profiel ── #}
     <div class="card card-quiet card-quiet--ochre mb-4">
       <div class="card-body">
@@ -589,6 +606,44 @@ function autoSelectEeg() {
   }
   w.addEventListener('input', recompute);
   h.addEventListener('input', recompute);
+})();
+
+// ── Polygrafie: geen EEG, dus ook geen EEG/EOG/EMG-keuze ──────────────
+// Een polygrafie heeft die kanalen niet. Zolang ze kiesbaar bleven, koos
+// iemand er iets — op een echte opname de neusdruk — en stageerde YASA op een
+// flowsignaal. De server negeert die kanalen bij polygrafie hoe dan ook; dit
+// maakt zichtbaar waarom ze niet te kiezen zijn in plaats van ze stil te laten
+// mislukken.
+(function () {
+  const st = document.getElementById('studyType');
+  if (!st) return;
+  const cards = ['eegCard', 'eogCard', 'emgCard']
+    .map(id => document.getElementById(id)).filter(Boolean);
+  const isPolygraphy = v => String(v || '').split('_').includes('pg');
+
+  function apply() {
+    const pg = isPolygraphy(st.value);
+    cards.forEach(card => {
+      card.querySelectorAll('input[type=radio]').forEach(r => {
+        r.disabled = pg;
+        // Terug naar "niet beschikbaar" — anders blijft een eerdere keuze in
+        // de DOM staan en oogt het alsof hij nog meegaat.
+        if (pg) r.checked = (r.value === '');
+      });
+      card.classList.toggle('opacity-50', pg);
+      let note = card.querySelector('.pg-note');
+      if (pg && !note) {
+        note = document.createElement('div');
+        note.className = 'pg-note small text-muted px-3 pb-2';
+        note.textContent = {{ t('eeg_disabled_polygraphy') | tojson }};
+        card.appendChild(note);
+      } else if (!pg && note) {
+        note.remove();
+      }
+    });
+  }
+  st.addEventListener('change', apply);
+  apply();
 })();
 
 // Submit-knop feedback

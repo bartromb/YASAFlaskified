@@ -1,5 +1,29 @@
 # Changelog — YASAFlaskified
 
+## v0.19.5 — 2026-08-07  *(het studietype bepaalt de kanaalkeuze, niet andersom)*
+
+Geen psgscoring-wijziging (blijft 0.14.6).
+
+De serverkant negeerde bij polygrafie al elk meegestuurd EEG-kanaal (0.19.3),
+maar in het formulier stond de neusdruk nog steeds geselecteerd — en er was
+geen manier om dat te veranderen.
+
+**EEG heeft nu een "niet beschikbaar"-keuze.** EOG en EMG hadden die al; EEG
+niet, en er stond `required` op. Een radiogroep zonder gekozen optie toont en
+verstuurt bovendien de EERSTE optie, en dat is op een polygrafiemontage
+`Pressure Flow`. Er was dus letterlijk geen manier om "geen EEG" te kiezen.
+Zonder herkend EEG-kanaal staat "niet beschikbaar" nu aangevinkt.
+
+**Het studietype staat bovenaan het formulier.** Het stond onder de
+kanaalkeuze, dus je koos kanalen voordat je zei wat voor onderzoek het was. De
+volgorde liep omgekeerd aan de afhankelijkheid.
+
+**Kies je een polygrafie, dan gaan EEG, EOG en EMG op slot** en springen ze
+terug naar "niet beschikbaar", met de reden eronder: *"Niet van toepassing bij
+polygrafie: er is geen EEG, dus geen slaapstaging."* De server negeerde die
+kanalen al; dit maakt zichtbaar waarom, in plaats van ze stil te laten
+verdwijnen.
+
 ## v0.19.4 — 2026-08-07  *(de titel volgt het onderzoek)*
 
 Geen psgscoring-wijziging (blijft 0.14.6). Kleine nalevering op 0.19.3, gezien op
