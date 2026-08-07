@@ -1729,6 +1729,12 @@ _PDF_V027 = {
         "en": "SpO2 sample rate < 0.33 Hz (>3s averaging) — ODI and desaturation detection possibly underestimated (AASM: max 3s averaging).",
         "de": "SpO2-Abtastrate < 0.33 Hz (>3s Mittelung) — ODI und Desaturationserkennung möglicherweise unterschätzt (AASM: max 3s Mittelung).",
     },
+    "pdf_title_pg": {
+        "nl": "Polygrafie — Slaaprapport",
+        "fr": "Polygraphie — Rapport de sommeil",
+        "en": "Polygraphy — Sleep Report",
+        "de": "Polygraphie — Schlafbericht",
+    },
     "pdf_title_psg": {
         "nl": "Polysomnografie — Slaaprapport",
         "fr": "Polysomnographie — Rapport de sommeil",

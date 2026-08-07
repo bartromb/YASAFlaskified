@@ -1188,6 +1188,12 @@ def generate_pdf_report(results:dict, output_path:str,
     elif study_type == "titration_pg_mra":
         title_txt = t("pdf_titration_mra", lang)
         therapy_label = "MRA"
+    elif is_polygraphy:
+        # Er stond "Polysomnografie" boven een polygrafierapport — een
+        # onderzoek zonder EEG. Precies het soort etiket dat dit hele blok
+        # rechtzet, dus het hoort de werkelijkheid te volgen: de titel komt uit
+        # wat er gedraaid heeft, niet uit een vergeten keuzelijst.
+        title_txt = t("pdf_title_pg", lang)
     else:
         title_txt = t("pdf_title_psg", lang)
 

@@ -1,5 +1,16 @@
 # Changelog — YASAFlaskified
 
+## v0.19.4 — 2026-08-07  *(de titel volgt het onderzoek)*
+
+Geen psgscoring-wijziging (blijft 0.14.6). Kleine nalevering op 0.19.3, gezien op
+een testrapport voordat die versie uitgerold was.
+
+Boven een polygrafierapport stond **"Polysomnografie — Slaaprapport"**. Een
+polygrafie is per definitie een onderzoek zónder EEG, dus dat is precies het
+soort etiket dat 0.19.3 rechtzet — en het stond nog op de eerste regel. De titel
+komt nu uit wat er werkelijk gedraaid heeft: **"Polygrafie — Slaaprapport"**,
+in alle vier de talen.
+
 ## v0.19.3 — 2026-08-07  *(polygrafie: de opname beslist, en het rapport toont geen slaap meer)*
 
 Geen psgscoring-wijziging (blijft 0.14.6).
