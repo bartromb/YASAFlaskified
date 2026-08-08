@@ -1,5 +1,57 @@
 # Changelog — YASAFlaskified
 
+## v0.19.13 — 2026-08-08  *(eventcontrole werkte op geen enkele echte montage)*
+
+**Reparatie — "Geen enkel paneel kon getekend worden".** De visuele
+eventcontrole uit 0.19.12 faalde op élke klinische opname, niet op een
+randgeval. Op een montage met één druksensor wijzen de rollen `flow` en
+`flow_pressure` naar hetzelfde fysieke kanaal, en `raw.pick()` weigert een
+selectie met dubbels:
+
+    need = ['Pressure Flow', 'Pressure Flow', 'Flow Th.', 'RIP Thora', ...]
+    ValueError: Found 6 / 7 unique names, sel is not unique
+
+`load_panel_raw` ontdubbelt nu op kanaalnaam met behoud van volgorde, en de
+tekenfunctie zet één rij per FYSIEK kanaal in plaats van per rol — dezelfde
+curve twee keer onder twee labels suggereert twee sensoren die het eens zijn,
+wat in een controle-instrument precies de verkeerde indruk wekt. De
+detectiemarkering (`◀`) volgt mee naar de rij die het kanaal wél tekent.
+
+**En de reden was onzichtbaar.** `load_panel_raw` ving elke uitzondering af en
+gaf stil `None` terug, waarna de pagina alleen meldde dat er niets getekend
+kon worden. De fout stond in geen enkel log; hij moest van de server gevist
+worden. Er is nu een logger in `generate_pdf_report.py` en beide terugvallen
+schrijven weg wat er misging.
+
+Waarom de tests dit niet zagen: mijn fixture had toevallig uitsluitend unieke
+kanaalnamen. `test_epoch_panel_alignment.py` heeft er nu een montage bij waar
+twee rollen één kanaal delen — vier nieuwe toetsen, waaronder één op
+`load_panel_raw` zelf, want daar knapte het en niet in het tekenen.
+
+### Opruiming van de repository
+
+Verwijderd: `myproject/.hypothesis/` (27 bestanden testcache die bij elke run
+veranderen), `myproject/templates/dashboard.html.pre_v0841_bak` (het patroon
+`*.bak` in `.gitignore` ving `_bak` niet, en al getrackte bestanden negeert
+`.gitignore` sowieso), de wortelkopie `logo.png` (byte-identiek aan
+`myproject/static/logo.png`; de Dockerfile kopieert alleen `myproject/`),
+`upgrade_v0822.sh` en `upgrade_v0825.sh` (eenmalige migraties naar v0.8.22 en
+v0.8.30), en `RELEASE_v0.17.0.md` (eenmalige checklist).
+
+`.gitignore` uitgebreid met `.hypothesis/`, `.ruff_cache/`, `.mypy_cache/` en
+`*.log`.
+
+De release-badge in de README stond hardgecodeerd op v0.19.10 en liep dus elke
+release achter; hij leest nu de laatste release via de GitHub-API.
+
+Sectie 5b van `DEPLOY_RUNBOOK.md` verwees naar het verwijderde
+`RELEASE_v0.17.0.md`. Die sectie is NIET geschrapt: stap 4–6
+(`JOB_ACCESS_STRICT`) en de `SESSION_COOKIE_SECURE`-noot staan nog open op
+productie. Alleen de dode link is weg en er staat nu bij wat historie is en
+wat niet.
+
+314 tests groen (was 310).
+
 ## v0.19.12 — 2026-08-08  *(visuele eventcontrole voor beheerders; psgscoring 0.15.2)*
 
 **Nieuw: `/review/<job_id>`** — een weergave die de gescoorde respiratoire

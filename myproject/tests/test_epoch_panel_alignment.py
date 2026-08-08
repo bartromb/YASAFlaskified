@@ -82,8 +82,14 @@ def edf(tmp_path_factory):
 CH_MAP = {"flow": "Flow", "thorax": "Thorax",
           "abdomen": "Abdomen", "spo2": "SpO2"}
 
+# Zoals een echte klinische montage met ÉÉN druksensor eruitziet: de rollen
+# `flow` en `flow_pressure` wijzen naar hetzelfde fysieke kanaal. Dit is de
+# regel, niet de uitzondering — op productie gold het voor elke opname.
+CH_MAP_GEDEELD = {"flow": "Flow", "flow_pressure": "Flow",
+                  "thorax": "Thorax", "abdomen": "Abdomen", "spo2": "SpO2"}
 
-def _panel(edf_path, onset=DROP_START, dur=DROP_END - DROP_START):
+
+def _panel(edf_path, onset=DROP_START, dur=DROP_END - DROP_START, ch_map=None):
     """Render en geef de assen terug, per kanaaltype."""
     grabbed = {}
     real_subplots = plt.subplots
@@ -93,18 +99,28 @@ def _panel(edf_path, onset=DROP_START, dur=DROP_END - DROP_START):
         grabbed["fig"], grabbed["axes"] = fig, np.atleast_1d(axes)
         return fig, axes
 
+    cm = CH_MAP if ch_map is None else ch_map
     real_close = plt.close
     plt.subplots, plt.close = spy, lambda *a, **k: None
     try:
-        g._plot_epoch_example(edf_path, CH_MAP,
+        g._plot_epoch_example(edf_path, cm,
                               {"type": "obstructive", "onset_s": onset,
                                "duration_s": dur, "confidence": 0.9},
                               hypno=["N2"] * 20)
     finally:
         plt.subplots, plt.close = real_subplots, real_close
 
+    if "axes" not in grabbed:
+        return {}, None
     axes = grabbed["axes"]
-    order = [ct for ct, _, _ in g._EPOCH_CH_ORDER if ct in CH_MAP]
+    # Ontdubbeld op kanaalNAAM, in de volgorde van _EPOCH_CH_ORDER — dezelfde
+    # regel die de tekenfunctie toepast.
+    order, gezien = [], set()
+    for ct, _, _ in g._EPOCH_CH_ORDER:
+        naam = cm.get(ct)
+        if naam and naam not in gezien:
+            gezien.add(naam)
+            order.append(ct)
     out = {ct: axes[i] for i, ct in enumerate(order[:len(axes)])}
     return out, grabbed["fig"]
 
@@ -210,3 +226,47 @@ def test_a_flat_channel_does_not_collapse_the_axis(edf, tmp_path):
         lo, hi = axes[ct].get_ylim()
         assert hi > lo, f"{ct}: y-as heeft hoogte nul"
     plt.close(fig)
+
+
+# ──────────────────────────────────────────────────────────────
+#  Twee rollen, één kanaal
+# ──────────────────────────────────────────────────────────────
+#
+# In productie viel de hele weergave om met "Geen enkel paneel kon getekend
+# worden". Oorzaak: op een montage met één druksensor wijzen `flow` en
+# `flow_pressure` naar hetzelfde kanaal, en `raw.pick()` weigert een lijst met
+# dubbels — "Found 6 / 7 unique names, sel is not unique". Dat was de regel op
+# élke klinische opname, niet een randgeval; mijn fixture had toevallig
+# uitsluitend unieke kanaalnamen en zag het dus niet.
+
+def test_two_roles_sharing_one_channel_still_render(edf):
+    axes, fig = _panel(edf, ch_map=CH_MAP_GEDEELD)
+    assert fig is not None, "geen enkel paneel getekend bij een gedeeld kanaal"
+    plt.close(fig)
+
+
+def test_a_shared_channel_is_drawn_once(edf):
+    """Dezelfde curve twee keer onder twee labels suggereert twee sensoren
+    die het eens zijn — in een controle-instrument de verkeerde indruk."""
+    axes, fig = _panel(edf, ch_map=CH_MAP_GEDEELD)
+    assert len(fig.axes) == 4, (
+        f"verwacht 4 rijen (Flow, Thorax, Abdomen, SpO2), kreeg {len(fig.axes)}")
+    plt.close(fig)
+
+
+def test_the_shared_channel_keeps_its_data(edf):
+    """Ontdubbelen mag geen kanaal laten vallen dat wél getekend hoort."""
+    axes, fig = _panel(edf, ch_map=CH_MAP_GEDEELD)
+    x, y = _line(axes["flow"])
+    binnen = (x >= DROP_START) & (x < DROP_END)
+    assert np.abs(y[binnen]).max() < 0.1 * AMP
+    assert np.abs(y[~binnen]).max() > 0.5 * AMP
+    plt.close(fig)
+
+
+def test_load_panel_raw_survives_duplicate_roles(edf):
+    """De gedeelde EDF-lezing is waar het knapte, niet het tekenen."""
+    raw = g.load_panel_raw(edf, CH_MAP_GEDEELD)
+    assert raw is not None, "load_panel_raw geeft None bij een gedeeld kanaal"
+    assert len(raw.ch_names) == len(set(raw.ch_names)), "dubbele kanalen geladen"
+    assert "Flow" in raw.ch_names

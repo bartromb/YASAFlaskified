@@ -4,6 +4,7 @@ Site-config: via config.json["site"] of site_config parameter.
 """
 import io
 import json
+import logging
 import os
 from datetime import date
 
@@ -14,6 +15,8 @@ from version import __version__ as _APP_VERSION
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+logger = logging.getLogger(__name__)
 import numpy as np
 
 # v0.8.37: Medatec-parity PDF sections + OSAS score
@@ -938,11 +941,22 @@ def epoch_panel_png(edf_path, channel_map, event, hypno=None,
             return None
     available = raw.ch_names
 
-    ch_to_plot = []
+    # Eén rij per FYSIEK kanaal, niet per rol. Op een montage met één
+    # druksensor wijzen `flow` en `flow_pressure` allebei naar hetzelfde
+    # kanaal; dat twee keer tekenen suggereert twee sensoren die het eens
+    # zijn, wat in een controle-instrument precies de verkeerde indruk is.
+    # (En `raw.pick()` weigert een lijst met dubbels ronduit:
+    # "Found 6 / 7 unique names, sel is not unique".)
+    ch_to_plot, _alias = [], {}
     for ch_type, label, color in _EPOCH_CH_ORDER:
         ch_name = channel_map.get(ch_type)
-        if ch_name and ch_name in available:
-            ch_to_plot.append((ch_type, ch_name, label, color))
+        if not ch_name or ch_name not in available:
+            continue
+        if ch_name in _alias:
+            _alias[ch_name].append(ch_type)
+            continue
+        _alias[ch_name] = [ch_type]
+        ch_to_plot.append((ch_type, ch_name, label, color))
 
     if len(ch_to_plot) < 2:
         return None
@@ -981,6 +995,16 @@ def epoch_panel_png(edf_path, channel_map, event, hypno=None,
         _det_ch_type = "flow_pressure"  # nasal pressure for hypopneas
         if "flow_pressure" not in [c[0] for c in ch_to_plot]:
             _det_ch_type = "flow"
+
+    # De gezochte rol kan als dubbele zijn weggevallen: `flow_pressure` en
+    # `flow` delen op veel montages één kanaal. De markering hoort dan op de
+    # rij te staan die dat kanaal wél tekent, anders wijst hij nergens naar.
+    if _det_ch_type and _det_ch_type not in [c[0] for c in ch_to_plot]:
+        _gezocht = channel_map.get(_det_ch_type)
+        for ct, cn, _, _ in ch_to_plot:
+            if cn and cn == _gezocht:
+                _det_ch_type = ct
+                break
 
     # ── Blue marks: other scored events in window (v0.8.37) ─────
     if all_events:
@@ -1149,14 +1173,28 @@ def load_panel_raw(edf_path, channel_map):
         mne.set_log_level("ERROR")
         raw = mne.io.read_raw_edf(edf_path, preload=False, verbose=False)
         available = raw.ch_names
-        need = [channel_map[t] for t, _, _ in _EPOCH_CH_ORDER
-                if channel_map.get(t) and channel_map.get(t) in available]
+        # dict.fromkeys: ontdubbelen met behoud van volgorde. Meerdere rollen
+        # kunnen naar hetzelfde kanaal wijzen — op een montage met één
+        # druksensor zijn `flow` en `flow_pressure` allebei "Pressure Flow" —
+        # en `raw.pick()` weigert zo'n lijst met
+        # "Found 6 / 7 unique names, sel is not unique".
+        need = list(dict.fromkeys(
+            channel_map[t] for t, _, _ in _EPOCH_CH_ORDER
+            if channel_map.get(t) and channel_map.get(t) in available))
         if not need:
+            logger.warning("signaalpanelen: geen van de gevraagde kanalen "
+                           "staat in de EDF (%d kanalen beschikbaar)",
+                           len(available))
             return None
         raw.pick(need)
         raw.load_data()
         return raw
     except Exception:
+        # Niet stilzwijgend None: deze terugval maakte een pick-fout
+        # onzichtbaar en de weergave meldde alleen "geen enkel paneel kon
+        # getekend worden", zonder de reden.
+        logger.exception("signaalpanelen: EDF laden mislukt (%s)",
+                         os.path.basename(str(edf_path)))
         return None
 
 

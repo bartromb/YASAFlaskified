@@ -87,3 +87,13 @@ step4_yasaflaskified_bundle_v0.3.1.sh
 .v091_backup_*/
 
 uv.lock
+
+# Testcaches. `.hypothesis/` stond 27 bestanden lang in de repo: het is een
+# lokale database met gevonden tegenvoorbeelden, geen broncode, en hij
+# verandert bij elke testrun.
+.hypothesis/
+.ruff_cache/
+.mypy_cache/
+
+# Runartefacten van analyses en scripts
+*.log

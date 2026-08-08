@@ -164,12 +164,14 @@ Expected route codes: `/`=200, login-gated routes=302, POST-only routes=405 on G
 
 ---
 
-## 5b. One-off: the job-registry release
+## 5b. The job registry: history, and what is still open
 
-> Step-by-step checklist with the exact commands: **[RELEASE_v0.17.0.md](RELEASE_v0.17.0.md)**.
+Steps 1–3 are **history** — the `job` table shipped in v0.17.0 and the backfill
+has run. They stay here because they document why the table exists and what
+`deploy.sh` still does idempotently on every deploy.
 
-Only for the deploy that first ships the `job` table. After that the backfill is
-just an idempotent step in `deploy.sh` and needs no attention.
+Steps 4–6 and the cookie note at the end are **still open on production**; see
+`docs/opm20260809.txt` §D2.
 
 The order matters: the access check is only as good as the table it reads, and
 the table starts empty.
