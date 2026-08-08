@@ -1,5 +1,40 @@
 # Changelog — YASAFlaskified
 
+## v0.19.6 — 2026-08-07  *(één grootheid, één getal; psgscoring 0.14.7)*
+
+Vier bevindingen uit de rapportvergelijking, alle vier eerst tegen de code
+gehouden.
+
+**De opnamedatum toonde de analysedatum.** Het veld las `analysis_timestamp`.
+Een heranalyse verzette daarmee de datum van een onderzoek dat maanden eerder
+plaatsvond, en twee runs van dezelfde nacht kregen twee verschillende
+opnamedatums. Nu `recording_start`; ontbreekt die in oudere resultaten, dan een
+streepje — eerlijker dan de verkeerde datum onder het juiste etiket. Het
+handtekeningblok houdt bewust de rapportdatum, want dat is wat "Datum" daar
+betekent.
+
+**Twee RDI's in één rapport.** Sectie 8 leest `respiratory.summary` (gevuld
+door `_compute_rera_rdi`); sectie 8b las `arousal.summary`, die de RERA's
+onafhankelijk berekent en niet bijwerkt na RERA-promotie — 183 RERA's in
+sectie 8 tegen 0 in 8b, met een eigen RDI ernaast. Die drie rijen zijn uit 8b
+weg; die sectie gaat over arousal-etiologie, een andere vraag.
+
+**De kolom "Index" droeg het aantal.** Bij 57 RERA's stond er "n=57 · Index 57";
+alleen de totaalrij deelde door de tijd. Nu een echte index, met dezelfde
+noemer als het totaal, afgeleid uit totaal en index zodat er geen tweede
+TST-definitie bijkomt.
+
+**Twee FRI-tellers.** Sectie 8 toont de flow-reducties die FRI BLEVEN; 8d telde
+`len(rejected) − n_reinstated`, dus inclusief wat verderop RERA werd —
+systematisch hoger, zelfde label. 8d leest nu dezelfde bron, met terugval voor
+oudere resultaten.
+
+**psgscoring 0.14.6 → 0.14.7:** dezelfde noemer-ondergrens stond op twaalf
+plaatsen, niet één. Arousal-index, PLM-index, ODI, RERA-index en RDI waren nog
+steeds het aantal maal duizend terwijl de AHI al gerepareerd was.
+
+251 tests groen.
+
 ## v0.19.5 — 2026-08-07  *(het studietype bepaalt de kanaalkeuze, niet andersom)*
 
 Geen psgscoring-wijziging (blijft 0.14.6).

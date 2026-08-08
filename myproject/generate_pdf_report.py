@@ -239,6 +239,21 @@ def _phenotype_summary_line(rsum, lang="nl"):
     return "<b>" + t("pdf_pheno_hdr", lang) + ":</b> " + "  ·  ".join(tags)
 
 
+def _recording_date(meta, dash="—"):
+    """De datum waarop de OPNAME gemaakt is, niet die van de analyse.
+
+    `analysis_timestamp` stond onder het label "Opnamedatum". Dat is de datum
+    waarop de analyse draaide: een heranalyse verzette daarmee de datum van een
+    onderzoek dat maanden eerder plaatsvond, en twee runs van dezelfde nacht
+    kregen twee verschillende "opnamedatums".
+
+    Ontbreekt `recording_start` — oudere resultaten dragen hem niet — dan is een
+    streepje eerlijker dan de verkeerde datum.
+    """
+    v = (meta or {}).get("recording_start")
+    return str(v)[:10] if v else dash
+
+
 def provenance_rows(results, lang="nl"):
     """Welk kanaal voedde welke analyse — als ``[[label, waarde], ...]``.
 
@@ -1231,7 +1246,12 @@ def generate_pdf_report(results:dict, output_path:str,
     _ess_raw = pat.get("ess")
     _ess_str = f"{_ess_raw}/24" if _ess_raw not in (None, "", "—") else "—"
     right_rows=[[t("pdf_patient_id",lang),str(pat.get("patient_id","—") or "—")],
-                [t("pdf_rec_date",lang),(meta.get("analysis_timestamp","—") or "—")[:10]],
+                # "Opnamedatum" toonde `analysis_timestamp` — de datum waarop
+                # de ANALYSE draaide. Twee runs van dezelfde nacht kregen
+                # daardoor twee verschillende "opnamedatums", en een heranalyse
+                # verzette de datum van een onderzoek dat maanden eerder
+                # plaatsvond. De echte opnamestart staat in `recording_start`.
+                [t("pdf_rec_date",lang), _recording_date(meta)],
                 [t("pdf_duration",lang),_v(meta,"duration_min",fmt="{:.0f}")+" min"],
                 [t("pdf_scorer",lang),str(pat.get("scorer","—") or "—")],
                 [t("pdf_institution",lang),str(pat.get("institution",site.get("name","")) or "")],
@@ -1916,11 +1936,22 @@ def generate_pdf_report(results:dict, output_path:str,
         story.append(_hdr(t("pdf_rera_section_hdr", lang), color=BLUE)); sp(0.1)
         n_rera_fri  = rsum.get("n_rera_fri", 0) or 0
         n_rera_flat = rsum.get("n_rera_flattening", 0) or 0
+        # De kolom heet "Index" maar droeg het AANTAL: bij 57 RERA's stond er
+        # "n=57 · Index 57". Alleen de totaalrij deelde door de tijd. Een index
+        # van 57/u naast een totaal van 4,2/u leest als twee onverenigbare
+        # getallen over hetzelfde. Zelfde noemer als het totaal, afgeleid uit
+        # de twee waarden die er al waren zodat er geen tweede TST-definitie
+        # bijkomt.
+        _rera_h = (rera_n / rera_idx) if (rera_n and rera_idx) else None
+
+        def _idx(n):
+            return f"{n / _rera_h:.1f} /u" if _rera_h else "—"
+
         ext_rows = [
-            [t("pdf_rera_amp_arousal", lang),  str(n_rera_fri), f"{n_rera_fri}"],
-            [t("pdf_rera_flat_arousal", lang), str(n_rera_flat), f"{n_rera_flat}"],
+            [t("pdf_rera_amp_arousal", lang),  str(n_rera_fri), _idx(n_rera_fri)],
+            [t("pdf_rera_flat_arousal", lang), str(n_rera_flat), _idx(n_rera_flat)],
             [t("pdf_rera_total", lang),  str(rera_n), f"{rera_idx:.1f} /u"],
-            [t("pdf_fri_no_criteria", lang), str(n_fri_pure), ""],
+            [t("pdf_fri_no_criteria", lang), str(n_fri_pure), _idx(n_fri_pure)],
             [t("pdf_rdi_formula", lang),          "", f"{rdi_val:.1f} /u"],
         ]
         story.append(KeepTogether([_tbl(
@@ -2067,7 +2098,6 @@ def generate_pdf_report(results:dict, output_path:str,
         arous=pneumo.get("arousal",{}); asum=arous.get("summary",{})
         if not is_polygraphy and arous.get("success") and asum:
             story.append(_hdr(t("rpt_sec8b", lang),color=BLUE)); sp(0.1)
-            rdi=_f(asum,"rdi")
             # v0.15.0 (B6): arousal aetiology as per-hour indices (AASM V.A Note 4)
             _ar_rows = [
                 [t("pdf_arousal_index", lang),
@@ -2085,10 +2115,16 @@ def generate_pdf_report(results:dict, output_path:str,
             _ar_rows += [
                 [t("pdf_resp_arousals",lang),    str(asum.get("n_respiratory_arousals","—"))],
                 [t("pdf_spont_arousals",lang),        str(asum.get("n_spontaneous_arousals","—"))],
-                ["RERA's",                   str(asum.get("n_reras","—"))],
-                ["RERA-index",               f"{asum.get('rera_index','—')} /u"],
-                ["RDI (AHI + RERA)",         f"{rdi:.1f} /u" if rdi else "—"],
             ]
+            # RERA's, RERA-index en RDI stonden hier ook — uit de
+            # arousal-module, die ze onafhankelijk van de respiratoire
+            # pijplijn berekent en NIET bijwerkt na RERA-promotie. Sectie 8
+            # meldde 183 RERA's terwijl hier 0 stond, en er stonden twee
+            # verschillende RDI's in één rapport. Sectie 8 is de bron: die
+            # komt uit _compute_rera_rdi() en telt beide RERA-bronnen.
+            #
+            # Deze sectie gaat over arousal-ETIOLOGIE — waar arousals vandaan
+            # komen — en dat is een andere vraag dan hoeveel RERA's er zijn.
             story.append(_tbl([t("pdf_param",lang),t("pdf_value",lang)], _ar_rows,[9,8])); sp(0.1)
     else:
         story.append(Paragraph(f"{t('pdf_not_available', lang)}: {resp.get('error','—')}",styles["SM"]))
@@ -2204,14 +2240,24 @@ def generate_pdf_report(results:dict, output_path:str,
     # ── 8d. FLOW-REDUCTIE ZONDER CRITERIA (FRI) ──────────────
     rejected_hyps = resp.get("rejected_hypopneas", [])
     n_reinstated  = resp.get("rule1b_reinstated", 0) or 0
-    n_fri = max(0, len(rejected_hyps) - n_reinstated)
+    # Deze sectie telde `len(rejected) - n_reinstated`: ALLE afgewezen
+    # hypopneeën, inclusief die verderop tot RERA gepromoveerd zijn. Sectie 8
+    # toont `rsum["n_fri"]`, de events die FRI BLEVEN. Twee definities onder
+    # hetzelfde label, en de ene was systematisch hoger dan de andere.
+    #
+    # "Flow-reductie zonder criteria" betekent: geen desaturatie, geen arousal,
+    # dus ook geen RERA. Dat is de tweede definitie. Sectie 8 is de bron.
+    n_fri = rsum.get("n_fri")
+    if n_fri is None:
+        n_fri = max(0, len(rejected_hyps) - n_reinstated)
     if n_fri > 0 and resp.get("success"):
         tst_h = float(str(stats.get("TST", 0) or 0)) / 60.0
-        fri_index = n_fri / tst_h if tst_h > 0 else 0
+        fri_index = n_fri / tst_h if tst_h > 0 else None
         story.append(_hdr(t("rpt_sec8d", lang), color=BLUE)); sp(0.1)
         story.append(_tbl([t("pdf_param", lang), t("pdf_value", lang)], [
             [t("pdf_fri_count", lang),  str(n_fri)],
-            [t("pdf_fri_index", lang),  f"{fri_index:.1f} /u"],
+            [t("pdf_fri_index", lang),
+             f"{fri_index:.1f} /u" if fri_index is not None else "—"],
             [t("pdf_fri_r1b", lang),    str(n_reinstated)],
         ], [9, 8])); sp(0.1)
         story.append(Paragraph(
@@ -2432,11 +2478,14 @@ def generate_pdf_report(results:dict, output_path:str,
         story.append(Paragraph(f"<b>{t('comments', lang)}:</b> {manual_comment}", styles["B"]))
     sp(0.1)
 
-    rec_date=(meta.get("analysis_timestamp","—") or "—")[:10]
+    # Bewust de ANALYSEDATUM: dit is het handtekeningblok, en het label is
+    # "Datum" — de dag waarop dit rapport is opgemaakt. De opnamedatum staat
+    # bovenaan en komt uit `recording_start`; zie _recording_date().
+    report_date=(meta.get("analysis_timestamp","—") or "—")[:10]
     scorer=str(pat.get("scorer","—") or "—")
     sig=Table([[Paragraph(f"<b>{t('pdf_scorer',lang)}</b> {scorer}",styles["B"]),
                 Paragraph(f"<b>{t('physician',lang)}:</b> _________________________",styles["B"]),
-                Paragraph(f"<b>{t('date',lang)}:</b> {rec_date}",styles["B"])]],
+                Paragraph(f"<b>{t('date',lang)}:</b> {report_date}",styles["B"])]],
               colWidths=[CW/3]*3)
     sig.setStyle(TableStyle([("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6),
         ("BOX",(0,0),(-1,-1),0.4,GRID),("BACKGROUND",(0,0),(-1,-1),BGROW)]))
