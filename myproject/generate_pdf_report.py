@@ -312,6 +312,15 @@ def provenance_rows(results, lang="nl"):
     if _ar_eeg and _ar_eeg != meta.get("eeg_channel"):
         rows.append([_lbl("prov_arousal_eeg", "Arousal-analyse — EEG"), _ar_eeg])
 
+    # Env-overrides overrulen profielwaarden. Zonder deze regel betekent
+    # dezelfde profielnaam op twee machines iets anders, en juist dit blok
+    # hoort de UITVOERING te tonen in plaats van de keuze. Alleen tonen wanneer
+    # er iets aan staat — anders is het ruis op elk rapport.
+    _env = pmeta.get("env_overrides") or {}
+    if _env:
+        rows.append([_lbl("prov_env_overrides", "Afwijkende parameters (omgeving)"),
+                     ", ".join(f"{k}={v}" for k, v in sorted(_env.items()))])
+
     # De vijf afgeleide analyses (AHI-sweep, baseline, arousal-koppeling, CSR,
     # ventilatoire last) lezen sinds psgscoring 0.14.1 een eigen referentie.
     # Alleen tonen wanneer die afwijkt van het apneukanaal — anders is het ruis.

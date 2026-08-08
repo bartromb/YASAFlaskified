@@ -1,5 +1,21 @@
 # Changelog — YASAFlaskified
 
+## v0.19.10 — 2026-08-08  *(afwijkende parameters zichtbaar; psgscoring 0.15.1)*
+
+**Het herkomstblok toont nu actieve omgevingsparameters.** `PSGSCORING_BREATH_*`
+overrulet profielwaarden — handig om te meten zonder profielen te muteren, maar
+het betekent dat dezelfde profielnaam op twee machines iets anders kan
+betekenen. Juist dat blok bestaat om de UITVOERING te tonen in plaats van de
+keuze, en het zweeg erover. De regel verschijnt alleen wanneer er iets aan
+staat.
+
+**psgscoring 0.15.0 → 0.15.1.** De REM-AHI meldt nu op hoeveel REM hij rust: bij
+22,5 minuten REM is één event al 2,7/u, wiskundig correct en klinisch
+onbruikbaar. Nieuw in de samenvatting: `rem_min`, `nrem_min`,
+`ahi_rem_reliable`, `ahi_rem_caveat`. Puur additief. Plus tests voor de dunst
+gedekte modules, die een echt defect blootlegden: `_classify_plmi(None)` gaf
+"normal" — een schone verklaring op grond van een ontbrekende meting.
+
 ## v0.19.9 — 2026-08-07  *(psgscoring 0.15.0)*
 
 Geen YF-codewijziging. Pin naar psgscoring **0.15.0**.

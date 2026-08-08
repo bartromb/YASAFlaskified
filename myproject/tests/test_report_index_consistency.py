@@ -126,3 +126,57 @@ def test_the_fri_fallback_survives_for_older_results():
     src = _src("generate_pdf_report.py")
     assert "max(0, len(rejected_hyps) - n_reinstated)" in src, \
         "terugval voor oude resultaten is weg"
+
+
+# ─────────────────────────────────────────────────────────────
+#  5. Afwijkende omgevingsparameters horen zichtbaar te zijn
+# ─────────────────────────────────────────────────────────────
+#
+# `PSGSCORING_BREATH_*` overrulet profielwaarden. Dat bestaat om te kunnen
+# meten zonder profielen te muteren, maar het betekent dat dezelfde
+# profielnaam op twee machines iets anders kan betekenen. Juist het
+# herkomstblok bestaat om de UITVOERING te tonen in plaats van de keuze.
+
+def _rows(env_overrides):
+    from generate_pdf_report import provenance_rows
+    return provenance_rows({
+        "meta": {"eeg_channel": "C4", "eog_channel": "EOG1", "emg_channel": "EMG1"},
+        "pneumo": {"meta": {
+            "all_channels": ["C4", "EOG1", "EMG1", "Pressure Flow"],
+            "channels_used": {}, "flow_channels": {},
+            "env_overrides": env_overrides,
+        }},
+    })
+
+
+def _find(rows, needle):
+    for label, value in rows:
+        if needle.lower() in str(label).lower():
+            return str(value)
+    return None
+
+
+def test_an_active_override_shows_up_in_the_provenance_block():
+    v = _find(_rows({"arousal_latency_grading": True}), "omgeving")
+    assert v is not None, "afwijkende parameter wordt niet gemeld"
+    assert "arousal_latency_grading" in v
+
+
+def test_several_overrides_are_all_listed():
+    v = _find(_rows({"arousal_latency_grading": True,
+                     "candidate_min_duration_s": 8.0}), "omgeving")
+    assert "arousal_latency_grading" in v
+    assert "candidate_min_duration_s" in v
+
+
+def test_the_normal_case_adds_no_row():
+    """Leeg is het normale geval; een lege regel op elk rapport is ruis."""
+    for leeg in ({}, None):
+        assert _find(_rows(leeg), "omgeving") is None
+
+
+def test_older_results_without_the_field_do_not_break_the_block():
+    from generate_pdf_report import provenance_rows
+    rows = provenance_rows({"meta": {"eeg_channel": "C4"},
+                            "pneumo": {"meta": {"all_channels": ["C4"]}}})
+    assert rows and _find(rows, "omgeving") is None
