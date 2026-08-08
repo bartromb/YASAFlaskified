@@ -70,6 +70,17 @@ rsync -rlptz --checksum --no-owner --no-group --dry-run --itemize-changes \
 Inspect the list. Expect only code/docs to change — **never** `app.py`/compose/
 Dockerfile/nginx unintentionally, and **never** a data dir.
 
+> **Never add `--delete`.** The server holds files that are deliberately absent
+> from the repo — `.env` and `myproject/.env` (gitignored), `logs/`,
+> `processed/`, and the `myproject_v*_backup/` directories. `--delete` removes
+> every one of them, and the stack will not start: `docker compose` fails with
+> `env file /data/slaapkliniek/.env not found` and leaves the *previous*
+> containers running, so `docker compose ps` still looks healthy while the
+> deploy has silently not happened. This occurred on 2026-08-08 during the
+> 0.19.11 deploy; recovery was `tar xzf` of the pre-deploy backup, which is
+> exactly why step 0 takes one. Copy the command above verbatim rather than
+> retyping a shorter one.
+
 **Step 2 — real rsync (drop `--dry-run --itemize-changes`).**
 
 **Step 3 — verify the critical files transferred (md5, both sides):**
