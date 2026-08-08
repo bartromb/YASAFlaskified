@@ -254,6 +254,42 @@ def _recording_date(meta, dash="—"):
     return str(v)[:10] if v else dash
 
 
+try:                                            # psgscoring >= 0.15.1
+    from psgscoring.respiratory import MIN_STAGE_MIN_FOR_INDEX as _MIN_REM_MIN
+except Exception:                               # oudere installatie in dev
+    _MIN_REM_MIN = 30.0
+
+# Spiegelt `rem_gap_tolerance` in yasa_analysis.py (4 epochs à 30 s). Hier
+# gedupliceerd omdat het rapport die module niet importeert; een toets in
+# tests/test_report_index_consistency.py bewaakt dat de twee gelijk blijven.
+REM_GAP_TOLERANCE_MIN = 2.0
+
+
+def rem_ahi_caveat(rsum, lang="nl"):
+    """Kwalificeer de REM-AHI wanneer er te weinig REM was om hem te dragen.
+
+    psgscoring levert het FEIT (`ahi_rem_reliable`, `rem_min`); dit rapport
+    levert de FORMULERING, want de tekst in de bibliotheek is eentalig en dit
+    rapport verschijnt in vier talen.
+
+    Waarom kwalificeren en niet weglaten: de index bestaat wél, hij is alleen
+    niet te vertrouwen. Weglaten roept bij de lezer de vraag op waar hij bleef;
+    een REM-AHI van 64/u naast een NREM-AHI van 39/u zonder vermelding dat de
+    eerste op 22 minuten en ~24 events rust, leest als REM-predominante OSA —
+    een patroon met behandelconsequenties.
+
+    Ontbreekt het veld — resultaten van vóór 0.15.1 dragen het niet — dan
+    zwijgt deze functie. Geen kwalificatie is beter dan een verzonnen kwalificatie.
+    """
+    rsum = rsum or {}
+    if rsum.get("ahi_rem") is None or rsum.get("ahi_rem_reliable") is not False:
+        return None
+    m = rsum.get("rem_min")
+    return t("pdf_rem_ahi_caveat", lang).format(
+        rem=f"{m:.0f}" if isinstance(m, (int, float)) else "?",
+        min=f"{_MIN_REM_MIN:.0f}")
+
+
 def provenance_rows(results, lang="nl"):
     """Welk kanaal voedde welke analyse — als ``[[label, waarde], ...]``.
 
@@ -1626,6 +1662,20 @@ def generate_pdf_report(results:dict, output_path:str,
             (str(rs.get("mean_rem_period_min","—")),t("pdf_mean_period",lang),"min",NAVY),
             (str(rs.get("longest_rem_period_min","—")),t("pdf_longest",lang),"min",NAVY),
         ]))
+        # De vier tegels dragen twee definities: `rem_duration_min` telt
+        # R-epochs, een periode is een spanne die korte onderbrekingen
+        # overbrugt. Bij 8 perioden, 22,5 min REM en 3,69 min gemiddeld nodigt
+        # dat uit tot vermenigvuldigen (29,5) en straft dat af. Alleen tonen
+        # wanneer ze zichtbaar uiteenlopen; anders is het ruis op elk rapport.
+        try:
+            _n, _mean = rs.get("n_rem_periods"), rs.get("mean_rem_period_min")
+            _dur = rs.get("rem_duration_min")
+            if None not in (_n, _mean, _dur) and _n * _mean - _dur > 0.5:
+                story.append(Paragraph(
+                    f"<i>{t('pdf_rem_period_note', lang).format(gap=REM_GAP_TOLERANCE_MIN)}</i>",
+                    styles["SM"]))
+        except (TypeError, ValueError):
+            pass
       else:
         story.append(Paragraph(f"{t('pdf_not_available', lang)}: {rem.get('error','—')}",styles["SM"]))
       sp(0.12)
@@ -1938,8 +1988,16 @@ def generate_pdf_report(results:dict, output_path:str,
         rera_n   = rsum.get("n_rera", 0) or 0
         rera_idx = rsum.get("rera_index", 0) or 0
         rdi_val  = rsum.get("rdi", 0) or 0
-        rem_ahi  = rsum.get("rem_ahi")
-        nrem_ahi = rsum.get("nrem_ahi")
+        # Eén bron. psgscoring levert deze grootheid twee keer: `ahi_rem` uit
+        # respiratory.py (via is_rem(), en het enige paar dat `ahi_rem_reliable`
+        # draagt) en `rem_ahi` uit pipeline.py (via stage == "R", een eigen
+        # herberekening). §8c toonde de tweede, §8e de eerste, onder labels die
+        # niet van elkaar te onderscheiden zijn: "REM AHI" en "AHI REM". Ze
+        # geven doorgaans hetzelfde, maar als ze uiteenlopen staat er twee keer
+        # een ander getal en kwalificeert de REM-noot de verkeerde. `rem_ahi`
+        # blijft als terugval voor resultaten van vóór respiratory.py.
+        rem_ahi  = rsum.get("ahi_rem")  if rsum.get("ahi_rem")  is not None else rsum.get("rem_ahi")
+        nrem_ahi = rsum.get("ahi_nrem") if rsum.get("ahi_nrem") is not None else rsum.get("nrem_ahi")
         n_fri_pure = rsum.get("n_fri", 0) or 0
 
         story.append(_hdr(t("pdf_rera_section_hdr", lang), color=BLUE)); sp(0.1)
@@ -1983,6 +2041,14 @@ def generate_pdf_report(results:dict, output_path:str,
             [t("pdf_param",lang), t("pdf_value",lang)],
             stage_rows,
             [8, 6])])); sp(0.1)
+        _rem_note = rem_ahi_caveat(rsum, lang)
+        if _rem_note:
+            # Geen waarschuwingsglyph: ⚠ ontbreekt in het ingebedde lettertype
+            # en wordt een zwart blokje — dat is in dit rapport bovendien al de
+            # legenda-kleurmarkering. Kleur en cursief dragen de nadruk.
+            story.append(Paragraph(
+                f"<i><font color='#e67e22'>REM AHI: {_rem_note}.</font></i>",
+                styles["SM"])); sp(0.1)
 
         # ── v0.10.0: klinische fenotypes (POSA, REM-predominant) ──────────
         _ph = rsum.get("phenotypes") or {}
@@ -2081,9 +2147,11 @@ def generate_pdf_report(results:dict, output_path:str,
                 styles["SM"])); sp(0.1)
 
         # ── Overige respiratoire indices ─────────────────────────────────
+        _rem_cav = rem_ahi_caveat(rsum, lang)
         story.append(KeepTogether([_tbl(
             [t("pdf_param", lang), t("pdf_value", lang), ""],
-            [["AHI REM",   _v(rsum,"ahi_rem",fmt="{:.1f}"),  ""],
+            [["AHI REM",   _v(rsum,"ahi_rem",fmt="{:.1f}"),
+              (_rem_cav or "")],
              ["AHI NREM",  _v(rsum,"ahi_nrem",fmt="{:.1f}"), ""],
              [t("pdf_avg_apnea_dur", lang), f"{rsum.get('avg_apnea_dur_s','—')} s", ""],
              [t("pdf_max_apnea_dur", lang),  f"{rsum.get('max_apnea_dur_s','—')} s", ""],

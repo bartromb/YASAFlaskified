@@ -180,3 +180,95 @@ def test_older_results_without_the_field_do_not_break_the_block():
     rows = provenance_rows({"meta": {"eeg_channel": "C4"},
                             "pneumo": {"meta": {"all_channels": ["C4"]}}})
     assert rows and _find(rows, "omgeving") is None
+
+
+# ─────────────────────────────────────────────────────────────
+#  6. De REM-AHI zegt op hoeveel REM hij rust
+# ─────────────────────────────────────────────────────────────
+#
+# psgscoring 0.15.1 voegde `ahi_rem_reliable` en `ahi_rem_caveat` toe, maar het
+# rapport las die velden niet. Op recording 62942a61 (22 min REM) stond
+# daardoor "REM AHI 64.2 /u" naast "NREM AHI 38.6 /u" zonder vermelding dat de
+# eerste op ~24 events rust. Dat leest als REM-predominante OSA.
+#
+# Deze toetsen kijken naar de RAPPORTGENERATOR, niet naar de bibliotheek. De
+# oorspronkelijke fout was juist dat de bibliotheek geverifieerd werd en het
+# rapport niet.
+
+from generate_pdf_report import rem_ahi_caveat  # noqa: E402
+
+
+def test_too_little_rem_is_qualified_in_the_report():
+    txt = rem_ahi_caveat({"ahi_rem": 64.2, "ahi_rem_reliable": False,
+                          "rem_min": 22.5})
+    assert txt and "22" in txt
+
+
+def test_enough_rem_says_nothing():
+    assert rem_ahi_caveat({"ahi_rem": 38.6, "ahi_rem_reliable": True,
+                           "rem_min": 91.0}) is None
+
+
+def test_older_results_without_the_field_are_not_qualified():
+    """Resultaten van vóór 0.15.1 dragen het veld niet. Geen kwalificatie is
+    beter dan een verzonnen kwalificatie."""
+    assert rem_ahi_caveat({"ahi_rem": 64.2}) is None
+    assert rem_ahi_caveat({}) is None
+    assert rem_ahi_caveat(None) is None
+
+
+def test_no_rem_ahi_means_no_caveat_about_it():
+    assert rem_ahi_caveat({"ahi_rem": None, "ahi_rem_reliable": False,
+                           "rem_min": 0.0}) is None
+
+
+@pytest.mark.parametrize("lang", ["nl", "fr", "en", "de"])
+def test_the_caveat_is_translated(lang):
+    txt = rem_ahi_caveat({"ahi_rem": 64.2, "ahi_rem_reliable": False,
+                          "rem_min": 22.5}, lang)
+    assert txt and "{" not in txt, txt
+    assert "22" in txt and "30" in txt
+
+
+def test_a_missing_rem_duration_does_not_print_a_placeholder():
+    txt = rem_ahi_caveat({"ahi_rem": 64.2, "ahi_rem_reliable": False})
+    assert txt and "None" not in txt
+
+
+def test_both_sections_that_print_rem_ahi_consult_the_caveat():
+    """De kern van de fout: het veld bestond, het rapport las het niet.
+    §8c toont "REM AHI", §8e toont "AHI REM" — allebei moeten ze vragen."""
+    src = _src("generate_pdf_report.py")
+    calls = [ln for ln in src.splitlines()
+             if "rem_ahi_caveat(rsum" in ln and not ln.lstrip().startswith("def ")]
+    assert len(calls) >= 2, (
+        "een van de twee REM-AHI-secties raadpleegt de kwalificatie niet; "
+        f"gevonden aanroepen: {calls}")
+
+
+# ─────────────────────────────────────────────────────────────
+#  7. De REM-tegels dragen twee definities
+# ─────────────────────────────────────────────────────────────
+
+def test_the_rem_threshold_matches_the_library_when_it_is_available():
+    """`_MIN_REM_MIN` valt terug op 30.0 als psgscoring te oud is. Die terugval
+    is er voor oudere installaties, maar hij mag niet stilletjes afwijken van
+    de bibliotheek zodra die de constante wél levert."""
+    lib = pytest.importorskip("psgscoring.respiratory")
+    drempel = getattr(lib, "MIN_STAGE_MIN_FOR_INDEX", None)
+    if drempel is None:
+        pytest.skip("psgscoring < 0.15.1 — terugval is dan het juiste gedrag")
+    from generate_pdf_report import _MIN_REM_MIN
+    assert _MIN_REM_MIN == drempel
+
+
+def test_the_report_gap_tolerance_matches_the_analysis():
+    """`REM_GAP_TOLERANCE_MIN` in het rapport spiegelt `rem_gap_tolerance` in
+    yasa_analysis.py. Lopen ze uiteen, dan legt de voetnoot iets anders uit dan
+    de code doet."""
+    import re
+    from generate_pdf_report import REM_GAP_TOLERANCE_MIN
+    src = _src("yasa_analysis.py")
+    m = re.search(r"gap_tolerance: int = (\d+)", src)
+    assert m, "gap_tolerance niet gevonden in yasa_analysis.py"
+    assert REM_GAP_TOLERANCE_MIN == int(m.group(1)) * 0.5

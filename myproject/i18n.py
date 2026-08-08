@@ -2615,6 +2615,26 @@ _V0102_PDF = {
     },
     "pdf_conf_signal_noise": {"nl": "conf&lt;0.40 = signaalruis", "fr": "conf&lt;0,40 = bruit du signal", "en": "conf&lt;0.40 = signal noise", "de": "Konfidenz&lt;0,40 = Signalrauschen"},
     "pdf_max_apnea_dur":     {"nl": "Max. apnea-duur", "fr": "Durée max. d'apnée", "en": "Max apnea duration", "de": "Max. Apnoe-Dauer"},
+    # De REM-AHI bestaat ook bij weinig REM — hij is dan alleen niet te
+    # vertrouwen. Een REM-AHI van 64/u op 22 minuten leest als
+    # REM-predominante OSA terwijl hij op ~24 events berust. Daarom
+    # kwalificeren en niet weglaten: weglaten roept de vraag op waar hij bleef.
+    "pdf_rem_ahi_caveat": {
+        "nl": "slechts {rem} min REM (&lt; {min} min) — te weinig om de REM-AHI op te steunen",
+        "fr": "seulement {rem} min de REM (&lt; {min} min) — insuffisant pour fonder l'IAH REM",
+        "en": "only {rem} min REM (&lt; {min} min) — too little sleep to rest the REM-AHI on",
+        "de": "nur {rem} min REM (&lt; {min} min) — zu wenig Schlaf für einen belastbaren REM-AHI",
+    },
+    # De drie REM-tegels tellen niet op, en dat is geen rekenfout: een periode
+    # is een spanne die korte onderbrekingen overbrugt, de REM-duur telt
+    # uitsluitend R-epochs. Zonder deze noot nodigt het paneel uit tot
+    # vermenigvuldigen en straft dat af.
+    "pdf_rem_period_note": {
+        "nl": "Een REM-periode is een aaneengesloten spanne die onderbrekingen tot {gap} min overbrugt; de REM-duur telt alleen R-epochs. Periodes × gemiddelde is daarom hoger dan de REM-duur.",
+        "fr": "Une période REM est un intervalle continu tolérant des interruptions jusqu'à {gap} min ; la durée REM ne compte que les époques R. Périodes × moyenne dépasse donc la durée REM.",
+        "en": "A REM period is a contiguous span bridging interruptions of up to {gap} min; REM duration counts R epochs only. Periods × mean therefore exceeds REM duration.",
+        "de": "Eine REM-Periode ist eine zusammenhängende Spanne, die Unterbrechungen bis {gap} min überbrückt; die REM-Dauer zählt nur R-Epochen. Perioden × Mittelwert liegt daher über der REM-Dauer.",
+    },
     # Spiegelnoot: bij EEN sensor moet het rapport zeggen dat de
     # AASM-methodiek niet gevolgd kon worden. Apneus op nasale druk
     # overdetecteren t.o.v. de thermistor; dat mag niet stil blijven.

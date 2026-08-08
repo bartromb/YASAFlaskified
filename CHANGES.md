@@ -1,5 +1,47 @@
 # Changelog — YASAFlaskified
 
+## v0.19.11 — 2026-08-08  *(de REM-AHI zegt waarop hij rust; psgscoring 0.15.2)*
+
+**De REM-kwalificatie staat nu in het rapport.** psgscoring 0.15.1 leverde
+`ahi_rem_reliable` en `ahi_rem_caveat`, maar de rapportgenerator las die velden
+nergens. Op opname 62942a61 stond daardoor "REM AHI 64.2 /u" naast
+"NREM AHI 38.6 /u" zonder één woord over de 22 minuten REM waarop de eerste
+rustte — ongeveer 24 events. Dat leest als REM-predominante OSA, een patroon
+met behandelconsequenties.
+
+De bibliotheek levert het feit, dit rapport de formulering: de tekst in
+psgscoring is eentalig en het rapport verschijnt in vier talen. Resultaten van
+vóór 0.15.1 dragen het veld niet en krijgen geen kwalificatie — geen
+kwalificatie is beter dan een verzonnen kwalificatie.
+
+**Eén bron voor de REM-AHI.** psgscoring levert deze grootheid twee keer:
+`ahi_rem` uit `respiratory.py` (via `is_rem()`, en het enige paar dat de
+betrouwbaarheidsvelden draagt) en `rem_ahi` uit `pipeline.py` (via
+`stage == "R"`, een eigen herberekening). §8c toonde de tweede, §8e de eerste,
+onder labels die voor de lezer niet te scheiden zijn: "REM AHI" en "AHI REM".
+Ze gaven op deze opname hetzelfde, maar bij divergentie zou de kwalificatie het
+verkeerde getal betreffen. Het rapport leest nu `ahi_rem`, met `rem_ahi` als
+terugval voor oudere resultaten. De duplicatie in psgscoring zelf blijft staan
+en is genoteerd in `docs/opm20260809.txt`.
+
+**Geen waarschuwingsglyph.** De eerste versie zette ⚠ voor de kwalificatie. Dat
+teken ontbreekt in het ingebedde lettertype en werd een zwart blokje — in dit
+rapport bovendien al de legenda-kleurmarkering, dus het las als een tweede
+betekenis van hetzelfde teken. Zelfde val als de ↳ in v0.17.2. Kleur en
+cursief dragen de nadruk nu.
+
+**Voetnoot bij de REM-tegels.** "8 perioden · 22,5 min REM · 3,69 min
+gemiddeld" nodigt uit tot vermenigvuldigen (29,5) en straft dat af. Geen
+rekenfout maar twee definities: `rem_duration_min` telt R-epochs, een periode
+is een spanne die onderbrekingen tot 2 min overbrugt. De noot verschijnt alleen
+wanneer de getallen zichtbaar uiteenlopen.
+
+**Tests.** `tests/test_pdf_rem_caveat_render.py` rendert het rapport
+daadwerkelijk en leest de tekstlaag terug. Dat is bewust: de oorspronkelijke
+fout was dat de bibliotheek geverifieerd werd en het rapport niet, en een toets
+op de helper zou hem niet gevangen hebben — de helper wérkte, alleen riep
+niemand hem aan. 272 tests groen (was 251).
+
 ## v0.19.10 — 2026-08-08  *(afwijkende parameters zichtbaar; psgscoring 0.15.1)*
 
 **Het herkomstblok toont nu actieve omgevingsparameters.** `PSGSCORING_BREATH_*`
