@@ -14,6 +14,11 @@
   .k-typical     { background:#f0f9ff; border-left:4px solid #0284c7; }
   .panel-note    { color:#4a5568; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
                    font-size:.74rem; }
+  .ahi-tag       { font-size:.68rem; padding:.1rem .4rem; border-radius:.25rem;
+                   margin-right:.5rem; white-space:nowrap; }
+  .ahi-in        { background:#e6f4ea; color:#1e6b34; border:1px solid #b7dfc4; }
+  .ahi-partial   { background:#fff4e5; color:#8a4b08; border:1px solid #f0c893; }
+  .ahi-out       { background:#f1f3f5; color:#5a6270; border:1px solid #d8dde3; }
 </style>
 {% endblock %}
 
@@ -64,7 +69,18 @@
             &nbsp;·&nbsp; {{ '%.0f'|format(ev.duration_s) }} s
             {%- if ev.stage %} &nbsp;·&nbsp; {{ ev.stage }}{% endif %}
           </span>
-          <span class="panel-note">{{ ev._review_note }}</span>
+          <span>
+            {% if ev._ahi == "counted" %}
+              <span class="ahi-tag ahi-in">{{ t("event_review_in_ahi") }}</span>
+            {% elif ev._ahi == "uncertain_only" %}
+              <span class="ahi-tag ahi-partial">{{ t("event_review_uncertain_only") }}</span>
+            {% elif ev._ahi == "not_scored" %}
+              <span class="ahi-tag ahi-out">{{ t("event_review_not_scored") }}</span>
+            {% else %}
+              <span class="ahi-tag ahi-out">{{ t("event_review_not_in_ahi") }}</span>
+            {% endif %}
+            <span class="panel-note">{{ ev._review_note }}</span>
+          </span>
         </div>
         <img src="{{ uri }}" alt="{{ ev.type }} @ {{ ev.onset_s }}s" loading="lazy">
       </div>

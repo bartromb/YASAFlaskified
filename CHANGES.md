@@ -1,5 +1,42 @@
 # Changelog — YASAFlaskified
 
+## v0.19.14 — 2026-08-08  *(telt dit event mee in de AHI?)*
+
+De visuele eventcontrole toonde het TYPE van een event maar niet of het in het
+hoofdgetal zat. Juist bij "uncertain" is dat contra-intuïtief, want er zijn
+**twee** labels die zo lezen en ze gedragen zich tegengesteld:
+
+| type | betekenis | `ahi_total` | `ahi_incl_uncertain` |
+|---|---|---|---|
+| `uncertain` | een APNEU die de effort-classificatie niet kon onderverdelen (meestal een aangetast RIP-signaal) | **nee** | ja |
+| `hypopnea_uncertain` | een HYPOPNEE waarvan het subtype onbepaald bleef | **ja** | ja |
+
+De asymmetrie is geen ontwerpkeuze maar een gevolg van de telling:
+`respiratory.py` doet `hypopneas = [e for e in events if "hypopnea" in
+e["type"]]` — substring-matching, dus `hypopnea_uncertain` glijdt er vanzelf
+in. De kale `uncertain` staat in een eigen lijst en wordt bewust weggelaten uit
+`ahi_total` (conservatief, bedoeld om na te kijken). `ahi_incl_uncertain` is
+tegen scoorders geijkt op ~0 bias; `ahi_total` ligt ~1,5/u lager.
+
+Elk paneel draagt nu een label. **Vier** toestanden, niet drie:
+
+- `telt in AHI`
+- `niet in AHI · wel in AHI incl. onbepaald` — de kale `uncertain`
+- `gescoord, niet in AHI` — een RERA zit in de RDI, niet in de AHI
+- `niet gescoord` — een afgewezen kandidaat werd nooit een event
+
+De laatste twee waren in de eerste versie één label. Dat wiste een verschil dat
+er voor de beoordelaar juist toe doet: een RERA is wél gescoord.
+
+**Drift-bescherming.** `ahi_membership()` herhaalt een regel die in psgscoring
+inline in `_compute_summary` staat en niet als functie beschikbaar is.
+`test_ahi_membership_matches_psgscoring` laat psgscoring daarom ZELF tellen —
+één event per type — en controleert of `ahi_total` en `ahi_incl_uncertain`
+bewegen zoals het label belooft. Verandert psgscoring de regel, dan valt die
+toets om in plaats van dat de pagina stil gaat liegen.
+
+330 tests groen (was 314).
+
 ## v0.19.13 — 2026-08-08  *(eventcontrole werkte op geen enkele echte montage)*
 
 **Reparatie — "Geen enkel paneel kon getekend worden".** De visuele

@@ -35,6 +35,47 @@ DEFAULT_PANELS = 12
 
 
 # ══════════════════════════════════════════════════════════════
+#  Telt dit event mee in de AHI?
+# ══════════════════════════════════════════════════════════════
+
+# Zonder dit kan een beoordelaar niet zien of het event dat hij bekijkt in het
+# hoofdgetal zit. En juist bij "uncertain" is dat contra-intuïtief:
+#
+#   uncertain            een apneu die de effort-classificatie niet kon
+#                        onderverdelen (obstructief/centraal/gemengd), meestal
+#                        door een aangetast RIP-signaal. WEL gescoord, NIET in
+#                        `ahi_total` — dat is bewust conservatief en bedoeld om
+#                        na te kijken. Wel in `ahi_incl_uncertain`, dat tegen
+#                        scoorders ~0 bias heeft; `ahi_total` ligt ~1,5/u lager.
+#
+#   hypopnea_uncertain   een hypopnee waarvan het subtype onbepaald bleef.
+#                        Telt WEL gewoon mee, want de telling in
+#                        respiratory.py matcht op de substring "hypopnea".
+#
+# Twee labels die allebei "uncertain" zeggen en zich tegengesteld gedragen.
+# Deze regels spiegelen `_compute_summary` in psgscoring; de spiegel wordt
+# vastgepind door test_ahi_membership_matches_psgscoring, die psgscoring zelf
+# laat tellen en vergelijkt.
+
+_APNEA_TYPES = ("obstructive", "central", "mixed")
+
+COUNTED = "counted"                 # zit in ahi_total én ahi_incl_uncertain
+UNCERTAIN_ONLY = "uncertain_only"   # alleen in ahi_incl_uncertain
+NOT_COUNTED = "not_counted"         # WEL gescoord, in geen van beide AHI's (bv. RERA)
+NOT_SCORED = "not_scored"           # afgewezen kandidaat — nooit een event geworden
+
+
+def ahi_membership(event_type):
+    """Geeft COUNTED, UNCERTAIN_ONLY of NOT_COUNTED voor een eventtype."""
+    t = str(event_type or "").lower()
+    if "hypopnea" in t or t in _APNEA_TYPES:
+        return COUNTED
+    if t == "uncertain":
+        return UNCERTAIN_ONLY
+    return NOT_COUNTED
+
+
+# ══════════════════════════════════════════════════════════════
 #  Selectie — grensgevallen eerst
 # ══════════════════════════════════════════════════════════════
 
@@ -95,7 +136,12 @@ def select_review_events(pneumo, n=DEFAULT_PANELS):
             return
         gezien.add(sleutel)
         gekozen.append({**ev, "_review_kind": soort,
-                        "_review_note": toelichting})
+                        "_review_note": toelichting,
+                        # Onderscheid dat er voor de lezer toe doet: een RERA is
+                        # WEL gescoord en telt alleen niet in de AHI, een
+                        # afgewezen kandidaat is nooit een event geworden.
+                        "_ahi": (NOT_SCORED if soort == "rejected"
+                                 else ahi_membership(ev.get("type")))})
 
     # 1. Twijfelgevallen: de laagste confidence eerst.
     met_conf = [(c, e) for e in events if (c := _confidence(e)) is not None]

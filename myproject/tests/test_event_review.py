@@ -180,3 +180,92 @@ def test_the_route_is_admin_only_and_job_gated():
     blok = blok[:blok.index("def event_review")]
     assert '@requires_role("admin")' in blok, "rolpoort ontbreekt"
     assert "@job_access_required" in blok, "job-poort ontbreekt"
+
+
+# ──────────────────────────────────────────────────────────────
+#  Telt dit event mee in de AHI?
+# ──────────────────────────────────────────────────────────────
+#
+# Zonder dit label kan een beoordelaar niet zien of het event dat hij bekijkt
+# in het hoofdgetal zit. Bij "uncertain" is dat contra-intuïtief: een apneu die
+# de effort-classificatie niet kon onderverdelen valt BUITEN `ahi_total`
+# (bewust conservatief), terwijl `hypopnea_uncertain` gewoon meetelt omdat de
+# telling in psgscoring op de substring "hypopnea" matcht. Twee labels die
+# allebei "uncertain" zeggen en zich tegengesteld gedragen.
+
+from event_review import (COUNTED, NOT_COUNTED, NOT_SCORED,  # noqa: E402
+                          UNCERTAIN_ONLY, ahi_membership)
+
+
+@pytest.mark.parametrize("typ,verwacht", [
+    ("obstructive", COUNTED),
+    ("central", COUNTED),
+    ("mixed", COUNTED),
+    ("hypopnea", COUNTED),
+    ("hypopnea_central", COUNTED),
+    ("hypopnea_mixed", COUNTED),
+    ("hypopnea_uncertain", COUNTED),      # substring "hypopnea" → telt mee
+    ("uncertain", UNCERTAIN_ONLY),        # niet-onderverdeelde APNEU → niet
+    ("rera", NOT_COUNTED),
+    ("", NOT_COUNTED),
+    (None, NOT_COUNTED),
+])
+def test_ahi_membership(typ, verwacht):
+    assert ahi_membership(typ) == verwacht
+
+
+def test_the_two_uncertain_labels_differ():
+    """De kern van de vraag: ze lezen hetzelfde en tellen anders."""
+    assert ahi_membership("uncertain") != ahi_membership("hypopnea_uncertain")
+
+
+def test_ahi_membership_matches_psgscoring():
+    """Pin de spiegel vast op psgscoring zelf.
+
+    `ahi_membership` herhaalt een regel die in `_compute_summary` inline staat
+    en niet als functie geëxporteerd wordt. Deze toets laat psgscoring ÉCHT
+    tellen — één event per type — en controleert of `ahi_total` en
+    `ahi_incl_uncertain` bewegen zoals het label belooft. Verandert psgscoring
+    de regel, dan valt dit om in plaats van dat het rapport stil gaat liegen.
+    """
+    resp = pytest.importorskip("psgscoring.respiratory")
+    hypno = ["N2"] * 240                       # 2 uur slaap
+    leeg = resp._compute_summary([], hypno)
+    basis_tot = leeg.get("ahi_total") or 0.0
+    basis_unc = leeg.get("ahi_incl_uncertain") or 0.0
+
+    for typ in ("obstructive", "central", "mixed", "hypopnea",
+                "hypopnea_central", "hypopnea_uncertain", "uncertain"):
+        ev = [{"type": typ, "onset_s": 100.0, "duration_s": 20.0,
+               "stage": "N2", "epoch": 3, "confidence": 0.9}]
+        s = resp._compute_summary(ev, hypno)
+        in_tot = (s.get("ahi_total") or 0.0) > basis_tot
+        in_unc = (s.get("ahi_incl_uncertain") or 0.0) > basis_unc
+        label = ahi_membership(typ)
+        assert (label == COUNTED) == in_tot, (
+            f"{typ}: label zegt {label}, ahi_total beweegt={in_tot}")
+        assert (label in (COUNTED, UNCERTAIN_ONLY)) == in_unc, (
+            f"{typ}: label zegt {label}, ahi_incl_uncertain beweegt={in_unc}")
+
+
+def test_a_rejected_candidate_is_marked_as_never_scored():
+    """Onderscheid dat er voor de lezer toe doet: een afgewezen kandidaat is
+    nooit een event geworden, terwijl een RERA WEL gescoord is en alleen niet
+    in de AHI zit. Allebei "telt niet mee" noemen wist dat verschil."""
+    rej = [{"type": "hypopnea", "onset_s": 300.0, "duration_s": 13.0,
+            "reject_reason": "local_reduction_19pct<20pct"}]
+    gekozen = select_review_events(_pneumo([], rej), n=2)
+    assert gekozen[0]["_ahi"] == NOT_SCORED
+    assert NOT_SCORED != NOT_COUNTED
+
+
+def test_a_scored_rera_is_not_the_same_as_a_rejected_candidate():
+    evs = [_ev(100, 0.5, "rera")]
+    assert select_review_events(_pneumo(evs), n=2)[0]["_ahi"] == NOT_COUNTED
+
+
+def test_scored_events_carry_their_membership():
+    evs = [_ev(100, 0.5, "uncertain"), _ev(200, 0.5, "hypopnea_uncertain")]
+    m = {e["type"]: e["_ahi"] for e in select_review_events(_pneumo(evs), n=4)}
+    assert m["uncertain"] == UNCERTAIN_ONLY
+    assert m["hypopnea_uncertain"] == COUNTED

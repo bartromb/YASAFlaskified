@@ -2627,6 +2627,26 @@ _V0102_PDF = {
         "fr": "Ces panneaux montrent délibérément les cas les plus DIFFICILES : les événements scorés avec la confiance la plus faible et les candidats rejetés les plus proches du seuil. Ce n'est donc pas un échantillon représentatif de la nuit. La zone rouge est l'événement ; l'axe y est calibré sur la respiration adjacente afin que la réduction soit jugeable.",
         "en": "These panels deliberately show the HARDEST cases: the scored events with the lowest confidence and the rejected candidates that came closest to the threshold. It is therefore not a cross-section of the night — what the algorithm gets right effortlessly is not shown. The red band is the event; the y-axis is scaled on the surrounding breathing so the reduction can be judged.",
         "de": "Diese Panels zeigen bewusst die SCHWIERIGSTEN Fälle: die gescorten Ereignisse mit der niedrigsten Konfidenz und die abgelehnten Kandidaten, die dem Schwellenwert am nächsten kamen. Es ist also kein Querschnitt der Nacht. Rot markiert ist das Ereignis; die y-Achse ist auf die umgebende Atmung skaliert."},
+    # Telt dit event mee in het hoofdgetal? Bij "uncertain" is dat
+    # contra-intuïtief: een niet-onderverdeelde APNEU valt buiten `ahi_total`,
+    # een `hypopnea_uncertain` telt gewoon mee. Zonder dit label kan de
+    # beoordelaar dat verschil niet zien.
+    "event_review_in_ahi": {
+        "nl": "telt in AHI", "fr": "compté dans l'IAH",
+        "en": "counted in AHI", "de": "im AHI gezählt"},
+    "event_review_uncertain_only": {
+        "nl": "niet in AHI · wel in AHI incl. onbepaald",
+        "fr": "hors IAH · inclus dans l'IAH avec indéterminés",
+        "en": "not in AHI · in AHI incl. unclassified",
+        "de": "nicht im AHI · im AHI inkl. unbestimmt"},
+    # Gescoord maar buiten de AHI (bv. een RERA, die in de RDI zit) — iets
+    # anders dan een kandidaat die nooit een event werd.
+    "event_review_not_in_ahi": {
+        "nl": "gescoord, niet in AHI", "fr": "scoré, hors IAH",
+        "en": "scored, not in AHI", "de": "gescort, nicht im AHI"},
+    "event_review_not_scored": {
+        "nl": "niet gescoord", "fr": "non scoré",
+        "en": "not scored", "de": "nicht gescort"},
     "event_review_k_borderline": {"nl": "grensgeval", "fr": "cas limite", "en": "borderline", "de": "Grenzfall"},
     "event_review_k_rejected":   {"nl": "afgewezen", "fr": "rejeté", "en": "rejected", "de": "abgelehnt"},
     "event_review_k_typical":    {"nl": "typevoorbeeld", "fr": "exemple type", "en": "type example", "de": "Typbeispiel"},
