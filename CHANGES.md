@@ -1,5 +1,22 @@
 # Changelog — YASAFlaskified
 
+## v0.19.9 — 2026-08-07  *(psgscoring 0.15.0)*
+
+Geen YF-codewijziging. Pin naar psgscoring **0.15.0**.
+
+**Zichtbaar voor de gebruiker:** het profiel `aasm_v3_prob` heet niet langer
+"fully probabilistic" maar **"graded arousal axis"**. Dat was een naam die meer
+beloofde dan hij waarmaakte: alleen de hypopnee-as is gegradeerd, apneus komen
+uit dezelfde regelcascade als in elk ander profiel en hun confidence klemt vast
+op 0,95 (obstructief) of 0,90 (centraal). De profielsleutel is ongewijzigd, dus
+ingestelde standaardprofielen blijven werken.
+
+**Nieuw achter een vlag, standaard uit:** `hypoxic_burden_local_baseline`. De
+hypoxic burden bleek niet onderschat bij lage saturatie — een vlakke basislijn
+van 85 % geeft dezelfde burden als 96 % — maar wél overschat bij drift: op een
+nacht die van 94 % naar 82 % zakt bijna verdubbelt hij zonder dat de events
+veranderen.
+
 ## v0.19.8 — 2026-08-07  *(psgscoring 0.14.9)*
 
 Geen YF-codewijziging. Pin naar psgscoring **0.14.9**: de RERA-ontdubbeling
