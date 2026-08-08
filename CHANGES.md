@@ -1,5 +1,19 @@
 # Changelog — YASAFlaskified
 
+## v0.19.7 — 2026-08-07  *(psgscoring 0.14.8)*
+
+Geen YF-codewijziging. Pin naar psgscoring **0.14.8**, dat twee indices
+repareert die een andere opname beschreven dan het rapport:
+
+- **Positionele AHI werd berekend vóór de events definitief waren.** De
+  positieanalyse draait in stap 6; stap 7b vervangt daarna elke hypopnee. Elk
+  `breath_graded`-profiel hield dus AHI-per-positie van de envelope-detector.
+  Via `ahi_per_pos` reikte dat tot de positionele fenotypering, dus het oordeel
+  "kandidaat voor positietherapie" stond op de verkeerde eventlijst.
+- **"AHI excl. ruis" kon groter zijn dan de AHI.** Niet door de noemer — die is
+  in beide dezelfde — maar doordat de gefilterde variant over álle events telde
+  terwijl `ahi_total` `uncertain` uitsluit.
+
 ## v0.19.6 — 2026-08-07  *(één grootheid, één getal; psgscoring 0.14.7)*
 
 Vier bevindingen uit de rapportvergelijking, alle vier eerst tegen de code
