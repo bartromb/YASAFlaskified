@@ -1,5 +1,20 @@
 # Changelog — YASAFlaskified
 
+## v0.19.8 — 2026-08-07  *(psgscoring 0.14.9)*
+
+Geen YF-codewijziging. Pin naar psgscoring **0.14.9**: de RERA-ontdubbeling
+toetst nu intervaloverlap in plaats van onset-nabijheid.
+
+De oude toets (`|onset_a − onset_b| < 5 s`) miste een kandidaat die zes seconden
+later begint maar volledig binnen het event valt, en noemde twee dingen hetzelfde
+wanneer ze toevallig vlak na elkaar begonnen zonder elkaar te raken. "Elke
+overlap" bleek te grof: afgewezen hypopnee-kandidaten overlappen voor 0,83–1,00
+(duplicaten), flattening-reeksen voor 0,06–0,22 (flow-limitatie náást een event).
+De regel is nu "meer dan de helft van de kandidaat ligt binnen een gescoord
+event", en die drempel ligt in het gemeten gat.
+
+Alle AHI's onveranderd.
+
 ## v0.19.7 — 2026-08-07  *(psgscoring 0.14.8)*
 
 Geen YF-codewijziging. Pin naar psgscoring **0.14.8**, dat twee indices
