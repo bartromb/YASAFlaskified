@@ -2301,6 +2301,73 @@ def show_results(job_id):
     )
 
 
+@app.route("/review/<job_id>")
+@login_required
+@job_access_required
+@requires_role("admin")
+def event_review(job_id):
+    """Visuele controle van de gescoorde respiratoire events.
+
+    Alleen voor beheerders: dit toont ruwe signalen en is bedoeld om de
+    scoring te BEOORDELEN, niet om een uitslag te lezen.
+
+    Beide poorten staan er bewust, en de VOLGORDE is bewust:
+    `job_access_required` eerst, `requires_role` daarna. Wie geen recht heeft
+    op de job krijgt dan dezelfde weigering als op elke andere job-route
+    (terug naar het dashboard) in plaats van de rol-weigering, en de
+    gedeelde toets in test_job_access.py blijft één regel bewaken voor alle
+    routes. De rolpoort bijt daarna nog voor wie de job wél mag zien maar
+    geen beheerder is.
+
+    Het verzoek duurt seconden en dat is inherent — de EDF-lezing is de
+    kostenpost (zie `event_review.load_panel_raw`), niet het tekenen.
+    """
+    from event_review import (DEFAULT_PANELS, MAX_PANELS, build_review_panels,
+                              channel_map_for, resolve_edf_path,
+                              select_review_events)
+
+    _require_job_access(job_id)
+    data   = _load_results(job_id)
+    pneumo = data.get("pneumo", {}) or {}
+
+    try:
+        n = int(request.args.get("n", DEFAULT_PANELS))
+    except (TypeError, ValueError):
+        n = DEFAULT_PANELS
+    n = max(1, min(n, MAX_PANELS))
+
+    events   = select_review_events(pneumo, n=n)
+    ch_map   = channel_map_for(data)
+    edf_path = resolve_edf_path(job_id, app.config["UPLOAD_FOLDER"])
+
+    panels, reden = [], None
+    if not events:
+        reden = "no_events"
+    elif not ch_map:
+        reden = "no_channel_map"
+    elif not edf_path:
+        # De EDF wordt na anonimisering of opruiming verwijderd; de
+        # resultaten blijven. Dan is er niets te tekenen en zegt de pagina dat.
+        reden = "no_edf"
+    else:
+        hypno = [ep.get("stage", "W") for ep in (data.get("timeline") or [])] or None
+        panels = build_review_panels(
+            edf_path, ch_map, events, hypno=hypno,
+            all_events=(pneumo.get("respiratory", {}) or {}).get("events") or [])
+        if not panels:
+            reden = "render_failed"
+
+    logger.info("eventcontrole %s door %s: %d panelen",
+                job_id, current_user.username, len(panels))
+    return render_template(
+        "event_review.html",
+        job_id=job_id, panels=panels, reason=reden, n=n,
+        max_panels=MAX_PANELS,
+        summary=(pneumo.get("respiratory", {}) or {}).get("summary", {}) or {},
+        profile=(pneumo.get("meta", {}) or {}).get("scoring_profile"),
+    )
+
+
 def _serve_fresh_report(job_id, path, gen_fn, download_name, mimetype, kind):
     """Serve a derived report artifact, guaranteeing it reflects the current
     results and is never served from a stale browser cache.

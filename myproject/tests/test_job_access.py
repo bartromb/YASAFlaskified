@@ -30,6 +30,10 @@ JOB_ROUTES = [
     ("GET", "/status/{jid}"),
     ("GET", "/api/status/{jid}"),
     ("GET", "/results/{jid}"),
+    # Visuele eventcontrole. Staat hier omdat de route een <job_id> draagt;
+    # daarnaast geldt requires_role("admin") — toegang tot de uitslag geeft
+    # nog geen toegang tot de ruwe signalen. Zie test_event_review_route.py.
+    ("GET", "/review/{jid}"),
     ("GET", "/results/{jid}/pdf"),
     ("GET", "/results/{jid}/excel"),
     ("GET", "/results/{jid}/psg"),

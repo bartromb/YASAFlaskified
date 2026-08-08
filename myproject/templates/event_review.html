@@ -1,0 +1,75 @@
+{# templates/event_review.html — visuele controle van de gescoorde respiratoire events #}
+{% extends "base.html" %}
+{% block title %}{{ t("event_review_title") }} — {{ job_id }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .panel-card    { border:1px solid #e2e8f0; border-radius:.5rem; overflow:hidden; margin-bottom:1.25rem; }
+  .panel-card img{ width:100%; height:auto; display:block; }
+  .panel-head    { padding:.45rem .75rem; font-size:.82rem; display:flex;
+                   justify-content:space-between; align-items:center; gap:1rem;
+                   border-bottom:1px solid #edf2f7; }
+  .k-borderline  { background:#fffbeb; border-left:4px solid #d97706; }
+  .k-rejected    { background:#fef2f2; border-left:4px solid #dc2626; }
+  .k-typical     { background:#f0f9ff; border-left:4px solid #0284c7; }
+  .panel-note    { color:#4a5568; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+                   font-size:.74rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-xl py-4">
+
+  <div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+      <h2 class="mb-0">🔍 {{ t("event_review_title") }}</h2>
+      <small class="text-muted">
+        Job: {{ job_id }}
+        {%- if profile %} &nbsp;·&nbsp; {{ t("scoring_profile") }}: <strong>{{ profile }}</strong>{% endif %}
+        {%- if summary.ahi_total is not none %} &nbsp;·&nbsp; AHI {{ summary.ahi_total }}/u{% endif %}
+      </small>
+    </div>
+    <a href="/results/{{ job_id }}" class="btn btn-outline-secondary btn-sm">← {{ t("analysis_results") }}</a>
+  </div>
+
+  <p class="text-muted" style="max-width:60rem">{{ t("event_review_intro") }}</p>
+
+  {% if reason %}
+    <div class="alert alert-warning">
+      {% if reason == "no_events" %}{{ t("event_review_no_events") }}
+      {% elif reason == "no_edf" %}{{ t("event_review_no_edf") }}
+      {% elif reason == "no_channel_map" %}{{ t("event_review_no_channels") }}
+      {% else %}{{ t("event_review_render_failed") }}{% endif %}
+    </div>
+  {% endif %}
+
+  {% if panels %}
+    <div class="mb-3">
+      <span class="badge" style="background:#d97706">{{ t("event_review_k_borderline") }}</span>
+      <span class="badge" style="background:#dc2626">{{ t("event_review_k_rejected") }}</span>
+      <span class="badge" style="background:#0284c7">{{ t("event_review_k_typical") }}</span>
+      <small class="text-muted ms-2">{{ panels|length }} {{ t("event_review_panels_shown") }}</small>
+      {% if n < max_panels %}
+        <a class="ms-2 small" href="?n={{ max_panels }}">{{ t("event_review_show_more") }} ({{ max_panels }})</a>
+      {% endif %}
+    </div>
+
+    {% for ev, uri in panels %}
+      <div class="panel-card">
+        <div class="panel-head k-{{ ev._review_kind }}">
+          <span>
+            <strong>{{ ev.type|upper }}</strong>
+            &nbsp;·&nbsp; t = {{ '%02d:%02d:%02d'|format(
+                 (ev.onset_s // 3600)|int, ((ev.onset_s % 3600) // 60)|int, (ev.onset_s % 60)|int) }}
+            &nbsp;·&nbsp; {{ '%.0f'|format(ev.duration_s) }} s
+            {%- if ev.stage %} &nbsp;·&nbsp; {{ ev.stage }}{% endif %}
+          </span>
+          <span class="panel-note">{{ ev._review_note }}</span>
+        </div>
+        <img src="{{ uri }}" alt="{{ ev.type }} @ {{ ev.onset_s }}s" loading="lazy">
+      </div>
+    {% endfor %}
+  {% endif %}
+
+</div>
+{% endblock %}

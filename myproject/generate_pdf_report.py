@@ -902,9 +902,9 @@ def _select_example_events(events, n=3):
     return result
 
 
-def _plot_epoch_example(edf_path, channel_map, event, hypno=None,
-                        pre_s=15, post_s=30, wc=16.2, hc_per_ch=1.2,
-                        all_events=None, raw=None):
+def epoch_panel_png(edf_path, channel_map, event, hypno=None,
+                    pre_s=15, post_s=30, wc=16.2, hc_per_ch=1.2,
+                    all_events=None, raw=None):
     """Plot een enkel epoch-voorbeeld: gestapelde pneumokanalen rond een event.
 
     Parameters
@@ -1021,17 +1021,34 @@ def _plot_epoch_example(edf_path, channel_map, event, hypno=None,
             ax.axhline(90, color="#e74c3c", linewidth=0.4, linestyle="--", alpha=0.5)
         else:
             ax.plot(times, data, color=color, linewidth=lw)
-            # v0.8.37: Robust scaling with median ± 4*MAD (artefact-resistant)
+            # Schaal op de REFERENTIE-ademhaling buiten het event, niet op het
+            # hele venster.
+            #
+            # De vorige regel was median ± 4·MAD over het volledige venster.
+            # Een respiratoir event is per definitie een stille periode, dus
+            # hoe overtuigender het event, hoe kleiner de MAD en hoe strakker
+            # de schaal — precies omgekeerd aan wat de lezer nodig heeft. Op
+            # een echte gemengde apneu (SN3, t=436 s) bleef van het
+            # flowkanaal een streep over en stond Abdomen op 20–40 terwijl de
+            # werkelijke excursies een veelvoud daarvan zijn. Je kunt de
+            # reductie niet beoordelen als juist de ademhaling waartegen je
+            # vergelijkt buiten beeld valt.
             if len(data) > 10:
-                med = np.median(data)
-                mad = np.median(np.abs(data - med))
-                if mad > 0:
-                    lo = med - 4 * mad
-                    hi = med + 4 * mad
-                else:
-                    p1, p99 = np.percentile(data, [1, 99])
-                    lo, hi = p1, p99
-                margin = max((hi - lo) * 0.05, 1)
+                ev_mask = (times >= onset) & (times <= onset + dur)
+                ref = data[~ev_mask]
+                basis = ref if len(ref) > 10 else data
+                lo, hi = np.percentile(basis, [1, 99])
+                if hi <= lo:                       # vlak referentiesignaal
+                    lo, hi = float(np.min(basis)), float(np.max(basis))
+                # Het event zelf moet in beeld blijven, ook wanneer het buiten
+                # de referentie valt — denk aan de drukpiek bij heropening.
+                if ev_mask.any():
+                    ev_data = data[ev_mask]
+                    lo = min(lo, float(np.percentile(ev_data, 1)))
+                    hi = max(hi, float(np.percentile(ev_data, 99)))
+                if hi <= lo:                       # volledig vlak kanaal
+                    lo, hi = lo - 1.0, hi + 1.0
+                margin = (hi - lo) * 0.08
                 ax.set_ylim(lo - margin, hi + margin)
 
         # Primary event (red)
@@ -1090,7 +1107,57 @@ def _plot_epoch_example(edf_path, channel_map, event, hypno=None,
     fig.savefig(buf, format="png", dpi=150, bbox_inches="tight")
     plt.close(fig)
     buf.seek(0)
+    return buf, total_hc
+
+
+def _plot_epoch_example(edf_path, channel_map, event, hypno=None,
+                        pre_s=15, post_s=30, wc=16.2, hc_per_ch=1.2,
+                        all_events=None, raw=None):
+    """PDF-verpakking rond `epoch_panel_png`.
+
+    De tekencode is gedeeld met de visuele eventcontrole in de webapp
+    (`event_review.py`), die PNG-bytes nodig heeft in plaats van een
+    ReportLab-object. Splitsen in plaats van dupliceren, zodat een verbetering
+    aan het paneel op beide plekken landt.
+    """
+    out = epoch_panel_png(edf_path, channel_map, event, hypno=hypno,
+                          pre_s=pre_s, post_s=post_s, wc=wc,
+                          hc_per_ch=hc_per_ch, all_events=all_events, raw=raw)
+    if out is None:
+        return None
+    buf, total_hc = out
     return Image(buf, width=wc*cm, height=total_hc*cm)
+
+
+def load_panel_raw(edf_path, channel_map):
+    """Lees de EDF ÉÉN keer en houd alleen de kanalen die de panelen tekenen.
+
+    Dit is de dominante kostenpost, niet het tekenen: op een nacht van 6,6 uur
+    kost de header 1,0 s en het laden van vier kanalen 5,1 s, goed voor 194 MB
+    — tegenover 0,18 s per paneel. Eén lezing voor de hele set is daarom geen
+    optimalisatie maar een ontwerpvoorwaarde; per-paneel herlezen maakt elke
+    weergave van twintig events een zaak van twee minuten.
+
+    Volledig laden, niet croppen: bij gemengde samplefrequenties verandert een
+    partiële lezing de waarden van de trager bemonsterde kanalen.
+
+    Geeft None terug wanneer het bestand onleesbaar is of geen enkel gevraagd
+    kanaal bevat — de aanroeper valt dan terug op per-event laden.
+    """
+    try:
+        import mne
+        mne.set_log_level("ERROR")
+        raw = mne.io.read_raw_edf(edf_path, preload=False, verbose=False)
+        available = raw.ch_names
+        need = [channel_map[t] for t, _, _ in _EPOCH_CH_ORDER
+                if channel_map.get(t) and channel_map.get(t) in available]
+        if not need:
+            return None
+        raw.pick(need)
+        raw.load_data()
+        return raw
+    except Exception:
+        return None
 
 
 def _build_epoch_examples(results, wc=16.2):
@@ -1129,21 +1196,7 @@ def _build_epoch_examples(results, wc=16.2):
     # the plots need), then reuse it. Previously each _plot_epoch_example
     # re-read the full EDF — ~3x the load cost. Byte-identical (same channels,
     # same sfreq, same full load_data). Falls back to per-event loading.
-    shared_raw = None
-    try:
-        import mne
-        mne.set_log_level("ERROR")
-        shared_raw = mne.io.read_raw_edf(edf_path, preload=False, verbose=False)
-        _avail = shared_raw.ch_names
-        _need = [ch_map[t] for t, _, _ in _EPOCH_CH_ORDER
-                 if ch_map.get(t) and ch_map.get(t) in _avail]
-        if _need:
-            shared_raw.pick(_need)
-            shared_raw.load_data()
-        else:
-            shared_raw = None
-    except Exception:
-        shared_raw = None
+    shared_raw = load_panel_raw(edf_path, ch_map)
 
     images = []
     for ev in picks:
@@ -2341,7 +2394,22 @@ def generate_pdf_report(results:dict, output_path:str,
             f"<i>{t('pdf_fri_note', lang)}</i>", styles["SM"])); sp(0.1)
 
     # ── 8e. Signaalvoorbeelden ────────────────────────────────
-    # v0.8.37: tijdelijk uitgeschakeld — epoch alignment nog niet correct
+    # Blijft uit het RAPPORT; de visuele controle krijgt een eigen weergave.
+    #
+    # Stond hier sinds v0.8.36 uit met "epoch alignment nog niet correct".
+    # Die uitlijning is nagemeten en klopt: op een synthetische mixed-rate EDF
+    # met een dropout op een bekende plek, en op menselijk gescoorde events uit
+    # PSG-IPA (SN3, obstructief t=316,6 s, centraal t=241,8 s) valt de band
+    # exact op het event, met het effort-gedrag dat bij het type hoort.
+    # Vastgelegd in tests/test_epoch_panel_alignment.py.
+    #
+    # Wat wél stuk was — median ± 4·MAD dat de referentie-ademhaling wegklemde
+    # zodra het event stil genoeg was — is gerepareerd in _plot_epoch_example.
+    #
+    # Waarom het toch uit blijft: 400 events is ~73 s rendertijd en ~28 MB aan
+    # panelen. Een rapport is het verkeerde omhulsel voor een volledige
+    # eventcontrole; die hoort achter een aparte weergave die op aanvraag
+    # tekent.
     # if not is_polygraphy:
     #     epoch_imgs = _build_epoch_examples(results)
     #     if epoch_imgs:

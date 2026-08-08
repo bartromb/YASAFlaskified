@@ -2615,6 +2615,43 @@ _V0102_PDF = {
     },
     "pdf_conf_signal_noise": {"nl": "conf&lt;0.40 = signaalruis", "fr": "conf&lt;0,40 = bruit du signal", "en": "conf&lt;0.40 = signal noise", "de": "Konfidenz&lt;0,40 = Signalrauschen"},
     "pdf_max_apnea_dur":     {"nl": "Max. apnea-duur", "fr": "Durée max. d'apnée", "en": "Max apnea duration", "de": "Max. Apnoe-Dauer"},
+    # ── Visuele eventcontrole (beheerder) ─────────────────────────────
+    # De inleiding zegt expliciet dat de selectie NIET representatief is.
+    # Wie hier twaalf grensgevallen ziet en denkt dat dat de nacht is, trekt
+    # de verkeerde conclusie over de kwaliteit van de scoring.
+    "event_review_title": {
+        "nl": "Visuele controle van de events", "fr": "Contrôle visuel des événements",
+        "en": "Visual event review", "de": "Visuelle Ereignisprüfung"},
+    "event_review_intro": {
+        "nl": "Deze panelen tonen bewust de LASTIGSTE gevallen: de gescoorde events met de laagste confidence en de afgewezen kandidaten die het dichtst bij de drempel kwamen. Het is dus geen doorsnede van de nacht — wat het algoritme moeiteloos goed doet staat er niet bij. Rood gearceerd is het event zelf; de y-as is geschaald op de ademhaling ernaast, zodat de reductie te beoordelen valt.",
+        "fr": "Ces panneaux montrent délibérément les cas les plus DIFFICILES : les événements scorés avec la confiance la plus faible et les candidats rejetés les plus proches du seuil. Ce n'est donc pas un échantillon représentatif de la nuit. La zone rouge est l'événement ; l'axe y est calibré sur la respiration adjacente afin que la réduction soit jugeable.",
+        "en": "These panels deliberately show the HARDEST cases: the scored events with the lowest confidence and the rejected candidates that came closest to the threshold. It is therefore not a cross-section of the night — what the algorithm gets right effortlessly is not shown. The red band is the event; the y-axis is scaled on the surrounding breathing so the reduction can be judged.",
+        "de": "Diese Panels zeigen bewusst die SCHWIERIGSTEN Fälle: die gescorten Ereignisse mit der niedrigsten Konfidenz und die abgelehnten Kandidaten, die dem Schwellenwert am nächsten kamen. Es ist also kein Querschnitt der Nacht. Rot markiert ist das Ereignis; die y-Achse ist auf die umgebende Atmung skaliert."},
+    "event_review_k_borderline": {"nl": "grensgeval", "fr": "cas limite", "en": "borderline", "de": "Grenzfall"},
+    "event_review_k_rejected":   {"nl": "afgewezen", "fr": "rejeté", "en": "rejected", "de": "abgelehnt"},
+    "event_review_k_typical":    {"nl": "typevoorbeeld", "fr": "exemple type", "en": "type example", "de": "Typbeispiel"},
+    "event_review_panels_shown": {"nl": "panelen", "fr": "panneaux", "en": "panels", "de": "Panels"},
+    "event_review_show_more":    {"nl": "meer tonen", "fr": "afficher plus", "en": "show more", "de": "mehr anzeigen"},
+    "event_review_no_events": {
+        "nl": "Deze analyse bevat geen respiratoire events om te tonen.",
+        "fr": "Cette analyse ne contient aucun événement respiratoire à afficher.",
+        "en": "This analysis contains no respiratory events to show.",
+        "de": "Diese Analyse enthält keine respiratorischen Ereignisse."},
+    "event_review_no_edf": {
+        "nl": "Het originele EDF-bestand is niet meer beschikbaar — na anonimisering of opruiming blijven de resultaten bestaan maar de signalen niet. Zonder signalen valt er niets te tekenen.",
+        "fr": "Le fichier EDF d'origine n'est plus disponible : après anonymisation ou nettoyage, les résultats subsistent mais pas les signaux.",
+        "en": "The original EDF file is no longer available — after anonymisation or cleanup the results remain but the signals do not.",
+        "de": "Die ursprüngliche EDF-Datei ist nicht mehr verfügbar — nach Anonymisierung oder Bereinigung bleiben die Ergebnisse, die Signale nicht."},
+    "event_review_no_channels": {
+        "nl": "Er is geen kanaaltoewijzing bewaard bij deze analyse, dus is niet vast te stellen welk signaal welk kanaal was.",
+        "fr": "Aucune correspondance de canaux n'a été enregistrée pour cette analyse.",
+        "en": "No channel mapping was stored with this analysis, so it cannot be determined which signal was which channel.",
+        "de": "Zu dieser Analyse wurde keine Kanalzuordnung gespeichert."},
+    "event_review_render_failed": {
+        "nl": "Geen enkel paneel kon getekend worden. Mogelijk bevat de EDF de respiratoire kanalen niet meer.",
+        "fr": "Aucun panneau n'a pu être tracé.",
+        "en": "No panel could be drawn. The EDF may no longer contain the respiratory channels.",
+        "de": "Es konnte kein Panel gezeichnet werden."},
     # De REM-AHI bestaat ook bij weinig REM — hij is dan alleen niet te
     # vertrouwen. Een REM-AHI van 64/u op 22 minuten leest als
     # REM-predominante OSA terwijl hij op ~24 events berust. Daarom

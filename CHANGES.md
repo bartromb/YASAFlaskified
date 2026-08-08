@@ -1,5 +1,70 @@
 # Changelog — YASAFlaskified
 
+## v0.19.12 — 2026-08-08  *(visuele eventcontrole voor beheerders; psgscoring 0.15.2)*
+
+**Nieuw: `/review/<job_id>`** — een weergave die de gescoorde respiratoire
+events tekent, met een knop op de resultatenpagina die alleen voor beheerders
+verschijnt. Een AHI is één getal en verbergt hoe het tot stand kwam; dit toont
+de signalen.
+
+**De selectie is omgekeerd ten opzichte van het rapport.**
+`_select_example_events` in de rapportgenerator kiest de hoogste confidence,
+het langste event en de grootste desaturatie — de meest overtuigende
+voorbeelden. Voor controle is dat waardeloos: wat het algoritme moeiteloos
+goed doet hoef je niet na te kijken. Hier komt eerst de laagste confidence,
+dan de afgewezen kandidaten die het dichtst bij de drempel kwamen, dan één
+representant per type. Die nabijheid komt uit de reden zelf:
+`local_reduction_19pct<20pct` scoort 0,95 en komt vooraan,
+`local_reduction_2pct<20pct` scoort 0,10 en niet. De pagina zegt in vier talen
+expliciet dat dit géén doorsnede van de nacht is.
+
+**Twee poorten, in deze volgorde.** `job_access_required` eerst,
+`requires_role("admin")` daarna. Toegang tot de uitslag is niet hetzelfde als
+toegang tot de ruwe signalen: een technicus die zijn eigen job bekijkt wordt
+hier geweigerd. De volgorde is niet vrijblijvend — andersom kreeg een
+gebruiker van een andere site de rol-weigering in plaats van de gewone
+job-weigering, en dat brak de gedeelde regel in `test_job_access.py`.
+
+**Eén EDF-lezing per pagina, niet per paneel.** Gemeten op een nacht van 6,6
+uur: header 1,0 s, vier kanalen laden 5,1 s en 194 MB, tegenover 0,18 s per
+paneel. Panelen als losse verzoeken zou twintig events op twee minuten
+brengen. Eén verzoek bouwt de hele set, begrensd op 24.
+
+### Reparatie — de y-schaal van de signaalpanelen
+
+De schaal was `median ± 4·MAD` over het hele venster. Een respiratoir event is
+per definitie een stille periode, dus hoe overtuigender het event, hoe kleiner
+de MAD en hoe strakker de schaal — precies omgekeerd aan wat de lezer nodig
+heeft. Op een gemengde apneu (PSG-IPA SN3, t=436 s) bleef van het flowkanaal
+een streep over en stond Abdomen op 20–40 terwijl de werkelijke excursies een
+veelvoud zijn. Je kunt een reductie niet beoordelen als de ademhaling waartegen
+je vergelijkt buiten beeld valt. Nu schaalt hij op de referentie-ademhaling
+buiten het event, met het event erbij getrokken zodat een drukpiek bij
+heropening zichtbaar blijft.
+
+### De aantekening "epoch alignment nog niet correct" was verouderd
+
+De sectie signaalvoorbeelden stond sinds v0.8.36 uit met die ene regel als
+reden. Nagemeten, en de uitlijning klopt: op een synthetische mixed-rate EDF
+met een dropout op een bekende plek, en op menselijk gescoorde events uit
+PSG-IPA (SN3, obstructief t=316,6 s, centraal t=241,8 s) valt de band exact op
+het event — mét het effort-gedrag dat bij het type hoort: thorax en abdomen
+lopen door bij obstructief, staan stil bij centraal. Ook getoetst en verworpen:
+dat de `exclude`-lezing in `tasks.py` (32 Hz) tegenover de tekenlezing (256 Hz)
+de tijdas zou verschuiven — alle drie de leespaden vinden dezelfde seconde.
+
+De PDF-sectie blijft niettemin uit: 400 events is ~73 s rendertijd en ~28 MB
+aan panelen, en een rapport is het verkeerde omhulsel voor een volledige
+eventcontrole.
+
+### Tests
+
+38 nieuw, 310 groen (was 272). `test_epoch_panel_alignment.py` gebruikt een
+**piekerige** golfvorm, geen sinus: met een sinus is de MAD ongeveer de halve
+amplitude, klemt de oude regel niet en zou de toets groen staan zonder iets te
+meten. Er staat een toets in die de oude regel op dezelfde data toepast en
+aantoont dat hij faalt, zodat het fixture niet stilletjes te braaf kan worden.
+
 ## v0.19.11 — 2026-08-08  *(de REM-AHI zegt waarop hij rust; psgscoring 0.15.2)*
 
 **De REM-kwalificatie staat nu in het rapport.** psgscoring 0.15.1 leverde
