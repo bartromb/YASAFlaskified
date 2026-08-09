@@ -34,6 +34,9 @@ JOB_ROUTES = [
     # daarnaast geldt requires_role("admin") — toegang tot de uitslag geeft
     # nog geen toegang tot de ruwe signalen. Zie test_event_review_route.py.
     ("GET", "/review/{jid}"),
+    # Oordeel van de beoordelaar. Schrijft naar {job}_review.json en raakt de
+    # AHI niet; corrigeren gebeurt in de PSG Editor.
+    ("POST", "/review/{jid}/verdict"),
     ("GET", "/results/{jid}/pdf"),
     ("GET", "/results/{jid}/excel"),
     ("GET", "/results/{jid}/psg"),

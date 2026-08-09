@@ -249,6 +249,30 @@
   });
   viewer.bindKeyboard();
 
+  // ── Deeplink: /score_v12/<job>?t=<seconden> ────────────────
+  // De visuele eventcontrole toont een event op t=8439 s; zonder dit zou je
+  // vanaf epoch 1 naar epoch 282 moeten bladeren om het te bekijken. De
+  // controle vindt de gevallen, de editor is waar je ze corrigeert — dan moet
+  // de sprong ertussen niet met de hand.
+  (function jumpToDeepLink() {
+    const raw = new URLSearchParams(location.search).get("t");
+    if (raw === null) return;
+    const t = parseFloat(raw);
+    if (!isFinite(t) || t < 0) return;
+    const epoch = Math.max(0, Math.floor(t / 30));
+    // De viewer heeft zijn info nog niet; wachten tot n_epochs bekend is,
+    // anders klemt goTo() tegen een onbekende bovengrens.
+    let pogingen = 0;
+    const tik = setInterval(() => {
+      if (viewer.info && viewer.info.n_epochs) {
+        clearInterval(tik);
+        viewer.goTo(Math.min(epoch, viewer.info.n_epochs - 1));
+      } else if (++pogingen > 100) {          // ~10 s, dan opgeven
+        clearInterval(tik);
+      }
+    }, 100);
+  })();
+
   // ── Live slaapstadium-stats ───────────────────────────────
   function updateStageStats() {
     const stages=scorer.getStages(); const n=stages.length;

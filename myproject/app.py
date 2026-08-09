@@ -2322,8 +2322,9 @@ def event_review(job_id):
     Het verzoek duurt seconden en dat is inherent — de EDF-lezing is de
     kostenpost (zie `event_review.load_panel_raw`), niet het tekenen.
     """
-    from event_review import (DEFAULT_PANELS, MAX_PANELS, build_review_panels,
-                              channel_map_for, resolve_edf_path,
+    from event_review import (DEFAULT_PANELS, MAX_PANELS, attach_verdicts,
+                              build_review_panels, channel_map_for,
+                              load_verdicts, resolve_edf_path,
                               select_review_events)
 
     _require_job_access(job_id)
@@ -2337,6 +2338,7 @@ def event_review(job_id):
     n = max(1, min(n, MAX_PANELS))
 
     events   = select_review_events(pneumo, n=n)
+    attach_verdicts(events, load_verdicts(job_id, app.config["UPLOAD_FOLDER"]))
     ch_map   = channel_map_for(data)
     edf_path = resolve_edf_path(job_id, app.config["UPLOAD_FOLDER"])
 
@@ -2366,6 +2368,53 @@ def event_review(job_id):
         summary=(pneumo.get("respiratory", {}) or {}).get("summary", {}) or {},
         profile=(pneumo.get("meta", {}) or {}).get("scoring_profile"),
     )
+
+
+@app.route("/review/<job_id>/verdict", methods=["POST"])
+@login_required
+@job_access_required
+@requires_role("admin")
+def event_review_verdict(job_id):
+    """Leg het oordeel van de beoordelaar vast over één event.
+
+    **Dit verandert de AHI niet.** Bewust: een klinisch rapport waarvan het
+    hoofdgetal verschuift omdat iemand op een knop drukt is niet meer te
+    reconstrueren — je kunt dan niet zeggen welke AHI in het dossier stond toen
+    de brief werd geschreven. De oordelen leven ernaast, in
+    `{job_id}_review.json`, en zijn bedoeld als gelabelde dataset.
+
+    Geen `@csrf.exempt`, anders dan de oudere API-routes hier: dit endpoint
+    schrijft en de pagina kan de token even goed in de `X-CSRFToken`-header
+    meesturen.
+    """
+    from event_review import ALG_REJECTED, ALG_SCORED, VERDICTS, save_verdict
+
+    _require_job_access(job_id)
+    req = request.get_json(silent=True) or {}
+    try:
+        onset_s = float(req.get("onset_s"))
+    except (TypeError, ValueError):
+        return jsonify({"status": "error", "error": "onset_s ontbreekt"}), 400
+    verdict = req.get("verdict")
+    if verdict not in VERDICTS:
+        return jsonify({"status": "error", "error": "onbekend oordeel"}), 400
+    algorithm = req.get("algorithm")
+    if algorithm not in (ALG_SCORED, ALG_REJECTED):
+        return jsonify({"status": "error", "error": "onbekende herkomst"}), 400
+
+    data   = _load_results(job_id)
+    pneumo = data.get("pneumo", {}) or {}
+    record = save_verdict(
+        job_id, app.config["UPLOAD_FOLDER"],
+        onset_s=onset_s, verdict=verdict, event_type=req.get("type"),
+        algorithm=algorithm, user=current_user.username,
+        note=req.get("note", ""),
+        profile=(pneumo.get("meta", {}) or {}).get("scoring_profile"),
+        psgscoring_version=PSGSCORING_VERSION,
+    )
+    logger.info("eventcontrole %s: %s op t=%.1f door %s",
+                job_id, verdict, onset_s, current_user.username)
+    return jsonify({"status": "ok", "verdict": record})
 
 
 def _serve_fresh_report(job_id, path, gen_fn, download_name, mimetype, kind):

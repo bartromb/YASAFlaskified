@@ -25,6 +25,7 @@ import glob
 import json
 import logging
 import os
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,104 @@ logger = logging.getLogger(__name__)
 # paneel bovenop ~6 s laadtijd houdt 24 het verzoek onder de tien seconden.
 MAX_PANELS = 24
 DEFAULT_PANELS = 12
+
+
+# ══════════════════════════════════════════════════════════════
+#  Oordelen van de beoordelaar
+# ══════════════════════════════════════════════════════════════
+#
+# Een oordeel verandert de AHI NIET. Dat is een bewuste beperking, geen
+# tekortkoming: een klinisch rapport waarvan het hoofdgetal verschuift omdat
+# iemand op een knop drukt, is niet meer te reconstrueren — je kunt dan niet
+# zeggen welke AHI in het dossier stond toen de brief werd geschreven. De
+# oordelen leven ernaast, in `{job_id}_review.json`.
+#
+# Wat wordt opgeslagen is de BEDOELDE UITKOMST ("had gescoord moeten worden"),
+# niet "eens/oneens". Dat overleeft een wijziging aan het algoritme: bij
+# eens/oneens weet je later niet meer waarmee iemand het eens was. Daarom
+# staat het oordeel van het algoritme (`algorithm`) er apart bij, samen met
+# profiel en psgscoring-versie — een oordeel gaat over wat de software op dat
+# moment deed.
+
+SHOULD_SCORE = "should_be_scored"
+SHOULD_NOT_SCORE = "should_not_be_scored"
+UNSURE = "unsure"
+VERDICTS = (SHOULD_SCORE, SHOULD_NOT_SCORE, UNSURE)
+
+ALG_SCORED = "scored"
+ALG_REJECTED = "rejected"
+
+
+def _verdict_path(job_id, upload_folder):
+    return os.path.join(upload_folder, f"{job_id}_review.json")
+
+
+def _event_key(onset_s):
+    """Zelfde sleutel als de selectie gebruikt: onset op 0,1 s."""
+    return f"{float(onset_s):.1f}"
+
+
+def load_verdicts(job_id, upload_folder):
+    """Bestaande oordelen, of een leeg dict. Faalt nooit hard — een kapot
+    annotatiebestand mag de weergave niet blokkeren."""
+    p = _verdict_path(job_id, upload_folder)
+    if not os.path.exists(p):
+        return {}
+    try:
+        with open(p) as f:
+            return (json.load(f) or {}).get("verdicts", {}) or {}
+    except Exception:
+        logger.exception("eventcontrole: %s onleesbaar", os.path.basename(p))
+        return {}
+
+
+def save_verdict(job_id, upload_folder, *, onset_s, verdict, event_type,
+                 algorithm, user, note="", profile=None, psgscoring_version=None,
+                 now=None):
+    """Leg één oordeel vast. Geeft het opgeslagen record terug.
+
+    Schrijft via een tijdelijk bestand + rename, zodat een onderbroken schrijf
+    geen half bestand achterlaat waarin eerdere oordelen verloren gaan.
+    """
+    if verdict not in VERDICTS:
+        raise ValueError(f"onbekend oordeel: {verdict!r}")
+
+    p = _verdict_path(job_id, upload_folder)
+    huidig = load_verdicts(job_id, upload_folder)
+    record = {
+        "onset_s": round(float(onset_s), 1),
+        "type": event_type,
+        "algorithm": algorithm,          # wat de software deed
+        "verdict": verdict,              # wat de beoordelaar vindt
+        "note": (note or "").strip()[:500],
+        "by": user,
+        "at": (now or datetime.now(timezone.utc)).isoformat(timespec="seconds"),
+        "profile": profile,
+        "psgscoring": psgscoring_version,
+    }
+    huidig[_event_key(onset_s)] = record
+
+    tmp = p + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump({"job_id": job_id, "verdicts": huidig}, f, indent=2)
+    os.replace(tmp, p)
+    return record
+
+
+def agrees_with_algorithm(record):
+    """Was de beoordelaar het eens met de software?
+
+    Afgeleid in plaats van opgeslagen, zodat het antwoord meebeweegt als een
+    later algoritme hetzelfde event anders behandelt. `None` bij twijfel.
+    """
+    v, a = record.get("verdict"), record.get("algorithm")
+    if v == UNSURE:
+        return None
+    if a == ALG_SCORED:
+        return v == SHOULD_SCORE
+    if a == ALG_REJECTED:
+        return v == SHOULD_NOT_SCORE
+    return None
 
 
 # ══════════════════════════════════════════════════════════════
@@ -153,6 +252,11 @@ def select_review_events(pneumo, n=DEFAULT_PANELS):
             return
         gezien.add(sleutel)
         gekozen.append({**ev, "_review_kind": soort,
+                        # Wat de software met dit event deed. Nodig om een
+                        # oordeel later te kunnen interpreteren, en om de
+                        # knoppen de juiste kant op te laten wijzen.
+                        "_algorithm": (ALG_REJECTED if soort == "rejected"
+                                       else ALG_SCORED),
                         "_review_note": toelichting,
                         # Onderscheid dat er voor de lezer toe doet: een RERA is
                         # WEL gescoord en telt alleen niet in de AHI, een
@@ -208,6 +312,13 @@ def select_review_events(pneumo, n=DEFAULT_PANELS):
 
     gekozen.sort(key=lambda e: e["onset_s"])
     return gekozen
+
+
+def attach_verdicts(events, verdicts):
+    """Hang bestaande oordelen aan de geselecteerde events."""
+    for ev in events:
+        ev["_verdict"] = (verdicts or {}).get(_event_key(ev["onset_s"]))
+    return events
 
 
 # ══════════════════════════════════════════════════════════════

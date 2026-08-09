@@ -21,6 +21,11 @@
   .ahi-in        { background:#e6f4ea; color:#1e6b34; border:1px solid #b7dfc4; }
   .ahi-partial   { background:#fff4e5; color:#8a4b08; border:1px solid #f0c893; }
   .ahi-out       { background:#f1f3f5; color:#5a6270; border:1px solid #d8dde3; }
+  .panel-foot    { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;
+                   padding:.4rem .75rem; border-top:1px solid #edf2f7;
+                   background:#fbfcfd; }
+  .v-state       { font-size:.74rem; color:#4a5568; }
+  .v-btn.active  { font-weight:600; box-shadow:inset 0 0 0 2px currentColor; }
 </style>
 {% endblock %}
 
@@ -89,9 +94,65 @@
           </span>
         </div>
         <img src="{{ uri }}" alt="{{ ev.type }} @ {{ ev.onset_s }}s" loading="lazy">
+        {# Oordeel = mening, en verandert de AHI NIET. Corrigeren doe je in de
+           PSG Editor, die het event echt toevoegt of weghaalt en de AHI
+           herberekent. Twee verschillende dingen, dus twee knoppen. #}
+        <div class="panel-foot" data-onset="{{ ev.onset_s }}"
+             data-type="{{ ev.type }}" data-alg="{{ ev._algorithm }}">
+          <span class="v-btns">
+            <button class="btn btn-sm btn-outline-success v-btn" data-v="should_be_scored">{{ t("event_review_v_score") }}</button>
+            <button class="btn btn-sm btn-outline-danger  v-btn" data-v="should_not_be_scored">{{ t("event_review_v_noscore") }}</button>
+            <button class="btn btn-sm btn-outline-secondary v-btn" data-v="unsure">{{ t("event_review_v_unsure") }}</button>
+          </span>
+          <span class="v-state">
+            {%- if ev._verdict %}{{ t("event_review_v_saved") }}: {{ ev._verdict.verdict }} — {{ ev._verdict.by }} {{ ev._verdict.at[:16] }}{% endif -%}
+          </span>
+          <a class="btn btn-sm btn-outline-dark ms-auto"
+             href="/score_v12/{{ job_id }}?t={{ ev.onset_s|int }}" target="_blank"
+             title="{{ t('event_review_open_editor_hint') }}">{{ t("event_review_open_editor") }}</a>
+        </div>
       </div>
     {% endfor %}
   {% endif %}
 
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Een oordeel is een MENING en raakt de AHI niet — corrigeren gebeurt in de
+// PSG Editor, die het event echt toevoegt of weghaalt en de AHI herberekent.
+// De CSRF-token gaat mee in de header: dit endpoint is bewust NIET van CSRF
+// vrijgesteld, anders dan de oudere API-routes in deze app.
+(function () {
+  var CSRF = "{{ csrf_token() }}";
+  document.querySelectorAll(".panel-foot").forEach(function (foot) {
+    var state = foot.querySelector(".v-state");
+    foot.querySelectorAll(".v-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        btn.disabled = true;
+        fetch("/review/{{ job_id }}/verdict", {
+          method: "POST",
+          headers: {"Content-Type": "application/json", "X-CSRFToken": CSRF},
+          body: JSON.stringify({
+            onset_s: parseFloat(foot.dataset.onset),
+            type: foot.dataset.type,
+            algorithm: foot.dataset.alg,
+            verdict: btn.dataset.v
+          })
+        }).then(function (r) { return r.json(); })
+          .then(function (d) {
+            btn.disabled = false;
+            if (d.status !== "ok") { state.textContent = "⚠ " + (d.error || "mislukt"); return; }
+            foot.querySelectorAll(".v-btn").forEach(function (b) { b.classList.remove("active"); });
+            btn.classList.add("active");
+            state.textContent = "{{ t('event_review_v_saved') }}: " + d.verdict.verdict
+                              + " — " + d.verdict.by + " " + d.verdict.at.slice(0, 16);
+          })
+          .catch(function (e) { btn.disabled = false; state.textContent = "⚠ " + e; });
+      });
+    });
+  });
+})();
+</script>
 {% endblock %}

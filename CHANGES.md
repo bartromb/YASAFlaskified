@@ -1,5 +1,51 @@
 # Changelog — YASAFlaskified
 
+## v0.19.16 — 2026-08-08  *(oordeel vastleggen; deeplink naar de PSG Editor)*
+
+**De PSG Editor kon dit al.** Bij het uitwerken van "afgekeurde events alsnog
+kunnen scoren" bleek `event_api.toggle_event_at` events al toe te voegen en te
+verwijderen — en verder te gaan dan gedacht: hij herberekent de statistieken en
+schrijft ze terug in `results.json` met `manually_corrected: True`. De AHI
+verandert daar dus wél.
+
+Een tweede scoormechanisme in de controlepagina bouwen zou "één grootheid, twee
+definities" hebben opgeleverd, met verschillende semantiek — dezelfde klasse
+fout als de twee RDI's en de twee REM-AHI's eerder deze week. Daarom een andere
+verdeling:
+
+- **de controlepagina** vindt de gevallen (dat kan de editor niet: die toont de
+  nacht, niet "deze twaalf") en legt een **mening** vast;
+- **de PSG Editor** is waar je écht corrigeert, met het signaal erbij en een
+  echte onset en duur;
+- **een deeplink** verbindt ze. De editor opende altijd op epoch 1, dus vanaf
+  een paneel op t=8439 s moest je met de hand naar epoch 282 bladeren.
+  `/score_v12/<job>?t=<seconden>` springt er nu heen.
+
+**Oordelen.** Drie knoppen per paneel, opgeslagen in `{job_id}_review.json`.
+Een oordeel **verandert de AHI niet** — daar staat een toets op. Dat is een
+bewuste beperking: een klinisch rapport waarvan het hoofdgetal verschuift omdat
+iemand op een knop drukt is niet meer te reconstrueren, en dan valt niet te
+zeggen welke AHI in het dossier stond toen de brief werd geschreven.
+
+Opgeslagen wordt de **bedoelde uitkomst** ("hoort gescoord"), niet
+"eens/oneens" — met daarnaast wat het algoritme deed, plus profiel en
+psgscoring-versie. Bij eens/oneens weet je later niet meer waarmee iemand het
+eens was; nu blijft het label leesbaar wanneer een volgende versie hetzelfde
+event anders behandelt. `agrees_with_algorithm()` leidt de overeenstemming af
+in plaats van hem op te slaan. Dat maakt de verzameling bruikbaar als
+gelabelde dataset.
+
+Het endpoint is **niet** van CSRF vrijgesteld, anders dan de oudere API-routes
+hier: de pagina stuurt de token in de `X-CSRFToken`-header.
+
+**Een toetssuite die de gelukkige weg niet dekte.** De fixture van
+`test_event_review_route.py` had geen EDF, dus viel het hele
+`{% if panels %}`-blok weg — de knoppen, de editor-link en zelfs het renderen
+van panelen waren ongedekt terwijl de suite groen stond. De fixture schrijft nu
+een echte kleine EDF, met een toets die afdwingt dat er panelen verschijnen.
+
+368 tests groen (was 340).
+
 ## v0.19.15 — 2026-08-08  *(buurevents zichtbaar; regel B en duidelijke gevallen)*
 
 **Reparatie — afwezigheid van een markering betekende niets.** De panelen

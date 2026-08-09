@@ -2653,6 +2653,19 @@ _V0102_PDF = {
     # Regel B = via arousal gekwalificeerd in plaats van via desaturatie. Daar
     # zit de meeste subjectiviteit en de grootste spreiding tussen scoorders.
     "event_review_k_rule_b":     {"nl": "regel B (arousal)", "fr": "règle B (micro-éveil)", "en": "rule B (arousal)", "de": "Regel B (Arousal)"},
+    # Oordeel = mening, en verandert de AHI NIET. Corrigeren gebeurt in de PSG
+    # Editor, die het event echt toevoegt of weghaalt en de AHI herberekent.
+    # Twee verschillende handelingen, dus twee knoppen naast elkaar.
+    "event_review_v_score":   {"nl": "hoort gescoord", "fr": "devrait être scoré", "en": "should be scored", "de": "sollte gescort sein"},
+    "event_review_v_noscore": {"nl": "hoort niet gescoord", "fr": "ne devrait pas être scoré", "en": "should not be scored", "de": "sollte nicht gescort sein"},
+    "event_review_v_unsure":  {"nl": "twijfel", "fr": "incertain", "en": "unsure", "de": "unsicher"},
+    "event_review_v_saved":   {"nl": "vastgelegd", "fr": "enregistré", "en": "recorded", "de": "erfasst"},
+    "event_review_open_editor": {"nl": "in PSG Editor →", "fr": "dans l'éditeur PSG →", "en": "in PSG Editor →", "de": "im PSG-Editor →"},
+    "event_review_open_editor_hint": {
+        "nl": "Opent de PSG Editor op dit tijdstip. Daar corrigeer je de scoring écht — de AHI wordt dan herberekend. Een oordeel hiernaast verandert de AHI niet.",
+        "fr": "Ouvre l'éditeur PSG à cet instant. C'est là que la scoration est réellement corrigée et l'IAH recalculé ; un avis ci-contre ne modifie pas l'IAH.",
+        "en": "Opens the PSG Editor at this moment. That is where scoring is actually corrected and the AHI recomputed; a verdict here does not change the AHI.",
+        "de": "Öffnet den PSG-Editor an dieser Stelle. Dort wird die Scorung tatsächlich korrigiert und der AHI neu berechnet; ein Urteil hier ändert den AHI nicht."},
     # Makkelijke gevallen staan er niet om na te kijken maar om te ijken: je
     # moet kunnen zien hoe een onbetwist event eruitziet.
     "event_review_k_easy":       {"nl": "duidelijk geval", "fr": "cas net", "en": "clear-cut", "de": "eindeutiger Fall"},

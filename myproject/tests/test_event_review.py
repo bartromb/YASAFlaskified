@@ -315,3 +315,115 @@ def test_a_clear_cut_case_is_not_relabelled_as_borderline():
     gekozen = select_review_events(_pneumo(evs), n=12)
     hoogste = max(gekozen, key=lambda e: e["confidence"])
     assert hoogste["_review_kind"] == "easy"
+
+
+# ──────────────────────────────────────────────────────────────
+#  Oordelen van de beoordelaar
+# ──────────────────────────────────────────────────────────────
+#
+# Een oordeel is een MENING en verandert de AHI niet. Corrigeren gebeurt in de
+# PSG Editor (`/score_v12/<job>`), die via `event_api.toggle_event_at` het
+# event echt toevoegt of weghaalt, de stats herberekent en `results.json`
+# bijwerkt met `manually_corrected: True`. Twee verschillende handelingen —
+# zou deze weergave óók gaan scoren, dan waren er twee mechanismen voor
+# hetzelfde met verschillende semantiek.
+
+from event_review import (ALG_REJECTED, ALG_SCORED,  # noqa: E402
+                          SHOULD_NOT_SCORE, SHOULD_SCORE, UNSURE,
+                          agrees_with_algorithm, attach_verdicts,
+                          load_verdicts, save_verdict)
+
+
+def test_a_verdict_round_trips(tmp_path):
+    save_verdict("j", str(tmp_path), onset_s=316.6, verdict=SHOULD_SCORE,
+                 event_type="hypopnea", algorithm=ALG_REJECTED, user="admin")
+    v = load_verdicts("j", str(tmp_path))
+    assert v["316.6"]["verdict"] == SHOULD_SCORE
+    assert v["316.6"]["by"] == "admin"
+    assert v["316.6"]["algorithm"] == ALG_REJECTED
+
+
+def test_a_second_verdict_overwrites_the_first_and_keeps_the_others(tmp_path):
+    save_verdict("j", str(tmp_path), onset_s=100.0, verdict=SHOULD_SCORE,
+                 event_type="hypopnea", algorithm=ALG_REJECTED, user="a")
+    save_verdict("j", str(tmp_path), onset_s=200.0, verdict=UNSURE,
+                 event_type="hypopnea", algorithm=ALG_SCORED, user="a")
+    save_verdict("j", str(tmp_path), onset_s=100.0, verdict=SHOULD_NOT_SCORE,
+                 event_type="hypopnea", algorithm=ALG_REJECTED, user="b")
+    v = load_verdicts("j", str(tmp_path))
+    assert v["100.0"]["verdict"] == SHOULD_NOT_SCORE and v["100.0"]["by"] == "b"
+    assert v["200.0"]["verdict"] == UNSURE, "ander oordeel is verdwenen"
+
+
+def test_the_provenance_of_a_verdict_is_recorded():
+    """Een oordeel gaat over wat de software OP DAT MOMENT deed. Zonder
+    profiel en versie is het later niet te interpreteren."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        r = save_verdict("j", d, onset_s=1.0, verdict=UNSURE,
+                         event_type="hypopnea", algorithm=ALG_SCORED,
+                         user="a", profile="aasm_v3_prob",
+                         psgscoring_version="0.15.2")
+    assert r["profile"] == "aasm_v3_prob" and r["psgscoring"] == "0.15.2"
+    assert r["at"] and r["by"] == "a"
+
+
+def test_an_unknown_verdict_is_refused(tmp_path):
+    with pytest.raises(ValueError):
+        save_verdict("j", str(tmp_path), onset_s=1.0, verdict="misschien",
+                     event_type="hypopnea", algorithm=ALG_SCORED, user="a")
+
+
+def test_a_corrupt_verdict_file_does_not_block_the_page(tmp_path):
+    (tmp_path / "j_review.json").write_text("{ dit is geen json")
+    assert load_verdicts("j", str(tmp_path)) == {}
+
+
+def test_no_verdict_file_is_simply_empty(tmp_path):
+    assert load_verdicts("nooitbeoordeeld", str(tmp_path)) == {}
+
+
+@pytest.mark.parametrize("alg,verdict,verwacht", [
+    (ALG_SCORED,   SHOULD_SCORE,     True),
+    (ALG_SCORED,   SHOULD_NOT_SCORE, False),
+    (ALG_REJECTED, SHOULD_NOT_SCORE, True),
+    (ALG_REJECTED, SHOULD_SCORE,     False),
+    (ALG_SCORED,   UNSURE,           None),
+    (ALG_REJECTED, UNSURE,           None),
+])
+def test_agreement_is_derived_not_stored(alg, verdict, verwacht):
+    """Opgeslagen wordt de BEDOELDE UITKOMST, niet eens/oneens. Zo blijft het
+    oordeel leesbaar als een later algoritme hetzelfde event anders behandelt."""
+    assert agrees_with_algorithm({"algorithm": alg, "verdict": verdict}) is verwacht
+
+
+def test_verdicts_attach_to_the_selected_events(tmp_path):
+    save_verdict("j", str(tmp_path), onset_s=200.0, verdict=SHOULD_NOT_SCORE,
+                 event_type="hypopnea", algorithm=ALG_SCORED, user="a")
+    evs = select_review_events(_pneumo([_ev(100, 0.4), _ev(200, 0.3)]), n=4)
+    attach_verdicts(evs, load_verdicts("j", str(tmp_path)))
+    m = {e["onset_s"]: e["_verdict"] for e in evs}
+    assert m[200.0]["verdict"] == SHOULD_NOT_SCORE
+    assert m[100.0] is None
+
+
+def test_events_carry_what_the_algorithm_did():
+    evs = [_ev(100, 0.4)]
+    rej = [{"type": "hypopnea", "onset_s": 200.0, "duration_s": 13.0,
+            "reject_reason": "local_reduction_19pct<20pct"}]
+    m = {e["onset_s"]: e["_algorithm"]
+         for e in select_review_events(_pneumo(evs, rej), n=4)}
+    assert m[100.0] == ALG_SCORED
+    assert m[200.0] == ALG_REJECTED
+
+
+def test_saving_a_verdict_does_not_touch_the_results(tmp_path):
+    """De kern van de afspraak: de AHI blijft wat hij was."""
+    import json
+    res = tmp_path / "j_results.json"
+    inhoud = {"pneumo": {"respiratory": {"summary": {"ahi_total": 20.0}}}}
+    res.write_text(json.dumps(inhoud))
+    voor = res.read_text()
+    save_verdict("j", str(tmp_path), onset_s=1.0, verdict=SHOULD_SCORE,
+                 event_type="hypopnea", algorithm=ALG_REJECTED, user="a")
+    assert res.read_text() == voor, "results.json is aangeraakt door een oordeel"
