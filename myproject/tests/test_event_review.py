@@ -269,3 +269,49 @@ def test_scored_events_carry_their_membership():
     m = {e["type"]: e["_ahi"] for e in select_review_events(_pneumo(evs), n=4)}
     assert m["uncertain"] == UNCERTAIN_ONLY
     assert m["hypopnea_uncertain"] == COUNTED
+
+
+# ──────────────────────────────────────────────────────────────
+#  Regel B en makkelijke gevallen
+# ──────────────────────────────────────────────────────────────
+
+def test_rule_b_cases_get_their_own_category():
+    """Hypopneeën die via een AROUSAL kwalificeerden in plaats van via
+    desaturatie. Daar zit de meeste subjectiviteit, dus die wil je zien."""
+    evs = [_ev(100, 0.8), _ev(200, 0.8, rule1a_arousal=True), _ev(300, 0.8)]
+    soorten = {e["onset_s"]: e["_review_kind"]
+               for e in select_review_events(_pneumo(evs), n=12)}
+    assert soorten.get(200.0) == "rule_b"
+
+
+def test_the_legacy_rule1b_flag_is_read_too():
+    """Oudere resultaten dragen alleen de historische alias."""
+    evs = [_ev(100, 0.8), _ev(200, 0.8, rule1b=True)]
+    soorten = {e["onset_s"]: e["_review_kind"]
+               for e in select_review_events(_pneumo(evs), n=12)}
+    assert soorten.get(200.0) == "rule_b"
+
+
+def test_clear_cut_cases_are_included_as_a_yardstick():
+    """Niet om na te kijken maar om te ijken — en zonder deze categorie is de
+    verzameling uitsluitend grensgevallen, en dus scheef."""
+    evs = [_ev(i * 100, 0.30 + i * 0.05) for i in range(1, 13)]
+    gekozen = select_review_events(_pneumo(evs), n=12)
+    makkelijk = [e for e in gekozen if e["_review_kind"] == "easy"]
+    assert makkelijk, "geen enkel duidelijk geval geselecteerd"
+    assert max(e["confidence"] for e in makkelijk) == max(
+        e["confidence"] for e in evs)
+
+
+def test_hard_and_easy_are_both_present():
+    evs = [_ev(i * 100, 0.20 + i * 0.06) for i in range(1, 13)]
+    soorten = {e["_review_kind"] for e in select_review_events(_pneumo(evs), n=12)}
+    assert {"borderline", "easy"} <= soorten, soorten
+
+
+def test_a_clear_cut_case_is_not_relabelled_as_borderline():
+    """Het event met de hoogste confidence mag niet als twijfelgeval eindigen."""
+    evs = [_ev(i * 100, 0.20 + i * 0.06) for i in range(1, 13)]
+    gekozen = select_review_events(_pneumo(evs), n=12)
+    hoogste = max(gekozen, key=lambda e: e["confidence"])
+    assert hoogste["_review_kind"] == "easy"

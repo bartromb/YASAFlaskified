@@ -2623,10 +2623,10 @@ _V0102_PDF = {
         "nl": "Visuele controle van de events", "fr": "Contrôle visuel des événements",
         "en": "Visual event review", "de": "Visuelle Ereignisprüfung"},
     "event_review_intro": {
-        "nl": "Deze panelen tonen bewust de LASTIGSTE gevallen: de gescoorde events met de laagste confidence en de afgewezen kandidaten die het dichtst bij de drempel kwamen. Het is dus geen doorsnede van de nacht — wat het algoritme moeiteloos goed doet staat er niet bij. Rood gearceerd is het event zelf; de y-as is geschaald op de ademhaling ernaast, zodat de reductie te beoordelen valt.",
-        "fr": "Ces panneaux montrent délibérément les cas les plus DIFFICILES : les événements scorés avec la confiance la plus faible et les candidats rejetés les plus proches du seuil. Ce n'est donc pas un échantillon représentatif de la nuit. La zone rouge est l'événement ; l'axe y est calibré sur la respiration adjacente afin que la réduction soit jugeable.",
-        "en": "These panels deliberately show the HARDEST cases: the scored events with the lowest confidence and the rejected candidates that came closest to the threshold. It is therefore not a cross-section of the night — what the algorithm gets right effortlessly is not shown. The red band is the event; the y-axis is scaled on the surrounding breathing so the reduction can be judged.",
-        "de": "Diese Panels zeigen bewusst die SCHWIERIGSTEN Fälle: die gescorten Ereignisse mit der niedrigsten Konfidenz und die abgelehnten Kandidaten, die dem Schwellenwert am nächsten kamen. Es ist also kein Querschnitt der Nacht. Rot markiert ist das Ereignis; die y-Achse ist auf die umgebende Atmung skaliert."},
+        "nl": "Deze panelen zijn géén doorsnede van de nacht. Ze tonen bewust de lastigste gevallen — laagste confidence, afgewezen kandidaten die het net niet haalden, en hypopneeën die via een arousal kwalificeerden — aangevuld met enkele duidelijke gevallen om op te ijken. <b>Rood</b> is het event waar het paneel over gaat; <b>blauw</b> zijn andere events die op dezelfde plek gescoord zijn. Staat er geen markering, dan is daar niets gescoord. De y-as is geschaald op de ademhaling naast het event, zodat de reductie te beoordelen valt.",
+        "fr": "Ces panneaux ne sont pas un échantillon représentatif de la nuit. Ils montrent délibérément les cas les plus difficiles — confiance la plus faible, candidats rejetés de justesse, hypopnées qualifiées par micro-éveil — complétés par quelques cas nets servant de référence. <b>Rouge</b> : l'événement concerné ; <b>bleu</b> : les autres événements scorés au même endroit. Sans marquage, rien n'a été scoré. L'axe y est calibré sur la respiration adjacente.",
+        "en": "These panels are not a cross-section of the night. They deliberately show the hardest cases — lowest confidence, rejected candidates that just missed, and hypopneas that qualified on an arousal — plus a few clear-cut cases to calibrate against. <b>Red</b> is the event the panel is about; <b>blue</b> marks other events scored in the same place. No marking means nothing was scored there. The y-axis is scaled on the breathing beside the event so the reduction can be judged.",
+        "de": "Diese Panels sind kein Querschnitt der Nacht. Sie zeigen bewusst die schwierigsten Fälle — niedrigste Konfidenz, knapp abgelehnte Kandidaten und über ein Arousal qualifizierte Hypopnoen — ergänzt um einige eindeutige Fälle als Referenz. <b>Rot</b> ist das Ereignis des Panels; <b>blau</b> sind andere dort gescorte Ereignisse. Ohne Markierung wurde dort nichts gescort. Die y-Achse ist auf die Atmung neben dem Ereignis skaliert."},
     # Telt dit event mee in het hoofdgetal? Bij "uncertain" is dat
     # contra-intuïtief: een niet-onderverdeelde APNEU valt buiten `ahi_total`,
     # een `hypopnea_uncertain` telt gewoon mee. Zonder dit label kan de
@@ -2650,6 +2650,12 @@ _V0102_PDF = {
     "event_review_k_borderline": {"nl": "grensgeval", "fr": "cas limite", "en": "borderline", "de": "Grenzfall"},
     "event_review_k_rejected":   {"nl": "afgewezen", "fr": "rejeté", "en": "rejected", "de": "abgelehnt"},
     "event_review_k_typical":    {"nl": "typevoorbeeld", "fr": "exemple type", "en": "type example", "de": "Typbeispiel"},
+    # Regel B = via arousal gekwalificeerd in plaats van via desaturatie. Daar
+    # zit de meeste subjectiviteit en de grootste spreiding tussen scoorders.
+    "event_review_k_rule_b":     {"nl": "regel B (arousal)", "fr": "règle B (micro-éveil)", "en": "rule B (arousal)", "de": "Regel B (Arousal)"},
+    # Makkelijke gevallen staan er niet om na te kijken maar om te ijken: je
+    # moet kunnen zien hoe een onbetwist event eruitziet.
+    "event_review_k_easy":       {"nl": "duidelijk geval", "fr": "cas net", "en": "clear-cut", "de": "eindeutiger Fall"},
     "event_review_panels_shown": {"nl": "panelen", "fr": "panneaux", "en": "panels", "de": "Panels"},
     "event_review_show_more":    {"nl": "meer tonen", "fr": "afficher plus", "en": "show more", "de": "mehr anzeigen"},
     "event_review_no_events": {

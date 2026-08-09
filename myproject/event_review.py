@@ -109,6 +109,16 @@ def _rejection_nearness(ev):
     return max(0.0, min(1.0, gemeten / drempel))
 
 
+def _is_rule_b(ev):
+    """Kwalificeerde deze hypopnee via een AROUSAL in plaats van desaturatie?
+
+    `rule1a_arousal` is de AASM-v3-naam, `rule1b` de historische alias die
+    psgscoring beide op het event zet (zie `breath_scoring.py`). Beide lezen,
+    want oudere resultaten dragen alleen de tweede.
+    """
+    return bool(ev.get("rule1a_arousal") or ev.get("rule1b"))
+
+
 def select_review_events(pneumo, n=DEFAULT_PANELS):
     """Kies de events die een beoordelaar het meest zeggen.
 
@@ -116,7 +126,14 @@ def select_review_events(pneumo, n=DEFAULT_PANELS):
 
     1. gescoorde events met de LAAGSTE confidence — daar zit de twijfel;
     2. afgewezen kandidaten die het DICHTST bij de drempel kwamen;
-    3. per eventtype één representant, zodat geen categorie ontbreekt.
+    3. regel-B-gevallen: hypopneeën die via een arousal kwalificeerden en niet
+       via desaturatie. Daar zit de meeste subjectiviteit, en de grootste
+       spreiding tussen menselijke scoorders;
+    4. MAKKELIJKE gevallen: de hoogste confidence. Niet om na te kijken maar om
+       te ijken — je moet kunnen zien hoe een onbetwist event eruitziet, en
+       zonder deze categorie is de verzameling scheef (uitsluitend
+       grensgevallen) en dus onbruikbaar om later op te trainen;
+    5. per eventtype één representant, zodat geen categorie ontbreekt.
 
     De uitkomst is deterministisch: bij gelijke sleutel beslist de onsettijd,
     zodat twee weergaven van dezelfde job dezelfde panelen tonen.
@@ -143,26 +160,47 @@ def select_review_events(pneumo, n=DEFAULT_PANELS):
                         "_ahi": (NOT_SCORED if soort == "rejected"
                                  else ahi_membership(ev.get("type")))})
 
-    # 1. Twijfelgevallen: de laagste confidence eerst.
     met_conf = [(c, e) for e in events if (c := _confidence(e)) is not None]
     met_conf.sort(key=lambda p: (p[0], p[1]["onset_s"]))
-    for c, ev in met_conf[:max(1, n // 2)]:
-        voeg_toe(ev, "borderline", f"laagste confidence ({c:.2f})")
 
-    # 2. Bijna-scores: afgewezen kandidaten dicht bij de drempel.
+    # De SPECIFIEKE categorieën eerst. Een regel-B-geval heeft doorgaans ook
+    # een lage confidence; als de brede twijfelcategorie hem eerst opeist,
+    # verdwijnt juist de informatie waarom hij lastig is. Het specifieke label
+    # wint dus van het algemene.
+    #
+    # De quota's zijn floors, behalve waar minstens één exemplaar zinvol is:
+    # bij een klein aantal panelen horen de moeilijke gevallen te overheersen,
+    # en `easy`/`rule_b` verdwijnen dan vanzelf (n//6 == 0 onder de zes).
+
+    # 1. Bijna-scores: afgewezen kandidaten dicht bij de drempel.
     bijna = sorted(rejected,
                    key=lambda e: (-_rejection_nearness(e), e["onset_s"]))
-    for ev in bijna[:max(1, n // 3)]:
+    for ev in bijna[:max(1, n // 4)]:
         voeg_toe(ev, "rejected", str(ev.get("reject_reason") or "afgewezen"))
 
-    # 3. Dekking: één representant per type dat nog ontbreekt.
+    # 2. Regel B: gekwalificeerd via arousal, niet via desaturatie.
+    regel_b = sorted((e for e in events if _is_rule_b(e)),
+                     key=lambda e: (_confidence(e) if _confidence(e) is not None
+                                    else 1.0, e["onset_s"]))
+    for ev in regel_b[:n // 6]:
+        voeg_toe(ev, "rule_b", "arousal, geen desaturatie")
+
+    # 3. Twijfelgevallen: de laagste confidence.
+    for c, ev in met_conf[:max(1, n // 3)]:
+        voeg_toe(ev, "borderline", f"laagste confidence ({c:.2f})")
+
+    # 4. Duidelijke gevallen: de hoogste confidence, als ijkpunt.
+    for c, ev in reversed(met_conf[len(met_conf) - n // 6:] if n // 6 else []):
+        voeg_toe(ev, "easy", f"hoogste confidence ({c:.2f})")
+
+    # 5. Dekking: één representant per type dat nog ontbreekt.
     getoond = {e.get("type") for e in gekozen}
     for ev in sorted(events, key=lambda e: e["onset_s"]):
         if ev.get("type") not in getoond:
             getoond.add(ev.get("type"))
             voeg_toe(ev, "typical", "eerste van dit type")
 
-    # 4. Aanvullen tot n met de resterende laagste confidence.
+    # 6. Aanvullen tot n met de resterende laagste confidence.
     for c, ev in met_conf:
         if len(gekozen) >= n:
             break

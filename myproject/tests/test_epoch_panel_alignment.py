@@ -270,3 +270,122 @@ def test_load_panel_raw_survives_duplicate_roles(edf):
     assert raw is not None, "load_panel_raw geeft None bij een gedeeld kanaal"
     assert len(raw.ch_names) == len(set(raw.ch_names)), "dubbele kanalen geladen"
     assert "Flow" in raw.ch_names
+
+
+# ──────────────────────────────────────────────────────────────
+#  Buurevents: afwezigheid van blauw moet iets betekenen
+# ──────────────────────────────────────────────────────────────
+#
+# De oude regel sloeg elk buurevent over waarvoor
+# `oe_onset < t_start + 2 or oe_end > t_end - 2` gold — precies de
+# half-zichtbare buren, de meest voorkomende soort. Aangetoond op PSG-IPA SN3:
+# in het venster rond de obstructieve apneu bij t=316,6 s staat een tweede
+# apneu op 359,4–371,1 s die 8,5 s over de rand loopt en dus onbemarkeerd bleef,
+# terwijl hij in beeld stond. "Geen blauw" betekende daardoor niet "niet
+# gescoord" maar "misschien wel". Dat is voor een controle-instrument fataal.
+
+def _spans(ax):
+    """x-bereiken van de gearceerde vlakken (`axvspan`) op een as.
+
+    Let op het patch-type: matplotlib 3.11 geeft een **Rectangle** terug,
+    oudere versies een Polygon. Een helper die alleen Polygon herkende gaf hier
+    een lege lijst, waardoor twee toetsen leeg slaagden — ze controleerden de
+    AFWEZIGHEID van een markering en kregen die gratis. Vandaar dat elke
+    buurtoets hieronder eerst `_assert_event_span` doet: valt deze helper stil,
+    dan faalt álles in plaats van stilletjes groen te blijven.
+    """
+    from matplotlib.patches import Polygon, Rectangle
+    uit = []
+    for p in ax.patches:
+        if isinstance(p, Rectangle):
+            x, w = float(p.get_x()), float(p.get_width())
+            uit.append((x, x + w))
+        elif isinstance(p, Polygon):
+            xy = np.asarray(p.get_xy())
+            if xy.ndim == 2 and xy.shape[1] == 2:
+                uit.append((float(xy[:, 0].min()), float(xy[:, 0].max())))
+    return uit
+
+
+def _assert_event_span(ax):
+    """Het rode vlak van het event zelf moet altijd gevonden worden."""
+    treffers = [s for s in _spans(ax)
+                if abs(s[0] - DROP_START) < 1 and abs(s[1] - DROP_END) < 1]
+    assert treffers, ("_spans() vindt het event-vlak niet — de helper is stuk "
+                      "en de buurtoetsen meten niets meer")
+
+
+def _panel_met_buren(edf_path, buren):
+    grabbed = {}
+    real_subplots, real_close = plt.subplots, plt.close
+
+    def spy(*a, **kw):
+        fig, axes = real_subplots(*a, **kw)
+        grabbed["fig"], grabbed["axes"] = fig, np.atleast_1d(axes)
+        return fig, axes
+
+    plt.subplots, plt.close = spy, lambda *a, **k: None
+    try:
+        g._plot_epoch_example(
+            edf_path, CH_MAP,
+            {"type": "obstructive", "onset_s": DROP_START,
+             "duration_s": DROP_END - DROP_START, "confidence": 0.9},
+            hypno=["N2"] * 20, all_events=buren)
+    finally:
+        plt.subplots, plt.close = real_subplots, real_close
+    return grabbed["axes"][0], grabbed["fig"]
+
+
+def test_a_neighbour_crossing_the_window_edge_is_still_marked(edf):
+    """Het geval uit SN3: een buur die over de rand loopt."""
+    buren = [{"type": "obstructive", "onset_s": DROP_END + 25,
+              "duration_s": 40.0}]          # loopt ruim voorbij t_end
+    ax, fig = _panel_met_buren(edf, buren)
+    _assert_event_span(ax)
+    randen = [s for s in _spans(ax) if s[0] > DROP_END + 20]
+    assert randen, "buurevent over de vensterrand wordt niet gemarkeerd"
+    plt.close(fig)
+
+
+def test_a_neighbour_starting_before_the_window_is_still_marked(edf):
+    buren = [{"type": "hypopnea", "onset_s": DROP_START - 40,
+              "duration_s": 35.0}]          # begint vóór t_start, loopt erin
+    ax, fig = _panel_met_buren(edf, buren)
+    _assert_event_span(ax)
+    vroeg = [s for s in _spans(ax) if s[0] < DROP_START - 10]
+    assert vroeg, "buurevent dat vóór het venster begint wordt niet gemarkeerd"
+    plt.close(fig)
+
+
+def test_the_marking_is_clipped_to_the_window(edf):
+    """Niet buiten de as tekenen; anders herschaalt matplotlib de x-as en
+    verandert het getoonde venster."""
+    buren = [{"type": "obstructive", "onset_s": DROP_END + 25,
+              "duration_s": 200.0}]
+    ax, fig = _panel_met_buren(edf, buren)
+    _assert_event_span(ax)
+    lo, hi = ax.get_xlim()
+    # t_end = 350; matplotlib zet daar zijn gebruikelijke marge omheen (~353).
+    # Een niet-afgeknipte markering zou tot 545 lopen.
+    assert hi <= DROP_END + 40, f"x-as opgerekt tot {hi:.0f}"
+    plt.close(fig)
+
+
+def test_a_neighbour_outside_the_window_is_not_marked(edf):
+    """De markering moet nog steeds iets uitsluiten."""
+    buren = [{"type": "obstructive", "onset_s": DROP_END + 500,
+              "duration_s": 20.0}]
+    ax, fig = _panel_met_buren(edf, buren)
+    _assert_event_span(ax)
+    assert not [s for s in _spans(ax) if s[0] > DROP_END + 40]
+    plt.close(fig)
+
+
+def test_rejected_candidates_are_not_marked_as_scored(edf):
+    """Blauw betekent GESCOORD. Een afgewezen kandidaat hoort er niet in."""
+    buren = [{"type": "rejected_hypopnea", "onset_s": DROP_END + 5,
+              "duration_s": 10.0}]
+    ax, fig = _panel_met_buren(edf, buren)
+    _assert_event_span(ax)
+    assert not [s for s in _spans(ax) if DROP_END + 3 < s[0] < DROP_END + 8]
+    plt.close(fig)

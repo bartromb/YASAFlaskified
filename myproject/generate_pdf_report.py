@@ -1006,23 +1006,44 @@ def epoch_panel_png(edf_path, channel_map, event, hypno=None,
                 _det_ch_type = ct
                 break
 
-    # ── Blue marks: other scored events in window (v0.8.37) ─────
+    # ── Blauw: andere GESCOORDE events in het venster ───────────
+    #
+    # Elk overlappend event wordt gemarkeerd, ook wanneer het de vensterrand
+    # overschrijdt. De oude regel sloeg alles over waarvoor
+    # `oe_onset < t_start + 2 or oe_end > t_end - 2` gold, en dat filterde juist
+    # de half-zichtbare buren weg — de meest voorkomende soort. Op het paneel
+    # rond de obstructieve apneu bij t=316,6 s (PSG-IPA SN3) bleef de apneu op
+    # 359,4–371,1 s daardoor onbemarkeerd terwijl hij in beeld stond.
+    #
+    # Dat maakte de weergave dubbelzinnig op de ergst mogelijke manier: geen
+    # blauw betekende niet "niet gescoord" maar "misschien wel, misschien niet".
+    # In een controle-instrument moet de afwezigheid van een markering
+    # betekenen dat er niets gescoord is.
     if all_events:
         for oe in all_events:
-            oe_onset = float(oe.get("onset_s", -999))
-            oe_dur = float(oe.get("duration_s", 0))
+            try:
+                oe_onset = float(oe.get("onset_s"))
+                oe_dur = float(oe.get("duration_s") or 0.0)
+            except (TypeError, ValueError):
+                continue
             oe_end = oe_onset + oe_dur
-            if oe_onset < t_start + 2 or oe_end > t_end - 2:
+            if oe_end <= t_start or oe_onset >= t_end:      # geen overlap
                 continue
-            if abs(oe_onset - onset) < 1.0:
+            if abs(oe_onset - onset) < 1.0:                 # het event zelf
                 continue
-            oe_type = oe.get("type", "").lower()
+            oe_type = str(oe.get("type", "")).lower()
             if "fri" in oe_type or "rejected" in oe_type:
                 continue
+            lo, hi = max(oe_onset, t_start), min(oe_end, t_end)
             for ax_j in axes:
-                ax_j.axvspan(oe_onset, oe_end, color="#3182CE", alpha=0.10, zorder=0)
-                ax_j.axvline(oe_onset, color="#3182CE", linewidth=0.4, alpha=0.4)
-                ax_j.axvline(oe_end, color="#3182CE", linewidth=0.4, alpha=0.4)
+                ax_j.axvspan(lo, hi, color="#3182CE", alpha=0.15, zorder=0)
+                # Alleen een grenslijn waar de grens ECHT ligt. Een lijn op de
+                # afgeknipte rand zou een begin of einde suggereren dat er niet
+                # is, en dan lijkt een doorlopend event een kort event.
+                if oe_onset >= t_start:
+                    ax_j.axvline(oe_onset, color="#3182CE", linewidth=0.4, alpha=0.5)
+                if oe_end <= t_end:
+                    ax_j.axvline(oe_end, color="#3182CE", linewidth=0.4, alpha=0.5)
 
     # ── Per-channel data + red primary event marking ──────────
     for i, (ch_type, ch_name, label, color) in enumerate(ch_to_plot):

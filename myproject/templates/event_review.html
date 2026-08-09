@@ -12,6 +12,8 @@
   .k-borderline  { background:#fffbeb; border-left:4px solid #d97706; }
   .k-rejected    { background:#fef2f2; border-left:4px solid #dc2626; }
   .k-typical     { background:#f0f9ff; border-left:4px solid #0284c7; }
+  .k-rule_b      { background:#f5f0ff; border-left:4px solid #7c3aed; }
+  .k-easy        { background:#f0fdf4; border-left:4px solid #16a34a; }
   .panel-note    { color:#4a5568; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
                    font-size:.74rem; }
   .ahi-tag       { font-size:.68rem; padding:.1rem .4rem; border-radius:.25rem;
@@ -37,7 +39,9 @@
     <a href="/results/{{ job_id }}" class="btn btn-outline-secondary btn-sm">← {{ t("analysis_results") }}</a>
   </div>
 
-  <p class="text-muted" style="max-width:60rem">{{ t("event_review_intro") }}</p>
+  {# | safe omdat de tekst uit onze eigen i18n-tabel komt (vaste <b>-tags voor
+     rood/blauw), niet uit gebruikersinvoer. #}
+  <p class="text-muted" style="max-width:60rem">{{ t("event_review_intro") | safe }}</p>
 
   {% if reason %}
     <div class="alert alert-warning">
@@ -52,6 +56,8 @@
     <div class="mb-3">
       <span class="badge" style="background:#d97706">{{ t("event_review_k_borderline") }}</span>
       <span class="badge" style="background:#dc2626">{{ t("event_review_k_rejected") }}</span>
+      <span class="badge" style="background:#7c3aed">{{ t("event_review_k_rule_b") }}</span>
+      <span class="badge" style="background:#16a34a">{{ t("event_review_k_easy") }}</span>
       <span class="badge" style="background:#0284c7">{{ t("event_review_k_typical") }}</span>
       <small class="text-muted ms-2">{{ panels|length }} {{ t("event_review_panels_shown") }}</small>
       {% if n < max_panels %}

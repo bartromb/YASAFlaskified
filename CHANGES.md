@@ -1,5 +1,56 @@
 # Changelog — YASAFlaskified
 
+## v0.19.15 — 2026-08-08  *(buurevents zichtbaar; regel B en duidelijke gevallen)*
+
+**Reparatie — afwezigheid van een markering betekende niets.** De panelen
+markeerden andere gescoorde events in blauw, maar sloegen alles over waarvoor
+`oe_onset < t_start + 2 or oe_end > t_end - 2` gold. Dat filterde juist de
+half-zichtbare buren weg, de meest voorkomende soort. Aangetoond op PSG-IPA
+SN3: in het venster rond de obstructieve apneu bij t=316,6 s staat een tweede
+apneu op 359,4–371,1 s die in beeld is maar 8,5 s over de rand loopt — en dus
+onbemarkeerd bleef.
+
+De weergave was daarmee dubbelzinnig op de ergst mogelijke manier: geen blauw
+betekende niet "hier is niets gescoord" maar "misschien wel, misschien niet".
+Voor een controle-instrument is dat fataal, want de lezer kan een gemist event
+niet onderscheiden van een gemarkeerd event.
+
+Nu wordt elk OVERLAPPEND event gemarkeerd, afgeknipt op de vensterrand. De
+grenslijnen worden alleen getekend waar de grens écht ligt — een lijn op de
+afgeknipte rand zou een begin of einde suggereren dat er niet is, en dan lijkt
+een doorlopend event kort. De arcering ging van alpha 0,10 naar 0,15, want ze
+was nauwelijks zichtbaar.
+
+**Twee nieuwe selectiecategorieën.**
+
+- **Regel B** (paars): hypopneeën die via een AROUSAL kwalificeerden in plaats
+  van via desaturatie. Daar zit de meeste subjectiviteit en de grootste
+  spreiding tussen menselijke scoorders. De vlag stond al op het event
+  (`rule1a_arousal`, met `rule1b` als historische alias die oudere resultaten
+  dragen); beide worden gelezen.
+- **Duidelijke gevallen** (groen): de hoogste confidence. Niet om na te kijken
+  maar om te IJKEN — je moet kunnen zien hoe een onbetwist event eruitziet. En
+  methodologisch belangrijker: zonder deze categorie bestaat de verzameling
+  uitsluitend uit grensgevallen, en dan is ze scheef en ongeschikt om later een
+  model op te trainen.
+
+De specifieke categorieën claimen nu vóór de brede. Een regel-B-geval heeft
+doorgaans ook een lage confidence; als de twijfelcategorie hem eerst opeist,
+verdwijnt juist de informatie waaróm hij lastig is. Bij weinig panelen
+verdwijnen `rule_b` en `easy` vanzelf (quota `n//6`), zodat de moeilijke
+gevallen dan overheersen.
+
+De inleiding legt nu ook uit wat blauw betekent, in vier talen.
+
+**Een toets die leeg slaagde.** `axvspan` geeft in matplotlib 3.11 een
+`Rectangle` terug, geen `Polygon`. Mijn eerste hulpfunctie herkende alleen
+Polygon, gaf dus altijd een lege lijst, en twee toetsen die de AFWEZIGHEID van
+een markering controleerden kregen hun resultaat gratis. Elke buurtoets begint
+nu met `_assert_event_span()`: valt de hulpfunctie stil, dan faalt álles in
+plaats van stilletjes groen te blijven.
+
+340 tests groen (was 330): vijf voor de buurmarkering, vijf voor de nieuwe categorieën.
+
 ## v0.19.14 — 2026-08-08  *(telt dit event mee in de AHI?)*
 
 De visuele eventcontrole toonde het TYPE van een event maar niet of het in het
