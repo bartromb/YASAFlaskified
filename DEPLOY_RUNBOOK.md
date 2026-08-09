@@ -171,7 +171,7 @@ has run. They stay here because they document why the table exists and what
 `deploy.sh` still does idempotently on every deploy.
 
 Steps 4–6 and the cookie note at the end are **still open on production**; see
-`docs/opm20260809.txt` §D2.
+`docs/openstaand_werk.md` §D2.
 
 The order matters: the access check is only as good as the table it reads, and
 the table starts empty.

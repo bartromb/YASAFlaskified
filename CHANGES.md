@@ -273,7 +273,7 @@ onder labels die voor de lezer niet te scheiden zijn: "REM AHI" en "AHI REM".
 Ze gaven op deze opname hetzelfde, maar bij divergentie zou de kwalificatie het
 verkeerde getal betreffen. Het rapport leest nu `ahi_rem`, met `rem_ahi` als
 terugval voor oudere resultaten. De duplicatie in psgscoring zelf blijft staan
-en is genoteerd in `docs/opm20260809.txt`.
+en is genoteerd in `docs/openstaand_werk.md`.
 
 **Geen waarschuwingsglyph.** De eerste versie zette ⚠ voor de kwalificatie. Dat
 teken ontbreekt in het ingebedde lettertype en werd een zwart blokje — in dit
