@@ -30,11 +30,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 edfio = pytest.importorskip("edfio")
 
-import matplotlib                                        # noqa: E402
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt                          # noqa: E402
+import matplotlib  # noqa: E402
 
-import generate_pdf_report as g                          # noqa: E402
+matplotlib.use("Agg")
+import generate_pdf_report as g  # noqa: E402
+import matplotlib.pyplot as plt  # noqa: E402
 
 DUR_S, DROP_START, DROP_END = 600, 300.0, 320.0
 AMP = 100.0

@@ -2322,10 +2322,16 @@ def event_review(job_id):
     Het verzoek duurt seconden en dat is inherent — de EDF-lezing is de
     kostenpost (zie `event_review.load_panel_raw`), niet het tekenen.
     """
-    from event_review import (DEFAULT_PANELS, MAX_PANELS, attach_verdicts,
-                              build_review_panels, channel_map_for,
-                              load_verdicts, resolve_edf_path,
-                              select_review_events)
+    from event_review import (
+        DEFAULT_PANELS,
+        MAX_PANELS,
+        attach_verdicts,
+        build_review_panels,
+        channel_map_for,
+        load_verdicts,
+        resolve_edf_path,
+        select_review_events,
+    )
 
     _require_job_access(job_id)
     data   = _load_results(job_id)
