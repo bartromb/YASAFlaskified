@@ -1,5 +1,40 @@
 # Changelog — YASAFlaskified
 
+## v0.20.0 — 2026-08-13  *(psgscoring 0.17.0: twee sensorpoorten gerepareerd)*
+
+Een dependency-bump, maar **geen byte-identieke**: psgscoring 0.17.0 zet twee
+gerepareerde sensorpoorten default aan op dertien van de vijftien profielen.
+Gerapporteerde AHI's veranderen. `mesa_shhs` en `chicago_1999` blijven gepind.
+
+**De RIP-kwaliteitspoort mat de eenhedendeclaratie, niet de sensor.**
+`assess_rip_channel` keurde effortkanalen af op absolute drempels
+(`MAD < 0.005`), terwijl EDF-eenheden per kanaal vrij zijn. Een opname die RIP
+in mV declareert komt na omrekening naar V ~150x te laag binnen met een
+volstrekt normaal signaal. Op MESA viel daardoor 52 van de 52 opnames af en
+kwam 100 % van de apneus uit als `uncertain`; op een klinische opname valt het
+thoraxkanaal af met de béste signaalvorm van het hele stel, waarna de opname
+stil naar `single-channel` degradeert — zonder paradoxale fasedetectie, precies
+de grootheid voor obstructief/centraal.
+
+Kale `uncertain` valt buiten `ahi_total`, dus dit is een INDEXwijziging.
+Tegen de NSRR-referentie (n=40) halveert de bias: `aasm_v3_rec` −9,48 → −5,14,
+`aasm_v3_breath` −11,93 → −5,33, met op `breath` identieke F1, precisie en
+recall — zelfde events, andere boekhouding.
+
+**Wat dit voor bestaande rapporten betekent.** Een opname met RIP in mV kreeg
+tot nu toe apneus zonder subtype, en die telden niet mee in `ahi_total`. Dezelfde
+opname opnieuw analyseren geeft nu een hogere AHI en wél een obstructief/
+centraal-onderscheid. Reeds uitgeleverde rapporten worden niet met terugwerkende
+kracht herrekend.
+
+**Tweede poort: het stabiele-ademhalingsfilter draaide half.** Het vergeleek het
+eventtype exact met `"hypopnea"`, waardoor `hypopnea_central`, `_mixed` en
+`_uncertain` eraan ontsnapten. Op PSG-IPA dekte het 96 % van de hypopneus, op
+MESA met dichte poort nul. Nu dekt het alle subtypes.
+
+Volledige verantwoording, inclusief de vooraf vastgelegde beslisregel voor de
+drempel, staat in de psgscoring-CHANGELOG bij v0.17.0.
+
 ## v0.19.16 — 2026-08-08  *(oordeel vastleggen; deeplink naar de PSG Editor)*
 
 **De PSG Editor kon dit al.** Bij het uitwerken van "afgekeurde events alsnog
