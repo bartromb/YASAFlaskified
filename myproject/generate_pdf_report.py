@@ -1343,7 +1343,8 @@ def generate_pdf_report(results:dict, output_path:str,
     study_type = results.get("study_type", "diagnostic_psg")
     # Eén gedeelde regel: `"_pg_" in study_type` miste `diagnostic_pg` en zou
     # daar een AHI-label boven een REI-getal zetten. Zie study_type.py.
-    from study_type import is_polygraphy as _is_pg, is_titration as _is_titr
+    from study_type import is_polygraphy as _is_pg
+    from study_type import is_titration as _is_titr
     is_titration = _is_titr(study_type)
     # `results["is_polygraphy"]` draagt wat er werkelijk gedraaid heeft: de
     # analyse merkt een montage zonder EEG zelf op, ook als het studietype op

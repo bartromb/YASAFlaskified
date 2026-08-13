@@ -18,7 +18,11 @@ jobs:
           python-version: '3.11'
           cache: pip
       - name: Install ruff
-        run: pip install ruff
+        # Gepind: ongepind kan een nieuwe ruff-release de poort rood maken
+        # zonder dat er een regel code verandert. Deze check stond van
+        # v0.19.16 tot v0.20.0 rood zonder dat iemand het merkte; een gate die
+        # om externe redenen kan omvallen wordt genegeerd en is dan geen gate.
+        run: pip install ruff==0.16.3
       - name: ruff check
         run: ruff check myproject
 

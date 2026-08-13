@@ -27,7 +27,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from generate_pdf_report import _recording_date  # noqa: E402
 
-
 # ─────────────────────────────────────────────────────────────
 #  4. De opnamedatum
 # ─────────────────────────────────────────────────────────────
@@ -267,6 +266,7 @@ def test_the_report_gap_tolerance_matches_the_analysis():
     yasa_analysis.py. Lopen ze uiteen, dan legt de voetnoot iets anders uit dan
     de code doet."""
     import re
+
     from generate_pdf_report import REM_GAP_TOLERANCE_MIN
     src = _src("yasa_analysis.py")
     m = re.search(r"gap_tolerance: int = (\d+)", src)

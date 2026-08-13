@@ -21,9 +21,13 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from event_review import (MAX_PANELS, _rejection_nearness,  # noqa: E402
-                          channel_map_for, resolve_edf_path,
-                          select_review_events)
+from event_review import (  # noqa: E402
+    MAX_PANELS,
+    _rejection_nearness,
+    channel_map_for,
+    resolve_edf_path,
+    select_review_events,
+)
 
 
 def _ev(onset, conf, typ="hypopnea", **kw):
@@ -193,8 +197,13 @@ def test_the_route_is_admin_only_and_job_gated():
 # telling in psgscoring op de substring "hypopnea" matcht. Twee labels die
 # allebei "uncertain" zeggen en zich tegengesteld gedragen.
 
-from event_review import (COUNTED, NOT_COUNTED, NOT_SCORED,  # noqa: E402
-                          UNCERTAIN_ONLY, ahi_membership)
+from event_review import (  # noqa: E402
+    COUNTED,
+    NOT_COUNTED,
+    NOT_SCORED,
+    UNCERTAIN_ONLY,
+    ahi_membership,
+)
 
 
 @pytest.mark.parametrize("typ,verwacht", [
@@ -328,10 +337,17 @@ def test_a_clear_cut_case_is_not_relabelled_as_borderline():
 # zou deze weergave óók gaan scoren, dan waren er twee mechanismen voor
 # hetzelfde met verschillende semantiek.
 
-from event_review import (ALG_REJECTED, ALG_SCORED,  # noqa: E402
-                          SHOULD_NOT_SCORE, SHOULD_SCORE, UNSURE,
-                          agrees_with_algorithm, attach_verdicts,
-                          load_verdicts, save_verdict)
+from event_review import (  # noqa: E402
+    ALG_REJECTED,
+    ALG_SCORED,
+    SHOULD_NOT_SCORE,
+    SHOULD_SCORE,
+    UNSURE,
+    agrees_with_algorithm,
+    attach_verdicts,
+    load_verdicts,
+    save_verdict,
+)
 
 
 def test_a_verdict_round_trips(tmp_path):
