@@ -33,3 +33,33 @@ testpaths = ["myproject/tests"]
 python_files = ["test_*.py"]
 pythonpath = ["myproject"]
 addopts = "-v --tb=short"
+
+[tool.mypy]
+# Pragmatisch en bewust GESCOPEERD. Een gate die bij invoering rood staat wordt
+# genegeerd -- precies wat er met de ruff-gate gebeurde, die van v0.19.16 tot
+# v0.20.0 rood stond zonder dat iemand het merkte.
+#
+# De CI draait mypy op de modules die AL schoon zijn; daar blokkeert hij dus
+# echt. Wat er nog buiten valt, stand 2026-08-14: app.py 3, i18n.py 2,
+# generate_pdf_report.py 2. Modules worden toegevoegd zodra ze op nul staan,
+# nooit verwijderd.
+ignore_missing_imports = true
+follow_imports = "silent"
+files = [
+    "myproject/arousal_analysis.py",
+    "myproject/backfill_jobs.py",
+    "myproject/edf_anonymize.py",
+    "myproject/edf_api.py",
+    "myproject/event_api.py",
+    "myproject/event_review.py",
+    "myproject/generate_demo_edf.py",
+    "myproject/generate_excel_report.py",
+    "myproject/pdf_report_additions.py",
+    "myproject/pneumo_analysis.py",
+    "myproject/signal_quality.py",
+    "myproject/study_type.py",
+    "myproject/validation_metrics.py",
+    "myproject/version.py",
+    "myproject/worker.py",
+    "myproject/wsgi.py",
+]

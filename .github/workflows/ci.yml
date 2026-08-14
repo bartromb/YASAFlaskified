@@ -26,6 +26,16 @@ jobs:
       - name: ruff check
         run: ruff check myproject
 
+      - name: Install mypy
+        # Gepind, om dezelfde reden als ruff: een nieuwe release mag de gate
+        # niet rood maken zonder codewijziging.
+        run: pip install mypy==2.3.0
+
+      - name: mypy
+        # Scope staat in [tool.mypy] in pyproject.toml -- de modules die al
+        # schoon zijn. Zie de toelichting daar voor de ratel.
+        run: mypy
+
   test:
     name: pytest
     runs-on: ubuntu-latest

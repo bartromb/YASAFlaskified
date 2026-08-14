@@ -7,6 +7,7 @@ AI-based sleep staging + AASM-compliant respiratory scoring + multilingual clini
 [![Live](https://img.shields.io/badge/live-slaapkliniek.be-blue)](https://slaapkliniek.be)
 [![psgscoring](https://img.shields.io/pypi/v/psgscoring?label=psgscoring)](https://pypi.org/project/psgscoring/)
 [![License](https://img.shields.io/badge/license-BSD--3-green)](LICENSE)
+[![CI](https://github.com/bartromb/YASAFlaskified/actions/workflows/ci.yml/badge.svg)](https://github.com/bartromb/YASAFlaskified/actions/workflows/ci.yml)
 <!-- static release badge: the dynamic github/v/release endpoint intermittently
      fails with "Unable to select next GitHub token from pool" (shields.io token-pool
      rate limit). Bump the version here on each new release. -->
@@ -57,6 +58,23 @@ Upload an anonymised EDF recording via browser → receive a complete PSG analys
 
 - **PSG-IPA** (PhysioNet): 5 recordings, 59 scorer sessions — mean |ΔAHI| = 2.0/h, concordance 4/5
 - **AZORG** (planned): n≥50, Bland-Altman, weighted κ — protocol AZORG-YASA-2026-001
+
+## Release policy
+
+Releases are **measurement points, not milestones**. Several may be cut on the
+same day: each one pins a validated combination of this app and a `psgscoring`
+version, and the version number is what makes that combination citable.
+
+Scored output is produced by `psgscoring`, so the stability guarantee lives
+there — in the **profiles**, not in this app's version number. `mesa_shhs` and
+`chicago_1999` are frozen because they reproduce published results; the other
+profiles track the current best understanding of the AASM rules and may move
+when a measurement justifies it.
+
+If you need scored values to stay identical across time, pin both: the
+`psgscoring` version in `requirements.txt` (also recorded in
+`myproject/version.py` as `PSGSCORING_VERSION`) and the profile you selected.
+A profile name alone is not a guarantee.
 
 ## Self-hosting
 
