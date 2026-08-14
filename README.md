@@ -38,7 +38,7 @@ Upload an anonymised EDF recording via browser → receive a complete PSG analys
 | Step | What | How |
 |------|------|-----|
 | 1 | Sleep staging | YASA LightGBM (Vallat & Walker, *eLife* 2021) |
-| 2 | Respiratory scoring | psgscoring — AASM Manual rules with 12 bias corrections |
+| 2 | Respiratory scoring | psgscoring — AASM Manual rules, graded evidence, measured bias corrections |
 | 3 | Arousal detection | K-complex exclusion + CVR coupling |
 | 4 | PLM scoring | AASM rules + WASM criteria |
 | 5 | SpO₂ analysis | ODI 3%/4%, baseline (P90), T90 |
@@ -48,7 +48,15 @@ Upload an anonymised EDF recording via browser → receive a complete PSG analys
 ### Key features
 
 - **AHI confidence interval** — every study scored at three stringency levels, reported as a range
-- **12 bias corrections** — systematic over- and under-counting correction with per-fix event counters
+- **Graded evidence** — the AASM Rule 1A conjunction as a product of graded
+  terms rather than a chain of yes/no cuts; on MESA (n=150, held out) that
+  raises event agreement over the rule cascade without costing AHI accuracy
+- **Bias corrections with the measurement attached** — systematic over- and
+  under-counting correction with per-fix event counters; every change carries
+  the measurement that motivated it in the psgscoring `CHANGELOG`
+- **Visual event review** — an administrator route (`/review/<job_id>`) that
+  draws every scored respiratory event with its signals, its qualifying rule,
+  and the neighbouring events that were *not* scored
 - **Configurable scoring profiles** — strict / standard / sensitive
 - **Interactive EDF browser** — event overlay with epoch navigation
 - **Multi-site access control** — data isolation per clinical centre, enforced from a `job` table in the database on every job route ([details](MULTI_SITE_GUIDE.md#toegangsmodel-klinische-sites-binnen-één-stack))
