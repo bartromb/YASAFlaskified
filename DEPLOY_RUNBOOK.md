@@ -57,6 +57,21 @@ Live clinical app. `~10–30 s` downtime at `up -d`. **`.env`, `instance/`,
 `uploads/`, `processed/`, `logs/` are never overwritten** (excluded). Run from the
 local repo on `main` after the merge.
 
+**Step 0 — take the pre-deploy backup.** The warning below tells you recovery
+was `tar xzf` of "the pre-deploy backup, which is exactly why step 0 takes
+one" — but until v0.21.0 this section had no step 0, so the safety net the
+warning points at did not exist. It does now:
+
+```bash
+ssh root@65.108.230.243 'cd /data/slaapkliniek && \
+  tar czf /root/predeploy-$(date +%F-%H%M).tgz \
+    --exclude=uploads --exclude=processed .'
+```
+
+This captures `.env`, `myproject/.env`, `instance/`, `logs/` and the code —
+everything an `rsync` mistake can remove — without the multi-GB recording
+directories. Keep it until the deploy is verified healthy.
+
 **Step 1 — dry-run first (no changes; confirm only code files change):**
 ```bash
 cd ~/CODE/YASAFlaskified
