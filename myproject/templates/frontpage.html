@@ -431,6 +431,62 @@
 
   #new      { background: var(--bg); }
   #roadmap  { background: var(--surface); border-top: 1px solid var(--border); }
+
+  /* ── INVITATION TO SLEEP CENTRES ── */
+  #invite { background: var(--bg); border-top: 1px solid var(--border); }
+  .route-list {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem;
+    margin-top: 2.5rem;
+  }
+  @media (max-width: 900px) { .route-list { grid-template-columns: 1fr; } }
+  .route {
+    background: var(--surface); border: 1px solid var(--border-2);
+    border-radius: 12px; padding: 1.5rem; box-shadow: var(--shadow-sm);
+    display: flex; flex-direction: column;
+  }
+  .route .route-num {
+    font-family: 'JetBrains Mono', monospace; font-size: .72rem;
+    letter-spacing: .08em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: .6rem;
+  }
+  .route h4 {
+    font-family: 'DM Serif Display', serif; font-size: 1.1rem;
+    margin: 0 0 .5rem; color: var(--text);
+  }
+  .route p {
+    font-size: .88rem; color: var(--text-soft); margin: 0 0 1rem;
+    line-height: 1.6; flex: 1;
+  }
+  .route code {
+    font-family: 'JetBrains Mono', monospace; font-size: .78rem;
+    background: var(--surface-2); padding: .15rem .4rem;
+    border-radius: 4px; color: var(--text);
+    overflow-wrap: anywhere;
+  }
+  .route-link {
+    font-family: 'JetBrains Mono', monospace; font-size: .76rem;
+    letter-spacing: .04em;
+  }
+
+  .caveats {
+    margin-top: 2.5rem; background: var(--surface);
+    border: 1px solid var(--border-2); border-left: 3px solid #d97706;
+    border-radius: 12px; padding: 1.6rem 1.8rem;
+  }
+  .caveats h3 {
+    font-family: 'DM Serif Display', serif; font-size: 1.15rem;
+    margin: 0 0 .4rem; color: var(--text);
+    display: flex; align-items: center; gap: .55rem;
+  }
+  .caveats .cav-lead { font-size: .9rem; color: var(--text-soft); margin: 0 0 1.2rem; }
+  .caveats ol { margin: 0; padding-left: 1.25rem; }
+  .caveats li {
+    font-size: .9rem; color: var(--text-soft);
+    line-height: 1.65; margin-bottom: .75rem;
+  }
+  .caveats li:last-child { margin-bottom: 0; }
+  .caveats li strong { color: var(--text); }
+  .invite-contact { margin-top: 1.8rem; font-size: .92rem; color: var(--text-soft); }
 </style>
 </head>
 <body>
@@ -443,6 +499,7 @@
     <a href="#workflow">{{ t('fp_nav_workflow') }}</a>
     <a href="#new">{{ t('fp_new_title') }}</a>
     <a href="#roadmap">{{ t('fp_road_title') }}</a>
+    <a href="#invite">{{ t('fp_inv_nav') }}</a>
     <a href="#stack">{{ t('fp_nav_stack') }}</a>
     <a href="#credits">{{ t('fp_nav_credits') }}</a>
     <span class="lang-picker">
@@ -745,6 +802,59 @@ stats = yasa.<span class="fn">sleep_statistics</span>(hypno, sf_hyp=<span class=
   </div>
 </section>
 
+<!-- INVITATION TO SLEEP CENTRES -->
+<section id="invite">
+  <div class="section-inner">
+    <div class="section-tag">{{ t('fp_inv_tag') }}</div>
+    <h2 class="section-title reveal">{{ t('fp_inv_title') }}</h2>
+    <p class="section-lead reveal">{{ t('fp_inv_lead') }}</p>
+
+    <div class="route-list">
+      <div class="route reveal">
+        <div class="route-num">{{ t('fp_inv_r1_num') }}</div>
+        <h4>{{ t('fp_inv_r1_t') }}</h4>
+        <p>{{ t('fp_inv_r1_b') }}</p>
+        <a class="route-link" href="mailto:bart.rombaut@gmail.com?subject=YASAFlaskified%20-%20account">
+          {{ t('fp_inv_r1_cta') }} →
+        </a>
+      </div>
+      <div class="route reveal">
+        <div class="route-num">{{ t('fp_inv_r2_num') }}</div>
+        <h4>{{ t('fp_inv_r2_t') }}</h4>
+        <p>{{ t('fp_inv_r2_b') }}</p>
+        <p><code>curl -sSL https://raw.githubusercontent.com/bartromb/YASAFlaskified/main/deploy.sh | sudo bash</code></p>
+        <a class="route-link" href="https://github.com/bartromb/YASAFlaskified/blob/main/DEPLOY_RUNBOOK.md" target="_blank" rel="noopener">
+          {{ t('fp_inv_r2_cta') }} →
+        </a>
+      </div>
+      <div class="route reveal">
+        <div class="route-num">{{ t('fp_inv_r3_num') }}</div>
+        <h4>{{ t('fp_inv_r3_t') }}</h4>
+        <p>{{ t('fp_inv_r3_b') }}</p>
+        <p><code>pip install psgscoring</code></p>
+        <a class="route-link" href="https://github.com/bartromb/psgscoring" target="_blank" rel="noopener">
+          {{ t('fp_inv_r3_cta') }} →
+        </a>
+      </div>
+    </div>
+
+    <div class="caveats reveal">
+      <h3><span>⚠️</span>{{ t('fp_inv_cav_title') }}</h3>
+      <p class="cav-lead">{{ t('fp_inv_cav_lead') }}</p>
+      <ol>
+        <li><strong>{{ t('fp_inv_c1_t') }}</strong> {{ t('fp_inv_c1_b') | safe }}</li>
+        <li><strong>{{ t('fp_inv_c2_t') }}</strong> {{ t('fp_inv_c2_b') }}</li>
+        <li><strong>{{ t('fp_inv_c3_t') }}</strong> {{ t('fp_inv_c3_b') }}</li>
+        <li><strong>{{ t('fp_inv_c4_t') }}</strong> {{ t('fp_inv_c4_b') }}</li>
+        <li><strong>{{ t('fp_inv_c5_t') }}</strong> {{ t('fp_inv_c5_b') }}</li>
+        <li><strong>{{ t('fp_inv_c6_t') }}</strong> {{ t('fp_inv_c6_b') }}</li>
+      </ol>
+    </div>
+
+    <p class="invite-contact reveal">{{ t('fp_inv_contact') | safe }}</p>
+  </div>
+</section>
+
 <!-- STACK -->
 <section id="stack">
   <div class="section-inner">
@@ -755,7 +865,7 @@ stats = yasa.<span class="fn">sleep_statistics</span>(hypno, sf_hyp=<span class=
       <div class="tech-tag"><span class="dot" style="background:#2563eb"></span>Python 3.11</div>
       <div class="tech-tag"><span class="dot" style="background:#7c3aed"></span>Flask</div>
       <div class="tech-tag"><span class="dot" style="background:#2563eb"></span>YASA 0.7</div>
-      <div class="tech-tag"><span class="dot" style="background:#059669"></span>psgscoring 0.12</div>
+      <div class="tech-tag"><span class="dot" style="background:#059669"></span>psgscoring {{ PSGSCORING_VERSION }}</div>
       <div class="tech-tag"><span class="dot" style="background:#059669"></span>MNE-Python</div>
       <div class="tech-tag"><span class="dot" style="background:#f59e0b"></span>Redis / RQ</div>
       <div class="tech-tag"><span class="dot" style="background:#7c3aed"></span>Gunicorn</div>

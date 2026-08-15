@@ -1,5 +1,52 @@
 # Changelog — YASAFlaskified
 
+## v0.21.0 — 2026-08-15  *(landing page: an invitation to other sleep centres)*
+
+**No change to scoring.** `psgscoring` stays pinned at 0.17.0 and no report
+field, index or profile moves. This release is documentation and the landing
+page.
+
+**An invitation to other sleep centres, with the caveats attached to it.**
+A new `#invite` section on the front page invites other centres to install,
+modify and test the software, and lists three routes: an account on this
+instance, self-hosting via `deploy.sh`, or `pip install psgscoring` inside
+their own pipeline. Six caveats sit directly beneath the invitation rather
+than behind a link — not a medical device, validated on five recordings and
+one external cohort, test it against your own scoring first, the AHI is an
+estimate with an interval, personal data stays the centre's responsibility,
+and there is no support SLA. A centre that adopts this inherits every one of
+them, and the ones that matter most are exactly the ones a page like this
+tends to bury. Translated in full to NL/FR/EN/DE (31 keys).
+
+`test_frontpage_invite.py` guards the parts that rot silently: that all four
+languages render *their own* text rather than falling back to English (a
+fallback still returns HTTP 200, so status alone proves nothing), that six
+caveats are present, and that the install command on the page matches the one
+in `DEPLOY_RUNBOOK.md`.
+
+**The `deploy.sh` reference was spelled two ways.** The script's own usage
+header said `bartromb/yasaflaskified`, every document said
+`bartromb/YASAFlaskified`. Both resolve, because GitHub redirects raw requests
+case-insensitively — which is why it survived: nothing broke, so nothing
+flagged it. That is undocumented third-party behaviour to rest on, and a
+reader comparing the header to the repository name gets two answers. One
+spelling now, pinned across README, runbook, script header and landing page by
+`test_deploy_sh_links.py`.
+
+The README's Self-hosting section never mentioned `deploy.sh` at all — it
+offered only the manual `git clone` + `docker compose` route, so the
+one-command installer was undiscoverable from the front door. Both routes are
+now listed.
+
+**Stale numbers on the README.** Validation quoted mean |ΔAHI| = 2.0/h from an
+older harness; it is bias +1.69/h, MAE 1.76/h, r 0.997, weighted κ 0.839, and
+MESA n=150 is now quoted too. The paper title matched neither the manuscript
+nor the psgscoring README; all three now carry the v38 title.
+
+**The stack tile said `psgscoring 0.12`** — five minor versions stale, because
+it was hand-typed. It renders `PSGSCORING_VERSION` now, which the app already
+exposes to every template, so it cannot drift again.
+
 ## v0.20.0 — 2026-08-13  *(psgscoring 0.17.0: twee sensorpoorten gerepareerd)*
 
 Een dependency-bump, maar **geen byte-identieke**: psgscoring 0.17.0 zet twee

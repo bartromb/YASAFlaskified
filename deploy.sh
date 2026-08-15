@@ -10,7 +10,7 @@
 # Installs YASAFlaskified on a vanilla Ubuntu 22.04+ / Debian server.
 # Run as root or with sudo:
 #
-#   curl -sSL https://raw.githubusercontent.com/bartromb/yasaflaskified/main/deploy.sh | sudo bash
+#   curl -sSL https://raw.githubusercontent.com/bartromb/YASAFlaskified/main/deploy.sh | sudo bash
 #
 # Or locally:
 #   sudo bash deploy.sh

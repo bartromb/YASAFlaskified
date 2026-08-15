@@ -3290,3 +3290,286 @@ _MAINTENANCE_V0120 = {
 }
 TRANSLATIONS.update(_MAINTENANCE_V0120)
 
+
+# ═══════════════════════════════════════════════════════════
+# v0.21.0 — frontpage: invitation to other sleep centres
+#
+# The caveats are deliberately on the landing page rather than behind a
+# link. A centre that adopts this software inherits every limitation
+# listed here, and the ones that matter most (single-cohort validation,
+# no CE mark, controller responsibility for personal data) are exactly
+# the ones a marketing page tends to bury.
+# ═══════════════════════════════════════════════════════════
+_FRONTPAGE_INVITE_V0210 = {
+    "fp_inv_nav": {
+        "nl": "Voor slaapcentra",
+        "fr": "Pour les centres du sommeil",
+        "en": "For sleep centres",
+        "de": "Für Schlafzentren"},
+    "fp_inv_tag": {
+        "nl": "// Uitnodiging aan slaapcentra",
+        "fr": "// Invitation aux centres du sommeil",
+        "en": "// An invitation to sleep centres",
+        "de": "// Einladung an Schlafzentren"},
+    "fp_inv_title": {
+        "nl": "Gebruik het in uw eigen centrum",
+        "fr": "Utilisez-le dans votre propre centre",
+        "en": "Use it in your own centre",
+        "de": "Nutzen Sie es in Ihrem eigenen Zentrum"},
+    "fp_inv_lead": {
+        "nl": "psgscoring en YASAFlaskified zijn open source onder BSD-3. Elk slaapcentrum mag ze "
+              "installeren, aanpassen en op eigen opnames toetsen — zonder licentiekosten en zonder "
+              "toestemming te vragen. Wij nodigen u daar uitdrukkelijk toe uit. Wat we terugvragen is "
+              "geen betaling maar tegenspraak: cijfers uit uw eigen cohort, vooral wanneer ze van de "
+              "onze afwijken.",
+        "fr": "psgscoring et YASAFlaskified sont open source sous licence BSD-3. Tout centre du sommeil "
+              "peut les installer, les modifier et les évaluer sur ses propres enregistrements — sans "
+              "frais de licence et sans demander d'autorisation. Nous vous y invitons explicitement. Ce "
+              "que nous demandons en retour n'est pas un paiement mais une contradiction : des chiffres "
+              "issus de votre propre cohorte, surtout lorsqu'ils divergent des nôtres.",
+        "en": "psgscoring and YASAFlaskified are open source under BSD-3. Any sleep centre may install "
+              "them, modify them and test them on its own recordings — no licence fee, no permission "
+              "needed. We explicitly invite you to do so. What we ask in return is not payment but "
+              "contradiction: numbers from your own cohort, especially where they disagree with ours.",
+        "de": "psgscoring und YASAFlaskified sind Open Source unter BSD-3. Jedes Schlafzentrum darf sie "
+              "installieren, anpassen und an eigenen Aufzeichnungen prüfen — ohne Lizenzkosten und ohne "
+              "um Erlaubnis zu fragen. Wir laden Sie ausdrücklich dazu ein. Was wir zurückerbitten, ist "
+              "keine Bezahlung, sondern Widerspruch: Zahlen aus Ihrer eigenen Kohorte, besonders dort, "
+              "wo sie von unseren abweichen."},
+
+    # ── Route 1: hosted instance ──
+    "fp_inv_r1_num": {
+        "nl": "Route 1 — kennismaken", "fr": "Voie 1 — découvrir",
+        "en": "Route 1 — first look",  "de": "Weg 1 — kennenlernen"},
+    "fp_inv_r1_t": {
+        "nl": "Meekijken op deze instantie",
+        "fr": "Essayer sur cette instance",
+        "en": "Try it on this instance",
+        "de": "Auf dieser Instanz mitschauen"},
+    "fp_inv_r1_b": {
+        "nl": "Vraag een gratis account aan en laat een gepseudonimiseerde EDF scoren. Binnen vijf à "
+              "tien minuten krijgt u het volledige rapport, inclusief de visuele eventcontrole. De "
+              "snelste manier om te zien wat het doet — en waar het uw eigen scoring tegenspreekt.",
+        "fr": "Demandez un compte gratuit et faites analyser un EDF pseudonymisé. En cinq à dix minutes "
+              "vous recevez le rapport complet, y compris la revue visuelle des événements. Le moyen le "
+              "plus rapide de voir ce que fait l'outil — et où il contredit votre propre scoring.",
+        "en": "Request a free account and have a pseudonymised EDF scored. Within five to ten minutes "
+              "you get the full report, including the visual event review. The fastest way to see what "
+              "it does — and where it contradicts your own scoring.",
+        "de": "Fordern Sie ein kostenloses Konto an und lassen Sie eine pseudonymisierte EDF auswerten. "
+              "Innerhalb von fünf bis zehn Minuten erhalten Sie den vollständigen Bericht samt "
+              "visueller Ereigniskontrolle. Der schnellste Weg zu sehen, was die Software leistet — und "
+              "wo sie Ihrer eigenen Auswertung widerspricht."},
+    "fp_inv_r1_cta": {
+        "nl": "Account aanvragen", "fr": "Demander un compte",
+        "en": "Request an account", "de": "Konto anfragen"},
+
+    # ── Route 2: self-hosting ──
+    "fp_inv_r2_num": {
+        "nl": "Route 2 — zelf hosten", "fr": "Voie 2 — auto-hébergement",
+        "en": "Route 2 — self-hosting", "de": "Weg 2 — selbst hosten"},
+    "fp_inv_r2_t": {
+        "nl": "Op uw eigen server",
+        "fr": "Sur votre propre serveur",
+        "en": "On your own server",
+        "de": "Auf Ihrem eigenen Server"},
+    "fp_inv_r2_b": {
+        "nl": "Eén commando op een verse Ubuntu- of Debian-server installeert de volledige stack: "
+              "Docker, Nginx, firewall en een Let's Encrypt-certificaat. Uw opnames verlaten daarbij uw "
+              "eigen infrastructuur niet.",
+        "fr": "Une seule commande sur un serveur Ubuntu ou Debian vierge installe toute la pile : "
+              "Docker, Nginx, pare-feu et un certificat Let's Encrypt. Vos enregistrements ne quittent "
+              "alors jamais votre propre infrastructure.",
+        "en": "A single command on a fresh Ubuntu or Debian server installs the whole stack: Docker, "
+              "Nginx, firewall and a Let's Encrypt certificate. Your recordings never leave your own "
+              "infrastructure.",
+        "de": "Ein einziger Befehl auf einem frischen Ubuntu- oder Debian-Server installiert den "
+              "gesamten Stack: Docker, Nginx, Firewall und ein Let's-Encrypt-Zertifikat. Ihre "
+              "Aufzeichnungen verlassen dabei Ihre eigene Infrastruktur nicht."},
+    "fp_inv_r2_cta": {
+        "nl": "Uitrolhandleiding", "fr": "Guide de déploiement",
+        "en": "Deployment runbook", "de": "Deployment-Handbuch"},
+
+    # ── Route 3: library only ──
+    "fp_inv_r3_num": {
+        "nl": "Route 3 — enkel de bibliotheek", "fr": "Voie 3 — la bibliothèque seule",
+        "en": "Route 3 — the library alone",    "de": "Weg 3 — nur die Bibliothek"},
+    "fp_inv_r3_t": {
+        "nl": "In uw eigen pijplijn",
+        "fr": "Dans votre propre pipeline",
+        "en": "In your own pipeline",
+        "de": "In Ihrer eigenen Pipeline"},
+    "fp_inv_r3_b": {
+        "nl": "Alleen de scoringlogica, zonder webapplicatie. Draai ze op opnames die uw team al "
+              "gescoord heeft en vergelijk event per event in plaats van enkel de AHI.",
+        "fr": "Uniquement la logique de scoring, sans application web. Exécutez-la sur des "
+              "enregistrements déjà cotés par votre équipe et comparez événement par événement plutôt "
+              "que le seul IAH.",
+        "en": "The scoring logic only, without the web application. Run it over recordings your team has "
+              "already scored and compare event by event rather than the AHI alone.",
+        "de": "Nur die Auswertungslogik, ohne Webanwendung. Führen Sie sie auf Aufzeichnungen aus, die "
+              "Ihr Team bereits ausgewertet hat, und vergleichen Sie Ereignis für Ereignis statt nur "
+              "den AHI."},
+    "fp_inv_r3_cta": {
+        "nl": "Documentatie", "fr": "Documentation",
+        "en": "Documentation", "de": "Dokumentation"},
+
+    # ── Caveats ──
+    "fp_inv_cav_title": {
+        "nl": "Lees dit eerst",
+        "fr": "À lire avant tout",
+        "en": "Read this first",
+        "de": "Bitte zuerst lesen"},
+    "fp_inv_cav_lead": {
+        "nl": "Wij hebben er belang bij dat u deze software gebruikt. Daarom staan de beperkingen hier, "
+              "en niet in de kleine lettertjes.",
+        "fr": "Nous avons intérêt à ce que vous utilisiez ce logiciel. C'est pourquoi les limites "
+              "figurent ici, et non en petits caractères.",
+        "en": "We have an interest in you adopting this software. That is precisely why the limitations "
+              "are here, and not in the small print.",
+        "de": "Wir haben ein Interesse daran, dass Sie diese Software einsetzen. Genau deshalb stehen "
+              "die Einschränkungen hier und nicht im Kleingedruckten."},
+
+    "fp_inv_c1_t": {
+        "nl": "Geen medisch hulpmiddel.", "fr": "Pas un dispositif médical.",
+        "en": "Not a medical device.",    "de": "Kein Medizinprodukt."},
+    "fp_inv_c1_b": {
+        "nl": 'Niet CE-gemarkeerd (MDR 2017/745), niet FDA-cleared. Dit is onderzoekssoftware. Elk '
+              'rapport moet door een bevoegd arts worden nagekeken vóór enige diagnostische of '
+              'therapeutische beslissing. De <a href="/disclaimer">volledige disclaimer</a> staat ook '
+              'in elk gegenereerd rapport.',
+        "fr": 'Pas de marquage CE (MDR 2017/745), pas d\'autorisation FDA. Il s\'agit d\'un logiciel de '
+              'recherche. Chaque rapport doit être vérifié par un médecin qualifié avant toute décision '
+              'diagnostique ou thérapeutique. La <a href="/disclaimer">clause de non-responsabilité '
+              'complète</a> figure aussi dans chaque rapport généré.',
+        "en": 'Not CE-marked (MDR 2017/745), not FDA-cleared. This is research software. Every report '
+              'must be reviewed by a qualified physician before any diagnostic or therapeutic decision. '
+              'The <a href="/disclaimer">full disclaimer</a> also appears in every generated report.',
+        "de": 'Keine CE-Kennzeichnung (MDR 2017/745), keine FDA-Zulassung. Dies ist '
+              'Forschungssoftware. Jeder Bericht muss vor jeder diagnostischen oder therapeutischen '
+              'Entscheidung von einer qualifizierten Ärztin oder einem qualifizierten Arzt geprüft '
+              'werden. Der <a href="/disclaimer">vollständige Haftungsausschluss</a> steht auch in '
+              'jedem erzeugten Bericht.'},
+
+    "fp_inv_c2_t": {
+        "nl": "Gevalideerd op vijf opnames en één extern cohort.",
+        "fr": "Validé sur cinq enregistrements et une cohorte externe.",
+        "en": "Validated on five recordings and one external cohort.",
+        "de": "An fünf Aufzeichnungen und einer externen Kohorte validiert."},
+    "fp_inv_c2_b": {
+        "nl": "PSG-IPA (5 opnames, elk door 12 scoorders beoordeeld) en MESA/NSRR (n=150, volledig "
+              "achtergehouden). Dat volstaat om te publiceren, niet om uw populatie te "
+              "vertegenwoordigen. Montages, sensoren en scoorgewoonten verschillen per centrum, en de "
+              "twee cohorten spreken elkaar op onderdelen tegen.",
+        "fr": "PSG-IPA (5 enregistrements, cotés chacun par 12 experts) et MESA/NSRR (n=150, "
+              "entièrement mise de côté). C'est suffisant pour publier, pas pour représenter votre "
+              "population. Les montages, les capteurs et les habitudes de cotation diffèrent d'un "
+              "centre à l'autre, et les deux cohortes se contredisent sur certains points.",
+        "en": "PSG-IPA (5 recordings, each scored by 12 scorers) and MESA/NSRR (n=150, fully held out). "
+              "That is enough to publish, not enough to represent your population. Montages, sensors "
+              "and scoring habits differ between centres, and the two cohorts contradict each other on "
+              "some points.",
+        "de": "PSG-IPA (5 Aufzeichnungen, jeweils von 12 Auswertenden beurteilt) und MESA/NSRR (n=150, "
+              "vollständig zurückgehalten). Das genügt für eine Publikation, nicht um Ihre Population "
+              "abzubilden. Montagen, Sensoren und Auswertungsgewohnheiten unterscheiden sich je "
+              "Zentrum, und die beiden Kohorten widersprechen einander in Teilen."},
+
+    "fp_inv_c3_t": {
+        "nl": "Toets het tegen uw eigen scoring vóór u erop steunt.",
+        "fr": "Comparez-le à votre propre cotation avant de vous y fier.",
+        "en": "Test it against your own scoring before relying on it.",
+        "de": "Prüfen Sie es gegen Ihre eigene Auswertung, bevor Sie sich darauf verlassen."},
+    "fp_inv_c3_b": {
+        "nl": "Laat minstens enkele tientallen opnames scoren die uw team al beoordeeld heeft, en kijk "
+              "naar Bland-Altman en gewogen κ — niet naar een gemiddelde AHI. Een gemiddelde verbergt "
+              "precies de spreiding waar het om gaat.",
+        "fr": "Faites analyser au moins quelques dizaines d'enregistrements déjà cotés par votre équipe "
+              "et examinez un Bland-Altman et un κ pondéré — pas un IAH moyen. Une moyenne masque "
+              "précisément la dispersion qui importe.",
+        "en": "Have at least a few dozen recordings scored that your team has already read, and look at "
+              "Bland-Altman and weighted κ — not a mean AHI. An average hides exactly the spread that "
+              "matters.",
+        "de": "Lassen Sie mindestens einige Dutzend Aufzeichnungen auswerten, die Ihr Team bereits "
+              "beurteilt hat, und betrachten Sie Bland-Altman und gewichtetes κ — nicht einen mittleren "
+              "AHI. Ein Mittelwert verbirgt genau die Streuung, auf die es ankommt."},
+
+    "fp_inv_c4_t": {
+        "nl": "De AHI is een schatting met een interval.",
+        "fr": "L'IAH est une estimation assortie d'un intervalle.",
+        "en": "The AHI is an estimate with an interval.",
+        "de": "Der AHI ist eine Schätzung mit einem Intervall."},
+    "fp_inv_c4_b": {
+        "nl": "Elke studie wordt op drie strengheidsniveaus gescoord en krijgt een robuustheidsgraad A, "
+              "B of C. Een C betekent dat de AHI sterk afhangt van waar de grens wordt gelegd. Dat is "
+              "informatie over de opname, geen defect in de software.",
+        "fr": "Chaque étude est cotée à trois niveaux de sévérité et reçoit une note de robustesse A, B "
+              "ou C. Un C signifie que l'IAH dépend fortement de l'endroit où le seuil est placé. C'est "
+              "une information sur l'enregistrement, pas un défaut du logiciel.",
+        "en": "Every study is scored at three stringency levels and receives a robustness grade of A, B "
+              "or C. A C means the AHI depends heavily on where the threshold is drawn. That is "
+              "information about the recording, not a defect in the software.",
+        "de": "Jede Studie wird auf drei Strenge-Stufen ausgewertet und erhält eine Robustheitsnote A, B "
+              "oder C. Ein C bedeutet, dass der AHI stark davon abhängt, wo die Grenze gezogen wird. "
+              "Das ist eine Information über die Aufzeichnung, kein Softwarefehler."},
+
+    "fp_inv_c5_t": {
+        "nl": "Persoonsgegevens blijven uw verantwoordelijkheid.",
+        "fr": "Les données personnelles restent sous votre responsabilité.",
+        "en": "Personal data remains your responsibility.",
+        "de": "Personenbezogene Daten bleiben Ihre Verantwortung."},
+    "fp_inv_c5_b": {
+        "nl": "Deze instantie draait in de EU (Hetzner, Duitsland), maar upload er uitsluitend "
+              "gepseudonimiseerde EDF's naartoe; de repository bevat daarvoor anonymize_edf.py. Voor "
+              "identificeerbare gegevens host u zelf — dan blijft uw centrum verwerkingsverantwoordelijke "
+              "en verlaat er niets uw eigen infrastructuur.",
+        "fr": "Cette instance fonctionne dans l'UE (Hetzner, Allemagne), mais n'y téléversez que des EDF "
+              "pseudonymisés ; le dépôt fournit anonymize_edf.py à cet effet. Pour des données "
+              "identifiables, hébergez vous-même — votre centre reste alors responsable du traitement "
+              "et rien ne quitte votre propre infrastructure.",
+        "en": "This instance runs in the EU (Hetzner, Germany), but upload only pseudonymised EDFs to "
+              "it; the repository ships anonymize_edf.py for that. For identifiable data, self-host — "
+              "your centre then remains the data controller and nothing leaves your own "
+              "infrastructure.",
+        "de": "Diese Instanz läuft in der EU (Hetzner, Deutschland), laden Sie dorthin jedoch "
+              "ausschließlich pseudonymisierte EDF-Dateien hoch; das Repository enthält dafür "
+              "anonymize_edf.py. Für identifizierbare Daten hosten Sie selbst — dann bleibt Ihr Zentrum "
+              "Verantwortlicher und nichts verlässt Ihre eigene Infrastruktur."},
+
+    "fp_inv_c6_t": {
+        "nl": "Geen support-SLA.", "fr": "Aucun contrat de support.",
+        "en": "No support SLA.",   "de": "Kein Support-SLA."},
+    "fp_inv_c6_b": {
+        "nl": "Dit is het werk van één klinisch team, niet van een bedrijf. GitHub-issues worden gelezen "
+              "en meestal beantwoord, maar er is geen gegarandeerde reactietijd. Wilt u dat scores over "
+              "de tijd identiek blijven, pin dan zowel de psgscoring-versie als het profiel: enkel "
+              "mesa_shhs en chicago_1999 zijn bevroren, de overige profielen volgen nieuwe metingen.",
+        "fr": "C'est le travail d'une seule équipe clinique, pas d'une entreprise. Les tickets GitHub "
+              "sont lus et généralement traités, mais aucun délai de réponse n'est garanti. Si vous "
+              "voulez que les résultats restent identiques dans le temps, figez à la fois la version de "
+              "psgscoring et le profil : seuls mesa_shhs et chicago_1999 sont gelés, les autres profils "
+              "suivent les nouvelles mesures.",
+        "en": "This is the work of a single clinical team, not a company. GitHub issues are read and "
+              "usually answered, but no response time is guaranteed. If you need scored values to stay "
+              "identical over time, pin both the psgscoring version and the profile: only mesa_shhs and "
+              "chicago_1999 are frozen, the other profiles follow new measurements.",
+        "de": "Dies ist die Arbeit eines einzelnen klinischen Teams, nicht eines Unternehmens. "
+              "GitHub-Issues werden gelesen und meist beantwortet, eine Reaktionszeit ist jedoch nicht "
+              "garantiert. Sollen Auswertungswerte über die Zeit identisch bleiben, fixieren Sie sowohl "
+              "die psgscoring-Version als auch das Profil: nur mesa_shhs und chicago_1999 sind "
+              "eingefroren, die übrigen Profile folgen neuen Messungen."},
+
+    "fp_inv_contact": {
+        "nl": 'Overweegt u het in uw centrum te gebruiken — of hebt u het al getoetst en wijken uw '
+              'cijfers af? Dat laatste horen we het liefst. '
+              '<a href="mailto:bart.rombaut@gmail.com">bart.rombaut@gmail.com</a>',
+        "fr": 'Vous envisagez de l\'utiliser dans votre centre — ou vous l\'avez déjà évalué et vos '
+              'chiffres divergent ? C\'est surtout ce dernier cas qui nous intéresse. '
+              '<a href="mailto:bart.rombaut@gmail.com">bart.rombaut@gmail.com</a>',
+        "en": 'Considering it for your centre — or have you already tested it and your numbers differ? '
+              'The latter is what we most want to hear. '
+              '<a href="mailto:bart.rombaut@gmail.com">bart.rombaut@gmail.com</a>',
+        "de": 'Erwägen Sie den Einsatz in Ihrem Zentrum — oder haben Sie es bereits geprüft und Ihre '
+              'Zahlen weichen ab? Gerade Letzteres hören wir am liebsten. '
+              '<a href="mailto:bart.rombaut@gmail.com">bart.rombaut@gmail.com</a>'},
+}
+TRANSLATIONS.update(_FRONTPAGE_INVITE_V0210)
