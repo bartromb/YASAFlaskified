@@ -847,12 +847,38 @@ def _send_email_notification(job_id: str, results: dict):
 # v0.8.37: Scoring profile comparison
 # ═══════════════════════════════════════════════════════════════════════════
 
-def run_profile_comparison(edf_path: str, results_dir: str) -> dict:
-    """Run all three scoring profiles and return comparison table.
+def run_profile_comparison(edf_path: str, results_dir: str, *,
+                           profiles: list[str] | None = None,
+                           primary: str | None = None) -> dict:
+    """Score één opname onder meerdere profielen en schrijf de vergelijking weg.
 
-    Returns dict with keys: strict, standard, sensitive — each containing
-    the AHI, OAHI, n_events, and per-fix counters.
+    `profiles=None` houdt het oude gedrag (de hele registry) — backwards
+    compatible. Geef een lijst om een studieprofiel-set te draaien.
+
+    LET OP DE KOSTEN, EN WAAROM DIE HIER STAAN
+    ------------------------------------------
+    Deze functie is sinds v0.9.0 **nooit aangeroepen**: ze kwam in de codebase
+    exact één keer voor, in haar eigen `def`, en `profile_comparison.json` is
+    dus nooit geschreven. Wat het rapport tot v0.22.x als "profielvergelijking"
+    toonde kwam uit psgscoring (`ahi_interval`, drie intervalarmen die de
+    pijplijn toch al draait), niet hieruit.
+
+    Dat is geen detail voor wie haar wél gaat aanroepen. Elk profiel is een
+    volledige `run_pneumo_analysis`; op een opname van 12 h bij 256 Hz kost dat
+    grofweg een halve tot twee minuten bovenop de gedeelde staging. De hele
+    registry is nu 19 profielen. Draai dus een expliciete set, niet de default,
+    zodra dit in een jobpad terechtkomt — en lees `_meta["wall_clock_s"]` om te
+    zien wat het werkelijk kostte in plaats van het te schatten.
+
+    Het primaire profiel draait MEE en wordt niet overgeslagen. Dat is een
+    bewuste keuze uit de specificatie: de rapportlaag vergelijkt de primaire rij
+    met het hoofdresultaat, en die assert is een gratis regressietest op
+    determinisme. Een verschil tussen die twee paden is precies het soort bug
+    (voorbewerkingscache, env-override, versieverschil) dat je wilt zien in
+    plaats van verbergen.
     """
+    import time
+
     import mne
     mne.set_log_level("ERROR")
 
@@ -863,15 +889,29 @@ def run_profile_comparison(edf_path: str, results_dir: str) -> dict:
     staging = run_sleep_staging(raw)
     hypno = staging.get("hypnogram", [])
 
-    # v0.9.0: comparison over alle 8 historische profielen
     try:
         from psgscoring.profiles import PROFILES as _PSG_PROFILES
-        _profile_names = list(_PSG_PROFILES.keys())
+        _registry = list(_PSG_PROFILES.keys())
     except Exception:
-        _profile_names = ["strict", "standard", "sensitive"]
-    comparison = {}
+        _PSG_PROFILES, _registry = {}, ["strict", "standard", "sensitive"]
+
+    if profiles:
+        _unknown = [p for p in profiles if _PSG_PROFILES and p not in _PSG_PROFILES]
+        if _unknown:
+            raise ValueError(
+                f"onbekende profielen: {_unknown}. Stil overslaan zou een "
+                f"vergelijking opleveren die minder profielen bevat dan de "
+                f"studie denkt te draaien.")
+        _profile_names = list(profiles)
+    else:
+        _profile_names = _registry
+
+    comparison: dict = {}
+    _wall: dict = {}
     for profile in _profile_names:
+        _t0 = time.monotonic()
         pneumo = run_pneumo_analysis(raw, hypno, scoring_profile=profile)
+        _wall[profile] = round(time.monotonic() - _t0, 1)
         rsum = pneumo.get("respiratory", {}).get("summary", {})
         comparison[profile] = {
             "ahi_total":    rsum.get("ahi_total"),
@@ -888,6 +928,8 @@ def run_profile_comparison(edf_path: str, results_dir: str) -> dict:
 
     # Severity classification per profile
     for profile, data in comparison.items():
+        if profile == "_meta":
+            continue
         ahi = data.get("ahi_total") or 0
         if ahi < 5:
             data["severity"] = "Normal"
@@ -897,6 +939,22 @@ def run_profile_comparison(edf_path: str, results_dir: str) -> dict:
             data["severity"] = "Moderate"
         else:
             data["severity"] = "Severe"
+
+    # Kopblok. Oude bestanden van vóór v0.23.0 missen dit; de rapportlaag
+    # behandelt `_meta` daarom als optioneel en zet er een regel bij dat de
+    # vergelijking is gemaakt vóór studieconfiguratie bestond.
+    try:
+        import psgscoring
+        _psgver = psgscoring.__version__
+    except Exception:                                            # pragma: no cover
+        _psgver = None
+    comparison["_meta"] = {
+        "primary_profile":   primary,
+        "profiles_compared": list(_profile_names),
+        "psgscoring_version": _psgver,
+        "hypnogram_shared":  True,
+        "wall_clock_s":      _wall,
+    }
 
     # Save comparison JSON
     import json

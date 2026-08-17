@@ -252,6 +252,11 @@ class Site(db.Model):
     logo_path = db.Column(db.String(300), default="")
     url       = db.Column(db.String(200), default="")
     language  = db.Column(db.String(5),   default="en")
+    # v0.23.0: studieprofiel-set als JSON-tekst. Eén kolom in plaats van vier,
+    # omdat de vorm nog beweegt en een half-gevulde set niets betekent: primair
+    # profiel, vergelijkingsgroep of -lijst, en of exploratory mee mag.
+    # NULL = huidig gedrag (geen studievergelijking, klinisch rapport ongewijzigd).
+    study_profile_set = db.Column(db.Text, nullable=True)
     users     = db.relationship("User", backref="site", lazy=True)
 
     def to_config_dict(self):
@@ -1426,6 +1431,61 @@ def admin_set_default_profile(user_id):
     flash(f"{user.username}: " + get_translation("profile_saved",
                                                  session.get("lang", "en")), "success")
     return redirect(url_for("admin_users"))
+
+
+@app.route("/admin/sites/<int:site_id>/study-profile-set", methods=["POST"])
+@login_required
+@requires_role("admin", "site")
+def admin_set_study_profile_set(site_id):
+    """Leg de studieprofiel-set van één site vast.
+
+    Wat dit bepaalt: welk profiel het HOOFDRESULTAAT draagt (kop-AHI, severity,
+    besluittekst) en welke profielen daarnaast in de profielmatrix van het
+    rapport komen. Leeg = huidig gedrag: geen matrix, en het klinische rapport
+    blijft precies zoals het was.
+
+    De validatie weigert liever dan stil te corrigeren. Een studie die denkt op
+    `mesa_shhs` te draaien moet dat te horen krijgen, niet ongemerkt een ander
+    profiel toegewezen krijgen — vandaar dat `validate_study_set` de fouten
+    teruggeeft en deze route ze alle vier laat zien in plaats van de eerste.
+    """
+    import json as _json
+
+    from profile_matrix import validate_study_set
+
+    site = Site.query.get_or_404(site_id)
+    if current_user.role == "site" and site.id != current_user.site_id:
+        abort(403)
+
+    if (request.form.get("clear") or "").strip():
+        site.study_profile_set = None
+        db.session.commit()
+        logger.info("Studieprofiel-set van site %s gewist", site.name)
+        flash(get_translation("study_set_cleared", session.get("lang", "en")),
+              "success")
+        return redirect(url_for("admin_sites"))
+
+    raw_profiles = (request.form.get("comparison_profiles") or "").strip()
+    cfg = {
+        "primary_profile": (request.form.get("primary_profile") or "").strip() or None,
+        "comparison_group": (request.form.get("comparison_group") or "").strip() or None,
+        "comparison_profiles": ([x.strip() for x in raw_profiles.split(",") if x.strip()]
+                                or None),
+        "include_experimental": bool(request.form.get("include_experimental")),
+    }
+    resolved, errors = validate_study_set(cfg)
+    if errors:
+        for e in errors:
+            flash(e, "danger")
+        return redirect(url_for("admin_sites"))
+
+    site.study_profile_set = _json.dumps(resolved)
+    db.session.commit()
+    logger.info("Studieprofiel-set van site %s: primair=%s, vergelijking=%s, "
+                "experimenteel=%s", site.name, resolved["primary_profile"],
+                resolved["comparison_profiles"], resolved["include_experimental"])
+    flash(get_translation("study_set_saved", session.get("lang", "en")), "success")
+    return redirect(url_for("admin_sites"))
 
 
 # ── Sitebeheer ──────────────────────────────────────────────────
@@ -3724,6 +3784,20 @@ def initialize_database():
                         logger.info("Kolom '%s' toegevoegd aan user", col)
                     except Exception as e:
                         logger.warning("Migratie '%s' mislukt: %s", col, e)
+
+            # ── v0.23.0: site-kolom voor de studieprofiel-set ─────
+            # `db.create_all()` maakt ontbrekende TABELLEN, geen ontbrekende
+            # kolommen. Zonder deze stap zou productie de kolom nooit krijgen en
+            # elke query erop stuklopen op een bestaande database.
+            site_cols = _sqlite_columns("site")
+            if site_cols and "study_profile_set" not in site_cols:
+                try:
+                    with db.engine.begin() as conn:
+                        conn.execute(text(
+                            "ALTER TABLE site ADD COLUMN study_profile_set TEXT"))
+                    logger.info("Kolom 'study_profile_set' toegevoegd aan site")
+                except Exception as e:
+                    logger.warning("Migratie 'study_profile_set' mislukt: %s", e)
 
             # Legacy wachtwoordveld kopiëren indien nodig
             cols2 = _sqlite_columns("user")

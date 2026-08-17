@@ -2406,6 +2406,86 @@ def generate_pdf_report(results:dict, output_path:str,
         # AHI (Rule 1A vs 1B) is shown above.
         # story.append(_prof_tbl); sp(0.12)   # intentionally not rendered
 
+        # ── v0.23.0: profielmatrix, uitsluitend voor studies ───────────────
+        #
+        # Deze matrix vervangt de tabel hierboven NIET in het klinische rapport.
+        # Die is in v0.15.0 bewust verwijderd omdat hij niet gevalideerd is als
+        # ernstinstrument, en meerdere severities naast elkaar zetten nodigt uit
+        # tot lezen als alternatieve diagnoses. Dat besluit draai ik niet om als
+        # bijeffect van een rapportagevraag.
+        #
+        # De specificatie opent met "Wanneer een studie via YF loopt", en dat is
+        # precies de grens die het conflict oplost: de matrix is een
+        # studieartefact. Hij verschijnt als er een volledige profielvergelijking
+        # bestaat (`profile_comparison.json` met `_meta`) of als er een
+        # studieprofiel-set is geconfigureerd. Zonder dat blijft het klinische
+        # rapport ongewijzigd.
+        #
+        # De rijlabels en de regelset komen uit de registry — geen hard-coded
+        # parameterkolommen meer. Dat wás het echte defect in de tabel hierboven:
+        # "70% (≥30%)", "30s", "3s", "15s" kwamen uit geen enkele bron.
+        try:
+            from profile_matrix import build_matrix, fmt, fmt_delta
+
+            _pm_comparison = results.get("profile_comparison_full") or None
+            _pm_study = (results.get("study_profile_set") or {}) or None
+            if _pm_comparison or _pm_study:
+                _pm = build_matrix(pneumo, _pm_comparison)
+                _pm_rows = _pm["rows"]
+            else:
+                _pm_rows = []
+
+            if _pm_rows:
+                story.append(Paragraph(t("pdf_prof_matrix_title", lang), styles["H2"]))
+                _pm_hdr = [t("pdf_prof_matrix_profile", lang),
+                        t("pdf_prof_matrix_ruleset", lang),
+                        "AHI", "OAHI", "CAHI", t("pdf_prof_matrix_events", lang),
+                        "RDI", t("pdf_prof_matrix_severity", lang),
+                        t("pdf_prof_matrix_delta", lang)]
+                _pm_body = []
+                for _r in _pm_rows:
+                    _label = _r["display_name"]
+                    if _r["is_frozen"]:
+                        _label = f"\U0001F512 {_label}"
+                    if _r["is_primary"]:
+                        _label = f"<b>\u25b6 {_label}</b>"
+                    _pm_body.append([
+                        _label, _r["ruleset"],
+                        fmt(_r["ahi"]), fmt(_r["oahi"]), fmt(_r["cahi"]),
+                        fmt(_r["n_events"], 0), fmt(_r["rdi"]),
+                        _r["severity"],
+                        "—" if _r["is_primary"] else fmt_delta(_r["delta_ahi"]),
+                    ])
+                story.append(_tbl(_pm_hdr, _pm_body, [5.2, 4.4, 1.5, 1.5, 1.5, 1.4, 1.5, 2.0, 1.6]))
+                sp(0.08)
+
+                _fn = _pm["footnotes"]
+                _notes = []
+                if _fn["primary"]:
+                    _prim = next(r for r in _pm_rows if r["is_primary"])
+                    _notes.append(t("pdf_prof_matrix_fn_primary", lang).format(
+                        profile=_prim["display_name"]))
+                _notes.append(t("pdf_prof_matrix_fn_channels", lang))
+                if _fn["rdi_missing"]:
+                    _notes.append(t("pdf_prof_matrix_fn_rdi", lang))
+                if _fn["frozen_present"]:
+                    _notes.append(t("pdf_prof_matrix_fn_frozen", lang))
+                if _fn["experimental_present"]:
+                    _notes.append(t("pdf_prof_matrix_fn_experimental", lang))
+                if _fn["pre_config"]:
+                    _notes.append(t("pdf_prof_matrix_fn_preconfig", lang))
+                if _pm["primary_mismatch"]:
+                    _mm = _pm["primary_mismatch"]
+                    _notes.append(t("pdf_prof_matrix_fn_mismatch", lang).format(
+                        matrix=f"{_mm['matrix']:.1f}", head=f"{_mm['head']:.1f}"))
+                for _n in _notes:
+                    story.append(Paragraph(_n, styles["SM"]))
+                sp(0.12)
+        except Exception as _pm_exc:                       # noqa: BLE001
+            # Een rapport mag hier niet op stranden; een ontbrekende matrix is
+            # zichtbaar, een ontbrekend rapport is een incident.
+            logger.warning("profielmatrix niet gerenderd: %s", _pm_exc)
+
         # v0.2.8: AHI Confidence Interval + Robustness Score
         _ahi_intv = pneumo.get("ahi_interval", {})
         _intv = _ahi_intv.get("interval")

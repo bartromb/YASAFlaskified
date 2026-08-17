@@ -3786,3 +3786,142 @@ _PROFILE_HELP_V0220 = {
               "nicht."},
 }
 TRANSLATIONS.update(_PROFILE_HELP_V0220)
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# v0.23.0 — profielmatrix in het rapport (studies)
+#
+# De matrix is een STUDIE-artefact en verschijnt niet in een klinisch rapport
+# zonder studieprofiel-set. De tabel die hij vervangt is in v0.15.0 bewust uit
+# de klinische PDF gehaald omdat hij niet gevalideerd is als ernstinstrument;
+# dat besluit blijft staan.
+#
+# Voetnoot 1 benoemt welk profiel het hoofdresultaat draagt, want dat is het
+# enige dat de kop, de severity en de besluittekst voedt. De overige rijen zijn
+# dezelfde opname onder een andere regelset.
+# ─────────────────────────────────────────────────────────────────────────
+
+_PROFILE_MATRIX_V0230 = {
+    "pdf_prof_matrix_title": {
+        "nl": "Profielmatrix (studie)", "fr": "Matrice de profils (étude)",
+        "en": "Profile matrix (study)", "de": "Profilmatrix (Studie)"},
+    "pdf_prof_matrix_profile": {
+        "nl": "Profiel", "fr": "Profil", "en": "Profile", "de": "Profil"},
+    "pdf_prof_matrix_ruleset": {
+        "nl": "Regelset", "fr": "Jeu de règles", "en": "Rule set",
+        "de": "Regelwerk"},
+    "pdf_prof_matrix_events": {
+        "nl": "Events", "fr": "Évén.", "en": "Events", "de": "Ereign."},
+    "pdf_prof_matrix_severity": {
+        "nl": "Ernst", "fr": "Sévérité", "en": "Severity", "de": "Schwere"},
+    "pdf_prof_matrix_delta": {
+        "nl": "Δ AHI", "fr": "Δ IAH", "en": "Δ AHI", "de": "Δ AHI"},
+
+    "pdf_prof_matrix_fn_primary": {
+        "nl": "Hoofdresultaat en besluit volgen ▶ {profile}; de overige rijen "
+              "zijn dezelfde opname onder een andere regelset of methode.",
+        "fr": "Le résultat principal et la conclusion suivent ▶ {profile} ; les "
+              "autres lignes sont le même enregistrement sous un autre jeu de "
+              "règles ou une autre méthode.",
+        "en": "The main result and the conclusion follow ▶ {profile}; the other "
+              "rows are the same recording under a different rule set or method.",
+        "de": "Hauptergebnis und Beurteilung folgen ▶ {profile}; die übrigen "
+              "Zeilen sind dieselbe Aufzeichnung unter einem anderen Regelwerk "
+              "oder Verfahren."},
+    "pdf_prof_matrix_fn_channels": {
+        "nl": "Alle rijen gebruiken dezelfde kanalen en hetzelfde hypnogram — "
+              "dat is wat de vergelijking betekenisvol maakt. De "
+              "kanaalherkomst-disclaimer elders in dit rapport geldt voor elke rij.",
+        "fr": "Toutes les lignes utilisent les mêmes voies et le même "
+              "hypnogramme — c'est ce qui rend la comparaison significative. "
+              "L'avertissement sur l'origine des voies vaut pour chaque ligne.",
+        "en": "Every row uses the same channels and the same hypnogram — that is "
+              "what makes the comparison meaningful. The channel-provenance "
+              "disclaimer elsewhere in this report applies to every row.",
+        "de": "Alle Zeilen verwenden dieselben Kanäle und dasselbe Hypnogramm — "
+              "das macht den Vergleich aussagekräftig. Der Hinweis zur "
+              "Kanalherkunft gilt für jede Zeile."},
+    "pdf_prof_matrix_fn_rdi": {
+        "nl": "„—\" bij RDI: de RERA-detectie levert onder dit profiel geen "
+              "waarde. Dat is een ontbrekende meting, niet 0,0.",
+        "fr": "« — » pour le RDI : la détection des RERA ne fournit pas de valeur "
+              "sous ce profil. C'est une mesure absente, pas 0,0.",
+        "en": "“—” in the RDI column: RERA detection yields no value under this "
+              "profile. That is a missing measurement, not 0.0.",
+        "de": "„—\" beim RDI: Die RERA-Erkennung liefert unter diesem Profil "
+              "keinen Wert. Das ist eine fehlende Messung, nicht 0,0."},
+    "pdf_prof_matrix_fn_frozen": {
+        "nl": "🔒 markeert een bevroren reproductieprofiel. Die bestaan om "
+              "gepubliceerde cijfers na te rekenen en zijn afgeschermd tegen "
+              "reparaties die elk ander profiel wél krijgt; ze dragen nooit het "
+              "hoofdresultaat.",
+        "fr": "🔒 signale un profil de reproduction figé. Ils servent à recalculer "
+              "des chiffres publiés et sont protégés des corrections que "
+              "reçoivent les autres profils ; ils ne portent jamais le résultat "
+              "principal.",
+        "en": "🔒 marks a frozen reproduction profile. These exist to recompute "
+              "published figures and are shielded from repairs every other "
+              "profile receives; they never carry the main result.",
+        "de": "🔒 kennzeichnet ein eingefrorenes Reproduktionsprofil. Sie dienen "
+              "der Nachrechnung veröffentlichter Zahlen und sind gegen "
+              "Reparaturen abgeschirmt, die alle anderen Profile erhalten; sie "
+              "tragen nie das Hauptergebnis."},
+    "pdf_prof_matrix_fn_experimental": {
+        "nl": "Deze matrix bevat experimentele profielen. Die zijn niet tegen "
+              "menselijke scoring gevalideerd, of gemeten en afgewezen; ze horen "
+              "in de methodesectie van een studie, niet in een klinisch besluit.",
+        "fr": "Cette matrice contient des profils expérimentaux. Ils ne sont pas "
+              "validés contre la lecture humaine, ou ont été mesurés et rejetés ; "
+              "ils relèvent de la section méthodes d'une étude, pas d'une "
+              "décision clinique.",
+        "en": "This matrix contains experimental profiles. They are not validated "
+              "against human scoring, or were measured and rejected; they belong "
+              "in the methods section of a study, not in a clinical decision.",
+        "de": "Diese Matrix enthält experimentelle Profile. Sie sind nicht gegen "
+              "menschliche Auswertung validiert oder wurden gemessen und "
+              "verworfen; sie gehören in den Methodenteil einer Studie, nicht in "
+              "eine klinische Entscheidung."},
+    "pdf_prof_matrix_fn_preconfig": {
+        "nl": "Deze vergelijking is gegenereerd vóór studieconfiguratie bestond; "
+              "welk profiel primair was, is niet vastgelegd.",
+        "fr": "Cette comparaison a été générée avant l'existence de la "
+              "configuration d'étude ; le profil principal n'est pas enregistré.",
+        "en": "This comparison was generated before study configuration existed; "
+              "which profile was primary is not recorded.",
+        "de": "Dieser Vergleich entstand, bevor es eine Studienkonfiguration gab; "
+              "welches Profil primär war, ist nicht festgehalten."},
+    "pdf_prof_matrix_fn_mismatch": {
+        "nl": "⚠ De primaire rij geeft AHI {matrix}/u terwijl het hoofdresultaat "
+              "{head}/u geeft. Twee codepaden zijn uit de pas; behandel dit "
+              "rapport als onbetrouwbaar tot het verschil verklaard is.",
+        "fr": "⚠ La ligne principale donne un IAH de {matrix}/h alors que le "
+              "résultat principal donne {head}/h. Deux chemins de code divergent ; "
+              "considérez ce rapport comme non fiable jusqu'à explication.",
+        "en": "⚠ The primary row gives AHI {matrix}/h while the main result gives "
+              "{head}/h. Two code paths disagree; treat this report as unreliable "
+              "until the difference is explained.",
+        "de": "⚠ Die primäre Zeile ergibt AHI {matrix}/h, das Hauptergebnis "
+              "{head}/h. Zwei Codepfade weichen ab; behandeln Sie diesen Bericht "
+              "als unzuverlässig, bis die Abweichung erklärt ist."},
+}
+TRANSLATIONS.update(_PROFILE_MATRIX_V0230)
+
+
+# v0.23.0 — meldingen bij de studieprofiel-set (admin)
+_STUDY_SET_V0230 = {
+    "study_set_saved": {
+        "nl": "Studieprofiel-set opgeslagen.",
+        "fr": "Ensemble de profils d'étude enregistré.",
+        "en": "Study profile set saved.",
+        "de": "Studien-Profilsatz gespeichert."},
+    "study_set_cleared": {
+        "nl": "Studieprofiel-set gewist; rapporten volgen weer het klinische gedrag "
+              "zonder profielmatrix.",
+        "fr": "Ensemble de profils d'étude effacé ; les comptes rendus reprennent le "
+              "comportement clinique sans matrice de profils.",
+        "en": "Study profile set cleared; reports return to the clinical behaviour "
+              "without a profile matrix.",
+        "de": "Studien-Profilsatz gelöscht; Berichte folgen wieder dem klinischen "
+              "Verhalten ohne Profilmatrix."},
+}
+TRANSLATIONS.update(_STUDY_SET_V0230)
