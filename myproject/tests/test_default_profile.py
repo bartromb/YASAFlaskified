@@ -171,6 +171,12 @@ def test_the_admin_page_renders_the_column(env):
 #  De dropdown blijft een dropdown
 # ─────────────────────────────────────────────────────────────
 
+try:
+    from psgscoring.profiles import PROFILES as _REGISTRY
+except Exception:                                            # pragma: no cover
+    _REGISTRY = {}
+
+
 def _render_channel_select(user_profile):
     """Render het echte template met een gebruiker die een profiel heeft."""
     import os as _os
@@ -192,7 +198,13 @@ def _render_channel_select(user_profile):
         t=lambda k, *a, **kw: k, csrf_token=lambda: "x",
         job_id="j", filename="f.edf", sfreq=256, channels=["C4:A1", "SpO2"],
         best_eeg="C4:A1", pneumo_auto={}, pneumo_channels={},
-        available_profiles=[(n, d, "v3 (2023)") for n, d in available_profile_choices()],
+        # v0.22.0: de template groepeert op FAMILIE, dus de fixture moet die
+        # meegeven. Uit de registry zelf en niet hardgecodeerd: een fixture die
+        # elk profiel "v3 (2023)" en "clinical" noemt zou de groepering testen
+        # die de test zelf verzint in plaats van die van de pagina.
+        available_profiles=[
+            (n, p.display_name, p.aasm_version, p.family)
+            for n, p in _REGISTRY.items()],
         current_user=_U())
 
 

@@ -1830,11 +1830,23 @@ def channel_select(job_id):
     Toont zowel EEG/EOG/EMG-selectie als respiratoire kanaalkeuze
     en een formulier voor patiëntgegevens.
     """
-    # v0.9.0: laad alle 8 historische profielen voor dropdown.
+    # v0.9.0: laad alle historische profielen voor de dropdown.
     # v0.9.5: annoteer profielen met LightGBM-classifier via een
     # "🤖 ML" suffix zodat de gebruiker direct ziet welke profielen
     # de v0.6.0 candidate-level re-classifier toepassen (default
     # alleen mesa_shhs).
+    #
+    # v0.22.0: de FAMILIE gaat mee naar de template. Tot nu toe bouwde deze
+    # lijst zich uit `PROFILES` zonder familiefilter en groepeerde de template
+    # alleen op de `aasm_version`-string. Daardoor stond elk exploratory profiel
+    # tussen de klinische, visueel niet te onderscheiden — en zodra psgscoring
+    # er een bijkrijgt, verschijnt dat automatisch in de klinische lijst zonder
+    # dat iemand dat besluit. Dat is precies wat er bij psgscoring 0.19.0
+    # gebeurde: vier enveloppe-armen, waarvan er één op twee cohorten is
+    # AFGEWEZEN, zouden naast `aasm_v3_rec` in dezelfde optgroep zijn geland.
+    #
+    # `family` komt uit psgscoring zelf en is daar door een test vastgepind, dus
+    # dit is geen tweede lijst die uit de pas kan lopen.
     try:
         from psgscoring.profiles import PROFILES as _PSG_PROFILES
         available_profiles = []
@@ -1842,12 +1854,13 @@ def channel_select(job_id):
             label = p.display_name
             if getattr(p.post_processing, "ml_classifier_path", None):
                 label = f"{label} 🤖 ML"
-            available_profiles.append((name, label, p.aasm_version))
+            available_profiles.append((name, label, p.aasm_version, p.family))
     except Exception:
+        # Terugval zonder psgscoring: alleen de aanbevolen standaard. Een
+        # hardgecodeerde familie hier zou de bron kunnen tegenspreken, dus houd
+        # de lijst zo kort dat dat niet kan.
         available_profiles = [
-            ("strict", "AASM v3 — Strict", "v3"),
-            ("standard", "AASM v3 — Standard", "v3"),
-            ("sensitive", "AASM v3 — Sensitive", "v3"),
+            ("aasm_v3_rec", "AASM v3 — Recommended", "v3", "clinical"),
         ]
 
     filepath_bytes = redis_conn.get(f"{job_id}_filepath")

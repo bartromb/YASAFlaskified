@@ -495,33 +495,82 @@
         {% set _user_prof = current_user.default_profile if current_user.is_authenticated else None %}
         {% set _known = available_profiles | map(attribute=0) | list %}
         {% set _sel = _user_prof if _user_prof in _known else 'aasm_v3_rec' %}
+        {# v0.22.0: gegroepeerd op FAMILIE, niet meer alleen op de
+           AASM-versiestring. Tot 0.21.0 stond elk exploratory profiel tussen de
+           klinische in dezelfde optgroep, visueel niet te onderscheiden — en
+           een nieuw profiel in psgscoring landde daar automatisch. Bij
+           psgscoring 0.19.0 zouden dat vier enveloppe-armen zijn geweest,
+           waarvan één op twee cohorten is AFGEWEZEN.
+
+           `family` komt uit psgscoring en is daar door een test vastgepind. De
+           experimentele groep staat onderaan, achter een eigen kop, en de
+           waarschuwing eronder is zichtbaar zonder de lijst te openen. #}
         <select name="scoring_profile" class="form-select" id="scoringProfile">
           {% if available_profiles %}
-            <optgroup label="AASM v3 (2023, current)">
-              {% for name, display_name, aasm_ver in available_profiles if 'v3' in aasm_ver %}
+            <optgroup label="{{ t('prof_grp_v3') }}">
+              {% for name, display_name, aasm_ver, fam in available_profiles
+                 if fam == 'clinical' and 'v3' in aasm_ver %}
                 <option value="{{ name }}"{% if name == _sel %} selected{% endif %}>{{ display_name }}</option>
               {% endfor %}
             </optgroup>
-            <optgroup label="Historical AASM versions">
-              {% for name, display_name, aasm_ver in available_profiles if 'v2' in aasm_ver or 'v1' in aasm_ver %}
+            <optgroup label="{{ t('prof_grp_hist') }}">
+              {% for name, display_name, aasm_ver, fam in available_profiles
+                 if fam == 'clinical' and ('v2' in aasm_ver or 'v1' in aasm_ver) %}
                 <option value="{{ name }}"{% if name == _sel %} selected{% endif %}>{{ display_name }}</option>
               {% endfor %}
             </optgroup>
-            <optgroup label="Dataset-specific">
-              {% for name, display_name, aasm_ver in available_profiles if 'v3' not in aasm_ver and 'v2' not in aasm_ver and 'v1' not in aasm_ver %}
+            <optgroup label="{{ t('prof_grp_dataset') }}">
+              {% for name, display_name, aasm_ver, fam in available_profiles
+                 if fam in ('dataset', 'legacy') %}
                 <option value="{{ name }}"{% if name == _sel %} selected{% endif %}>{{ display_name }}</option>
+              {% endfor %}
+            </optgroup>
+            <optgroup label="{{ t('prof_grp_exp') }}">
+              {% for name, display_name, aasm_ver, fam in available_profiles
+                 if fam == 'exploratory' %}
+                <option value="{{ name }}"{% if name == _sel %} selected{% endif %}>⚠ {{ display_name }}</option>
               {% endfor %}
             </optgroup>
           {% else %}
-            <option value="strict">{{ t('profile_strict') }}</option>
-            <option value="standard" selected>{{ t('profile_standard') }}</option>
-            <option value="sensitive">{{ t('profile_sensitive') }}</option>
+            <option value="aasm_v3_rec" selected>{{ t('profile_standard') }}</option>
           {% endif %}
         </select>
         <div class="form-text mt-2">{{ t('scoring_profile_hint') }}</div>
+        <div class="alert alert-warning py-2 px-3 mt-2 mb-0 small" role="alert">
+          <strong>⚠ {{ t('prof_grp_exp') }}.</strong> {{ t('prof_exp_warn') }}
+        </div>
         <div class="form-text mt-1 text-muted small">
           {{ t('ml_help') }}
         </div>
+
+        {# ── v0.22.0: uitleg per profielfamilie ──────────────────────────
+           Inklapbaar, dicht bij de keuze en niet op een aparte pagina: wie
+           twijfelt over een profiel twijfelt op dit moment, niet later. De
+           tekst legt uit WAT de families onderscheidt en waarom de
+           experimentele niet klinisch gebruikt mogen worden — die tweede helft
+           is de reden dat deze sectie bestaat. #}
+        <details class="mt-3 small">
+          <summary class="text-muted" style="cursor:pointer">
+            {{ t('prof_help_toggle') }}
+          </summary>
+          <div class="mt-2 ps-1" style="border-left:3px solid var(--accent-ochre); padding-left:.75rem">
+            <p class="mb-2">{{ t('prof_help_intro') }}</p>
+
+            <p class="mb-1"><strong>{{ t('prof_grp_v3') }}</strong></p>
+            <p class="mb-2 text-muted">{{ t('prof_help_v3') }}</p>
+
+            <p class="mb-1"><strong>{{ t('prof_grp_hist') }}</strong></p>
+            <p class="mb-2 text-muted">{{ t('prof_help_hist') }}</p>
+
+            <p class="mb-1"><strong>{{ t('prof_grp_dataset') }}</strong></p>
+            <p class="mb-2 text-muted">{{ t('prof_help_dataset') }}</p>
+
+            <p class="mb-1"><strong>⚠ {{ t('prof_grp_exp') }}</strong></p>
+            <p class="mb-2 text-muted">{{ t('prof_help_exp') }}</p>
+
+            <p class="mb-0 text-muted">{{ t('prof_help_pin') }}</p>
+          </div>
+        </details>
 
         {# v0.9.8: optional ML arousal re-classifier #}
         <hr class="my-3">

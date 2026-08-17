@@ -3573,3 +3573,216 @@ _FRONTPAGE_INVITE_V0210 = {
               '<a href="mailto:bart.rombaut@gmail.com">bart.rombaut@gmail.com</a>'},
 }
 TRANSLATIONS.update(_FRONTPAGE_INVITE_V0210)
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# v0.22.0 — profielgroepen, waarschuwing en helpsectie op channel_select
+#
+# De dropdown groepeert sinds 0.22.0 op de FAMILIE die psgscoring meegeeft in
+# plaats van op de AASM-versiestring. Reden: tot 0.21.0 stond elk exploratory
+# profiel tussen de klinische in dezelfde optgroep, en een nieuw profiel in de
+# bibliotheek landde daar automatisch. Bij psgscoring 0.19.0 zouden dat vier
+# enveloppe-armen zijn geweest, waarvan één op twee cohorten is afgewezen.
+#
+# Alle vier de talen zijn verplicht: `t()` valt stil terug op een andere taal,
+# dus een ontbrekende sleutel geeft geen fout maar een pagina die er in één taal
+# anders uitziet — en dit is de sectie waar dat het meest kost.
+# ─────────────────────────────────────────────────────────────────────────
+
+_PROFILE_HELP_V0220 = {
+    "prof_grp_v3": {
+        "nl": "AASM v3 (2023) — klinisch",
+        "fr": "AASM v3 (2023) — clinique",
+        "en": "AASM v3 (2023) — clinical",
+        "de": "AASM v3 (2023) — klinisch"},
+    "prof_grp_hist": {
+        "nl": "Historische AASM-versies",
+        "fr": "Versions AASM historiques",
+        "en": "Historical AASM versions",
+        "de": "Historische AASM-Versionen"},
+    "prof_grp_dataset": {
+        "nl": "Datasetreproductie (bevroren)",
+        "fr": "Reproduction de jeux de données (figée)",
+        "en": "Dataset reproduction (frozen)",
+        "de": "Datensatz-Reproduktion (eingefroren)"},
+    "prof_grp_exp": {
+        "nl": "Experimenteel — niet voor klinisch gebruik",
+        "fr": "Expérimental — pas pour un usage clinique",
+        "en": "Experimental — not for clinical use",
+        "de": "Experimentell — nicht für den klinischen Einsatz"},
+
+    "prof_exp_warn": {
+        "nl": "Deze profielen zijn niet tegen menselijke scoring gevalideerd, of "
+              "zijn gemeten en afgewezen. Ze staan in de lijst zodat een negatief "
+              "resultaat reproduceerbaar blijft, niet als keuze voor een verslag. "
+              "Gebruik ze uitsluitend voor onderzoek, en vermeld altijd welk "
+              "profiel is gebruikt.",
+        "fr": "Ces profils ne sont pas validés contre la lecture humaine, ou ont "
+              "été mesurés et rejetés. Ils figurent dans la liste pour que les "
+              "résultats négatifs restent reproductibles, non comme choix pour un "
+              "compte rendu. À réserver à la recherche, en indiquant toujours le "
+              "profil utilisé.",
+        "en": "These profiles are not validated against human scoring, or have "
+              "been measured and rejected. They are listed so a negative result "
+              "stays reproducible, not as a choice for a report. Use them for "
+              "research only, and always state which profile was used.",
+        "de": "Diese Profile sind nicht gegen menschliche Auswertung validiert "
+              "oder wurden gemessen und verworfen. Sie stehen in der Liste, damit "
+              "negative Ergebnisse reproduzierbar bleiben, nicht als Wahl für "
+              "einen Befund. Nur für die Forschung verwenden und immer angeben, "
+              "welches Profil benutzt wurde."},
+
+    "prof_help_toggle": {
+        "nl": "Welk profiel moet ik kiezen?",
+        "fr": "Quel profil choisir ?",
+        "en": "Which profile should I choose?",
+        "de": "Welches Profil soll ich wählen?"},
+
+    "prof_help_intro": {
+        "nl": "Een profiel bepaalt welke regels de scoring toepast: de "
+              "flowreductiedrempel, of een desaturatie of arousal vereist is, en "
+              "welke sensor de apneus scoort. Twijfel je, kies dan "
+              "<strong>AASM v3 — Recommended</strong>; dat is de regel die "
+              "geaccrediteerde labs sinds 31 december 2023 moeten volgen.",
+        "fr": "Un profil détermine les règles appliquées : le seuil de réduction "
+              "du débit, l'exigence d'une désaturation ou d'un micro-éveil, et le "
+              "capteur qui score les apnées. En cas de doute, choisissez "
+              "<strong>AASM v3 — Recommended</strong> : c'est la règle imposée aux "
+              "laboratoires accrédités depuis le 31 décembre 2023.",
+        "en": "A profile decides which rules the scoring applies: the flow "
+              "reduction threshold, whether a desaturation or arousal is "
+              "required, and which sensor scores apneas. When in doubt choose "
+              "<strong>AASM v3 — Recommended</strong> — the rule accredited labs "
+              "have had to follow since 31 December 2023.",
+        "de": "Ein Profil legt fest, welche Regeln angewendet werden: die "
+              "Flussreduktionsschwelle, ob eine Entsättigung oder ein Arousal "
+              "gefordert ist, und welcher Sensor Apnoen scort. Im Zweifel "
+              "<strong>AASM v3 — Recommended</strong> wählen — die Regel, an die "
+              "akkreditierte Labore seit dem 31. Dezember 2023 gebunden sind."},
+
+    "prof_help_v3": {
+        "nl": "De huidige klinische standaard en zijn varianten. "
+              "<em>Recommended</em> is de default. <em>Rule 1A, breath-graded</em> "
+              "scoort per ademteug in plaats van per sample en geeft elk event een "
+              "waarde voor hoe goed het aan de regel voldoet. <em>Dual-sensor</em> "
+              "scoort apneus op thermistor én neusdruk. <em>Nasal-pressure "
+              "reference</em> laat de afgeleide analyses op de neusdruk lopen in "
+              "plaats van op de thermistor. Alle vier volgen dezelfde AASM-regel; "
+              "ze verschillen in hoe ze die uitvoeren.",
+        "fr": "Le standard clinique actuel et ses variantes. <em>Recommended</em> "
+              "est le choix par défaut. <em>Rule 1A, breath-graded</em> score par "
+              "cycle respiratoire plutôt que par échantillon et attribue à chaque "
+              "événement une valeur de conformité à la règle. <em>Dual-sensor</em> "
+              "score les apnées sur la thermistance et la pression nasale. "
+              "<em>Nasal-pressure reference</em> fait porter les analyses dérivées "
+              "sur la pression nasale. Les quatre suivent la même règle AASM ; "
+              "elles diffèrent par la mise en œuvre.",
+        "en": "The current clinical standard and its variants. "
+              "<em>Recommended</em> is the default. <em>Rule 1A, breath-graded</em> "
+              "scores per breath rather than per sample and gives each event a "
+              "value for how well it meets the rule. <em>Dual-sensor</em> scores "
+              "apneas on both thermistor and nasal pressure. <em>Nasal-pressure "
+              "reference</em> points the derived analyses at nasal pressure "
+              "instead of the thermistor. All four follow the same AASM rule; they "
+              "differ in how they carry it out.",
+        "de": "Der aktuelle klinische Standard und seine Varianten. "
+              "<em>Recommended</em> ist die Vorgabe. <em>Rule 1A, breath-graded</em> "
+              "scort pro Atemzug statt pro Sample und gibt jedem Ereignis einen "
+              "Wert dafür, wie gut es die Regel erfüllt. <em>Dual-sensor</em> "
+              "scort Apnoen auf Thermistor und Nasendruck. <em>Nasal-pressure "
+              "reference</em> lässt die abgeleiteten Analysen auf dem Nasendruck "
+              "laufen. Alle vier folgen derselben AASM-Regel; sie unterscheiden "
+              "sich in der Umsetzung."},
+
+    "prof_help_hist": {
+        "nl": "AASM v1 (2007) en v2 (2012–2020), plus de CMS/Medicare-variant. "
+              "Nuttig als je een oudere opname wil scoren volgens de regel die "
+              "toen gold, of als een verzekeraar een 4 %-desaturatie eist. Deze "
+              "geven stelselmatig een lagere AHI dan v3, en dat is de bedoeling.",
+        "fr": "AASM v1 (2007) et v2 (2012–2020), plus la variante CMS/Medicare. "
+              "Utiles pour scorer un enregistrement ancien selon la règle de "
+              "l'époque, ou lorsqu'un assureur exige une désaturation de 4 %. "
+              "Ils donnent systématiquement un IAH plus bas que v3 : c'est voulu.",
+        "en": "AASM v1 (2007) and v2 (2012–2020), plus the CMS/Medicare variant. "
+              "Useful for scoring an older recording under the rule that applied "
+              "at the time, or when an insurer requires a 4 % desaturation. These "
+              "give a systematically lower AHI than v3, which is the point.",
+        "de": "AASM v1 (2007) und v2 (2012–2020) sowie die CMS/Medicare-Variante. "
+              "Nützlich, um eine ältere Aufzeichnung nach der damals geltenden "
+              "Regel zu scoren, oder wenn ein Kostenträger eine 4-%-Entsättigung "
+              "verlangt. Sie liefern systematisch einen niedrigeren AHI als v3 — "
+              "genau das ist der Zweck."},
+
+    "prof_help_dataset": {
+        "nl": "Bevroren profielen die gepubliceerde cijfers reproduceren: de "
+              "NSRR/MESA-conventie en de Chicago-criteria uit 1999. Ze zijn "
+              "afgeschermd tegen wijzigingen die alle andere profielen wél "
+              "krijgen, inclusief reparaties. Gebruik ze om een cohort na te "
+              "rekenen, niet om een patiënt te scoren.",
+        "fr": "Profils figés qui reproduisent des chiffres publiés : la convention "
+              "NSRR/MESA et les critères de Chicago de 1999. Ils sont protégés des "
+              "modifications que reçoivent tous les autres profils, corrections "
+              "comprises. À utiliser pour recalculer une cohorte, pas pour scorer "
+              "un patient.",
+        "en": "Frozen profiles that reproduce published figures: the NSRR/MESA "
+              "convention and the 1999 Chicago criteria. They are shielded from "
+              "changes every other profile receives, repairs included. Use them to "
+              "recompute a cohort, not to score a patient.",
+        "de": "Eingefrorene Profile, die veröffentlichte Zahlen reproduzieren: die "
+              "NSRR/MESA-Konvention und die Chicago-Kriterien von 1999. Sie sind "
+              "gegen Änderungen abgeschirmt, die alle anderen Profile erhalten, "
+              "Reparaturen eingeschlossen. Für die Neuberechnung einer Kohorte, "
+              "nicht für die Auswertung eines Patienten."},
+
+    "prof_help_exp": {
+        "nl": "Onderzoeksarmen. Sommige zijn nog niet tegen menselijke scoring "
+              "gemeten; andere zijn gemeten en afgewezen, en staan er alleen nog "
+              "zodat dat negatieve resultaat reproduceerbaar blijft. Hier horen "
+              "ook <em>Strict</em> en <em>Sensitive</em>: die zijn opzettelijk te "
+              "streng en te ruim en vormen samen met Recommended het "
+              "betrouwbaarheidsinterval van de AHI — als losse keuze voor een "
+              "verslag zijn ze niet bedoeld. Wat je hier kiest hoort in de "
+              "methodesectie van een studie, niet in een patiëntendossier.",
+        "fr": "Bras de recherche. Certains ne sont pas encore mesurés contre la "
+              "lecture humaine ; d'autres l'ont été et ont été rejetés, et ne "
+              "restent là que pour garder ce résultat négatif reproductible. On y "
+              "trouve aussi <em>Strict</em> et <em>Sensitive</em> : délibérément "
+              "trop stricts et trop larges, ils forment avec Recommended "
+              "l'intervalle de confiance de l'IAH — ils ne sont pas prévus comme "
+              "choix isolé pour un compte rendu. Ce que vous choisissez ici "
+              "appartient à la section méthodes d'une étude, pas à un dossier.",
+        "en": "Research arms. Some have not yet been measured against human "
+              "scoring; others have been measured and rejected, and remain only so "
+              "that negative result stays reproducible. <em>Strict</em> and "
+              "<em>Sensitive</em> live here too: they are deliberately too strict "
+              "and too permissive and together with Recommended they form the AHI "
+              "confidence interval — they are not meant as a standalone choice for "
+              "a report. What you pick here belongs in the methods section of a "
+              "study, not in a patient record.",
+        "de": "Forschungsarme. Einige sind noch nicht gegen menschliche Auswertung "
+              "gemessen; andere wurden gemessen und verworfen und bleiben nur "
+              "erhalten, damit dieses negative Ergebnis reproduzierbar bleibt. "
+              "Auch <em>Strict</em> und <em>Sensitive</em> gehören hierher: "
+              "absichtlich zu streng und zu großzügig, bilden sie mit Recommended "
+              "das Konfidenzintervall des AHI — als Einzelwahl für einen Befund "
+              "sind sie nicht gedacht. Was Sie hier wählen, gehört in den "
+              "Methodenteil einer Studie, nicht in eine Patientenakte."},
+
+    "prof_help_pin": {
+        "nl": "Het gekozen profiel staat in het rapport en in de metadata van de "
+              "job. Wil je dat cijfers over de tijd vergelijkbaar blijven, pin dan "
+              "zowel het profiel als de psgscoring-versie — een profielnaam alleen "
+              "is daarvoor niet genoeg.",
+        "fr": "Le profil retenu figure dans le rapport et dans les métadonnées de "
+              "la tâche. Pour que les chiffres restent comparables dans le temps, "
+              "fixez à la fois le profil et la version de psgscoring : le nom du "
+              "profil seul n'y suffit pas.",
+        "en": "The chosen profile appears in the report and in the job metadata. If "
+              "you need figures to stay comparable over time, pin both the profile "
+              "and the psgscoring version — a profile name alone is not enough.",
+        "de": "Das gewählte Profil erscheint im Bericht und in den Metadaten des "
+              "Auftrags. Damit Zahlen über die Zeit vergleichbar bleiben, fixieren "
+              "Sie Profil und psgscoring-Version — der Profilname allein genügt "
+              "nicht."},
+}
+TRANSLATIONS.update(_PROFILE_HELP_V0220)

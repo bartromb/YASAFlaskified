@@ -1,5 +1,83 @@
 # Changelog — YASAFlaskified
 
+## v0.22.0 — 2026-08-17  *(psgscoring 0.19.1, and a dropdown that separates research from clinical)*
+
+**Scoring changes for the first time since 0.19.x of the library.** `psgscoring`
+goes from 0.17.0 to **0.19.1**. Every profile a clinician can select scores
+identically — the envelope axis added in 0.19.0 is off on all of them — but the
+version pin moves, so a report generated after this deploy cites a different
+library version than one from before it. That matters for anything being
+compared across the boundary.
+
+0.19.1 rather than 0.19.0 because it is the same scoring code with the PyPI
+README links repaired; there is no reason to pin the version with the broken
+project page.
+
+### The dropdown separates research profiles from clinical ones
+
+The scoring-profile dropdown on the channel-selection page grouped profiles by
+the **AASM-version string** and applied no family filter at all. Every
+exploratory profile therefore sat among the clinical ones, in the same optgroup,
+visually indistinguishable — and any profile added to psgscoring landed there
+automatically, with nobody deciding it should.
+
+That was already true before this release; what made it urgent is what the pin
+bump would have done with it. psgscoring 0.19.0 adds four envelope arms, and
+they would have appeared in the group labelled "AASM v3 (2023, current)" right
+next to `aasm_v3_rec`. One of them, `aasm_v3_env_breath`, was measured against
+human scoring on **two independent cohorts and rejected** (PSG-IPA bias +3.19/h
+against +1.69/h; MESA n=150 paired ΔF1 −0.021, p = 2.4·10⁻⁶). A clinician had no
+way to tell it apart from the recommended profile.
+
+Now there are four groups, built from the `family` field psgscoring itself
+exposes and pins with a test:
+
+| group | contents |
+|---|---|
+| AASM v3 (2023) — clinical | `aasm_v3_rec`, `_breath`, `_dual`, `_pressure`, `cms_medicare` |
+| Historical AASM versions | `aasm_v2_rec`, `aasm_v1_rec` |
+| Dataset reproduction (frozen) | `mesa_shhs`, `chicago_1999` |
+| ⚠ Experimental — not for clinical use | the ten exploratory profiles |
+
+The experimental group sits last, each of its options carries a ⚠ in its own
+label, and a warning below the select is visible **without opening the list** —
+an optgroup heading alone is too easy to scroll past.
+
+`aasm_v3_strict` and `aasm_v3_sensitive` land in the experimental group. That is
+deliberate and it is a change in how they are presented: they are the bounds of
+the AHI confidence interval, intentionally too strict and too permissive, and
+they were never meant as a standalone choice for a report. A test pins that
+placement so promoting them later is a decision rather than a side effect.
+
+### A help section, next to the choice rather than on another page
+
+A collapsible "Which profile should I choose?" under the dropdown explains what
+distinguishes the four families, in all four languages. Someone unsure about a
+profile is unsure at that moment, not later on a documentation page.
+
+It says plainly that the experimental profiles are either unvalidated or
+measured-and-rejected, that they exist so a negative result stays reproducible,
+and that what you pick there belongs in the methods section of a study rather
+than in a patient record. It also states that a profile name alone is not enough
+to make figures comparable over time — the library version has to be pinned too.
+
+### Also
+
+* `myproject/tests/test_profile_dropdown.py` (17 tests) renders the real select
+  fragment out of the real template, so it tests the Jinja conditions rather
+  than a copy of them. It fails if an exploratory profile reaches a clinical
+  group (verified by removing the filter), if a profile lands in no group or in
+  two, or if psgscoring introduces a family the template does not render — in
+  which case those profiles would vanish from the dropdown without a word.
+* Two tests now pin `requirements.txt`, the installed library and
+  `version.py:PSGSCORING_VERSION` to each other. The local dev venv had drifted
+  to psgscoring 0.14.4 while requirements pinned 0.17.0, which is exactly how a
+  dropdown gets tested in a configuration that never ships.
+* `run_profile_comparison` in `tasks.py` iterates every profile in the registry
+  and is **dead code** — nothing calls it. Left in place, but noted: were it
+  live, this pin bump would have taken it from 15 to 19 full pipeline runs per
+  job, one of them on a rejected arm.
+
 ## v0.21.0 — 2026-08-15  *(landing page: an invitation to other sleep centres)*
 
 **No change to scoring.** `psgscoring` stays pinned at 0.17.0 and no report
