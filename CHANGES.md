@@ -1,5 +1,77 @@
 # Changelog — YASAFlaskified
 
+## v0.23.0 — 2026-08-18  *(a profile matrix for studies; the clinical report is untouched)*
+
+**No scored value moves.** `psgscoring` stays pinned at 0.19.1, no profile
+changes, and the clinical PDF a patient's report renders is byte-for-byte the
+report 0.22.0 rendered. Everything below is study reporting, plus one database
+column.
+
+### What this adds
+
+When a study runs through YF, the report can now show a **profile matrix** —
+the compared profiles as rows, with AHI, OAHI/CAHI, event count, RDI, severity,
+and the signed delta against the profile the researcher designated as primary.
+Row labels and the rule-set column are read from the psgscoring registry, so a
+profile added to the library cannot appear here under a label invented in this
+repo. A test rejects the return of hard-coded profile parameters.
+
+`run_profile_comparison` is parametrised (`profiles=`, `primary=`) and writes a
+`_meta` block: which profiles were compared, the psgscoring version, and
+`wall_clock_s` per profile — the number study planning needs and the one figure
+the sweep runs never recorded. It refuses an unknown profile name rather than
+skipping it: a comparison quietly containing fewer profiles than the study
+believes is worse than an error.
+
+The primary profile runs along with the rest, and the report layer asserts its
+row matches the head result to the decimal. A mismatch logs at ERROR and puts a
+visible warning in the matrix footnotes — the report is still generated. That
+assert is a free regression test on determinism between the two code paths.
+
+### Three premises behind this work did not hold
+
+Recorded because each one changed what got built:
+
+1. `run_profile_comparison` was described as running the whole registry since
+   v0.9.0. It never ran at all — the function occurred exactly once in the
+   codebase, its own `def`. `profile_comparison.json` was never written.
+2. The hard-coded three-profile table in the PDF was described as rendered. It
+   is not: `# story.append(_prof_tbl)   # intentionally not rendered`, removed
+   from the clinical report in v0.15.0 because it was never validated as a
+   severity instrument.
+3. What the report actually read came from the library, not from this repo:
+   `pipeline.py` fills `respiratory["profile_comparison"]` and `ahi_interval`
+   with three interval arms it rescores per recording.
+
+So the matrix renders as a **study** artefact — when a full comparison exists or
+a study profile set is configured — and leaves the clinical report alone
+otherwise. Reversing a considered clinical decision from v0.15.0 as a side
+effect of a reporting request would have been the wrong call.
+
+### Database
+
+New column `site.study_profile_set` (TEXT, nullable), holding the study's
+primary profile and comparison set as JSON. A SQLite migration adds it at
+startup: `db.create_all()` creates missing *tables*, not missing *columns*, so
+without it an existing production database would never get the column and every
+query touching it would fail. Frozen families (`dataset`, `legacy`) can never be
+primary; experimental profiles need an explicit flag; an explicit comparison
+list is never filtered behind the researcher's back.
+
+### Deliberately not done
+
+Nothing wires the 19-profile comparison into the clinical job path. Each profile
+is a full `run_pneumo_analysis`, so running the registry on every upload would
+multiply clinical turnaround by an order of magnitude for output no clinician
+reads.
+
+### Note on the release badge
+
+The static README release badge still read v0.21.0 — it was missed at the
+0.22.0 release. It now reads v0.23.0. The badge is static on purpose (the
+dynamic shields.io endpoint fails intermittently on its token pool), which is
+exactly why it needs the manual bump the runbook asks for.
+
 ## v0.22.0 — 2026-08-17  *(psgscoring 0.19.1, and a dropdown that separates research from clinical)*
 
 **Scoring changes for the first time since 0.19.x of the library.** `psgscoring`
