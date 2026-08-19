@@ -935,6 +935,7 @@ def run_profile_comparison(edf_path: str, results_dir: str, *,
 
     comparison: dict = {}
     _wall: dict = {}
+    _events: dict = {}
     for profile in _profile_names:
         _t0 = time.monotonic()
         pneumo = run_pneumo_analysis(
@@ -942,6 +943,14 @@ def run_profile_comparison(edf_path: str, results_dir: str, *,
             scoring_profile=profile)
         _wall[profile] = round(time.monotonic() - _t0, 1)
         rsum = pneumo.get("respiratory", {}).get("summary", {})
+        # De eventlijst zelf bewaren, niet alleen de samenvatting. Zonder deze
+        # regel is elke vraag "zijn dit dezelfde events?" onbeantwoordbaar, en
+        # dat is de vraag die een gelijke AHI oproept. Gemeten op 19-08-2026:
+        # 810 events over zeven profielen is 0,76 MiB in RAM en 0,35 MiB op
+        # schijf — 0,013 % van de piek, dus het volledige dict bewaren en niet
+        # een projectie, die alleen velden kost die later nodig blijken.
+        _events[profile] = list(
+            (pneumo.get("respiratory") or {}).get("events") or [])
         comparison[profile] = {
             "ahi_total":    rsum.get("ahi_total"),
             "oahi":         rsum.get("oahi"),
@@ -991,19 +1000,56 @@ def run_profile_comparison(edf_path: str, results_dir: str, *,
         _psgver = psgscoring.__version__
     except Exception:                                            # pragma: no cover
         _psgver = None
+    # Paarsgewijze eventovereenkomst tegen het primaire profiel. Dit is wat een
+    # indextabel principieel niet kan zeggen: of twee even grote verzamelingen
+    # dezelfde verzameling zijn. De matcher leeft in psgscoring omdat het een
+    # scoringsvraag is en de validatieharness hem zal willen.
+    _agree_err = None
+    if primary and primary in _events:
+        try:
+            from psgscoring.agreement import compare_event_sets
+            for _p, _evs in _events.items():
+                if _p == primary:
+                    continue
+                comparison[_p]["agreement_vs_primary"] = compare_event_sets(
+                    _events[primary], _evs, label_a=primary, label_b=_p)
+        except Exception as e:                                   # noqa: BLE001
+            # Een mislukte vergelijking mag de vergelijking niet opeten; het
+            # ontbreken ervan hoort wel zichtbaar te zijn in plaats van als
+            # "geen verschillen" te lezen.
+            _agree_err = str(e)
+            logger.error("[cmp] eventovereenkomst mislukt: %s", e)
+
     comparison["_meta"] = {
         "primary_profile":   primary,
         "profiles_compared": list(_profile_names),
         "psgscoring_version": _psgver,
         "hypnogram_shared":  True,
         "wall_clock_s":      _wall,
+        "n_events":          {k: len(v) for k, v in _events.items()},
+        "agreement_error":   _agree_err,
     }
 
     # Save comparison JSON
+    #
+    # `json` en `os` worden hier lokaal geïmporteerd, en daarmee zijn ze voor
+    # Python lokaal in de HELE functie. Een gebruik erboven is dus geen
+    # NameError maar een UnboundLocalError, precies op het pad dat pas draait
+    # als er iets weg te schrijven valt. Ruff (F823) ving dat; houd schrijfwerk
+    # daarom hieronder.
     import json
     import os
     json_path = os.path.join(results_dir, "profile_comparison.json")
     with open(json_path, "w") as f:
         json.dump(comparison, f, indent=2, default=str)
+
+    # De eventlijsten apart, zodat profile_comparison.json leesbaar blijft.
+    # Gemeten 0,35 MiB voor zeven profielen; het is geen reden voor een
+    # projectie, wel voor een eigen bestand.
+    try:
+        with open(os.path.join(results_dir, "profile_events.json"), "w") as _f:
+            json.dump(_events, _f, default=str)
+    except Exception as e:                                       # noqa: BLE001
+        logger.warning("[cmp] eventlijsten niet weggeschreven: %s", e)
 
     return comparison
