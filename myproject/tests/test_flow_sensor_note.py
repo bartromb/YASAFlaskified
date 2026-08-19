@@ -94,3 +94,47 @@ def test_every_note_is_translated_in_all_four_languages():
                 "pdf_thermistor_rejected_note", "pdf_single_sensor_note"):
         for lang in ("nl", "fr", "en", "de"):
             assert TRANSLATIONS[key][lang].strip(), f"{key}/{lang} ontbreekt"
+
+
+# ── de RIP-paarpoort hoort in het RAPPORT, niet alleen in een badge ─────
+
+def test_the_rip_pair_gate_reaches_the_pdf_report():
+    """Tot v0.27.0 stond de paarkwaliteit NERGENS in het rapport.
+
+    Ze werd alleen als badge in de webinterface getoond. Een clinicus las dus
+    "89 centrale apneus" zonder te kunnen zien dat de bilaterale analyse
+    uitstond en het onderscheid obstructief/centraal op één kanaal berustte.
+    Deze test leest de rapportcode: een blok dat er niet in staat, kan niet
+    per ongeluk terugverdwijnen zonder dat er iets faalt.
+    """
+    import inspect
+    import os
+    import sys
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    import generate_pdf_report as G
+    src = inspect.getsource(G)
+    assert '(results.get("pneumo") or {}).get("signal_quality")' in src, (
+        "het rapport leest de RIP-paarkwaliteit niet")
+    assert "pair_gate_suspect" in src, (
+        "het rapport maakt geen onderscheid tussen een terechte en een "
+        "twijfelachtige afkeuring")
+    assert "pdf_rip_gate_suspect" in src
+
+
+def test_the_rip_block_uses_prefixed_locals():
+    """`_hdr` hernoemen binnen deze functie gaf eerder een UnboundLocalError
+    op ELK rapport (ruff F823). Nieuwe blokken gebruiken daarom _rip_-namen."""
+    import inspect
+    import os
+    import re
+    import sys
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    import generate_pdf_report as G
+    src = inspect.getsource(G)
+    block = src[src.index("RIP-PAARPOORT"):]
+    block = block[:block.index("v0.8.22: Signal quality per channel")]
+    assigned = set(re.findall(r"^\s+(_[a-z_]+) =", block, re.M))
+    assert assigned, "geen lokale toewijzingen gevonden — is het blok er nog?"
+    assert all(n.startswith("_rip_") for n in assigned), (
+        f"niet-voorgevoegde lokalen in het RIP-blok: "
+        f"{sorted(n for n in assigned if not n.startswith('_rip_'))}")

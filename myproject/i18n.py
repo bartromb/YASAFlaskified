@@ -4041,3 +4041,28 @@ _STUDY_CMP_V0260 = {
         "de": "Der Profilvergleich konnte nicht eingeplant werden."},
 }
 TRANSLATIONS.update(_STUDY_CMP_V0260)
+
+# v0.27.0 — de RIP-paarpoort in het rapport. Stond er tot nu toe niet in.
+_RIP_GATE_V0270 = {
+    "pdf_rip_gate_single": {
+        "nl": "⚠ Effortclassificatie op één RIP-kanaal",
+        "fr": "⚠ Classification de l'effort sur un seul canal RIP",
+        "en": "⚠ Effort classification on a single RIP channel",
+        "de": "⚠ Effort-Klassifikation auf nur einem RIP-Kanal"},
+    "pdf_rip_gate_suspect": {
+        "nl": "⚠ Effortclassificatie op één RIP-kanaal — afkeuring twijfelachtig",
+        "fr": "⚠ Classification de l'effort sur un seul canal RIP — rejet douteux",
+        "en": "⚠ Effort classification on a single RIP channel — rejection doubtful",
+        "de": "⚠ Effort-Klassifikation auf einem RIP-Kanal — Ablehnung fraglich"},
+    "pdf_rip_mode": {
+        "nl": "Modus", "fr": "Mode", "en": "Mode", "de": "Modus"},
+    "pdf_rip_working": {
+        "nl": "gebruikt kanaal", "fr": "canal utilisé",
+        "en": "channel used", "de": "verwendeter Kanal"},
+    "pdf_rip_ratio": {
+        "nl": "Energieverhouding thorax/abdomen",
+        "fr": "Rapport d'énergie thorax/abdomen",
+        "en": "Thorax/abdomen energy ratio",
+        "de": "Energieverhältnis Thorax/Abdomen"},
+}
+TRANSLATIONS.update(_RIP_GATE_V0270)
