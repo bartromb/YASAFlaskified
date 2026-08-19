@@ -1,5 +1,46 @@
 # Changelog — YASAFlaskified
 
+## v0.28.0 — 2026-08-19  *(psgscoring 0.22.0: scored values change)*
+
+⚠️ **This is the first release today that changes scored values.** Everything
+before it was behaviour-identical — flags that stayed off, warnings, reporting.
+`psgscoring` moves 0.21.0 → **0.22.0**, and on the four v3 clinical profiles,
+wherever the effort classification falls back to a single band:
+
+* apnoeas that were `uncertain` now carry a subtype, so **`ahi_total` rises** —
+  bare `uncertain` fell outside that index;
+* **OAHI and CAHI shift**, predominantly from central to obstructive;
+* recordings where bilateral analysis works are unchanged.
+
+The same EDF therefore yields different indices than the report currently on
+file. That is intended and evidenced, but it is worth knowing before anyone
+places two reports of the same patient side by side.
+
+### Why
+
+With one usable effort band the classifier had a single axis: median event
+envelope against the baseline P75, with everything between 0.20 and 0.50
+landing on `uncertain`. That conflates a band that gets *smaller* — under
+obstruction thorax and abdomen move in antiphase, so volume shifts and one band
+drops while effort continues — with a band that is *absent*.
+
+Two cohorts, two references, same sign. **PSG-IPA**, twelve human scorers per
+recording: rhythm 0.586–0.592 against 0.609 bilateral, where the amplitude rule
+reaches 0.140–0.199 and leaves 52–63 % of apnoeas undecided. **MESA** against
+NSRR, criterion registered blind beforehand: median Δ +0.236 and +0.336,
+p = 0.002 on both belts.
+
+Human-versus-human subtype agreement on PSG-IPA is 0.883 over 181 scorer pairs,
+which is the scale these numbers should be read against.
+
+### No YASAFlaskified code changed
+
+Only the pin. The registry gained a profile (`aasm_v3_amplitude`, which
+preserves the pre-0.22 behaviour) and lost none, and the dropdown, the profile
+matrix and the study-set validation all read the registry rather than a
+hard-coded list — the fix shipped in v0.22.0 of this app. Nothing here needed
+adapting, which is what that fix was for.
+
 ## v0.27.0 — 2026-08-19  *(the RIP pair gate finally reaches the report)*
 
 **No scored value changes.** `psgscoring` moves 0.20.0 → **0.21.0**, which adds
