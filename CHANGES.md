@@ -1,5 +1,58 @@
 # Changelog — YASAFlaskified
 
+## v0.24.0 — 2026-08-19  *(the comparison function could not run; now it can, and we know what it costs)*
+
+**No clinical report changes.** The corrected CAI column lives in the
+study-gated profile matrix; the `compute_osas_score` fix is in a block that has
+not rendered since v0.15.0. `psgscoring` stays pinned at 0.19.1.
+
+### `run_profile_comparison` never ran
+
+It crashed on its third line — `run_sleep_staging(raw)` against a signature
+that needs `eeg_ch`. `git blame` dates that to 6 April, the original v0.9.0
+code; the function has been dead since, so nobody met it. v0.23.0 shipped it
+parametrised with 22 new tests, and those tests exercise `profile_matrix.py`,
+the pure module, not this line. A green suite over a broken entry point.
+
+Channels are parameters now, the way the clinical path gets them from the job
+config. No EEG auto-detection was invented — this project has none, and one
+here would sit beside the user's channel choice as a second truth. A caller
+that has already staged can pass `hypno=`, which is what `hypnogram_shared`
+was always supposed to mean.
+
+The unfiltered `preload=True` is gone, replaced by the selective load the rest
+of `tasks.py` uses: 175 s and 5.09 GiB become 0.5 s for the channels that
+matter. At eight RQ workers that is the difference between ~40 GiB and a
+handful.
+
+### Five wrong summary keys
+
+`_compute_summary` returns 68 fields and `cahi`, `n_apneas`, `n_hypopneas` are
+not among them, so all three came back `null` and the matrix columns "CAHI"
+and "n events" rendered `—` for every profile — which reads as "not available"
+when it means "wrong key".
+
+CAHI is **corrected, not renamed**: `central_index` is the central *apnoea*
+index and central hypopnoeas are not in it, so presenting it as CAHI
+understates the index. Nothing computes a CAHI in the reporting layer; that
+would give one index two definitions. A real CAHI belongs in `_compute_summary`
+in psgscoring.
+
+The same bug sat in `batch_analyse.py` and in `compute_osas_score`, where the
+central `'c'` modifier could never fire — `cai` read two nonexistent keys and
+`csr_detected` lives in `results["cheyne_stokes"]`, not the summary. The `'r'`
+modifier beside it works, which is why it went unnoticed.
+
+### What a comparison actually costs
+
+Seven clinical profiles on a 12 h recording: **45:59**, 5.89 GiB peak. Shared
+load and staging are 90.3 s — **3 %** of the run. One more profile costs 345 s
+median, not the "half a minute to two minutes" the docstring estimated.
+Nineteen profiles is roughly two hours per recording.
+
+That number decides the shape of the feature: a profile comparison is a batch
+job with an explicit profile set, never a synchronous button.
+
 ## v0.23.0 — 2026-08-18  *(a profile matrix for studies; the clinical report is untouched)*
 
 **No scored value moves.** `psgscoring` stays pinned at 0.19.1, no profile
