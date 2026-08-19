@@ -277,3 +277,47 @@ def test_the_upload_only_queues_when_the_box_is_ticked():
     assert m, "de studieset wordt niet meer voorwaardelijk gezet"
     assert 'request.form.get("study_comparison")' in m.group(1), (
         "de studieset wordt gezet zonder naar het vinkje te kijken")
+
+
+# ── de menselijke schaal ────────────────────────────────────────────────
+
+def test_the_human_reference_is_shown_next_to_the_agreement(rendered):
+    """Een Jaccard zonder schaal wordt als oordeel gelezen.
+
+    0,513 tussen twee profielen lijkt weinig tot je ziet dat twee menselijke
+    scorers op dezelfde nacht mediaan op 0,385 zitten. Die referentie hoort in
+    hetzelfde blok, niet in een voetnoot elders.
+    """
+    _out, txt = rendered
+    assert "0,385" in txt, "de menselijke mediaan ontbreekt"
+    assert "PSG-IPA" in txt
+    assert "0,902" in txt and "0,026" in txt, "de spreiding ontbreekt"
+
+
+def test_the_density_caveat_is_present(rendered):
+    """Jaccards van verschillende opnames zijn niet zonder meer vergelijkbaar."""
+    _out, txt = rendered
+    low = txt.lower()
+    assert "eventdichtheid" in low
+    assert "niet zonder meer" in low or "niet vergelijkbaar" in low
+
+
+def test_the_reference_is_framed_as_context_not_norm(rendered):
+    """Vijf opnames uit één cohort is geen norm, en dat moet er staan."""
+    _out, txt = rendered
+    assert "context, geen norm" in txt.lower()
+
+
+def test_the_reference_numbers_match_the_measurement():
+    """De cijfers in het rapport zijn de gemeten cijfers, niet afgerond weg.
+
+    Faalt als iemand de tabel bijwerkt zonder de meting over te doen.
+    """
+    import statistics
+
+    from generate_profile_report import _HUMAN_MEDIAN, _HUMAN_REF
+    meds = [row[2] for row in _HUMAN_REF]
+    assert statistics.median(meds) == _HUMAN_MEDIAN, (
+        "de gerapporteerde mediaan volgt niet uit de gerapporteerde rijen")
+    assert len(_HUMAN_REF) == 5
+    assert {r[0] for r in _HUMAN_REF} == {"SN1", "SN2", "SN3", "SN4", "SN5"}
