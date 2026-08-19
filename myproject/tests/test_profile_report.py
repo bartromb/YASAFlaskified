@@ -223,3 +223,57 @@ def test_a_comparison_without_agreement_says_so(tmp_path):
                          text=True).stdout
     assert "Geen overeenkomstgegevens" in txt
     assert "geen verschillen" in txt.lower()
+
+
+# ── de weblaag: vinkje vooraf, knop achteraf ────────────────────────────
+
+def test_both_templates_compile_with_the_real_filters():
+    """Een Jinja-fout in een blok achter `{% if %}` valt pas op bij het renderen.
+
+    De blokken hieronder verschijnen alleen bij een site mét studieprofiel-set,
+    dus een tikfout erin zou op elke andere installatie onzichtbaar blijven tot
+    precies de verkeerde gebruiker de pagina opent.
+    """
+    import app as A
+    for t in ("results_extended.html", "channel_select.html"):
+        A.app.jinja_env.get_template(t)
+
+
+def test_the_checkbox_appears_only_with_a_study_set():
+    """Zonder set is er niets te vergelijken; dan hoort er geen vinkje te staan."""
+    import app as A
+    tpl = A.app.jinja_env.get_template("channel_select.html")
+    src = tpl.environment.loader.get_source(tpl.environment,
+                                            "channel_select.html")[0]
+    assert "study_comparison" in src
+    i = src.index("study_comparison")
+    guard = src[:i]
+    assert "study_set and study_set.comparison_profiles" in guard, (
+        "het vinkje staat niet achter een controle op de studieprofiel-set")
+
+
+def test_the_checkbox_defaults_to_off():
+    """Standaard aan zou 46 minuten rekenwerk tot de norm maken."""
+    import app as A
+    src = A.app.jinja_env.loader.get_source(
+        A.app.jinja_env, "channel_select.html")[0]
+    i = src.index('name="study_comparison"')
+    field = src[i:i + 240]
+    assert "checked" not in field, "het vinkje staat standaard aan"
+
+
+def test_the_upload_only_queues_when_the_box_is_ticked():
+    """De poort zit in app.py, niet alleen in de template.
+
+    Een template verbergen is geen bescherming: het formulier is te posten
+    zonder hem. Deze test leest de code die de config vult.
+    """
+    import inspect
+    import re
+
+    import app as A
+    src = inspect.getsource(A)
+    m = re.search(r'"study_profile_set":\s*\((.{0,200}?)\),', src, re.S)
+    assert m, "de studieset wordt niet meer voorwaardelijk gezet"
+    assert 'request.form.get("study_comparison")' in m.group(1), (
+        "de studieset wordt gezet zonder naar het vinkje te kijken")

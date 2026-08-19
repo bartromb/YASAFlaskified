@@ -2106,6 +2106,10 @@ def channel_select(job_id):
         patient_prefill  = patient_prefill,  # EDF-header patiëntdata
         available_profiles = available_profiles,  # v0.9.0: 8 historische profielen
         header_ids       = _header_identifiers(filepath),  # v0.18.3: anonimisatie
+        # v0.26.0: het vinkje voor de profielvergelijking verschijnt alleen
+        # wanneer de site een studieprofiel-set heeft. Zonder set is er niets
+        # te vergelijken en zou een uitgegrijsd vinkje alleen vragen oproepen.
+        study_set        = _resolved_study_set(current_user),
     )
 
 
@@ -2273,7 +2277,13 @@ def start_analysis():
         # Dat houdt `validate_study_set` op één plek in plaats van twee, en het
         # betekent dat een site zonder studieconfiguratie geen vergelijking
         # inschakelt — de optie bestaat dan simpelweg niet.
-        "study_profile_set": _resolved_study_set(current_user),
+        # Alleen wanneer de gebruiker het bij DEZE opname heeft aangevinkt.
+        # Aan-voor-de-hele-site zou betekenen dat twintig opnames per nacht
+        # vijftien uur rekenwerk in de wachtrij zetten voor rapporten die
+        # misschien niemand opent; de vergelijking kan ook achteraf worden
+        # aangevraagd op de resultatenpagina.
+        "study_profile_set": (_resolved_study_set(current_user)
+                              if request.form.get("study_comparison") else {}),
         "study_type":       request.form.get("study_type", "diagnostic_psg"),
         # v0.9.8: optional ML arousal re-classifier (preview).
         # Checkbox value is "on" if checked, absent otherwise.
@@ -2400,9 +2410,17 @@ def show_results(job_id):
     _require_job_access(job_id)
     data   = _load_results(job_id)
     pneumo = data.get("pneumo", {})
+    # v0.26.0: het profielrapport is een apart onderzoeksdocument. De pagina
+    # toont de link alleen als het bestand er is, en de aanvraagknop alleen als
+    # de site een studieprofiel-set heeft -- anders is er niets te vergelijken.
+    _study_set = _resolved_study_set(current_user)
+    _profile_pdf = os.path.join(app.config["UPLOAD_FOLDER"],
+                                f"{job_id}_profielrapport.pdf")
     return render_template(
         "results_extended.html",
         data=data, job_id=job_id, pneumo=pneumo,
+        study_set=_study_set,
+        has_profile_report=os.path.exists(_profile_pdf),
     )
 
 
@@ -2577,6 +2595,64 @@ def download_pdf(job_id):
         job_id, pdf_path, _gen,
         download_name=f"slaaprapport_{job_id[:8]}.pdf",
         mimetype="application/pdf", kind="PDF")
+
+
+@app.route("/results/<job_id>/profielvergelijking", methods=["POST"])
+@login_required
+@job_access_required
+def request_profile_comparison(job_id):
+    """Vraag alsnog een profielvergelijking aan voor een afgeronde analyse.
+
+    De tegenhanger van het vinkje bij het uploaden. Wie vooraf niet wist dat
+    de vraag zou opkomen, hoeft de opname niet opnieuw te draaien.
+
+    Het hypnogram komt uit de opgeslagen resultaten en gaat mee, zodat de
+    vergelijking exact dezelfde slaapfasen gebruikt als het klinische rapport.
+    Opnieuw stagen zou 90 s kosten en kan een ánder hypnogram opleveren --
+    dan zou het profielrapport iets vergelijken dat niet in het rapport staat.
+    """
+    _require_job_access(job_id)
+    lang = session.get("lang", "en")
+
+    study = _resolved_study_set(current_user)
+    if not study.get("comparison_profiles"):
+        flash(get_translation("study_cmp_no_set", lang), "warning")
+        return redirect(url_for("show_results", job_id=job_id))
+
+    results = _load_results(job_id)
+    edf_path = results.get("edf_path")
+    hypno = ((results.get("staging") or {}).get("hypnogram")) or []
+    if not edf_path or not os.path.exists(edf_path):
+        flash(get_translation("study_cmp_no_edf", lang), "danger")
+        return redirect(url_for("show_results", job_id=job_id))
+    if not hypno:
+        # Zonder hypnogram zou de vergelijking zelf gaan stagen en mogelijk
+        # andere slaapfasen krijgen dan het rapport. Weigeren is eerlijker.
+        flash(get_translation("study_cmp_no_hypno", lang), "danger")
+        return redirect(url_for("show_results", job_id=job_id))
+
+    try:
+        from redis import Redis as _Redis
+        from rq import Queue as _Queue
+        q = _Queue("study", connection=_Redis(
+            host=os.environ.get("YASAFLASKIFIED_REDIS_HOST", "redis"),
+            port=int(os.environ.get("YASAFLASKIFIED_REDIS_PORT", 6379))))
+        q.enqueue("tasks.run_study_comparison",
+                  job_id, edf_path, app.config["UPLOAD_FOLDER"],
+                  study["comparison_profiles"], study.get("primary_profile"),
+                  None, None, None,
+                  results.get("pneumo_channels") or {}, hypno,
+                  job_timeout="6h")
+    except Exception as e:  # noqa: BLE001
+        logger.error("[study] handmatig inschakelen mislukt voor %s: %s",
+                     job_id, e)
+        flash(f"{get_translation('study_cmp_failed', lang)} ({e})", "danger")
+        return redirect(url_for("show_results", job_id=job_id))
+
+    logger.info("[study] handmatig aangevraagd voor %s door %s (%d profielen)",
+                job_id, current_user.username, len(study["comparison_profiles"]))
+    flash(get_translation("study_cmp_queued", lang), "info")
+    return redirect(url_for("show_results", job_id=job_id))
 
 
 @app.route("/results/<job_id>/profielrapport")
