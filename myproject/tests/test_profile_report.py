@@ -103,6 +103,23 @@ def _ev(o, d, t="obstructive"):
     return {"onset_s": float(o), "duration_s": float(d), "type": t}
 
 
+def _pdftotext(path):
+    """PDF -> tekst, met een luide fout als het gereedschap ontbreekt.
+
+    Bewust GEEN skip. Deze tests lezen de werkelijk gerenderde PDF terug in
+    plaats van de story-objecten te inspecteren, en dat is de enige manier
+    waarop ze konden vangen dat ▶ als een blokje uitkomt. Wegskippen zou elf
+    tests stil laten verdwijnen op precies de machine waar niemand kijkt.
+    """
+    import shutil
+    import subprocess
+    assert shutil.which("pdftotext"), (
+        "pdftotext ontbreekt (poppler-utils). Deze tests lezen de gerenderde "
+        "PDF terug en worden niet overgeslagen; installeer poppler-utils.")
+    return subprocess.run(["pdftotext", path, "-"], capture_output=True,
+                          text=True).stdout
+
+
 @pytest.fixture
 def rendered(tmp_path):
     from psgscoring.agreement import compare_event_sets
@@ -134,10 +151,7 @@ def rendered(tmp_path):
               "respiratory": {"summary": {"ahi_total": 19.6}}}
     out = str(tmp_path / "r.pdf")
     generate_profile_report(pneumo, comparison, out, job_id="abc12345")
-    import subprocess
-    txt = subprocess.run(["pdftotext", out, "-"], capture_output=True,
-                         text=True).stdout
-    return out, txt
+    return out, _pdftotext(out)
 
 
 def test_every_page_carries_the_research_marking(rendered):
@@ -218,9 +232,7 @@ def test_a_comparison_without_agreement_says_so(tmp_path):
     out = str(tmp_path / "r2.pdf")
     generate_profile_report({"meta": {"scoring_profile": "aasm_v3_rec"}},
                             comparison, out, job_id="x")
-    import subprocess
-    txt = subprocess.run(["pdftotext", out, "-"], capture_output=True,
-                         text=True).stdout
+    txt = _pdftotext(out)
     assert "Geen overeenkomstgegevens" in txt
     assert "geen verschillen" in txt.lower()
 

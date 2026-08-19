@@ -50,6 +50,14 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends libgomp1
+      - name: Install poppler-utils (pdftotext)
+        # De profielrapport-tests lezen de ECHT GERENDERDE PDF terug in plaats
+        # van de story-objecten te inspecteren. Dat is de enige manier waarop
+        # ze konden vangen dat ▶ in base-14 Helvetica als een blokje uitkomt --
+        # een fout die in de code onzichtbaar is. Zonder pdftotext zouden elf
+        # tests moeten worden overgeslagen, en een stil overgeslagen test is
+        # geen test.
+        run: sudo apt-get install -y --no-install-recommends poppler-utils
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
