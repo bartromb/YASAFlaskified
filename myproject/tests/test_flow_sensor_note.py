@@ -110,10 +110,10 @@ def test_the_rip_block_actually_renders_in_a_pdf(tmp_path):
     Deze test genereert een rapport en leest de PDF terug. Dat is het enige
     dat onderscheid maakt tussen "de code staat er" en "de lezer ziet het".
     """
+    import os
     import shutil
     import subprocess
     import sys
-    import os
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     assert shutil.which("pdftotext"), "pdftotext ontbreekt (poppler-utils)"
     from generate_pdf_report import generate_pdf_report
@@ -145,10 +145,10 @@ def test_the_rip_block_actually_renders_in_a_pdf(tmp_path):
 
 def test_a_bilateral_recording_gets_no_rip_block(tmp_path):
     """Guard op de guard: zou het blok altijd renderen, dan zegt het niets."""
+    import os
     import shutil
     import subprocess
     import sys
-    import os
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     assert shutil.which("pdftotext")
     from generate_pdf_report import generate_pdf_report
