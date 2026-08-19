@@ -1,5 +1,70 @@
 # Changelog — YASAFlaskified
 
+## v0.26.0 — 2026-08-19  *(the profile report: a second PDF, on its own queue, only when asked)*
+
+**No clinical report changes.** `psgscoring` stays at 0.20.0. The clinical PDF,
+the indices and the decision text are untouched; everything here is a separate
+research document plus the queue that produces it.
+
+### A comparison is a batch job, never a button
+
+Seven profiles cost a measured **45:59**, and only 3 % of that is shared work.
+RQ has no priority within a queue, so protecting clinical turnaround is
+entirely a matter of which workers listen where: comparisons go to a new
+`study` queue, workers 1–6 listen only on `default`, workers 7–8 on
+`default study` — and that order means they drain clinical work first. At most
+two of eight workers can sit in a comparison.
+
+The clinical report is written before anything is enqueued. The hypnogram is
+passed through: re-staging costs 90 s and risks different sleep stages than the
+report used, which would compare against something the report does not contain.
+
+### Two ways to ask, both opt-in
+
+A checkbox at upload — default **off**, shown only when the site has a study
+profile set, and it names what would run. And a button on the results page, for
+whoever did not know the question would come up.
+
+The gate sits in two places on purpose: the template hides the checkbox, but a
+form can be posted without it, so `app.py` only fills `study_profile_set` when
+the field is present. Hiding a control is not access control.
+
+### The document
+
+Four sections, A4 portrait, research marking on **every** page and a filename
+that repeats it. §A the index matrix (reusing `profile_matrix`, registry-driven,
+"—" and never 0.0, CAI not CAHI). §B the event agreement. §C sensor provenance
+from `meta.flow_channels`, quoting the thermistor gate's own reason — absent is
+not the same as present-but-rejected. §D provenance, per-profile wall clock and
+the caveats.
+
+Unlike the other derived artifacts the download does not generate on the fly:
+that would be a request stalling for tens of minutes. Missing means no
+comparison was run, and that is the honest answer.
+
+### A Jaccard needs a scale, so the report carries one
+
+PSG-IPA has twelve independently scored files per recording. Through the same
+matcher at the same threshold, 66 pairs per recording, the human median is
+**0.385** (0.026–0.965 across pairs). Two profiles at 0.513 therefore agree
+*more* than two humans do — without that reference the number reads as a
+shortcoming of the algorithm.
+
+Agreement also tracks event density: 273–339 events give 0.902, while 1–38
+events give 0.382. With few events one disagreement dominates, so Jaccards from
+different recordings are not comparable without the event count beside them.
+The report says both, and frames the reference as context rather than a norm.
+
+### End-to-end, on the test VM
+
+A real job through the real queue: picked up by worker7 within a second,
+**884.9 s** for two profiles, reproducing the workstation measurement to the
+digit (n=98, shared 76, Jaccard 0.5135, median IoU 1.000) on a different
+machine and a different psgscoring version.
+
+**Deploy note:** `docker-compose.yml` changes, so this deploy recreates the
+whole stack rather than only the app.
+
 ## v0.25.0 — 2026-08-19  *(§B: the events are kept, and compared against the primary profile)*
 
 **No clinical report changes.** `psgscoring` moves from 0.19.1 to **0.20.0**,
