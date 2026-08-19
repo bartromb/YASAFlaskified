@@ -1,5 +1,19 @@
 # Changelog — YASAFlaskified
 
+## v0.29.0 — 2026-08-19  *(the RIP block shipped into dead code)*
+
+The block added in v0.27.0 sat inside `if has_sq:`, and `has_sq` has been
+hard-coded `False` since v0.15.0 — the signal-quality section was removed from
+the clinical PDF then. So it could never render. On a real recording with
+energy ratio 1186× and `pair_gate_suspect=True`, the report said nothing.
+
+**The test that was supposed to guard it read the source** for
+`pair_gate_suspect` and passed. Presence is not reachability. The replacement
+renders a report and reads the PDF back, and it fails against the v0.27.0 code
+— verified, not assumed.
+
+`psgscoring` unchanged at 0.22.0; no scored value moves.
+
 ## v0.28.0 — 2026-08-19  *(psgscoring 0.22.0: scored values change)*
 
 ⚠️ **This is the first release today that changes scored values.** Everything
