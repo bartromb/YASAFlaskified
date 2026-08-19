@@ -98,6 +98,78 @@ def test_every_note_is_translated_in_all_four_languages():
 
 # ── de RIP-paarpoort hoort in het RAPPORT, niet alleen in een badge ─────
 
+def test_the_rip_block_actually_renders_in_a_pdf(tmp_path):
+    """Bereikbaarheid, niet aanwezigheid.
+
+    De vorige versie van deze test las de BRON op `pair_gate_suspect` en
+    slaagde -- terwijl het blok binnen `if has_sq:` stond, en `has_sq` sinds
+    v0.15.0 hard op False staat omdat de signaalkwaliteitssectie toen uit het
+    klinische rapport is gehaald. Het blok kon dus nooit renderen, en op een
+    echte opname met ratio 1186x stond er niets in het rapport.
+
+    Deze test genereert een rapport en leest de PDF terug. Dat is het enige
+    dat onderscheid maakt tussen "de code staat er" en "de lezer ziet het".
+    """
+    import shutil
+    import subprocess
+    import sys
+    import os
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    assert shutil.which("pdftotext"), "pdftotext ontbreekt (poppler-utils)"
+    from generate_pdf_report import generate_pdf_report
+
+    results = {
+        "pneumo": {
+            "meta": {"scoring_profile": "aasm_v3_rec"},
+            "respiratory": {"summary": {"ahi_total": 25.9}, "events": []},
+            "signal_quality": {
+                "recommended_mode": "single-channel",
+                "working_channel": "abdomen",
+                "energy_ratio": 1186.16,
+                "pair_gate_suspect": True,
+                "warnings": ["RIP energy ratio 1186x — thorax likely disconnected."],
+            },
+        },
+        "staging": {"hypnogram": ["N2"] * 100},
+    }
+    out = str(tmp_path / "r.pdf")
+    generate_pdf_report(results, out, lang="nl")
+    txt = subprocess.run(["pdftotext", out, "-"], capture_output=True,
+                         text=True).stdout
+    assert "1186" in txt, "de energieverhouding staat niet in het rapport"
+    assert "abdomen" in txt.lower(), "het gebruikte kanaal ontbreekt"
+    low = txt.lower()
+    assert "twijfelachtig" in low or "doubtful" in low or "fraglich" in low, (
+        "een twijfelachtige afkeuring wordt niet als zodanig gemeld")
+
+
+def test_a_bilateral_recording_gets_no_rip_block(tmp_path):
+    """Guard op de guard: zou het blok altijd renderen, dan zegt het niets."""
+    import shutil
+    import subprocess
+    import sys
+    import os
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    assert shutil.which("pdftotext")
+    from generate_pdf_report import generate_pdf_report
+    results = {
+        "pneumo": {
+            "meta": {"scoring_profile": "aasm_v3_rec"},
+            "respiratory": {"summary": {"ahi_total": 12.0}, "events": []},
+            "signal_quality": {"recommended_mode": "bilateral",
+                               "working_channel": None,
+                               "energy_ratio": 2.1,
+                               "pair_gate_suspect": False, "warnings": []},
+        },
+        "staging": {"hypnogram": ["N2"] * 100},
+    }
+    out = str(tmp_path / "r2.pdf")
+    generate_pdf_report(results, out, lang="nl")
+    txt = subprocess.run(["pdftotext", out, "-"], capture_output=True,
+                         text=True).stdout
+    assert "2.1" not in txt or "energieverhouding" not in txt.lower()
+
+
 def test_the_rip_pair_gate_reaches_the_pdf_report():
     """Tot v0.27.0 stond de paarkwaliteit NERGENS in het rapport.
 

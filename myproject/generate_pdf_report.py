@@ -1823,6 +1823,55 @@ def generate_pdf_report(results:dict, output_path:str,
     # ── END polygraphy skip ──────────────────────────────────────
 
     # ── 7b. SIGNAAL KWALITEIT & CONFIDENCE ─────────────────────
+    # STOND TOT NU TOE IN DODE CODE, EN DAT IS DE HELE LES
+    #
+    # Dit blok zat binnen `if has_sq:`, en `has_sq` staat sinds v0.15.0 HARD op
+    # False: de signaalkwaliteitssectie is toen op verzoek uit het klinische
+    # rapport gehaald. Het blok kon dus nooit renderen -- op een echte opname
+    # met ratio 1186x en `pair_gate_suspect=True` stond er niets in het
+    # rapport.
+    #
+    # De test die dit moest bewaken las de BRON op de aanwezigheid van
+    # `pair_gate_suspect` en slaagde. Aanwezigheid is geen bereikbaarheid. De
+    # vervangende test rendert een rapport en leest de PDF terug.
+    # ── RIP-PAARPOORT ──────────────────────────────────────────
+    # Deze stond tot v0.27.0 NERGENS in het rapport: de paarkwaliteit
+    # werd alleen als badge in de webinterface getoond. Een clinicus las
+    # dus "89 centrale apneus" zonder te kunnen zien dat de bilaterale
+    # analyse uitstond en het onderscheid obstructief/centraal op één
+    # kanaal berustte. Dat is precies de informatie die je nodig hebt om
+    # de subtypering te wantrouwen.
+    #
+    # Lokale namen met _rip_-voorvoegsel: `_hdr` is verderop in deze
+    # functie een helper, en een lokale hernoeming daarvan gaf eerder een
+    # UnboundLocalError op ELK rapport (ruff F823).
+    _rip_q = (results.get("pneumo") or {}).get("signal_quality") or {}
+    _rip_mode = _rip_q.get("recommended_mode")
+    if _rip_mode and _rip_mode != "bilateral":
+        _rip_suspect = bool(_rip_q.get("pair_gate_suspect"))
+        _rip_clr = "#e74c3c" if _rip_suspect else "#e67e22"
+        _rip_head = (t("pdf_rip_gate_suspect", lang) if _rip_suspect
+                     else t("pdf_rip_gate_single", lang))
+        story.append(Paragraph(
+            f"<font color='{_rip_clr}'><b>{_rip_head}</b></font>",
+            styles["B"])); sp(0.04)
+        _rip_lines = [
+            f"{t('pdf_rip_mode', lang)}: <b>{_rip_mode}</b>"
+            + (f" ({t('pdf_rip_working', lang)}: "
+               f"<b>{_rip_q.get('working_channel')}</b>)"
+               if _rip_q.get("working_channel") else ""),
+        ]
+        _rip_ratio = _rip_q.get("energy_ratio")
+        if _rip_ratio:
+            _rip_lines.append(f"{t('pdf_rip_ratio', lang)}: "
+                              f"<b>{_rip_ratio:.0f}×</b>")
+        for _w in (_rip_q.get("warnings") or [])[:3]:
+            _rip_lines.append(_w)
+        for _ln in _rip_lines:
+            story.append(Paragraph(f"• {_ln}", styles["SM"]))
+        sp(0.08)
+
+
     conf_rev = results.get("confidence_review", {})
     sig_q = results.get("signal_quality", {})
     sq_channels = sig_q.get("channels", {})
@@ -1852,43 +1901,6 @@ def generate_pdf_report(results:dict, output_path:str,
                     t("pdf_low_conf_per_stage", lang).format(parts=', '.join(parts)),
                     styles["SM"]))
             sp(0.15)
-
-        # ── RIP-PAARPOORT ──────────────────────────────────────────
-        # Deze stond tot v0.27.0 NERGENS in het rapport: de paarkwaliteit
-        # werd alleen als badge in de webinterface getoond. Een clinicus las
-        # dus "89 centrale apneus" zonder te kunnen zien dat de bilaterale
-        # analyse uitstond en het onderscheid obstructief/centraal op één
-        # kanaal berustte. Dat is precies de informatie die je nodig hebt om
-        # de subtypering te wantrouwen.
-        #
-        # Lokale namen met _rip_-voorvoegsel: `_hdr` is verderop in deze
-        # functie een helper, en een lokale hernoeming daarvan gaf eerder een
-        # UnboundLocalError op ELK rapport (ruff F823).
-        _rip_q = (results.get("pneumo") or {}).get("signal_quality") or {}
-        _rip_mode = _rip_q.get("recommended_mode")
-        if _rip_mode and _rip_mode != "bilateral":
-            _rip_suspect = bool(_rip_q.get("pair_gate_suspect"))
-            _rip_clr = "#e74c3c" if _rip_suspect else "#e67e22"
-            _rip_head = (t("pdf_rip_gate_suspect", lang) if _rip_suspect
-                         else t("pdf_rip_gate_single", lang))
-            story.append(Paragraph(
-                f"<font color='{_rip_clr}'><b>{_rip_head}</b></font>",
-                styles["B"])); sp(0.04)
-            _rip_lines = [
-                f"{t('pdf_rip_mode', lang)}: <b>{_rip_mode}</b>"
-                + (f" ({t('pdf_rip_working', lang)}: "
-                   f"<b>{_rip_q.get('working_channel')}</b>)"
-                   if _rip_q.get("working_channel") else ""),
-            ]
-            _rip_ratio = _rip_q.get("energy_ratio")
-            if _rip_ratio:
-                _rip_lines.append(f"{t('pdf_rip_ratio', lang)}: "
-                                  f"<b>{_rip_ratio:.0f}×</b>")
-            for _w in (_rip_q.get("warnings") or [])[:3]:
-                _rip_lines.append(_w)
-            for _ln in _rip_lines:
-                story.append(Paragraph(f"• {_ln}", styles["SM"]))
-            sp(0.08)
 
         # v0.8.22: Signal quality per channel
         if sq_channels:
