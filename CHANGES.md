@@ -1,5 +1,57 @@
 # Changelog — YASAFlaskified
 
+## v0.25.0 — 2026-08-19  *(§B: the events are kept, and compared against the primary profile)*
+
+**No clinical report changes.** `psgscoring` moves from 0.19.1 to **0.20.0**,
+which adds the agreement matcher and a wavelet option that is off on every
+profile — no scored value changes. The pin moves, so a report generated after
+this deploy cites a different library version than one from before it.
+
+### The events are no longer discarded
+
+`run_profile_comparison` kept only `respiratory.summary`, so the one question a
+comparison raises — *are two equally large event sets the same set?* — had no
+input to answer it. It now keeps the full event dicts and attaches
+`agreement_vs_primary` to every non-primary row, computed by
+`psgscoring.agreement.compare_event_sets`: shared / only-a / only-b, Jaccard,
+median and minimum IoU, per-category counts, and events that matched but carry
+a different label.
+
+Keeping the full dict rather than a projection is measured, not assumed: 810
+events across seven profiles is 0.76 MiB in RAM and 0.35 MiB on disk, 0.013 %
+of a 5.30 GiB peak. A projection saves 0.6 MiB and costs every field that later
+turns out to matter. The lists go to their own `profile_events.json` so
+`profile_comparison.json` stays readable.
+
+### What it says about the seven clinical profiles
+
+Against the measured event sets, primary `aasm_v3_rec` (126 events):
+
+| profile | n | shared | Jaccard | relabelled |
+|---|---:|---:|---:|---:|
+| `aasm_v3_pressure` | 126 | 126 | **1.000** | 0 |
+| `aasm_v2_rec` | 126 | 126 | **1.000** | 0 |
+| `aasm_v1_rec` | 100 | 100 | 0.794 | 0 |
+| `cms_medicare` | 100 | 100 | 0.794 | 0 |
+| `aasm_v3_dual` | 134 | 110 | 0.733 | **8** |
+| `aasm_v3_breath` | 98 | 76 | **0.513** | 0 |
+
+Three profiles are the same scoring under three names — seventeen minutes of
+compute for three copies. Two are `rec` minus 26 events rather than a different
+detection: their AHI of 14.5 against 19.6 is a subset, not a disagreement. One
+is genuinely different. None of that is visible in an AHI column.
+
+### Ten tests that call the function itself
+
+The 22 tests shipped with v0.23.0 were green while `run_profile_comparison`
+crashed on its third line, because they exercised the pure module and none of
+them called it. Two of the new ones failed first and taught something: the
+summary-key guard rejected `rdi` and `rera_index`, which are real but added
+after `_compute_summary` returns — the summary has more than one writer. And
+the agreement test failed on the old pin, which is why a missing matcher is now
+reported through `_meta["agreement_error"]` rather than reading as "no
+differences".
+
 ## v0.24.0 — 2026-08-19  *(the comparison function could not run; now it can, and we know what it costs)*
 
 **No clinical report changes.** The corrected CAI column lives in the
