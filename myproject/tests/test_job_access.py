@@ -23,7 +23,7 @@ from app import Job, Site, User, app, db
 from flask_login import login_user
 from werkzeug.security import generate_password_hash
 
-# Alle 30 job-routes, met een concrete URL per route. Blijft bewust
+# Alle 31 job-routes, met een concrete URL per route. Blijft bewust
 # handmatig: de meta-test onderaan bewaakt dat er niets bijkomt.
 JOB_ROUTES = [
     ("GET", "/channel-select/{jid}"),
@@ -38,6 +38,11 @@ JOB_ROUTES = [
     # AHI niet; corrigeren gebeurt in de PSG Editor.
     ("POST", "/review/{jid}/verdict"),
     ("GET", "/results/{jid}/pdf"),
+    # Het profielrapport: een ONDERZOEKSDOCUMENT met meerdere AHI's voor
+    # dezelfde nacht. Toegang volgt exact dezelfde regels als de andere
+    # afgeleiden -- wie de uitslag niet mag zien, mag deze zeker niet, want
+    # hier staan ook de profielen bij die niet klinisch gevalideerd zijn.
+    ("GET", "/results/{jid}/profielrapport"),
     ("GET", "/results/{jid}/excel"),
     ("GET", "/results/{jid}/psg"),
     ("POST", "/results/{jid}/delete"),
