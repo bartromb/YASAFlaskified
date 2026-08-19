@@ -3959,3 +3959,85 @@ _PROFILE_REPORT_V0260 = {
               "Minuten und verzögert den klinischen Bericht nicht."},
 }
 TRANSLATIONS.update(_PROFILE_REPORT_V0260)
+
+# v0.26.0 — de profielvergelijking aanvragen: vooraf (vinkje) of achteraf (knop).
+_STUDY_CMP_V0260 = {
+    "study_cmp_label": {
+        "nl": "Ook een profielvergelijking draaien (onderzoek)",
+        "fr": "Lancer aussi une comparaison de profils (recherche)",
+        "en": "Also run a profile comparison (research)",
+        "de": "Auch einen Profilvergleich durchführen (Forschung)"},
+    "study_cmp_hint": {
+        "nl": "Draait ná het klinische rapport, op een aparte wachtrij. Duurt "
+              "tientallen minuten en houdt niets op. Kan ook later worden "
+              "aangevraagd op de resultatenpagina.",
+        "fr": "S'exécute après le compte rendu clinique, sur une file distincte. "
+              "Prend plusieurs dizaines de minutes et ne retarde rien. Peut aussi "
+              "être demandé plus tard depuis la page de résultats.",
+        "en": "Runs after the clinical report, on a separate queue. Takes tens of "
+              "minutes and holds nothing up. Can also be requested later from the "
+              "results page.",
+        "de": "Läuft nach dem klinischen Bericht auf einer eigenen Warteschlange. "
+              "Dauert mehrere zehn Minuten und verzögert nichts. Kann auch später "
+              "über die Ergebnisseite angefordert werden."},
+    "study_cmp_profiles": {
+        "nl": "profielen", "fr": "profils", "en": "profiles", "de": "Profile"},
+    "study_cmp_primary": {
+        "nl": "primair", "fr": "principal", "en": "primary", "de": "primär"},
+    "study_cmp_button": {
+        "nl": "Profielvergelijking aanvragen",
+        "fr": "Demander une comparaison de profils",
+        "en": "Request a profile comparison",
+        "de": "Profilvergleich anfordern"},
+    "study_cmp_queued": {
+        "nl": "Profielvergelijking staat in de wachtrij. Ze draait op een aparte "
+              "wachtrij en houdt klinisch werk niet op; het rapport verschijnt "
+              "hier zodra ze klaar is.",
+        "fr": "Comparaison de profils mise en file d'attente. Elle s'exécute sur "
+              "une file distincte et ne retarde pas le travail clinique ; le "
+              "rapport apparaîtra ici une fois terminé.",
+        "en": "Profile comparison queued. It runs on a separate queue and does not "
+              "hold up clinical work; the report appears here when it is done.",
+        "de": "Profilvergleich eingeplant. Er läuft auf einer eigenen "
+              "Warteschlange und verzögert die klinische Arbeit nicht; der "
+              "Bericht erscheint hier, sobald er fertig ist."},
+    "study_cmp_no_set": {
+        "nl": "Deze site heeft geen studieprofiel-set, dus er valt niets te "
+              "vergelijken. Een beheerder stelt die in.",
+        "fr": "Ce site n'a pas d'ensemble de profils d'étude ; il n'y a donc rien "
+              "à comparer. Un administrateur peut le configurer.",
+        "en": "This site has no study profile set, so there is nothing to compare. "
+              "An administrator can configure one.",
+        "de": "Dieser Standort hat keinen Studien-Profilsatz, es gibt also nichts "
+              "zu vergleichen. Ein Administrator kann ihn einrichten."},
+    "study_cmp_no_edf": {
+        "nl": "Het EDF-bestand van deze opname is niet meer aanwezig; een "
+              "vergelijking kan alleen op de oorspronkelijke opname draaien.",
+        "fr": "Le fichier EDF de cet enregistrement n'est plus disponible ; une "
+              "comparaison ne peut s'exécuter que sur l'enregistrement d'origine.",
+        "en": "The EDF file for this recording is no longer present; a comparison "
+              "can only run on the original recording.",
+        "de": "Die EDF-Datei dieser Aufzeichnung ist nicht mehr vorhanden; ein "
+              "Vergleich kann nur mit der Originalaufzeichnung laufen."},
+    "study_cmp_no_hypno": {
+        "nl": "Deze analyse heeft geen opgeslagen hypnogram. Zonder dat zou de "
+              "vergelijking opnieuw stageren en mogelijk andere slaapfasen "
+              "gebruiken dan het rapport — dat levert een vergelijking op met "
+              "iets dat niet in het rapport staat.",
+        "fr": "Cette analyse n'a pas d'hypnogramme enregistré. Sans lui, la "
+              "comparaison referait le stadification et pourrait utiliser d'autres "
+              "stades que le compte rendu — elle comparerait donc avec autre chose "
+              "que ce qui figure dans le rapport.",
+        "en": "This analysis has no stored hypnogram. Without one the comparison "
+              "would re-stage and might use different sleep stages than the "
+              "report — comparing against something the report does not contain.",
+        "de": "Für diese Analyse ist kein Hypnogramm gespeichert. Ohne dieses "
+              "würde der Vergleich neu stadieren und möglicherweise andere "
+              "Schlafstadien verwenden als der Bericht."},
+    "study_cmp_failed": {
+        "nl": "Profielvergelijking kon niet worden ingeschakeld.",
+        "fr": "Impossible de mettre la comparaison de profils en file d'attente.",
+        "en": "Could not queue the profile comparison.",
+        "de": "Der Profilvergleich konnte nicht eingeplant werden."},
+}
+TRANSLATIONS.update(_STUDY_CMP_V0260)

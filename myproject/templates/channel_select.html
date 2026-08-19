@@ -543,6 +543,32 @@
           {{ t('ml_help') }}
         </div>
 
+        {# Profielvergelijking — alleen zichtbaar met een studieprofiel-set.
+           Standaard UIT: één vergelijking kost gemeten drie kwartier, en dat
+           per opname aanzetten hoort een bewuste handeling te zijn. De
+           vergelijking kan ook achteraf worden aangevraagd op de
+           resultatenpagina, dus dit vinkje overslaan verliest niets. #}
+        {% if study_set and study_set.comparison_profiles %}
+        <div class="border rounded p-2 mt-3 bg-light">
+          <div class="form-check mb-1">
+            <input class="form-check-input" type="checkbox"
+                   name="study_comparison" id="studyComparison" value="1">
+            <label class="form-check-label fw-semibold" for="studyComparison">
+              {{ t('study_cmp_label') }}
+            </label>
+          </div>
+          <div class="form-text mb-0">
+            {{ t('study_cmp_hint') }}
+            <span class="text-muted">
+              ({{ study_set.comparison_profiles | length }}
+               {{ t('study_cmp_profiles') }},
+               {{ t('study_cmp_primary') }}
+               <code>{{ study_set.primary_profile }}</code>)
+            </span>
+          </div>
+        </div>
+        {% endif %}
+
         {# ── v0.22.0: uitleg per profielfamilie ──────────────────────────
            Inklapbaar, dicht bij de keuze en niet op een aparte pagina: wie
            twijfelt over een profiel twijfelt op dit moment, niet later. De

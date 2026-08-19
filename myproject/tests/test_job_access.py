@@ -23,7 +23,7 @@ from app import Job, Site, User, app, db
 from flask_login import login_user
 from werkzeug.security import generate_password_hash
 
-# Alle 31 job-routes, met een concrete URL per route. Blijft bewust
+# Alle 32 job-routes, met een concrete URL per route. Blijft bewust
 # handmatig: de meta-test onderaan bewaakt dat er niets bijkomt.
 JOB_ROUTES = [
     ("GET", "/channel-select/{jid}"),
@@ -43,6 +43,10 @@ JOB_ROUTES = [
     # afgeleiden -- wie de uitslag niet mag zien, mag deze zeker niet, want
     # hier staan ook de profielen bij die niet klinisch gevalideerd zijn.
     ("GET", "/results/{jid}/profielrapport"),
+    # Achteraf een vergelijking aanvragen: POST, want het zet 46 minuten
+    # rekenwerk in gang. Wie de opname niet mag zien, mag er ook geen werk
+    # voor inschakelen.
+    ("POST", "/results/{jid}/profielvergelijking"),
     ("GET", "/results/{jid}/excel"),
     ("GET", "/results/{jid}/psg"),
     ("POST", "/results/{jid}/delete"),
