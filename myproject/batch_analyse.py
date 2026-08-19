@@ -95,7 +95,9 @@ def _analyse_single(edf_path: str, output_dir: str, profile: str) -> dict:
             # Respiratory
             "ahi_total": rsum.get("ahi_total"),
             "oahi": rsum.get("oahi"),
-            "cahi": rsum.get("cahi"),
+            # `cahi` bestaat niet in de summary; `central_index` is de
+            # centrale apneu-index. Zie de toelichting in tasks.py.
+            "central_index": rsum.get("central_index"),
             "ahi_rem": rsum.get("ahi_rem"),
             "ahi_nrem": rsum.get("ahi_nrem"),
             "ahi_supine": rsum.get("ahi_supine"),

@@ -25,7 +25,7 @@ Twee gevolgen voor deze module:
    inschakelt; anders de drie intervalarmen die elke job al oplevert. Een matrix
    die stilzwijgend leeg blijft omdat de bron niet bestaat, zou de spec
    "uitgevoerd" laten lijken zonder iets te tonen.
-2. Kolommen die de bron niet heeft — CAHI, eventaantal, RDI bij de
+2. Kolommen die de bron niet heeft — CAI, eventaantal, RDI bij de
    intervalbron — worden **"—"**, nooit 0,0. Dat is de regel die de spec zelf
    voor de RDI-cel stelt, hier consequent toegepast: een 0,0 in een rapport is
    een meting, en een streepje is een ontbrekende meting.
@@ -199,8 +199,10 @@ def _row_for(name: str, data: dict, reg: dict, primary: str | None) -> dict:
         "is_experimental": fam == EXPLORATORY,
         "ahi": _num(data.get("ahi") if "ahi" in data else data.get("ahi_total")),
         "oahi": _num(data.get("oahi")),
-        "cahi": _num(data.get("cahi") if "cahi" in data
-                     else data.get("central_ahi")),
+        # CAI, niet CAHI: psgscoring levert `central_index` (centrale apneus),
+        # geen centrale apneu-hypopneu-index. Beide oude sleutels bestonden
+        # nergens, dus deze kolom was altijd leeg.
+        "cai": _num(data.get("central_index")),
         "rdi": _num(data.get("rdi")),
         "n_events": _num(data.get("n_events") if "n_events" in data
                          else data.get("n_ah_total")),

@@ -2439,7 +2439,7 @@ def generate_pdf_report(results:dict, output_path:str,
                 story.append(Paragraph(t("pdf_prof_matrix_title", lang), styles["H2"]))
                 _pm_hdr = [t("pdf_prof_matrix_profile", lang),
                         t("pdf_prof_matrix_ruleset", lang),
-                        "AHI", "OAHI", "CAHI", t("pdf_prof_matrix_events", lang),
+                        "AHI", "OAHI", "CAI", t("pdf_prof_matrix_events", lang),
                         "RDI", t("pdf_prof_matrix_severity", lang),
                         t("pdf_prof_matrix_delta", lang)]
                 _pm_body = []
@@ -2451,7 +2451,7 @@ def generate_pdf_report(results:dict, output_path:str,
                         _label = f"<b>\u25b6 {_label}</b>"
                     _pm_body.append([
                         _label, _r["ruleset"],
-                        fmt(_r["ahi"]), fmt(_r["oahi"]), fmt(_r["cahi"]),
+                        fmt(_r["ahi"]), fmt(_r["oahi"]), fmt(_r["cai"]),
                         fmt(_r["n_events"], 0), fmt(_r["rdi"]),
                         _r["severity"],
                         "—" if _r["is_primary"] else fmt_delta(_r["delta_ahi"]),

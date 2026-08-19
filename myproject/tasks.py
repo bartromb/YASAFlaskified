@@ -849,7 +849,12 @@ def _send_email_notification(job_id: str, results: dict):
 
 def run_profile_comparison(edf_path: str, results_dir: str, *,
                            profiles: list[str] | None = None,
-                           primary: str | None = None) -> dict:
+                           primary: str | None = None,
+                           eeg_ch: str | None = None,
+                           eog_ch: str | None = None,
+                           emg_ch: str | None = None,
+                           pneumo_channels: dict | None = None,
+                           hypno: list | None = None) -> dict:
     """Score één opname onder meerdere profielen en schrijf de vergelijking weg.
 
     `profiles=None` houdt het oude gedrag (de hele registry) — backwards
@@ -885,9 +890,31 @@ def run_profile_comparison(edf_path: str, results_dir: str, *,
     from pneumo_analysis import run_pneumo_analysis
     from yasa_analysis import run_sleep_staging
 
-    raw = mne.io.read_raw_edf(edf_path, preload=True, verbose=False)
-    staging = run_sleep_staging(raw)
-    hypno = staging.get("hypnogram", [])
+    # Kanalen komen van de aanroeper, net als in het klinische pad, waar ze uit
+    # de jobconfig komen die de gebruiker op de kanaalpagina heeft ingevuld. Er
+    # is in dit project geen EEG-autodetectie; er hier een verzinnen zou een
+    # tweede waarheid maken naast de keuze van de gebruiker.
+    #
+    # `hypno` mag worden meegegeven door een aanroeper die al gestaged heeft —
+    # het klinische pad heeft het hypnogram al. Dat is wat `hypnogram_shared`
+    # in `_meta` behoort te betekenen: één staging, N profielen.
+    if hypno is None:
+        if not eeg_ch:
+            raise ValueError(
+                "run_profile_comparison heeft eeg_ch nodig om te kunnen stagen, "
+                "of een kant-en-klaar hypno=. Zonder een van beide draaide deze "
+                "functie op een TypeError bij haar derde regel.")
+        _staging_needed = [c for c in (eeg_ch, eog_ch, emg_ch) if c]
+        raw_staging = _load_edf(edf_path, _staging_needed, label="STAGING/cmp")
+        hypno = run_sleep_staging(
+            raw_staging, eeg_ch, eog_ch, emg_ch).get("hypnogram", [])
+
+    # Alleen de respiratoire kanalen laden. Een ongefilterde `preload=True` leest
+    # elk kanaal en laat MNE alles naar de hoogste samplefrequentie brengen: op
+    # een MESA-opname 175 s en 5,1 GiB tegen 0,5 s voor de kanalen die tellen.
+    # Bij acht RQ-workers is dat het verschil tussen ~40 GiB en een handvol.
+    _pneumo_needed = _detect_pneumo_channels(edf_path, pneumo_channels or {})
+    raw = _load_edf(edf_path, _pneumo_needed, label="PNEUMO/cmp")
 
     try:
         from psgscoring.profiles import PROFILES as _PSG_PROFILES
@@ -910,15 +937,31 @@ def run_profile_comparison(edf_path: str, results_dir: str, *,
     _wall: dict = {}
     for profile in _profile_names:
         _t0 = time.monotonic()
-        pneumo = run_pneumo_analysis(raw, hypno, scoring_profile=profile)
+        pneumo = run_pneumo_analysis(
+            raw=raw, hypno=hypno, channel_map=pneumo_channels or {},
+            scoring_profile=profile)
         _wall[profile] = round(time.monotonic() - _t0, 1)
         rsum = pneumo.get("respiratory", {}).get("summary", {})
         comparison[profile] = {
             "ahi_total":    rsum.get("ahi_total"),
             "oahi":         rsum.get("oahi"),
-            "cahi":         rsum.get("cahi"),
-            "n_apneas":     rsum.get("n_apneas"),
-            "n_hypopneas":  rsum.get("n_hypopneas"),
+            # Deze drie sleutels bestonden niet en kwamen dus als None terug:
+            # `_compute_summary` levert 68 velden, maar niet `cahi`, `n_apneas`
+            # of `n_hypopneas`. De matrixkolommen "CAHI" en "n events" bleven
+            # daardoor voor ELK profiel leeg, en renderden als "—" — wat er
+            # uitziet als "niet beschikbaar" terwijl het "verkeerde sleutel" is.
+            #
+            # `cahi` krijgt geen vervanger maar een correctie: de bibliotheek
+            # kent alleen `central_index`, de centrale APNEU-index. Centrale
+            # hypopneus (`n_hypopnea_central`) zitten er niet in, dus dat veld
+            # als CAHI tonen onderschat de index. Het heet hier wat het is. Wie
+            # CAHI wil, voegt hem toe aan `_compute_summary` in psgscoring —
+            # niet als rekensom in de rapportagelaag, want dan heeft een index
+            # twee definities.
+            "central_index": rsum.get("central_index"),
+            "n_apneas":      rsum.get("n_apnea_total"),
+            "n_hypopneas":   rsum.get("n_hypopnea"),
+            "n_ah_total":    rsum.get("n_ah_total"),
             "ahi_rem":      rsum.get("ahi_rem"),
             "ahi_nrem":     rsum.get("ahi_nrem"),
             "rera_index":   rsum.get("rera_index"),

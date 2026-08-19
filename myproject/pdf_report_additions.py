@@ -488,8 +488,14 @@ def compute_osas_score(results, ess=None):
     if nrem_ahi > 0 and rem_ahi / nrem_ahi >= 2.0:
         modifiers.append('r')
 
-    cai = summary.get('cahi', summary.get('cai', 0)) or 0
-    csr = summary.get('csr_detected', False)
+    # Beide sleutels hierboven bestonden niet, dus deze modifier kon NOOIT
+    # afgaan: `summary` kent `central_index`, niet `cahi`/`cai`, en
+    # `csr_detected` leeft in results["cheyne_stokes"], niet in de summary.
+    # De 'r'-modifier erboven werkt wel (ahi_rem/ahi_nrem bestaan), en dat is
+    # waarom het niemand opviel. Dit blok rendert overigens niet: sinds v0.15.0
+    # staat de OSAS-scoretabel default uit omdat ze niet gevalideerd is.
+    cai = summary.get('central_index', 0) or 0
+    csr = bool((results.get('cheyne_stokes') or {}).get('csr_detected', False))
     if cai > 5 or csr:
         modifiers.append('c')
 
