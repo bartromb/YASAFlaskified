@@ -46,6 +46,23 @@ _HEADBG = colors.HexColor("#EEEEEE")
 _BANNER = ("ONDERZOEKSDOCUMENT — niet voor klinische besluitvorming. "
            "Het klinische rapport van deze opname is een apart document.")
 
+# Menselijke overeenkomst op PSG-IPA: twaalf onafhankelijk scorende mensen per
+# opname, 66 paren per opname, gemeten met exact deze matcher en drempel
+# (19-08-2026). Dit staat in het rapport omdat een Jaccard zonder schaal als
+# oordeel wordt gelezen: 0,5 tussen twee profielen lijkt weinig tot je ziet dat
+# twee mensen mediaan op 0,385 zitten.
+#
+# Context, geen norm. Vijf opnames is een kleine set en PSG-IPA is één cohort
+# met zijn eigen scoringsconventies.
+_HUMAN_REF = [
+    ("SN1", "27–38", 0.703, "0,561–0,865"),
+    ("SN2", "8–33", 0.378, "0,167–0,606"),
+    ("SN3", "273–339", 0.902, "0,779–0,965"),
+    ("SN4", "1–38", 0.382, "0,026–0,691"),
+    ("SN5", "25–101", 0.385, "0,141–0,580"),
+]
+_HUMAN_MEDIAN = 0.385
+
 
 def _styles():
     ss = getSampleStyleSheet()
@@ -206,6 +223,34 @@ def _section_b(comparison, primary, st):
         "events die de index niet telt: een rij met meer events dan de AHI "
         "doet vermoeden is geen tegenspraak. Beide varianten staan hierboven "
         "zodat de keuze zichtbaar is in plaats van opgelegd.", st["note"]))
+
+    # De schaal. Zonder deze cijfers is een Jaccard een getal zonder betekenis.
+    out.append(Spacer(1, 8))
+    out.append(Paragraph("Hoeveel zijn mensen het onderling eens?", st["h2"]))
+    out.append(Paragraph(
+        "Dezelfde matcher en drempel, toegepast op PSG-IPA: twaalf "
+        "onafhankelijke scorers per opname, 66 paren per opname.", st["body"]))
+    out.append(Spacer(1, 3))
+    href = [["Opname", "events per scorer", "Jaccard mediaan", "spreiding"]]
+    for sn, ev, med, rng in _HUMAN_REF:
+        href.append([sn, ev, f"{med:.3f}".replace(".", ","), rng])
+    out.append(_table(href, [2.6 * cm, 4.6 * cm, 4.2 * cm, 4.6 * cm],
+                      [("ALIGN", (1, 1), (-1, -1), "RIGHT")]))
+    out.append(Spacer(1, 4))
+    out.append(Paragraph(
+        f"<b>Mediaan over de vijf opnames: "
+        f"{('%.3f' % _HUMAN_MEDIAN).replace('.', ',')}.</b> Een Jaccard van "
+        f"0,5 tussen twee profielen is dus geen tekortkoming van het "
+        f"algoritme: twee mensen op dezelfde nacht halen mediaan minder. "
+        f"Let daarbij op de eventdichtheid — SN3 heeft honderden events en "
+        f"0,902, SN4 hooguit enkele tientallen en 0,382 met paren tot 0,026. "
+        f"Bij weinig events domineert één meningsverschil de maat, en "
+        f"Jaccards van verschillende opnames zijn daarom niet zonder meer "
+        f"vergelijkbaar.", st["note"]))
+    out.append(Paragraph(
+        "Deze referentie is context, geen norm: vijf opnames is een kleine "
+        "set en PSG-IPA is één cohort met zijn eigen scoringsconventies.",
+        st["note"]))
 
     # Herlabeling: hetzelfde event, ander oordeel.
     changes = [(n, a["type_changes"]) for n, a in pairs if a.get("type_changes")]
