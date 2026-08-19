@@ -1863,6 +1863,32 @@ def results():
     return redirect(url_for("dashboard"))
 
 
+def _resolved_study_set(user):
+    """De studieprofiel-set van de site van deze gebruiker, gevalideerd.
+
+    Retourneert ``{}`` wanneer er niets is geconfigureerd of de configuratie
+    niet valideert. Een ongeldige set stil laten doorgaan zou een vergelijking
+    opleveren die iets anders draait dan de studie denkt; die fout hoort bij
+    het instellen thuis (`admin_set_study_profile_set` weigert hem daar al) en
+    niet 46 minuten later in een worker.
+    """
+    try:
+        from profile_matrix import validate_study_set
+        site = getattr(user, "site", None)
+        raw = getattr(site, "study_profile_set", None) if site else None
+        if not raw:
+            return {}
+        resolved, errors = validate_study_set(json.loads(raw))
+        if errors:
+            logger.warning("[study] set van site %s ongeldig, geen "
+                           "vergelijking: %s", getattr(site, "id", "?"), errors)
+            return {}
+        return resolved
+    except Exception as e:  # noqa: BLE001
+        logger.warning("[study] set niet leesbaar: %s", e)
+        return {}
+
+
 @app.route("/download/<path:filename>")
 @login_required
 def download_file(filename):
@@ -2242,6 +2268,12 @@ def start_analysis():
         "language":         session.get("lang", "en"),
         # v0.8.22: scoring profiel
         "scoring_profile":  request.form.get("scoring_profile", "standard"),
+        # v0.26.0: de studieprofiel-set wordt HIER opgelost, niet in de worker.
+        # De weblaag heeft de database; een RQ-worker leest alleen zijn config.
+        # Dat houdt `validate_study_set` op één plek in plaats van twee, en het
+        # betekent dat een site zonder studieconfiguratie geen vergelijking
+        # inschakelt — de optie bestaat dan simpelweg niet.
+        "study_profile_set": _resolved_study_set(current_user),
         "study_type":       request.form.get("study_type", "diagnostic_psg"),
         # v0.9.8: optional ML arousal re-classifier (preview).
         # Checkbox value is "on" if checked, absent otherwise.
@@ -2545,6 +2577,36 @@ def download_pdf(job_id):
         job_id, pdf_path, _gen,
         download_name=f"slaaprapport_{job_id[:8]}.pdf",
         mimetype="application/pdf", kind="PDF")
+
+
+@app.route("/results/<job_id>/profielrapport")
+@login_required
+@job_access_required
+def download_profile_report(job_id):
+    """Het profielrapport — een ONDERZOEKSDOCUMENT, geen klinisch rapport.
+
+    Anders dan de andere afgeleiden wordt dit bestand NIET on-the-fly
+    gegenereerd wanneer het ontbreekt. Het vergt een volledige
+    profielvergelijking van tientallen minuten; die achter een download-klik
+    hangen zou een verzoek zijn dat stilstaat tot een timeout. Bestaat het
+    niet, dan is er geen vergelijking gedraaid, en dat is het eerlijke
+    antwoord.
+
+    De bestandsnaam draagt het woord "onderzoek", want een PDF wordt
+    doorgestuurd op zijn naam.
+    """
+    _require_job_access(job_id)
+    path = os.path.join(app.config["UPLOAD_FOLDER"],
+                        f"{job_id}_profielrapport.pdf")
+    if not os.path.exists(path):
+        flash(get_translation("profile_report_absent", session.get("lang", "en")),
+              "info")
+        return redirect(url_for("show_results", job_id=job_id))
+    resp = send_file(path, as_attachment=True,
+                     download_name=f"onderzoek_profielen_{job_id[:8]}.pdf",
+                     mimetype="application/pdf")
+    resp.headers["Cache-Control"] = "no-store, must-revalidate"
+    return resp
 
 
 @app.route("/results/<job_id>/excel")

@@ -3925,3 +3925,37 @@ _STUDY_SET_V0230 = {
               "Verhalten ohne Profilmatrix."},
 }
 TRANSLATIONS.update(_STUDY_SET_V0230)
+
+# v0.26.0 — het profielrapport als apart onderzoeksdocument.
+_PROFILE_REPORT_V0260 = {
+    "profile_report_absent": {
+        "nl": "Voor deze opname is geen profielvergelijking gedraaid, dus er is "
+              "geen profielrapport. Een vergelijking wordt alleen ingeschakeld "
+              "wanneer de site een studieprofiel-set heeft.",
+        "fr": "Aucune comparaison de profils n'a été effectuée pour cet "
+              "enregistrement, donc il n'y a pas de rapport de profils. Une "
+              "comparaison n'est lancée que si le site dispose d'un ensemble de "
+              "profils d'étude.",
+        "en": "No profile comparison was run for this recording, so there is no "
+              "profile report. A comparison is only queued when the site has a "
+              "study profile set.",
+        "de": "Für diese Aufzeichnung wurde kein Profilvergleich durchgeführt, "
+              "daher gibt es keinen Profilbericht. Ein Vergleich wird nur "
+              "eingeplant, wenn der Standort einen Studien-Profilsatz hat."},
+    "profile_report_link": {
+        "nl": "Profielrapport (onderzoek)",
+        "fr": "Rapport de profils (recherche)",
+        "en": "Profile report (research)",
+        "de": "Profilbericht (Forschung)"},
+    "profile_report_pending": {
+        "nl": "Profielvergelijking staat in de wachtrij; dit duurt tientallen "
+              "minuten en houdt het klinische rapport niet op.",
+        "fr": "La comparaison de profils est en file d'attente ; elle prend "
+              "plusieurs dizaines de minutes et ne retarde pas le compte rendu "
+              "clinique.",
+        "en": "The profile comparison is queued; it takes tens of minutes and "
+              "does not hold up the clinical report.",
+        "de": "Der Profilvergleich ist eingeplant; er dauert mehrere zehn "
+              "Minuten und verzögert den klinischen Bericht nicht."},
+}
+TRANSLATIONS.update(_PROFILE_REPORT_V0260)

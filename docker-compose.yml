@@ -17,6 +17,16 @@
 x-worker-base: &worker-base
   image: yasaflaskified:${APP_VERSION:-0.8.37}
   restart: unless-stopped
+  # Klinische jobs staan op `default`, studievergelijkingen op `study`.
+  # Zie de worker-definities onderaan: zes workers luisteren ALLEEN op
+  # `default`, twee op beide. Dat is geen stijlkeuze maar de enige manier om
+  # klinische doorlooptijd te beschermen: een profielvergelijking kost gemeten
+  # 46 minuten voor zeven profielen, en RQ kent geen prioriteit binnen één
+  # wachtrij. Met deze verdeling kunnen er hoogstens twee workers in zo'n job
+  # vastzitten en blijven er zes over voor klinisch werk.
+  #
+  # De volgorde van de wachtrijnamen telt: `default study` betekent dat een
+  # worker `default` altijd eerst leegtrekt.
   command: rq worker --url redis://redis:6379 default
   env_file: .env
   environment:
@@ -122,10 +132,14 @@ services:
   worker7:
     <<: *worker-base
     container_name: kliniek_worker7
+    # Ook studiewerk, maar pas als `default` leeg is.
+    command: rq worker --url redis://redis:6379 default study
 
   worker8:
     <<: *worker-base
     container_name: kliniek_worker8
+    # Ook studiewerk, maar pas als `default` leeg is.
+    command: rq worker --url redis://redis:6379 default study
 
 volumes:
   kliniek_redis:

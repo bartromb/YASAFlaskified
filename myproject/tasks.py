@@ -493,16 +493,125 @@ def run_analysis_job(job_id: str) -> dict:
     elapsed = (datetime.utcnow() - started).total_seconds()
     logger.info("✅ Job voltooid: %s (%.1f sec)", job_id, elapsed)
 
+    # ── Studievergelijking inschakelen, op een APARTE wachtrij ──────────
+    #
+    # Nooit synchroon. Zeven profielen kosten gemeten 45:59 en slechts 3 %
+    # daarvan is gedeeld werk, dus een vergelijking is per definitie een
+    # batchtaak. Het klinische rapport hierboven is al geschreven en wacht
+    # nergens op.
+    #
+    # De studieset is bij het uploaden opgelost door de weblaag, die de DB
+    # heeft; een worker leest hier alleen wat er in de config staat. Dat houdt
+    # de validatie (`validate_study_set`) op één plek in plaats van twee.
+    #
+    # Het hypnogram gaat MEE. Het is hierboven al berekend; opnieuw stagen
+    # kost 90 s en riskeert een ánder hypnogram dan het klinische rapport
+    # gebruikte, waarmee de vergelijking zou vergelijken met iets anders dan
+    # wat er in het rapport staat.
+    _study = cfg.get("study_profile_set") or {}
+    _study_job_id = None
+    if _study.get("comparison_profiles"):
+        try:
+            from redis import Redis as _Redis
+            from rq import Queue as _Queue
+            _q = _Queue("study", connection=_Redis(
+                host=os.environ.get("YASAFLASKIFIED_REDIS_HOST", "redis"),
+                port=int(os.environ.get("YASAFLASKIFIED_REDIS_PORT", 6379))))
+            _sj = _q.enqueue(
+                "tasks.run_study_comparison",
+                job_id, edf_path, UPLOAD_FOLDER,
+                _study.get("comparison_profiles"),
+                _study.get("primary_profile"),
+                eeg_ch, eog_ch, emg_ch, pneumo_channels, hypno,
+                job_timeout="6h")
+            _study_job_id = _sj.id
+            logger.info("[study] vergelijking ingeschakeld op wachtrij "
+                        "'study': %s (%d profielen)", _sj.id,
+                        len(_study["comparison_profiles"]))
+        except Exception as e:                                   # noqa: BLE001
+            # Een mislukte inschakeling mag het klinische resultaat niet raken,
+            # maar moet wel zichtbaar zijn: stil niets doen leest als "er was
+            # geen studie".
+            logger.error("[study] inschakelen mislukt: %s", e)
+            errors.append(f"studievergelijking niet ingeschakeld: {e}")
+
     return {
         "status":       "done",
         "job_id":       job_id,
         "elapsed_sec":  round(elapsed, 1),
+        "study_job_id": _study_job_id,
         "result_json":  result_path,
         "result_pdf":   pdf_path,
         "result_excel": xlsx_path,
         "result_psg":   psg_path,
         "result_edfplus": edfplus_path,
         "errors":       errors,
+    }
+
+
+# ─────────────────────────────────────────────
+# STUDIEVERGELIJKING (WACHTRIJ `study`, LAGE PRIORITEIT)
+# ─────────────────────────────────────────────
+
+def run_study_comparison(job_id: str, edf_path: str, results_dir: str,
+                         profiles: list, primary: str,
+                         eeg_ch: str, eog_ch: str, emg_ch: str,
+                         pneumo_channels: dict, hypno: list) -> dict:
+    """Draai de profielvergelijking en zet er een profielrapport naast.
+
+    Draait op de wachtrij `study`, waar hoogstens twee van de acht workers naar
+    luisteren en dan nog pas als `default` leeg is. Zo kan een vergelijking van
+    drie kwartier geen klinische opname laten wachten.
+
+    Levert twee bestanden naast het klinische rapport:
+      {job_id}_profielrapport.pdf   het onderzoeksdocument
+      profile_comparison.json       de vergelijking, incl. overeenkomst
+    """
+    import time
+
+    started = time.monotonic()
+    logger.info("[study %s] start, %d profielen, primair %s",
+                job_id, len(profiles or []), primary)
+    try:
+        comparison = run_profile_comparison(
+            edf_path, results_dir,
+            profiles=profiles, primary=primary,
+            eeg_ch=eeg_ch, eog_ch=eog_ch, emg_ch=emg_ch,
+            pneumo_channels=pneumo_channels, hypno=hypno)
+    except Exception as e:                                       # noqa: BLE001
+        logger.exception("[study %s] vergelijking mislukt", job_id)
+        return {"status": "error", "job_id": job_id, "error": str(e)}
+
+    # Het klinische resultaat is de bron voor de kop en de primair-assert.
+    pneumo = {}
+    try:
+        with open(os.path.join(results_dir, f"{job_id}_results.json")) as f:
+            pneumo = (json.load(f) or {}).get("pneumo") or {}
+    except Exception as e:                                       # noqa: BLE001
+        logger.warning("[study %s] klinisch resultaat niet leesbaar: %s",
+                       job_id, e)
+
+    pdf_path = os.path.join(results_dir, f"{job_id}_profielrapport.pdf")
+    try:
+        from generate_profile_report import generate_profile_report
+        generate_profile_report(pneumo, comparison, pdf_path,
+                                job_id=job_id, lang="nl")
+    except Exception as e:                                       # noqa: BLE001
+        logger.exception("[study %s] profielrapport mislukt", job_id)
+        return {"status": "error", "job_id": job_id, "error": str(e),
+                "result_json": os.path.join(results_dir,
+                                            "profile_comparison.json")}
+
+    elapsed = round(time.monotonic() - started, 1)
+    logger.info("[study %s] klaar in %.1f s (%.1f min)",
+                job_id, elapsed, elapsed / 60)
+    return {
+        "status": "done",
+        "job_id": job_id,
+        "elapsed_sec": elapsed,
+        "result_pdf": pdf_path,
+        "result_json": os.path.join(results_dir, "profile_comparison.json"),
+        "profiles": list(profiles or []),
     }
 
 
@@ -936,6 +1045,7 @@ def run_profile_comparison(edf_path: str, results_dir: str, *,
     comparison: dict = {}
     _wall: dict = {}
     _events: dict = {}
+    _flow: dict = {}
     for profile in _profile_names:
         _t0 = time.monotonic()
         pneumo = run_pneumo_analysis(
@@ -951,6 +1061,15 @@ def run_profile_comparison(edf_path: str, results_dir: str, *,
         # een projectie, die alleen velden kost die later nodig blijken.
         _events[profile] = list(
             (pneumo.get("respiratory") or {}).get("events") or [])
+        # Sensorherkomst per profiel. De thermistorpoort beslist PER OPNAME of
+        # apneus op thermistor of neusdruk gescoord worden, en keurt in de
+        # praktijk de meeste montages af. Verschilt een profiel van het
+        # primaire omdat die poort omsloeg, dan is dát de verklaring — en
+        # zonder deze regel verzint de lezer er een. psgscoring zet het al
+        # klaar in meta.flow_channels met het commentaar dat het "in het
+        # rapport hoort te kunnen landen"; tot nu toe las niemand het.
+        _flow[profile] = dict((pneumo.get("meta") or {}).get(
+            "flow_channels") or {})
         comparison[profile] = {
             "ahi_total":    rsum.get("ahi_total"),
             "oahi":         rsum.get("oahi"),
@@ -1027,6 +1146,7 @@ def run_profile_comparison(edf_path: str, results_dir: str, *,
         "hypnogram_shared":  True,
         "wall_clock_s":      _wall,
         "n_events":          {k: len(v) for k, v in _events.items()},
+        "flow_channels":     _flow,
         "agreement_error":   _agree_err,
     }
 
