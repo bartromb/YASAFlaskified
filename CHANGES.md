@@ -1,5 +1,51 @@
 # Changelog — YASAFlaskified
 
+## v0.27.0 — 2026-08-19  *(the RIP pair gate finally reaches the report)*
+
+**No scored value changes.** `psgscoring` moves 0.20.0 → **0.21.0**, which adds
+a warning and a flag that is off on every profile. Every index stays what it
+was; what changes is what the report tells you about how it was produced.
+
+### The pair gate was invisible in the report
+
+`pneumo.signal_quality` — the RIP pair quality, including
+`recommended_mode`, `working_channel` and the warning "thorax likely
+disconnected" — appeared **only as a badge in the web interface**. It was never
+in the PDF. A clinician therefore read "89 central apnoeas" with no indication
+that bilateral analysis was off and that the obstructive/central distinction
+rested on a single belt.
+
+That is the same pattern as `ahi_rem_caveat`: the library produces it, the
+report never reads it.
+
+The report now carries a block whenever the mode is not bilateral, with the
+mode, the channel actually used, the energy ratio and the gate's own warnings —
+and a red heading instead of an orange one when the rejection is **doubtful**,
+that is, when the rejected channel passed its own quality test.
+
+### Why that distinction matters
+
+On a clinical recording the gate reported a ratio of 1186× and dropped the
+thorax as "likely disconnected" — while its own per-channel test gave that
+thorax `status=ok` and `breath_fraction` 0.740, and the belt was visibly
+moving. Rescoring with only that decision changed produced 142 events both
+times (Jaccard 1.000, so no detection moved) but relabelled 73 of them: 49
+central→obstructive, 16 uncertain→obstructive. `ahi_total` went 20.0 → 23.9,
+because bare `uncertain` falls outside that index.
+
+psgscoring 0.21.0 carries the repair behind `rip_pair_scale_free`, **off on
+every profile**: a scan of 150 MESA recordings found the gate firing on 6 and
+the flag changing exactly 1, so the pre-registered criterion cannot be met on
+that cohort. What ships here is the visibility, which changes nothing that is
+scored.
+
+### Tests
+
+Two read the report source, so the block cannot quietly disappear again. One of
+them pins that every local in it carries a `_rip_` prefix — renaming a local to
+`_hdr` in that same function previously caused an `UnboundLocalError` on *every*
+report.
+
 ## v0.26.0 — 2026-08-19  *(the profile report: a second PDF, on its own queue, only when asked)*
 
 **No clinical report changes.** `psgscoring` stays at 0.20.0. The clinical PDF,
