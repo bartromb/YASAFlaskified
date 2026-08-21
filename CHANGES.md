@@ -1,3 +1,41 @@
+## v0.30.0 — 2026-08-21
+
+Dependency bump to **psgscoring 0.23.0**, plus one report change.
+
+**Scored values change for PLM.** psgscoring 0.23.0 repairs the time base of
+the limb-movement detector: it computed RMS over windows of `int(sf * 0.1)`
+SAMPLES and converted the window index back with `idx * 0.1`. At 256 Hz a
+window is 0.09766 s, so every reported time ran 2.3% fast — accumulating to
++620 s at the end of a 7.4 h night. Event times move and the count moves with
+them, because the duration filter now works on the real duration. Event-F1
+against twelve scorers on PSG-IPA: median 0.038 -> 0.692 (scorer against
+scorer 0.820).
+
+This reaches YASAFlaskified in three places: `/review/<job_id>` draws the
+markers at the right time, the EDF+ export carries the corrected onsets
+(`generate_edfplus.py:155`), and `plm_arousal_index` in the PDF — which
+couples a PLM onset to an arousal within -0.5..+3 s — is no longer coupling
+on drifted times.
+
+**AHI, ODI, RDI and every respiratory index are untouched.** Verified rather
+than assumed: MESA n=150, seed 20260801, reproduces the August measurement to
+three decimals (`aasm_v3_rec` F1 0.438 bias -5.26; `aasm_v3_breath` F1 0.510
+bias -5.13). Golden 9/9.
+
+### Changed
+
+- `myproject/version.py` — `__version__` 0.30.0, `PSGSCORING_VERSION` 0.23.0.
+- `requirements.txt` — `psgscoring[ml]==0.23.0`.
+- `myproject/generate_pdf_report.py` — the hypoxic-burden reference range
+  `< 20` now appears only when the value came from the published Azarbarzin
+  definition; otherwise the label carries the method, e.g. `Hypoxic burden
+  (percentile)`. psgscoring can compute the burden several ways and on the
+  same recording those differ by a factor 0.29 to 2.34, so a literature
+  threshold printed beside a number from another definition implies a
+  comparability that is not there. See
+  psgscoring/docs/hypoxic_burden_bevinding.md.
+- `README.md` — release badge to v0.30.0.
+
 # Changelog — YASAFlaskified
 
 ## v0.29.0 — 2026-08-19  *(the RIP block shipped into dead code)*

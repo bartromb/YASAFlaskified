@@ -2630,7 +2630,20 @@ def generate_pdf_report(results:dict, output_path:str,
             [t("pdf_time_below90",lang),       f"{ss.get('pct_below_90','—')} %","< 1%"],
             ["ODI 3%",           f"{ss.get('odi_3pct','—')} /u",    "< 5/u"],
             ["ODI 4%",           f"{ss.get('odi_4pct','—')} /u",    "< 5/u"],
-            ["Hypoxic burden",   f"{ss.get('hypoxic_burden','—')} %·min/h", "< 20"],
+            # De referentiewaarde "< 20" komt uit Azarbarzin et al. (Eur Heart
+            # J 2019) en geldt voor DIE definitie: basislijn = maximum SpO2 in
+            # de 100 s vóór het eventeinde, oppervlakte over een uit het
+            # ensemble-gemiddelde afgeleid zoekvenster. psgscoring kan de
+            # burden op meerdere manieren berekenen, en die geven op dezelfde
+            # opname waarden die een factor 0,29 tot 2,34 uiteenlopen (acht
+            # MESA-opnames; psgscoring/docs/hypoxic_burden_bevinding.md).
+            # Toon de afkapwaarde daarom alleen naast de gepubliceerde
+            # definitie -- een grens naast een getal van een andere definitie
+            # suggereert een vergelijkbaarheid die er niet is.
+            [("Hypoxic burden" if ss.get("hypoxic_burden_method") == "azarbarzin"
+              else f"Hypoxic burden ({ss.get('hypoxic_burden_method') or '?'})"),
+             f"{ss.get('hypoxic_burden','—')} %·min/h",
+             ("< 20" if ss.get("hypoxic_burden_method") == "azarbarzin" else "")],
             [t("pdf_ventilatory_burden", lang),
              (f"{rsum.get('ventilatory_burden')} %"
               if rsum.get('ventilatory_burden') is not None else "—"),
