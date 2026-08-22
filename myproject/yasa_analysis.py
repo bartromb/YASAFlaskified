@@ -10,6 +10,7 @@ Fixes t.o.v. v7.1:
 """
 
 import logging
+import os
 import traceback
 from collections import Counter
 from datetime import datetime, timedelta
@@ -578,14 +579,112 @@ def run_sleep_cycles(hypno: list,
 # 8. ARTEFACTDETECTIE
 # ─────────────────────────────────────────────
 
-def run_artifact_detection(raw: mne.io.BaseRaw, eeg_channels: list) -> dict:
-    """Basisartefactdetectie: hoge amplitude, platte segmenten."""
+def _artifact_detection_yasa(data, sf, n_epochs, hypno) -> dict:
+    """`yasa.art_detect` op vensters van 30 s, teruggegeven per epoch.
+
+    `method="std"`, niet `"covar"`: die laatste vereist `pyriemann`, een
+    optionele afhankelijkheid die hier niet geinstalleerd is en die je niet
+    toevoegt voordat bewezen is dat de richting deugt. `"std"` z-scoort de
+    signaalstandaarddeviatie per venster en normaliseert per stadium als het
+    hypnogram meegaat -- het verschil met de vaste drempel van 500 uV blijft
+    daarmee overeind.
+
+    Het hypnogram gaat mee als het er is: `art_detect` beoordeelt elk stadium
+    dan tegen zijn eigen achtergrond, wat het hele punt van de methode is.
+    Ontbreekt het, dan draait de detectie over de nacht als geheel -- dat mag,
+    maar het is zwakker, en dat hoort in de samenvatting te staan in plaats van
+    stil te gebeuren.
+    """
+    import numpy as _np
+    import yasa as _yasa
+
+    _MAP = {"W": 0, "N1": 1, "N2": 2, "N3": 3, "R": 4}
+    epl = int(30 * sf)
+    n_samples = n_epochs * epl
+    hyp_arr = None
+    if hypno:
+        h = [_MAP.get(str(x).strip(), 0) for x in hypno[:n_epochs]]
+        if len(h) < n_epochs:
+            h += [0] * (n_epochs - len(h))
+        # `art_detect` wil het hypnogram op SAMPLERESOLUTIE, niet per epoch --
+        # het controleert `hypno.size == n_samples` en gooit anders.
+        hyp_arr = _np.repeat(_np.asarray(h), epl)[:n_samples]
+
+    art, _z = _yasa.art_detect(data[:, :n_samples], sf=sf,
+                               window=30, hypno=hyp_arr,
+                               method="std", threshold=3)
+    art = _np.asarray(art).astype(bool)
+    if art.size < n_epochs:                      # veiligheidsmarge
+        art = _np.pad(art, (0, n_epochs - art.size))
+    art = art[:n_epochs]
+
+    flags = [{"epoch": int(i), "artifact": bool(art[i]),
+              "max_amplitude_uV": None, "flat_signal": None,
+              "high_amplitude": None}
+             for i in range(n_epochs)]
+    n_art = int(art.sum())
+    return {
+        "success": True,
+        "artifact_epochs": [f for f in flags if f["artifact"]],
+        "summary": {
+            "n_total_epochs": n_epochs,
+            "n_artifact_epochs": n_art,
+            "artifact_percent": safe_round(n_art / n_epochs * 100) if n_epochs else 0,
+            "method": "yasa",
+            "hypno_used": hyp_arr is not None,
+        },
+    }
+
+
+ARTIFACT_METHOD_DEFAULT = "amplitude"
+"""Welke artefactdetectie draait. `amplitude` is de eigen regel en de default.
+
+`yasa` gebruikt `yasa.art_detect` -- covariantie-gebaseerde outlierdetectie
+per venster, met het hypnogram erbij zodat elk stadium tegen zijn eigen
+achtergrond wordt beoordeeld.
+
+Waarom er een keuze is. De eigen regel vlagt op piekamplitude boven 500 uV, en
+dat is amplitudedetectie, geen artefactdetectie: een arousal gaat samen met
+spieractiviteit, dus de regel selecteert juist de epochs waar arousals zitten.
+Gemeten op PSG-IPA kost dat arousal-F1 0,505 -> 0,484 (slechter op 5 van 5)
+terwijl de precisie niet beweegt -- de goede events verdwijnen, de verzonnen
+events blijven staan.
+
+Default blijft `amplitude` tot de vergelijking rond is; zie
+psgscoring/docs/artefactdetector_vervangen_preregistratie.md. Let op dat een
+andere regel meer verschuift dan arousals: artefact-epochs vallen uit de
+slaaptijd en `n_artifact_epochs` staat in het Excel-rapport.
+"""
+
+
+def run_artifact_detection(raw: mne.io.BaseRaw, eeg_channels: list,
+                           method: str = None, hypno: list = None) -> dict:
+    """Artefactdetectie per epoch van 30 s.
+
+    ``method`` is ``"amplitude"`` (eigen regel, default) of ``"yasa"``
+    (``yasa.art_detect``); zonder waarde beslist
+    ``YASAFLASKIFIED_ARTIFACT_METHOD`` en anders ARTIFACT_METHOD_DEFAULT.
+    ``hypno`` is een lijst stadiumlabels per epoch en wordt alleen door de
+    yasa-methode gebruikt.
+    """
     result = {"success": False, "artifact_epochs": [], "summary": {}, "error": None}
+    if method is None:
+        method = os.environ.get("YASAFLASKIFIED_ARTIFACT_METHOD",
+                                ARTIFACT_METHOD_DEFAULT)
+    if method not in ("amplitude", "yasa"):
+        logger.warning("onbekende artefactmethode %r; %r aangehouden",
+                       method, ARTIFACT_METHOD_DEFAULT)
+        method = ARTIFACT_METHOD_DEFAULT
     try:
         data      = raw.get_data(picks=eeg_channels, units="uV")
         sf        = raw.info["sfreq"]
         epoch_len = int(30 * sf)
         n_epochs  = data.shape[1] // epoch_len
+
+        if method == "yasa":
+            result.update(_artifact_detection_yasa(data, sf, n_epochs, hypno))
+            result["method"] = "yasa"
+            return result
 
         artifact_flags = []
         for ep in range(n_epochs):
@@ -764,7 +863,10 @@ def run_full_analysis(raw: mne.io.BaseRaw,
 
     # ── 8. Artefacten + tijdlijn ─────────────────────────────
     logger.info("[8/8] Artefacten & tijdlijn...")
-    output["artifacts"]          = run_artifact_detection(raw, all_eeg_channels)
+    # Hypnogram meegeven: de yasa-methode normaliseert dan PER STADIUM, wat
+    # het hele punt van die methode is. De amplitude-methode negeert het.
+    output["artifacts"]          = run_artifact_detection(raw, all_eeg_channels,
+                                                          hypno=hypno)
     output["hypnogram_timeline"] = build_hypnogram_timeline(hypno, recording_start)
 
     logger.info("✅ Alle analyses voltooid.")
