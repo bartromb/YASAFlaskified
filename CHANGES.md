@@ -1,3 +1,39 @@
+## v0.31.0 — 2026-08-22
+
+Dependency bump to **psgscoring 0.24.0**: arousal detection moves from the
+rule-based path to the MESA-trained classifier.
+
+**The arousal index and the RDI change on every report.** Measured on PSG-IPA
+against twelve scorers, in the multi-derivation mode the clinical profiles
+run: event-F1 **0.326 -> 0.505** (scorers reach 0.692 among themselves),
+precision 0.248 -> 0.425, better on 5 of 5 recordings.
+
+The clearest illustration of what this fixes: one recording reported an
+arousal index of 55.1/h against a scorer median of 8.5 -- a factor 6.47, at
+precision 0.090. It now reports 15.7. Across the five, the ratio to the scorer
+median goes from 1.59 (range 0.95-6.47) to 1.47 (range 0.94-1.85).
+
+Another recording shows why the index alone never revealed this: the old path
+reported 17.2 against a scorer 18.0, which looks perfect, while event-F1 sat
+at 0.152. The right count at the wrong moments -- the same pattern as the PLM
+time-base error in v0.30.0.
+
+**AHI moves only where a profile confirms hypopnoeas on arousal.** MESA n=150,
+paired: `aasm_v3_rec` identical on all 150, `aasm_v3_breath` bias -5.13 ->
+-5.28 and F1 0.510 -> 0.514. Severity class shifts on 13 of 150.
+
+**Not established, stated rather than left implicit:** the RDI impact is
+unmeasured (`_compute_rera_rdi` reads the arousal list directly); the
+multi-derivation evidence is n = 5; and the psgscoring golden harness no
+longer exercises the classifier, because its fixtures carry EEG at 32 Hz and
+a sampling-rate guard routes them to the rule path.
+
+### Changed
+
+- `myproject/version.py` — `__version__` 0.31.0, `PSGSCORING_VERSION` 0.24.0.
+- `requirements.txt` — `psgscoring[ml]==0.24.0`.
+- `README.md` — release badge.
+
 ## v0.30.0 — 2026-08-21
 
 Dependency bump to **psgscoring 0.23.0**, plus one report change.
