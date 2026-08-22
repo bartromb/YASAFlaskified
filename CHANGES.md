@@ -1,3 +1,21 @@
+# v0.32.0 — 2026-08-22 — psgscoring 0.25.0: the RDI returns on four profiles
+
+Pins `psgscoring[ml]==0.25.0`.
+
+**Reported values change back** on `aasm_v3_breath`, `aasm_v3_prob` and their
+`_dual` variants: the arousal classifier is off there again, so the RDI
+returns to its v0.30.0 value. The AHI barely moves (median −0.4/h) and the
+other twelve v3 profiles are untouched.
+
+The reason is in the psgscoring 0.25.0 notes: on MESA n=50 the classifier
+moved the RDI severity class on 14 of 50 recordings (28 %), and no dataset
+available to us carries a RERA reference that could say which RDI is closer
+to truth — MESA annotates none, and PSG-IPA holds 3 in its entire manual set
+despite allowing the label. A shift that reclassifies a quarter of patients
+without a reference is not booked as a correction.
+
+Reports produced under YF 0.31.0 carry the lower RDI. Nothing else changes.
+
 ## v0.31.0 — 2026-08-22
 
 Dependency bump to **psgscoring 0.24.0**: arousal detection moves from the
