@@ -1,3 +1,23 @@
+# v0.33.1 — 2026-08-23 — the report names the psgscoring that actually scored
+
+No scored value changes. `psgscoring[ml]==0.26.0` unchanged.
+
+`PSGSCORING_VERSION` was a hand-maintained literal in `version.py` and had
+fallen two releases behind: reports said `psgscoring 0.24.0` while 0.26.0 had
+done the scoring. A clinical report states its own provenance, so it was
+naming a library it had not used.
+
+Reading the installed version at render time would be wrong for a different
+reason — a report can be produced later than the analysis ran, and would then
+be stamped with today's software. `tasks.py` already captures
+`psgscoring.__version__` at scoring time into `comparison._meta`; the report
+now reads that. Older jobs without the field fall back to the installed
+version, marked `(?)` rather than presented as fact.
+
+Three tests pin it: the value must match what scored, the assignment must not
+become a hardcoded literal again, and a fallback must be marked as an
+approximation.
+
 # v0.33.0 — 2026-08-23 — psgscoring 0.26.0: arousals no longer lose a fifth of the night
 
 Pins `psgscoring[ml]==0.26.0`.
