@@ -398,8 +398,20 @@ def provenance_rows(results, lang="nl"):
 
     rows.append([_lbl("prov_profile", "Scoringsprofiel"),
                  pmeta.get("scoring_profile") or dash])
+    # De versie die GESCOORD heeft, niet die van vandaag. Een rapport kan
+    # later gerenderd worden dan de analyse draaide -- dan is de actueel
+    # geinstalleerde versie de verkeerde herkomst. `tasks.py` legt de echte
+    # versie bij het scoren vast in `comparison._meta.psgscoring_version`;
+    # ontbreekt die (oudere jobs), dan valt hij terug op wat er nu staat, en
+    # dat wordt dan als benadering gemarkeerd.
+    _stored = (((results or {}).get("comparison") or {}).get("_meta") or {}
+               ).get("psgscoring_version")
+    if _stored:
+        _psg = str(_stored)
+    else:
+        _psg = f"{_PSGSCORING_VERSION} (?)"
     rows.append([_lbl("prov_software", "Software"),
-                 f"psgscoring {_PSGSCORING_VERSION} · YASAFlaskified {_APP_VERSION}"])
+                 f"psgscoring {_psg} · YASAFlaskified {_APP_VERSION}"])
     return rows
 
 
