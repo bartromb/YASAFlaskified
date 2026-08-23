@@ -72,6 +72,30 @@ This captures `.env`, `myproject/.env`, `instance/`, `logs/` and the code —
 everything an `rsync` mistake can remove — without the multi-GB recording
 directories. Keep it until the deploy is verified healthy.
 
+**Step 0b — check for jobs in flight, and wait for them.** `up -d` recreates
+the workers, and a job running at that moment loses its worker: it stays
+"running" in the UI with no CPU behind it, and RQ only notices ~14 minutes
+later, moving it to the FailedJobRegistry with `AbandonedJobError`. The user
+sees a hang, then a failure, and the recording has to be re-run.
+
+This happened on 2026-08-23 during the 0.33.0 deploy. The runbook had no such
+step, so nothing was checked.
+
+```bash
+ssh root@65.108.230.243 'docker exec kliniek_app python -c "
+import os, redis
+from rq import Queue
+from rq.registry import StartedJobRegistry
+r = redis.from_url(os.environ.get(\"REDIS_URL\", \"redis://redis:6379/0\"))
+q = Queue(connection=r)
+print(\"queued:\", q.count, \" running:\", len(StartedJobRegistry(queue=q)))
+"'
+```
+
+Both zero → deploy. Anything running → wait for it, or tell the user their
+recording will be interrupted and agree a moment. A scoring run takes minutes,
+so waiting is nearly always the right call.
+
 **Step 1 — dry-run first (no changes; confirm only code files change):**
 ```bash
 cd ~/CODE/YASAFlaskified
