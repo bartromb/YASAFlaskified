@@ -1,3 +1,30 @@
+# v0.33.0 — 2026-08-23 — psgscoring 0.26.0: arousals no longer lose a fifth of the night
+
+Pins `psgscoring[ml]==0.26.0`.
+
+**Reported values change** on the sixteen v3 profiles: the arousal index moves,
+and on `aasm_v3_breath`, `aasm_v3_prob` and their `_dual` variants the RDI
+moves with it. The AHI is untouched, and the five profiles reproducing an
+external rule set or a published dataset analysis are byte-identical.
+
+Two causes, both in defaults rather than in the algorithm. The artefact list
+that this app computes — an epoch flagged at a peak above 500 µV — was
+removing the arousals: on MESA it discards a median 19.9 % of the night, and
+ignoring it in the arousal step is better on 30 of 30 recordings. And the
+classifier operating point had never been independently validated; 0.80
+replaces 0.60, chosen over 0.90 because it keeps the arousal index unbiased
+while 0.90 would put it a third too low.
+
+Combined, arousal event-F1 on MESA goes 0.338 → 0.543.
+
+`yasa.art_detect` is now available as an alternative artefact method behind
+`YASAFLASKIFIED_ARTIFACT_METHOD`, default unchanged at `amplitude`. It is not
+rejected as an artefact detector — there is no artefact reference to judge that
+— only as a fix for this problem: it discards 2.1 % instead of 19.9 % and still
+scores no better.
+
+Reports produced under YF 0.32.0 carry the higher arousal index and RDI.
+
 # v0.32.0 — 2026-08-22 — psgscoring 0.25.0: the RDI returns on four profiles
 
 Pins `psgscoring[ml]==0.25.0`.
