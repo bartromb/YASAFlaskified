@@ -74,3 +74,14 @@ def test_a_missing_stored_version_is_marked_as_an_approximation():
     tekst = " ".join(str(v) for _, v in provenance_rows({}))
     assert "(?)" in tekst, (
         f"een teruggevallen versie wordt als zeker gepresenteerd: {tekst[:200]!r}")
+
+
+def test_the_pipeline_stamp_is_preferred_over_the_comparison_block():
+    """De pipeline zet de versie in ELKE run; het comparison-blok alleen bij
+    een profielvergelijking. Een gewone klinische run heeft dat blok niet."""
+    from generate_pdf_report import provenance_rows
+
+    results = {"pneumo": {"meta": {"psgscoring_version": "0.27.0"}}}
+    tekst = " ".join(str(v) for _, v in provenance_rows(results))
+    assert "0.27.0" in tekst and "(?)" not in tekst, (
+        f"het stempel uit de pipeline wordt genegeerd: {tekst[:200]!r}")

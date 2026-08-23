@@ -404,8 +404,15 @@ def provenance_rows(results, lang="nl"):
     # versie bij het scoren vast in `comparison._meta.psgscoring_version`;
     # ontbreekt die (oudere jobs), dan valt hij terug op wat er nu staat, en
     # dat wordt dan als benadering gemarkeerd.
-    _stored = (((results or {}).get("comparison") or {}).get("_meta") or {}
-               ).get("psgscoring_version")
+    # Eerst het stempel dat de pipeline zelf in elke run zet (psgscoring
+    # >= 0.27.0); daarna het `comparison`-blok, dat alleen bestaat als er
+    # meerdere profielen vergeleken zijn -- bij een gewone klinische run met
+    # EEN profiel dus niet, en daar bleef het onzekerheidsteken permanent staan.
+    _stored = ((results or {}).get("pneumo") or {}).get("meta", {}).get(
+        "psgscoring_version")
+    if not _stored:
+        _stored = (((results or {}).get("comparison") or {}).get("_meta") or {}
+                   ).get("psgscoring_version")
     if _stored:
         _psg = str(_stored)
     else:
