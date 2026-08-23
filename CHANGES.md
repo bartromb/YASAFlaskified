@@ -1,3 +1,28 @@
+# v0.34.0 — 2026-08-23 — psgscoring 0.27.0: the classifier now runs where the RDI lives
+
+Pins `psgscoring[ml]==0.27.0`.
+
+**Reported values change** on `aasm_v3_breath`, `aasm_v3_prob` and their
+`_dual` variants: the arousal classifier runs there too, at operating point
+0.80. The arousal index and the RDI move; the AHI barely does. The other twelve
+v3 profiles are unchanged and the five reproduction profiles stay
+byte-identical.
+
+Measured before deciding, paired on MESA n=30: the RDI median falls 34.25 →
+28.70 and its severity class moves on 11 of 30, while the respiratory event-F1
+rises 0.44 → 0.48 (p = 5.5e-04). What decided it is that the arousal count —
+unlike the RDI — has a human reference: the previous setting counted 212
+against a reference of 128, the classifier gives 107, and the deviation from a
+clean count falls 0.58 → 0.26.
+
+Not claimed: that the resulting RDI is more correct. There is no RERA
+reference, so a lower RDI is a shift rather than a correction.
+
+**The provenance line is now reliable.** psgscoring stamps the version that
+produced the result into its output, and the report reads that first. It
+previously came from a `comparison` block that a normal single-profile run
+never creates, so reports carried a permanent `(?)` instead of a version.
+
 # v0.33.1 — 2026-08-23 — the report names the psgscoring that actually scored
 
 No scored value changes. `psgscoring[ml]==0.26.0` unchanged.
