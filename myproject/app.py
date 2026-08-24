@@ -553,7 +553,12 @@ class EDFProcessor:
         return [ch for ch in channels if any(k in ch.upper() for k in kw)]
 
     def _identify_emg_channels(self, channels):
-        kw = ["EMG","CHIN","LEG","TIBIAL"]
+        # Alle spierkanalen, kin en been. Deze lijst kiest GEEN kin-kanaal --
+        # ze gaat naar een telling in de uploadrespons en naar de
+        # metadataregel van de losse stagerings-PDF. De kin-keuze komt uit
+        # channel_select.html (dat been-labels uitsluit) en uit psgscoring.
+        # MENT/KIN/SUBMENT erbij, want die kin-labels ontbraken.
+        kw = ["EMG","CHIN","MENT","KIN","SUBMENT","LEG","TIBIAL"]
         return [ch for ch in channels if any(k in ch.upper() for k in kw)]
 
     def _identify_ecg_channels(self, channels):

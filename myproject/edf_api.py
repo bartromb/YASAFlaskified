@@ -29,7 +29,16 @@ CH_TYPE_PATTERNS = {
     "eeg":   ["EEG","FP","F3","F4","C3","C4","P3","P4","O1","O2",
                "FZ","CZ","PZ","OZ","T3","T4","T5","T6","A1","A2","M1","M2"],
     "eog":   ["EOG","E1","E2","LOC","ROC"],
-    "emg":   ["EMG","CHIN","CHIN1","CHIN2","LEG","TIBIAL"],
+    # LEG/TIBIAL staan hier BEWUST bij: dit is een weergavetype, niet een rol.
+    # Het signaalpaneel haalt er zijn amplitudeschaal (150 µV) uit, en een
+    # been-EMG is daar even goed mee bediend als een kin-EMG. De kin-KEUZE
+    # gebeurt elders (channel_select.html en psgscoring's _pick_emg), en die
+    # sluiten been-labels wel uit.
+    #
+    # Wat hier ontbrak zijn de kin-labels die het sjabloon al kende: Menton,
+    # Kinn en Submental vielen door naar "other" met schaal 1,0.
+    "emg":   ["EMG","CHIN","CHIN1","CHIN2","MENT","KIN","SUBMENT",
+               "LEG","TIBIAL"],
     "ecg":   ["ECG","EKG","CARDIAC"],
     "resp":  ["FLOW","NASAL","THERM","THOR","THORAX","ABD","ABDOMEN",
                "BELT","RESP","PFLOW","PTAF","CANNULA"],

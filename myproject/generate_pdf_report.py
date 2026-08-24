@@ -491,9 +491,33 @@ def _is_central_dominant(rsum):
         return False
 
 
-def _clinical_flags(rsum, pneumo, ss, asum, lang="nl"):
-    """B5: descriptive clinician attention points (NOT medical advice)."""
+# Analysewaarschuwing -> vertaalsleutel. Een code zonder sleutel valt terug op
+# zijn eigen (Nederlandse) `message`: zichtbaar in de verkeerde taal is beter
+# dan onzichtbaar, en dat was tot v0.34.1 het geval voor alle codes.
+_WARNING_KEYS = {
+    "emg_channel_missing": "pdf_warn_emg_missing",
+    "eog_channel_missing": "pdf_warn_eog_missing",
+    "all_epochs_artefact": "pdf_warn_all_artefact",
+}
+
+
+def _clinical_flags(rsum, pneumo, ss, asum, lang="nl", warnings=None):
+    """B5: descriptive clinician attention points (NOT medical advice).
+
+    v0.34.1: `analysis_warnings` uit `tasks.py` komt hier binnen. Die lijst
+    werd geschreven en door NIEMAND gelezen -- geen PDF-sectie, geen sjabloon,
+    geen route. Dat is dezelfde fout als de regressie die deze release
+    repareert, een laag hoger: een waarschuwing die alleen in een JSON-bestand
+    staat is geen waarschuwing.
+    """
     flags = []
+    for w in (warnings or []):
+        if not isinstance(w, dict):
+            continue
+        key = _WARNING_KEYS.get(w.get("code"))
+        txt = t(key, lang) if key else (w.get("message") or "")
+        if txt:
+            flags.append(txt)
     ph = (rsum or {}).get("phenotypes") or {}
     posa = ph.get("positional_osa")
     if posa and posa.get("flag") and posa.get("positional_therapy_candidate"):
@@ -1513,7 +1537,8 @@ def generate_pdf_report(results:dict, output_path:str,
     _p1_flags = _clinical_flags(
         rsum, pneumo,
         pneumo.get("spo2", {}).get("summary", {}),
-        pneumo.get("arousal", {}).get("summary", {}), lang)
+        pneumo.get("arousal", {}).get("summary", {}), lang,
+        warnings=results.get("analysis_warnings"))
     if _p1_flags:
         _fl_hdr = ParagraphStyle("FlagHdr", fontName="Helvetica-Bold", fontSize=7.5,
                                  textColor=colors.HexColor("#7a5c00"), leading=10)

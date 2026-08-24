@@ -1,3 +1,78 @@
+# v0.34.1 — 2026-08-24 — de kin-EMG bereikt de arousalanalyse nu werkelijk
+
+Pins `psgscoring[ml]==0.27.1`.
+
+**Reported values change** op opnames **zonder bruikbaar kin-EMG**: de
+arousalstap valt daar terug op de regelgebaseerde detectie in plaats van door
+een model te gaan dat op een constant-nul feature draait. Op opnames mét
+kin-EMG verandert er niets — behalve dat het kanaal er nu ook echt komt.
+
+## Het transportprobleem
+
+De LightGBM-arousalclassifier van psgscoring splitst 486 keer op een
+EMG-feature (4e op gain, alle drempels boven nul). Het werkpunt 0,80 uit
+v0.34.0 is gekozen op MESA-runs die het EDF **volledig** inlezen — met
+chin-EMG. Deze keten leverde het kanaal **nooit** aan:
+
+1. `pneumo_needed = pneumo_ch_list + [eeg_ch]` — de geconfigureerde `emg_ch`
+   stond er niet bij, dus `raw_pneumo` bevatte het kanaal per constructie niet.
+2. `run_pneumo_analysis(..., channel_map=pneumo_channels)` — de respiratoire
+   map, zonder sleutel `"emg"`.
+3. Het foutpad (`raw_pneumo = raw_staging`) had de EMG juist wél: de classifier
+   kreeg zijn features alléén na een mislukte load.
+
+Twee klinische AZORG-opnames gingen daardoor van AI 23,0 naar 4,9 en van 11,0
+naar 3,5 /u — die laatste bij AHI 42 met 217 respiratoire events.
+
+## Wat er verandert
+
+- `_pneumo_load_plan()` — de pneumo-raw draagt nu ook `emg_ch`. Alleen het EEG
+  en de kin-EMG komen erbij; de rest van de montage blijft eruit, want dáárom
+  bestaat die raw (een ongefilterde preload kost op een MESA-opname 5,1 GiB).
+- `_pneumo_channel_map()` — de sleutel `"emg"` gaat mee naar psgscoring, maar
+  alleen als het kanaal werkelijk in de raw zit. Een naam meegeven die er niet
+  is zou erger zijn: psgscoring valt dan terug op zijn eigen zoektocht en de
+  provenance zou een ander kanaal noemen dan de map.
+- **Het studievergelijkingspad** (`run_profile_comparison`) laadde alléén
+  pneumo-kanalen — geen `eeg_ch`, geen `emg_ch`. De arousal/RDI-arm van elk
+  profielrapport draaide dus zonder EMG en mogelijk zonder arousal-EEG, terwijl
+  vergelijkbaarheid met de klinische run het enige doel van die functie is.
+  Beide worden nu meegeladen en doorgegeven.
+- **Een ontbrekend EMG- of EOG-kanaal is zichtbaar.** `_validate_channels`
+  gooide bij ontbrekend EEG, maar meldde ontbrekend EMG/EOG alleen met een
+  `logger.warning` in de workerlog — niets in `analysis_warnings`, niets in het
+  rapport, niets in de UI. Precies daardoor bleef maandenlang onzichtbaar dat
+  de classifier zonder kin-EMG draaide. De functie geeft nu waarschuwingen
+  terug (`emg_channel_missing`, `eog_channel_missing`) die in
+  `analysis_warnings` terechtkomen.
+- **`analysis_warnings` werd geschreven en door niemand gelezen.** Een grep
+  door de codebase leverde één schrijver en **nul lezers** op: geen PDF-sectie,
+  geen sjabloon, geen route. De blokkerende "alle epochs als artefact"-melding
+  stond er sinds v0.31 in en is nooit ergens getoond. Dat is dezelfde fout als
+  de regressie die deze release repareert, één laag hoger. De lijst komt nu in
+  het aandachtspuntenkader op pagina 1, met een vertaalsleutel per code in alle
+  vier de talen; een code zonder sleutel valt terug op zijn eigen tekst, zodat
+  een nieuwe waarschuwing niet stil verdwijnt.
+- Het log meldt op welke raw de respiratoire analyse draait (normaal pad of
+  terugval), zodat dat verschil achteraf leesbaar is.
+- `CH_TYPE_PATTERNS["emg"]` en `_identify_emg_channels` kenden de kin-labels
+  `Menton`, `Kinn` en `Submental` niet — die vielen door naar type "other" met
+  schaal 1,0 in plaats van 150 µV in het signaalpaneel. LEG/TIBIAL blijven er
+  bewust in staan: dat is een weergavetype, geen rol, en de kin-keuze gebeurt
+  elders.
+
+## Niet geclaimd
+
+Dat dit de klinische −80 % verklaart. Op MESA n=10 kost het EMG-loos draaien
+ongeveer **−14 %** van de mediane arousal-index (16,65 → 14,30 /u), lager op 7
+van de 10 opnames en hóger op 3. De richting klopt, de grootte niet. Het
+restant blijft open. Zie `docs/arousal_emg_transport_bevinding.md` in
+psgscoring.
+
+Los van code: de twee AZORG-exports bevatten géén kin-EMG terwijl de montage
+die normaal heeft. Controleer het exportprofiel van de recorder — geen enkele
+reparatie hierboven raakt die schakel.
+
 # v0.34.0 — 2026-08-23 — psgscoring 0.27.0: the classifier now runs where the RDI lives
 
 Pins `psgscoring[ml]==0.27.0`.

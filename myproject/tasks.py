@@ -105,6 +105,48 @@ def _load_edf(edf_path: str, needed_channels: list,
         return mne.io.read_raw_edf(edf_path, preload=True, verbose=False)
 
 
+def _pneumo_load_plan(pneumo_ch_list: list, eeg_ch: str | None,
+                      emg_ch: str | None) -> list:
+    """Welke kanalen de pneumo-raw moet dragen.
+
+    De kin-EMG stond hier NIET bij. Gevolg: `raw_pneumo` bevatte het kanaal per
+    constructie niet, `channel_map_from_user` in psgscoring negeert stil elke
+    naam die niet in `raw.ch_names` zit, en de LGBM-arousalclassifier draaide
+    in productie structureel op een EMG-feature van constant nul -- terwijl de
+    kalibratie die zijn werkpunt koos het EDF volledig inlas en het kanaal dus
+    wel had.
+
+    Alleen het EEG en de kin-EMG komen erbij; de rest van de montage blijft
+    buiten de pneumo-raw. Dat is de reden dat die raw bestaat: een ongefilterde
+    preload brengt elk kanaal naar de hoogste samplefrequentie en kost op een
+    MESA-opname 5,1 GiB tegen een halve seconde voor de kanalen die tellen.
+    """
+    return list(dict.fromkeys(
+        c for c in list(pneumo_ch_list) + [eeg_ch, emg_ch] if c))
+
+
+def _pneumo_channel_map(pneumo_channels: dict | None, emg_ch: str | None,
+                        raw) -> dict:
+    """De respiratoire map plus de kin-EMG, mits die er werkelijk in zit.
+
+    De sleutel "emg" ontbrak volledig: YASAFlaskified gaf de respiratoire map
+    door en psgscoring's `ch.get("emg")` was dus altijd None vanuit de
+    gebruikersconfig.
+
+    Een naam meegeven die niet in de raw zit zou erger zijn dan hem weglaten:
+    psgscoring valt dan terug op zijn eigen patroonzoektocht en de provenance
+    zou een ander kanaal noemen dan de map.
+    """
+    m = dict(pneumo_channels or {})
+    if emg_ch and emg_ch in getattr(raw, "ch_names", []):
+        m["emg"] = emg_ch
+    elif emg_ch:
+        logger.warning(
+            "[task] kin-EMG %r zit niet in de pneumo-raw; niet in de "
+            "channel_map gezet (psgscoring zoekt zelf verder)", emg_ch)
+    return m
+
+
 def _detect_pneumo_channels(edf_path: str, pneumo_channels: dict) -> list:
     """Detecteer respiratoire kanalen via header (geen data)."""
     try:
@@ -244,6 +286,7 @@ def run_analysis_job(job_id: str) -> dict:
         # draait op haar eigen kanalen en heeft hier niets van nodig.
         logger.info("[task] Polygrafie: EEG-analyse overgeslagen")
         raw_analyse  = None
+        _channel_warnings: list[dict] = []
         yasa_results = {
             "staging":          staging_result,
             "sleep_statistics": {"success": False,
@@ -260,7 +303,8 @@ def run_analysis_job(job_id: str) -> dict:
             logger.info("ANALYSE EDF laden (%d kanalen)...", len(analyse_needed))
             raw_analyse = _load_edf(edf_path, analyse_needed, label="ANALYSE")
 
-        _validate_channels(raw_analyse, eeg_ch, eog_ch, emg_ch, extra_eeg)
+        _channel_warnings = _validate_channels(
+            raw_analyse, eeg_ch, eog_ch, emg_ch, extra_eeg)
 
         # ── Stap 4: Volledige YASA analyse (met prefetched hypno) ─
         _set_progress(job_id, 5, 10, "Spindles, slow waves, bandpower...")
@@ -283,16 +327,27 @@ def run_analysis_job(job_id: str) -> dict:
     pneumo_ch_list = _detect_pneumo_channels(edf_path, pneumo_channels)
 
     if pneumo_ch_list:
-        pneumo_needed = list(dict.fromkeys(pneumo_ch_list + [eeg_ch]))
-        logger.info("PNEUMO EDF laden (%d kanalen)...", len(pneumo_needed))
+        pneumo_needed = _pneumo_load_plan(pneumo_ch_list, eeg_ch, emg_ch)
+        logger.info("PNEUMO EDF laden (%d kanalen, kin-EMG=%s)...",
+                    len(pneumo_needed), emg_ch or "geen")
         try:
             raw_pneumo = _load_edf(edf_path, pneumo_needed, label="PNEUMO")
+            _pneumo_bron = "PNEUMO"
         except Exception as e:
+            # Tot v0.34.0 was dit foutpad het ENIGE pad waarop de arousalstap
+            # een kin-EMG zag: raw_staging draagt hem wel. De classifier kreeg
+            # zijn features dus alleen na een mislukte load. Nu is het verschil
+            # weg; de logregel blijft, zodat achteraf leesbaar is welke raw
+            # gescoord heeft.
             logger.warning("Pneumo EDF mislukt (%s) — gebruik staging-raw", e)
             raw_pneumo = raw_staging
+            _pneumo_bron = "STAGING (terugval)"
     else:
         logger.info("Geen pneumo-kanalen — gebruik staging-raw")
         raw_pneumo = raw_staging
+        _pneumo_bron = "STAGING (geen pneumo-kanalen)"
+    logger.info("[task] respiratoire analyse draait op raw=%s (%d kanalen)",
+                _pneumo_bron, len(getattr(raw_pneumo, "ch_names", []) or []))
 
     # ── Stap 6: Pneumo-analyse ────────────────────────────────
     _set_progress(job_id, 7, 10, "Respiratoire analyse (AHI, SpO2)...")
@@ -335,7 +390,7 @@ def run_analysis_job(job_id: str) -> dict:
         logger.debug("Clipping-check mislukt (niet-kritiek): %s", e)
 
     # Blokkerende bevindingen die de gebruiker MOET zien, niet als voetnoot.
-    analysis_warnings: list[dict] = []
+    analysis_warnings: list[dict] = list(_channel_warnings)
 
     # ── Twee bewakingen op het artefactmasker ────────────────────────────
     #
@@ -387,7 +442,8 @@ def run_analysis_job(job_id: str) -> dict:
         pneumo_results = run_pneumo_analysis(
             raw              = raw_pneumo,
             hypno            = hypno,
-            channel_map      = pneumo_channels,
+            channel_map      = _pneumo_channel_map(pneumo_channels, emg_ch,
+                                                   raw_pneumo),
             artifact_epochs  = art_epochs,
             scoring_profile  = cfg.get("scoring_profile", "standard"),
         )
@@ -678,20 +734,47 @@ def generate_edfplus_job(job_id: str) -> dict:
 # HULPFUNCTIES
 # ─────────────────────────────────────────────
 
-def _validate_channels(raw, eeg_ch, eog_ch, emg_ch, extra_eeg):
+def _validate_channels(raw, eeg_ch, eog_ch, emg_ch, extra_eeg) -> list:
+    """Controleer de gevraagde kanalen; geef terug wat de gebruiker moet zien.
+
+    Ontbrekend EEG was al een harde fout. Ontbrekend EOG of EMG was alleen een
+    `logger.warning` in de workerlog -- niets in `analysis_warnings`, niets in
+    het rapport, niets in de UI. Precies daardoor bleef maandenlang onzichtbaar
+    dat de LGBM-arousalclassifier zonder kin-EMG draaide en de arousal-index
+    decimeerde. De teruggegeven lijst heeft dezelfde vorm als de andere
+    `analysis_warnings`-entries.
+    """
     available = set(raw.ch_names)
     if eeg_ch not in available:
         raise ValueError(f"EEG '{eeg_ch}' niet gevonden. Beschikbaar: {sorted(available)}")
+    warnings: list[dict] = []
     if eog_ch and eog_ch not in available:
         logger.warning("EOG '%s' niet gevonden", eog_ch)
+        warnings.append({
+            "code": "eog_channel_missing",
+            "severity": "warning",
+            "message": (f"Het opgegeven EOG-kanaal '{eog_ch}' zit niet in dit "
+                        f"EDF-bestand. De slaapstadiëring draait zonder "
+                        f"oogbewegingen en is daardoor minder betrouwbaar."),
+        })
     if emg_ch and emg_ch not in available:
         logger.warning("EMG '%s' niet gevonden", emg_ch)
+        warnings.append({
+            "code": "emg_channel_missing",
+            "severity": "warning",
+            "message": (f"Het opgegeven kin-EMG-kanaal '{emg_ch}' zit niet in "
+                        f"dit EDF-bestand. REM-arousals zijn zonder kin-EMG "
+                        f"niet AASM-conform scoorbaar en de ML-arousalstap "
+                        f"wordt overgeslagen; de arousal-index komt uit de "
+                        f"regelgebaseerde detectie."),
+        })
     missing = [ch for ch in extra_eeg if ch not in available]
     if missing:
         logger.warning("Extra EEG overgeslagen: %s", missing)
         extra_eeg[:] = [ch for ch in extra_eeg if ch in available]
     if eeg_ch not in extra_eeg:
         extra_eeg.insert(0, eeg_ch)
+    return warnings
 
 
 def _collect_errors(results: dict) -> list:
@@ -1022,7 +1105,13 @@ def run_profile_comparison(edf_path: str, results_dir: str, *,
     # elk kanaal en laat MNE alles naar de hoogste samplefrequentie brengen: op
     # een MESA-opname 175 s en 5,1 GiB tegen 0,5 s voor de kanalen die tellen.
     # Bij acht RQ-workers is dat het verschil tussen ~40 GiB en een handvol.
-    _pneumo_needed = _detect_pneumo_channels(edf_path, pneumo_channels or {})
+    _pneumo_needed = _pneumo_load_plan(
+        _detect_pneumo_channels(edf_path, pneumo_channels or {}),
+        eeg_ch, emg_ch)
+    # Zonder eeg_ch en emg_ch draaide de arousal/RDI-arm van ELK profielrapport
+    # zonder kin-EMG en mogelijk zonder arousal-EEG. De studie-RDI was daardoor
+    # niet vergelijkbaar met de klinische run -- terwijl vergelijkbaarheid het
+    # enige doel van deze functie is.
     raw = _load_edf(edf_path, _pneumo_needed, label="PNEUMO/cmp")
 
     try:
@@ -1049,7 +1138,8 @@ def run_profile_comparison(edf_path: str, results_dir: str, *,
     for profile in _profile_names:
         _t0 = time.monotonic()
         pneumo = run_pneumo_analysis(
-            raw=raw, hypno=hypno, channel_map=pneumo_channels or {},
+            raw=raw, hypno=hypno,
+            channel_map=_pneumo_channel_map(pneumo_channels, emg_ch, raw),
             scoring_profile=profile)
         _wall[profile] = round(time.monotonic() - _t0, 1)
         rsum = pneumo.get("respiratory", {}).get("summary", {})

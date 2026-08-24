@@ -2054,6 +2054,27 @@ _PDF_AASM_V3 = {
         "en": "Dual-sensor scoring requested but not performed: only one flow channel available ({channel}). Apneas and hypopneas were both scored on that channel.",
         "de": "Dual-Sensor-Scoring angefordert, aber nicht durchgef\u00fchrt: nur ein Flusskanal verf\u00fcgbar ({channel}). Apnoen und Hypopnoen wurden beide auf diesem Kanal gescort.",
     },
+    # Kanalen die de gebruiker koos maar die niet in het EDF zitten. Dit
+    # stond tot v0.34.1 alleen in de workerlog; de arousal-regressie van
+    # v0.27.0 bleef daardoor maanden onzichtbaar.
+    "pdf_warn_emg_missing": {
+        "nl": "Geen kin-EMG in dit EDF-bestand. REM-arousals zijn zonder kin-EMG niet AASM-conform scoorbaar en de ML-arousalstap is overgeslagen; de arousal-index komt uit de regelgebaseerde detectie.",
+        "fr": "Pas d'EMG mentonnier dans ce fichier EDF. Sans EMG mentonnier, les micro-éveils en REM ne sont pas scorables selon l'AASM et l'étape d'arousal ML a été omise ; l'index de micro-éveils provient de la détection par règles.",
+        "en": "No chin EMG in this EDF file. Without chin EMG, REM arousals are not AASM-conformly scorable and the ML arousal step was skipped; the arousal index comes from the rule-based detector.",
+        "de": "Kein Kinn-EMG in dieser EDF-Datei. Ohne Kinn-EMG sind REM-Arousals nicht AASM-konform scorbar und der ML-Arousal-Schritt wurde übersprungen; der Arousal-Index stammt aus der regelbasierten Erkennung.",
+    },
+    "pdf_warn_eog_missing": {
+        "nl": "Geen EOG in dit EDF-bestand. De slaapstadiëring draait zonder oogbewegingen en is daardoor minder betrouwbaar.",
+        "fr": "Pas d'EOG dans ce fichier EDF. La stadification du sommeil s'effectue sans mouvements oculaires et est donc moins fiable.",
+        "en": "No EOG in this EDF file. Sleep staging runs without eye movements and is therefore less reliable.",
+        "de": "Kein EOG in dieser EDF-Datei. Die Schlafstadienbestimmung läuft ohne Augenbewegungen und ist daher weniger zuverlässig.",
+    },
+    "pdf_warn_all_artefact": {
+        "nl": "Alle epochs zijn als artefact gemarkeerd; er blijft geen slaaptijd over om indices op te baseren. Controleer of het opgegeven EEG-kanaal werkelijk een EEG is.",
+        "fr": "Toutes les époques sont marquées comme artefact ; il ne reste aucun temps de sommeil pour calculer les index. Vérifiez que le canal EEG indiqué est bien un EEG.",
+        "en": "Every epoch is marked as artefact; no sleep time remains on which to base the indices. Check that the EEG channel given really is an EEG.",
+        "de": "Alle Epochen sind als Artefakt markiert; es bleibt keine Schlafzeit, auf die sich die Indizes stützen könnten. Prüfen Sie, ob der angegebene EEG-Kanal wirklich ein EEG ist.",
+    },
     "pdf_flag_arousal": {
         "nl": "Verhoogde arousal-index ({ai}/u)",
         "fr": "Index de micro-éveils élevé ({ai}/h)",
