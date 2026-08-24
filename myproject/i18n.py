@@ -2057,6 +2057,31 @@ _PDF_AASM_V3 = {
     # Kanalen die de gebruiker koos maar die niet in het EDF zitten. Dit
     # stond tot v0.34.1 alleen in de workerlog; de arousal-regressie van
     # v0.27.0 bleef daardoor maanden onzichtbaar.
+    # Te weinig slaap in een houding om er een index over te geven. psgscoring
+    # gaf hier eerder een deling zonder ondergrens: één event in 0,5 min ruglig
+    # leverde "AHI Supine 120,0/u", in dezelfde tabel als de echte indices.
+    # Drie aandachtspunten uit de twee motiverende AZORG-rapporten.
+    # Beschrijvend, geen advies -- zelfde stijl als de bestaande vlaggen.
+    "pdf_flag_desat_discrepancy": {
+        "nl": "Desaturatielast disproportioneel t.o.v. de gescoorde events (ODI3 {odi}/u bij AHI {ahi}/u, T90 {t90}%) — beoordeel de ruwe tracing",
+        "fr": "Charge de désaturation disproportionnée par rapport aux événements scorés (IDO3 {odi}/h pour un IAH {ahi}/h, T90 {t90}%) — examinez le tracé brut",
+        "en": "Desaturation burden disproportionate to the scored events (ODI3 {odi}/h at AHI {ahi}/h, T90 {t90}%) — review the raw tracing",
+        "de": "Entsättigungslast unverhältnismäßig zu den gescorten Ereignissen (ODI3 {odi}/h bei AHI {ahi}/h, T90 {t90}%) — Rohsignal beurteilen"},
+    "pdf_flag_arousal_implausible": {
+        "nl": "Arousal-index onwaarschijnlijk laag t.o.v. de respiratoire eventfrequentie ({ai}/u bij AHI {ahi}/u) — controleer de arousaldetectie",
+        "fr": "Index de micro-éveils improbablement bas par rapport à la fréquence des événements respiratoires ({ai}/h pour un IAH {ahi}/h) — vérifiez la détection des micro-éveils",
+        "en": "Arousal index implausibly low relative to the respiratory event rate ({ai}/h at AHI {ahi}/h) — check the arousal detection",
+        "de": "Arousal-Index unplausibel niedrig im Verhältnis zur respiratorischen Ereignisrate ({ai}/h bei AHI {ahi}/h) — Arousal-Erkennung prüfen"},
+    "pdf_flag_bradycardia_mean": {
+        "nl": "Gemiddelde hartfrequentie {hr} bpm — onder de referentie 60–100",
+        "fr": "Fréquence cardiaque moyenne {hr} bpm — sous la référence 60–100",
+        "en": "Mean heart rate {hr} bpm — below the 60–100 reference",
+        "de": "Mittlere Herzfrequenz {hr} bpm — unter der Referenz 60–100"},
+    "pdf_pos_too_short": {
+        "nl": "— ({min} min, < {drempel})",
+        "fr": "— ({min} min, < {drempel})",
+        "en": "— ({min} min, < {drempel})",
+        "de": "— ({min} min, < {drempel})"},
     "pdf_warn_emg_missing": {
         "nl": "Geen kin-EMG in dit EDF-bestand. REM-arousals zijn zonder kin-EMG niet AASM-conform scoorbaar en de ML-arousalstap is overgeslagen; de arousal-index komt uit de regelgebaseerde detectie.",
         "fr": "Pas d'EMG mentonnier dans ce fichier EDF. Sans EMG mentonnier, les micro-éveils en REM ne sont pas scorables selon l'AASM et l'étape d'arousal ML a été omise ; l'index de micro-éveils provient de la détection par règles.",

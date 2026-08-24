@@ -1,3 +1,52 @@
+# v0.34.2 — 2026-08-24 — vier getallen die geen getal hoorden te zijn
+
+Pins `psgscoring[ml]==0.27.2`.
+
+**Reported values change**: de positie-AHI van een houding waarin te kort
+geslapen is, de FRI-index in twee secties, de kanaalkolom van de spindel- en
+SW-tabel, en drie nieuwe aandachtspunten.
+
+## De positie-AHI
+
+psgscoring geeft sinds 0.27.2 `None` zodra er minder dan 15 min in een houding
+geslapen is — de tabel toonde daarvoor "AHI Supine 120,0/u" uit één event in
+0,5 min. De rapportlaag sloeg elke `None` over, en dan staat er **niets**: niet
+te onderscheiden van een houding waarin de patiënt nooit gelegen heeft. Drie
+gevallen, drie weergaven: het getal, `— (0,5 min, < 15)`, of geen rij.
+
+## De FRI-index
+
+44,3/u in de RERA-sectie en 43,2/u in sectie 8d, over dezelfde nacht en
+dezelfde teller. Beide secties lezen nu `rsum["fri_index"]` uit psgscoring.
+Voor resultaten van vóór dat veld reconstrueert `_fri_index()` de noemer uit
+`n_rera / rera_index` — dezelfde noemer — en pas als laatste redmiddel de TST
+uit de slaapstatistiek.
+
+## De kanaalkolom van de spindel- en SW-tabel
+
+Die toonde `—` op elke rij, en dat kwam niet uit de rapportlaag.
+`sp.summary(grp_chan=True, ...)` zet het KANAAL in de index, en
+`to_dict(orient="records")` gooit de index weg. Het label was dus al verdwenen
+voordat het rapport ernaar kon kijken — een tabel met zes rijen waarvan niet te
+zien was waar ze bij horen. `reset_index()` erbij, en het label draagt kanaal
+én stadium wanneer de detector op allebei gegroepeerd heeft.
+
+## Drie aandachtspunten uit de twee motiverende rapporten
+
+1. **Desaturatielast disproportioneel** t.o.v. de gescoorde events
+   (`ODI3 ≥ 3 × AHI`, of `T90 ≥ 10 %` bij `AHI < 5`). Rapport 1 toonde AHI 3,1
+   naast ODI3 14,1 en T90 28 %: de hypoxemie werd gevlagd, de discrepantie
+   niet — terwijl die de klinische boodschap is.
+2. **Arousal-index onwaarschijnlijk laag** (`AHI ≥ 15` en `AI < AHI/2`).
+   Rapport 2 toonde AI 3,5/u bij AHI 42 met 217 events. Deze regel had de
+   EMG-transportregressie in één oogopslag zichtbaar gemaakt.
+3. **Gemiddelde hartfrequentie < 50 bpm.** Beide rapporten toonden 43,8 bpm
+   náást hun eigen referentie "60–100", zonder vlag, terwijl verderop al een
+   bradycardie-telling staat.
+
+Beschrijvend, geen advies — dezelfde stijl als de bestaande vlaggen, in alle
+vier de talen.
+
 # v0.34.1 — 2026-08-24 — de kin-EMG bereikt de arousalanalyse nu werkelijk
 
 Pins `psgscoring[ml]==0.27.1`.

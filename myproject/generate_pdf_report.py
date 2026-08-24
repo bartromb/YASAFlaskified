@@ -501,6 +501,92 @@ _WARNING_KEYS = {
 }
 
 
+def _detector_row_label(rij) -> str:
+    """Het label van een spindel- of SW-samenvattingsrij.
+
+    Kanaal én stadium wanneer de detector op allebei gegroepeerd heeft --
+    anders staan er twee rijen "C4-M1" onder elkaar met verschillende getallen
+    en is niet te zien welke welke is.
+    """
+    delen = []
+    for sleutel in ("Channel", "channel"):
+        if rij.get(sleutel):
+            delen.append(str(rij[sleutel]))
+            break
+    for sleutel in ("Stage", "stage"):
+        if rij.get(sleutel) not in (None, ""):
+            delen.append(str(rij[sleutel]))
+            break
+    return " · ".join(delen) if delen else "—"
+
+
+def _position_rows(pos_sum, lang="nl"):
+    """De positie-AHI-rijen: getal, "te kort", of geen rij.
+
+    psgscoring geeft `None` zodra er minder dan `min_minutes_for_index` in een
+    houding geslapen is -- de tabel toonde daarvoor 120,0/u uit één event in
+    een halve minuut. De rapportlaag sloeg elke None over, en dan staat er
+    NIETS: niet te onderscheiden van een houding waarin de patiënt nooit
+    gelegen heeft. Die twee horen verschillend te lezen.
+    """
+    pos_sum = pos_sum or {}
+    ahi_pos = pos_sum.get("ahi_per_pos") or {}
+    minuten = pos_sum.get("sleep_time_min") or {}
+    drempel = pos_sum.get("min_minutes_for_index") or 15.0
+    rijen = []
+    for naam, ahi in sorted(ahi_pos.items()):
+        if ahi is not None:
+            rijen.append([f"AHI {naam}", f"{ahi:.1f} /u"])
+            continue
+        m = minuten.get(naam)
+        if not m:                      # nooit in die houding geslapen
+            continue
+        # Niet afronden op hele minuten: 0,5 min zou "0 min" worden en dat
+        # leest als "nooit in die houding" -- precies het onderscheid dat deze
+        # rij moet maken.
+        _m = f"{m:.1f}" if m < 10 else f"{m:.0f}"
+        rijen.append([f"AHI {naam}",
+                      t("pdf_pos_too_short", lang).format(
+                          min=_m, drempel=f"{drempel:.0f}")])
+    return rijen
+
+
+_FRI_SENTINEL = object()
+
+
+def _fri_index(rsum, stats=None):
+    """De FRI-index, uit één bron.
+
+    Sectie 8d en de RERA-sectie rekenden hem elk zelf uit, met een andere
+    noemer: `stats["TST"]` uit de YASA-slaapstatistiek tegenover de slaaptijd
+    die psgscoring voor al zijn indices gebruikt (artefact-epochs eruit). Eén
+    rapport toonde daardoor 44,3/u naast 43,2/u over dezelfde nacht.
+
+    Volgorde:
+      1. `rsum["fri_index"]` -- psgscoring vanaf 0.27.1. Ook `None` telt: dat
+         betekent "geen bruikbare slaaptijd", een uitspraak en geen gat.
+      2. de noemer gereconstrueerd uit `n_rera / rera_index` -- dezelfde
+         noemer, voor resultaten van vóór dat veld.
+      3. `stats["TST"]` -- laatste redmiddel, en de enige die kan afwijken.
+    """
+    if rsum is None:
+        return None
+    val = rsum.get("fri_index", _FRI_SENTINEL)
+    if val is not _FRI_SENTINEL:
+        return val
+    n_fri = rsum.get("n_fri")
+    if not n_fri:
+        return None
+    n_rera, rera_idx = rsum.get("n_rera"), rsum.get("rera_index")
+    if n_rera and rera_idx:
+        return round(n_fri / (n_rera / rera_idx), 1)
+    try:
+        tst_h = float(str((stats or {}).get("TST", 0) or 0)) / 60.0
+    except (TypeError, ValueError):
+        return None
+    return round(n_fri / tst_h, 1) if tst_h > 0 else None
+
+
 def _clinical_flags(rsum, pneumo, ss, asum, lang="nl", warnings=None):
     """B5: descriptive clinician attention points (NOT medical advice).
 
@@ -541,6 +627,62 @@ def _clinical_flags(rsum, pneumo, ss, asum, lang="nl", warnings=None):
             flags.append(t("pdf_flag_arousal", lang).format(ai=f"{float(ai):.0f}"))
     except Exception:
         pass
+    # ── Discrepantie: meer desaturatie dan er events gescoord zijn ──────
+    #
+    # Eén rapport toonde AHI 3,1 naast ODI3 14,1, T90 28 % en een hypoxic
+    # burden van 17 %·min/u. De hypoxemie werd gevlagd, de discrepantie niet --
+    # terwijl die de klinische boodschap is: de desaturatie komt ergens vandaan
+    # en de scoring vindt het niet.
+    try:
+        _ahi = rsum.get("ahi_total")
+        _odi = ss.get("odi_3pct")
+        _t90 = ss.get("pct_below_90")
+        _ahi_f = float(_ahi) if _ahi is not None else None
+        _odi_f = float(_odi) if _odi is not None else None
+        _t90_f = float(_t90) if _t90 is not None else None
+        _disproportie = (
+            (_odi_f is not None and _ahi_f is not None
+             and _ahi_f > 0 and _odi_f >= 3 * _ahi_f)
+            or (_t90_f is not None and _t90_f >= 10
+                and _ahi_f is not None and _ahi_f < 5)
+        )
+        if _disproportie:
+            flags.append(t("pdf_flag_desat_discrepancy", lang).format(
+                odi=f"{_odi_f:.1f}" if _odi_f is not None else "—",
+                ahi=f"{_ahi_f:.1f}" if _ahi_f is not None else "—",
+                t90=f"{_t90_f:.0f}" if _t90_f is not None else "—"))
+    except (TypeError, ValueError):
+        pass
+
+    # ── Arousal-index die niet bij de eventlast past ────────────────────
+    #
+    # AI 3,5/u bij AHI 42 met 217 respiratoire events kan fysiologisch niet.
+    # Die combinatie stond in een klinisch rapport zonder enige vlag; deze
+    # regel had de EMG-transportregressie in één oogopslag zichtbaar gemaakt.
+    try:
+        _ahi_a = rsum.get("ahi_total")
+        _ai = asum.get("arousal_index")
+        if _ahi_a is not None and _ai is not None:
+            _ahi_a, _ai = float(_ahi_a), float(_ai)
+            if _ahi_a >= 15 and _ai < _ahi_a / 2:
+                flags.append(t("pdf_flag_arousal_implausible", lang).format(
+                    ai=f"{_ai:.1f}", ahi=f"{_ahi_a:.1f}"))
+    except (TypeError, ValueError):
+        pass
+
+    # ── Bradycardie op het gemiddelde ───────────────────────────────────
+    #
+    # Beide rapporten toonden 43,8 bpm náást hun eigen referentie "60-100",
+    # zonder vlag, terwijl verderop al een bradycardie-telling staat.
+    try:
+        _hr = ((pneumo.get("heart_rate", {}) or {}).get("summary", {})
+               or {}).get("avg_hr")
+        if _hr is not None and float(_hr) < 50:
+            flags.append(t("pdf_flag_bradycardia_mean", lang).format(
+                hr=f"{float(_hr):.1f}"))
+    except (TypeError, ValueError):
+        pass
+
     # Het dual-sensor algoritme is gevraagd maar niet uitvoerbaar: dat mag
     # niet stilzwijgend een ander algoritme opleveren dan de gebruiker koos.
     _dsf = (pneumo.get("meta", {}) or {}).get("dual_sensor_fallback") or {}
@@ -1787,7 +1929,7 @@ def generate_pdf_report(results:dict, output_path:str,
         if summ:
             _skip={"Stage","stage","Channel","channel"}
             keys=[k for k in summ[0] if k not in _skip]
-            rows=[[s.get("Channel",s.get("channel",s.get("Stage",s.get("stage","—"))))]+[_rnd(s.get(k)) for k in keys] for s in summ]
+            rows=[[_detector_row_label(s)]+[_rnd(s.get(k)) for k in keys] for s in summ]
             story.append(_tbl([t("pdf_channel",lang)]+[k.replace("_"," ").capitalize() for k in keys],rows))
       else:
         story.append(Paragraph(f"{t('pdf_not_available', lang)}: {spd.get('error','—')}",styles["SM"]))
@@ -1802,7 +1944,7 @@ def generate_pdf_report(results:dict, output_path:str,
         if summ:
             _skip={"Stage","stage","Channel","channel"}
             keys=[k for k in summ[0] if k not in _skip]
-            rows=[[s.get("Channel",s.get("channel",s.get("Stage",s.get("stage","—"))))]+[_rnd(s.get(k)) for k in keys] for s in summ]
+            rows=[[_detector_row_label(s)]+[_rnd(s.get(k)) for k in keys] for s in summ]
             story.append(_tbl([t("pdf_channel",lang)]+[k.replace("_"," ").capitalize() for k in keys],rows))
       else:
         story.append(Paragraph(f"{t('pdf_not_available', lang)}: {sw.get('error','—')}",styles["SM"]))
@@ -2220,11 +2362,17 @@ def generate_pdf_report(results:dict, output_path:str,
         def _idx(n):
             return f"{n / _rera_h:.1f} /u" if _rera_h else "—"
 
+        # De FRI-rij deelde hier zelf; sectie 8d deed het met een ANDERE
+        # noemer. Nu leest ze het veld dat psgscoring publiceert, en 8d
+        # hetzelfde.
+        _fri_i = _fri_index(rsum, stats)
+
         ext_rows = [
             [t("pdf_rera_amp_arousal", lang),  str(n_rera_fri), _idx(n_rera_fri)],
             [t("pdf_rera_flat_arousal", lang), str(n_rera_flat), _idx(n_rera_flat)],
             [t("pdf_rera_total", lang),  str(rera_n), f"{rera_idx:.1f} /u"],
-            [t("pdf_fri_no_criteria", lang), str(n_fri_pure), _idx(n_fri_pure)],
+            [t("pdf_fri_no_criteria", lang), str(n_fri_pure),
+             f"{_fri_i:.1f} /u" if _fri_i is not None else "—"],
             [t("pdf_rdi_formula", lang),          "", f"{rdi_val:.1f} /u"],
         ]
         story.append(KeepTogether([_tbl(
@@ -2238,11 +2386,7 @@ def generate_pdf_report(results:dict, output_path:str,
         ]
         # Positional AHI (from position analysis)
         pos_sum = pneumo.get("position", {}).get("summary", {})
-        ahi_pos = pos_sum.get("ahi_per_pos", {})
-        if ahi_pos:
-            for pos_name, pos_ahi in sorted(ahi_pos.items()):
-                if pos_ahi is not None:
-                    stage_rows.append([f"AHI {pos_name}", f"{pos_ahi:.1f} /u"])
+        stage_rows.extend(_position_rows(pos_sum, lang))
         story.append(KeepTogether([_tbl(
             [t("pdf_param",lang), t("pdf_value",lang)],
             stage_rows,
@@ -2614,8 +2758,7 @@ def generate_pdf_report(results:dict, output_path:str,
     if n_fri is None:
         n_fri = max(0, len(rejected_hyps) - n_reinstated)
     if n_fri > 0 and resp.get("success"):
-        tst_h = float(str(stats.get("TST", 0) or 0)) / 60.0
-        fri_index = n_fri / tst_h if tst_h > 0 else None
+        fri_index = _fri_index(rsum, stats)
         story.append(_hdr(t("rpt_sec8d", lang), color=BLUE)); sp(0.1)
         story.append(_tbl([t("pdf_param", lang), t("pdf_value", lang)], [
             [t("pdf_fri_count", lang),  str(n_fri)],

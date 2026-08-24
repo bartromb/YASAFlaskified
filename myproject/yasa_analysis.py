@@ -268,7 +268,14 @@ def run_spindle_detection(raw: mne.io.BaseRaw, hypno: list,
         if sp is not None:
             df = sp.summary(grp_chan=False, grp_stage=False)
             result["spindles"]       = df.to_dict(orient="records") if len(df) else []
-            result["summary"]        = sp.summary(grp_chan=True, grp_stage=False).to_dict(orient="records")
+            # reset_index(): `summary(grp_chan=True)` zet het KANAAL in de
+            # index, en `to_dict(orient="records")` gooit de index weg. Het
+            # label was dus al kwijt voordat het rapport ernaar kon kijken --
+            # de kanaalkolom toonde "—" op elke rij en de tabel was niet te
+            # interpreteren.
+            result["summary"]        = sp.summary(
+                grp_chan=True, grp_stage=False).reset_index().to_dict(
+                    orient="records")
             result["total_spindles"] = len(df)
         else:
             result["spindles"] = []
@@ -308,7 +315,11 @@ def run_sw_detection(raw: mne.io.BaseRaw, hypno: list,
         if sw is not None:
             df = sw.summary(grp_chan=False, grp_stage=False)
             result["slow_waves"]       = df.to_dict(orient="records") if len(df) else []
-            result["summary"]          = sw.summary(grp_chan=True, grp_stage=False).to_dict(orient="records")
+            # Zie run_spindle_detection: zonder reset_index() verdwijnt het
+            # kanaal met de index.
+            result["summary"]          = sw.summary(
+                grp_chan=True, grp_stage=False).reset_index().to_dict(
+                    orient="records")
             result["total_slow_waves"] = len(df)
         else:
             result["slow_waves"]       = []
