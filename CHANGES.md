@@ -1,3 +1,18 @@
+# v0.34.3 — 2026-08-24 — een montage met één beenkanaal kan dat nu kiezen
+
+Pins `psgscoring[ml]==0.27.3`.
+
+psgscoring kent sinds 0.27.3 een rol `leg` voor een beenkanaal zonder
+zijde-aanduiding — MESA's kale `Leg`, of een klinische montage die één
+tibialiskanaal exporteert. Zonder die rol in de kanaalpagina moest de gebruiker
+het aan `leg_l` of `leg_r` toewijzen, en dat is dezelfde onwaarheid die de rol
+juist vermijdt: de bilaterale ontdubbeling hoort niet te draaien alsof er twee
+kanalen zijn.
+
+De keuze staat nu in de kanaalpagina en in de route die het formulier uitleest
+(een `pneumo_leg` werd daarvoor stil weggegooid), met labels in alle vier de
+talen.
+
 # v0.34.2 — 2026-08-24 — vier getallen die geen getal hoorden te zijn
 
 Pins `psgscoring[ml]==0.27.2`.

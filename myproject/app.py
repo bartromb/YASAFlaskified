@@ -2208,7 +2208,10 @@ def start_analysis():
     pneumo_channels = {}
     for ch_type in ["flow", "flow_pressure", "flow_thermistor",
                     "thorax", "abdomen", "spo2", "pulse",
-                    "ecg", "position", "snore", "leg_l", "leg_r"]:
+                    "ecg", "position", "snore", "leg_l", "leg_r",
+                    # Eén ongezijderd beenkanaal. psgscoring gebruikt deze rol
+                    # alleen als leg_l en leg_r ontbreken.
+                    "leg"]:
         val = request.form.get(f"pneumo_{ch_type}") or None
         if val:
             pneumo_channels[ch_type] = val

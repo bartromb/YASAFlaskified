@@ -2902,6 +2902,11 @@ _V0103_ANALYSIS = {
     "ch_leg_l_desc":      {"nl": "Tibialis anterior links",  "fr": "Tibial antérieur gauche",    "en": "Left tibialis anterior",     "de": "Tibialis anterior links"},
     "ch_leg_r_label":     {"nl": "🦵 Been rechts",           "fr": "🦵 Jambe droite",            "en": "🦵 Right leg",               "de": "🦵 Rechtes Bein"},
     "ch_leg_r_desc":      {"nl": "Tibialis anterior rechts", "fr": "Tibial antérieur droit",     "en": "Right tibialis anterior",    "de": "Tibialis anterior rechts"},
+    # Eén ongezijderd beenkanaal. Toewijzen aan links of rechts zou beweren
+    # dat er een zijde bekend is; psgscoring behandelt deze rol apart, want
+    # de bilaterale ontdubbeling kan op één kanaal niet draaien.
+    "ch_leg_label":       {"nl": "🦵 Been (één kanaal)",     "fr": "🦵 Jambe (canal unique)",    "en": "🦵 Leg (single channel)",    "de": "🦵 Bein (ein Kanal)"},
+    "ch_leg_desc":        {"nl": "Tibialis, zijde onbekend", "fr": "Tibial, côté inconnu",       "en": "Tibialis, side unknown",     "de": "Tibialis, Seite unbekannt"},
     "ch_position_label":  {"nl": "🔄 Positie",               "fr": "🔄 Position",                "en": "🔄 Position",                "de": "🔄 Position"},
     "ch_position_desc":   {"nl": "Lichaamshouding",          "fr": "Position du corps",          "en": "Body position",              "de": "Körperposition"},
     "ch_snore_label":     {"nl": "🔊 Snurk",                 "fr": "🔊 Ronflement",              "en": "🔊 Snore",                   "de": "🔊 Schnarchen"},
