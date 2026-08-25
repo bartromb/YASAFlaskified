@@ -1,3 +1,30 @@
+# v0.34.4 — 2026-08-25 — de tweede EEG-afleiding was de saturatiecurve
+
+Pins `psgscoring[ml]==0.27.4`.
+
+**Reported values change** op montages met een SpO2-kanaal en een tweede
+centrale EEG-afleiding — de gangbare klinische montage. De arousal-union
+draaide daar op de saturatiecurve in plaats van op het tweede EEG.
+
+Op een klinische opname (AHI 64) meldde de provenance:
+
+```
+derivations: ['C3', 'SpO2']   n_per_derivation: {'C3': 142, 'SpO2': 0}
+```
+
+`C4` stond in dezelfde raw en werd nooit overwogen. Ná de reparatie:
+afleidingen `C3 + C4`, arousal-index 19,5 → **24,5**, en het aandeel
+respiratoire events dat in een arousal eindigt 0,204 → **0,257**.
+
+**Het werkpunt blijft 0,80** en is daarvoor opnieuw geijkt op de gerepareerde
+configuratie, op twee cohorten met vooraf vastgelegde beslisregel: PSG-IPA
+(12 scoorders) geeft count-ratio 1,01 en 4/5 binnen de scoordersspreiding,
+MESA (n=20) geeft 0,78 — beide binnen de grens. Een eerdere sweep op één
+afleiding wees 0,50 aan; op de gerepareerde configuratie is dat juist de
+slechtste optie. De drempel stond goed, hij kreeg de verkeerde invoer.
+
+Geen enkele andere gedragswijziging: beide default-uit vlaggen blijven uit.
+
 # v0.34.3 — 2026-08-24 — een montage met één beenkanaal kan dat nu kiezen
 
 Pins `psgscoring[ml]==0.27.3`.
