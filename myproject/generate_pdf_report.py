@@ -347,8 +347,10 @@ def provenance_rows(results, lang="nl"):
     # respiratoire pijplijn detecteert zijn eigen EEG-rol. Op een echte opname
     # was dat C4 tegen C3 — twee kanalen in één run, en het rapport toonde er
     # één. Alleen tonen wanneer ze verschillen, anders is het ruis.
-    _ar_eeg = (pmeta.get("channels_used") or {}).get("eeg")
-    if _ar_eeg and _ar_eeg != meta.get("eeg_channel"):
+    _ar_sum = ((pneumo.get("arousal") or {}).get("arousals") or {}).get(
+        "summary") or {}
+    _ar_eeg = _arousal_eeg_label(pmeta, _ar_sum)
+    if _arousal_row_needed(meta.get("eeg_channel"), pmeta, _ar_sum):
         rows.append([_lbl("prov_arousal_eeg", "Arousal-analyse — EEG"), _ar_eeg])
 
     # Env-overrides overrulen profielwaarden. Zonder deze regel betekent
@@ -499,6 +501,42 @@ _WARNING_KEYS = {
     "eog_channel_missing": "pdf_warn_eog_missing",
     "all_epochs_artefact": "pdf_warn_all_artefact",
 }
+
+
+def _arousal_eeg_label(pmeta, ar_summary):
+    """Welke EEG-afleiding(en) de arousal-analyse gevoed hebben.
+
+    `channels_used["eeg"]` is element 0 van de afleidingsset, niet de set. Op
+    een klinisch rapport stond daardoor "C3" terwijl er `C3 u C4` draaide --
+    twee afleidingen met allebei events (142 en 115). Dat is precies wat deze
+    tabel moet tonen; er staat onder dat de kanaalkeuze de uitkomst bepaalt.
+
+    De lijst wint van het enkele kanaal; ontbreekt hij (resultaten van vóór dit
+    veld, of het single-modus-pad dat er geen zet), dan blijft het kanaal.
+    """
+    pmeta = pmeta or {}
+    derivs = (ar_summary or {}).get("derivations")
+    if derivs:
+        namen = [str(d) for d in derivs if d]
+        if len(namen) > 1:
+            return " \u222a ".join(namen)
+        if namen:
+            return namen[0]
+    return (pmeta.get("channels_used") or {}).get("eeg")
+
+
+def _arousal_row_needed(staging_eeg, pmeta, ar_summary) -> bool:
+    """Hoort de arousal-EEG-rij in de tabel?
+
+    Ze stond er alleen wanneer het arousal-EEG AFWEEK van het stagingkanaal.
+    Draait er een union op C4 u O2 terwijl de staging ook C4 gebruikt, dan
+    verdween de hele rij en zag niemand dat er twee afleidingen liepen.
+    """
+    label = _arousal_eeg_label(pmeta, ar_summary)
+    if not label:
+        return False
+    derivs = (ar_summary or {}).get("derivations") or []
+    return len(derivs) > 1 or label != staging_eeg
 
 
 def _detector_row_label(rij) -> str:

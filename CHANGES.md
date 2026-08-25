@@ -1,3 +1,27 @@
+# v0.34.5 — 2026-08-25 — de provenance toont de afleidingsSET
+
+Pins `psgscoring[ml]==0.27.5`.
+
+**Geen enkele gescoorde waarde verandert.** Eén rapportregel wordt eerlijker.
+
+Het klinische rapport toonde "Arousal-analyse — EEG: **C3**" terwijl de analyse
+**C3 ∪ C4** draaide — twee afleidingen met allebei events (142 en 115).
+`channels_used["eeg"]` is element 0 van de afleidingsset, niet de set. Onder
+diezelfde tabel staat dat de kanaalkeuze de uitkomst bepaalt; hij deed dat niet.
+
+Niet cosmetisch: legt iemand dit rapport naast het vorige, dan staat er twee
+keer "C3" terwijl de arousal-index van 19,5 naar 24,5 ging. De verklaring van
+dat verschil — een tweede afleiding die er eerst niet was — stond nergens.
+
+**Tweede reparatie, onderweg gevonden:** de rij verscheen alléén wanneer het
+arousal-EEG AFWEEK van het stagingkanaal. Draaide er een union op `C4 ∪ O2`
+terwijl de staging ook C4 gebruikte, dan verdween de hele rij en zag niemand
+dat er twee afleidingen liepen.
+
+psgscoring 0.27.5 voegt `arousal_event_locked_threshold` toe — gebouwd,
+gemeten, **default uit**, en dus zonder gevolg voor het rapport. Zie de
+psgscoring-changelog voor de meting en waarom hij uit blijft.
+
 # v0.34.4 — 2026-08-25 — de tweede EEG-afleiding was de saturatiecurve
 
 Pins `psgscoring[ml]==0.27.4`.
