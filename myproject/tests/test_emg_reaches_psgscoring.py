@@ -199,3 +199,60 @@ def test_a_leg_channel_is_still_typed_as_emg_for_display():
     """Bewust: het signaalpaneel haalt zijn amplitudeschaal uit het type."""
     assert edf_api._detect_ch_type("EMG Tib L") == "emg"
     assert edf_api._detect_ch_type("PLMl") != "eeg"
+
+
+# ══════════════════════════════════════════════════════════════
+# De arousal-afleidingen moeten de pneumo-raw halen
+# ══════════════════════════════════════════════════════════════
+#
+# De pneumo-raw wordt gebouwd uit `detect_channels`, dat ÉÉN kanaal per rol
+# teruggeeft. Op een klinische opname stonden daar C3 en C4 in -- twee kanalen
+# uit DEZELFDE regio -- terwijl het EDF ook O1/O2 en F3/F4 droeg. De
+# arousalstap kiest zijn afleidingen uit wat er ÍS, dus die zag nooit een
+# frontale of occipitale afleiding.
+#
+# Gemeten op PSG-IPA (n=5, 12 scoorders): union van drie regio's geeft
+# arousal-F1 0,514 tegen 0,439-0,442 voor de beste enkele. Van één naar twee
+# regio's is +0,06. En geen regio wint overal -- op SN4 is occipitaal de
+# sterkste waar hij gemiddeld de zwakste is. AASM V.A Note 1 schrijft alle
+# drie voor.
+
+KLINISCH_EDF = ["Snore", "Pressure Flow", "Flow Th.", "RIP Thora", "RIP Abdom",
+                "Sum RIP", "SpO2", "PLMl", "PLMr", "EMG1", "Pos.", "Pleth",
+                "C4:A1", "Pulse", "ECG II", "C3", "C4", "O1", "O2", "A1", "A2",
+                "F3", "F4", "EOG1", "EOG2"]
+
+
+def test_the_load_plan_carries_all_three_regions():
+    plan = tasks._pneumo_load_plan(
+        ["Pressure Flow", "RIP Thora", "SpO2"], "C4", "EMG1",
+        eeg_all=KLINISCH_EDF)
+    boven = " ".join(plan).upper()
+    assert "O1" in boven or "O2" in boven, f"geen occipitale afleiding: {plan}"
+    assert "F3" in boven or "F4" in boven, f"geen frontale afleiding: {plan}"
+    assert "EMG1" in plan and "C4" in plan
+
+
+def test_the_saturation_curve_does_not_sneak_in_as_an_eeg():
+    plan = tasks._pneumo_load_plan(["Pressure Flow"], "C4", None,
+                                   eeg_all=KLINISCH_EDF)
+    assert "Pleth" not in plan
+    assert plan.count("SpO2") == 0 or "SpO2" in ["Pressure Flow"]
+
+
+def test_without_the_channel_list_the_plan_is_unchanged():
+    """Aanroepers die de EDF-namen niet meegeven mogen niet stilzwijgend
+    kanalen kwijtraken."""
+    assert tasks._pneumo_load_plan(["Flow", "Thorax"], "C3:A2", None) == [
+        "Flow", "Thorax", "C3:A2"]
+
+
+def test_the_requested_channels_are_the_ones_psgscoring_will_use():
+    """De plumbing en de detector moeten dezelfde set kiezen; anders vraagt de
+    app kanalen op die de arousalstap niet gebruikt, of andersom."""
+    from psgscoring.pipeline import arousal_derivation_channels
+    plan = tasks._pneumo_load_plan(["Pressure Flow"], "C4", "EMG1",
+                                   eeg_all=KLINISCH_EDF)
+    wil = arousal_derivation_channels(KLINISCH_EDF, {"eeg": "C4"})
+    for kanaal in wil:
+        assert kanaal in plan, f"{kanaal} wordt niet ingeladen; plan={plan}"

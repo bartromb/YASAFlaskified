@@ -106,7 +106,8 @@ def _load_edf(edf_path: str, needed_channels: list,
 
 
 def _pneumo_load_plan(pneumo_ch_list: list, eeg_ch: str | None,
-                      emg_ch: str | None) -> list:
+                      emg_ch: str | None,
+                      eeg_all: list | None = None) -> list:
     """Welke kanalen de pneumo-raw moet dragen.
 
     De kin-EMG stond hier NIET bij. Gevolg: `raw_pneumo` bevatte het kanaal per
@@ -121,8 +122,31 @@ def _pneumo_load_plan(pneumo_ch_list: list, eeg_ch: str | None,
     preload brengt elk kanaal naar de hoogste samplefrequentie en kost op een
     MESA-opname 5,1 GiB tegen een halve seconde voor de kanalen die tellen.
     """
+    extra = []
+    if eeg_all:
+        # De arousalstap kiest zijn afleidingen uit wat er IN de raw zit.
+        # `detect_channels` levert één kanaal per rol, dus op een klinische
+        # montage kwamen daar C3 en C4 in -- twee kanalen uit DEZELFDE regio --
+        # terwijl het EDF ook O1/O2 en F3/F4 droeg. Frontaal en occipitaal
+        # bereikten de detector dus nooit.
+        #
+        # Gemeten op PSG-IPA (n=5, 12 scoorders): de union van drie regio's
+        # geeft arousal-F1 0,514 tegen 0,439-0,442 voor de beste enkele, en
+        # geen regio wint overal -- op SN4 is occipitaal de sterkste waar hij
+        # gemiddeld de zwakste is. AASM V.A Note 1 schrijft alle drie voor.
+        #
+        # WELKE kanalen dat zijn beslist psgscoring, niet deze functie: laat
+        # de app raden wat de picker straks kiest en het loopt mis zodra die
+        # verandert. Dat is precies wat er met de SpO2-afleiding gebeurde.
+        try:
+            from psgscoring.pipeline import arousal_derivation_channels
+            extra = arousal_derivation_channels(
+                eeg_all, {"eeg": eeg_ch} if eeg_ch else None)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("[task] arousal-afleidingen niet bepaald (%s); "
+                           "alleen het stagings-EEG gaat mee", e)
     return list(dict.fromkeys(
-        c for c in list(pneumo_ch_list) + [eeg_ch, emg_ch] if c))
+        c for c in list(pneumo_ch_list) + [eeg_ch, emg_ch] + list(extra) if c))
 
 
 def _pneumo_channel_map(pneumo_channels: dict | None, emg_ch: str | None,
@@ -327,7 +351,13 @@ def run_analysis_job(job_id: str) -> dict:
     pneumo_ch_list = _detect_pneumo_channels(edf_path, pneumo_channels)
 
     if pneumo_ch_list:
-        pneumo_needed = _pneumo_load_plan(pneumo_ch_list, eeg_ch, emg_ch)
+        try:
+            _hdr_names = mne.io.read_raw_edf(
+                edf_path, preload=False, verbose=False).ch_names
+        except Exception:                       # noqa: BLE001
+            _hdr_names = None
+        pneumo_needed = _pneumo_load_plan(pneumo_ch_list, eeg_ch, emg_ch,
+                                          eeg_all=_hdr_names)
         logger.info("PNEUMO EDF laden (%d kanalen, kin-EMG=%s)...",
                     len(pneumo_needed), emg_ch or "geen")
         try:
@@ -1105,9 +1135,14 @@ def run_profile_comparison(edf_path: str, results_dir: str, *,
     # elk kanaal en laat MNE alles naar de hoogste samplefrequentie brengen: op
     # een MESA-opname 175 s en 5,1 GiB tegen 0,5 s voor de kanalen die tellen.
     # Bij acht RQ-workers is dat het verschil tussen ~40 GiB en een handvol.
+    try:
+        _cmp_names = mne.io.read_raw_edf(
+            edf_path, preload=False, verbose=False).ch_names
+    except Exception:                           # noqa: BLE001
+        _cmp_names = None
     _pneumo_needed = _pneumo_load_plan(
         _detect_pneumo_channels(edf_path, pneumo_channels or {}),
-        eeg_ch, emg_ch)
+        eeg_ch, emg_ch, eeg_all=_cmp_names)
     # Zonder eeg_ch en emg_ch draaide de arousal/RDI-arm van ELK profielrapport
     # zonder kin-EMG en mogelijk zonder arousal-EEG. De studie-RDI was daardoor
     # niet vergelijkbaar met de klinische run -- terwijl vergelijkbaarheid het

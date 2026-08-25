@@ -1,3 +1,37 @@
+# v0.34.6 — 2026-08-25 — de arousal-analyse krijgt alle drie de hersenregio's
+
+Pins `psgscoring[ml]==0.27.6`.
+
+**Reported values change** op montages die meer EEG-afleidingen dragen dan er
+tot nu toe werden ingelezen — de gangbare klinische montage.
+
+De pneumo-raw werd gebouwd uit `detect_channels`, dat **één kanaal per rol**
+teruggeeft. Op de klinische montage stonden daar `C3` en `C4` in — twee kanalen
+uit **dezelfde regio** — terwijl hetzelfde EDF ook `O1`/`O2` en `F3`/`F4` droeg.
+De arousalstap kiest zijn afleidingen uit wat er ÍS, dus frontaal en occipitaal
+bereikten hem nooit. AASM V.A Note 1 schrijft alle drie voor.
+
+Gemeten op PSG-IPA (n=5, 12 scoorders), arousal-F1 bij IoU 0,20:
+
+| combinatie | regio's | F1 |
+|---|---:|---:|
+| **F+C+O** | 3 | **0,514** |
+| F+C | 2 | 0,501 |
+| C+O | 2 | 0,460 |
+| beste enkele | 1 | 0,442 |
+
+Eén → twee regio's is **+0,06**, de derde nog **+0,013**, tegen een menselijk
+plafond van 0,679. Geen enkele regio wint overal: op SN4 wint occipitaal waar
+hij gemiddeld de zwakste is, op SN5 centraal, op SN2 frontaal.
+
+**Welke kanalen dat zijn beslist psgscoring**, via de nieuwe publieke
+`arousal_derivation_channels()`. Deze app raadt niet welke afleidingen de
+detector straks kiest — dat is precies wat er met de SpO2-afleiding misging.
+Een test faalt zodra de opgevraagde set en de gebruikte set uiteenlopen.
+
+De pneumo-raw blijft uitgekleed: alleen de respiratoire kanalen, de kin-EMG en
+deze EEG-afleidingen. Een ongefilterde preload kost op een MESA-opname 5,1 GiB.
+
 # v0.34.5 — 2026-08-25 — de provenance toont de afleidingsSET
 
 Pins `psgscoring[ml]==0.27.5`.
