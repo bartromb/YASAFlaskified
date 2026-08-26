@@ -1,3 +1,41 @@
+# v0.36.0 — 2026-08-26 — bij een split-night is het diagnostische deel de kop
+
+Pins `psgscoring[ml]==0.29.0`.
+
+**Reported values change** op opnames waar een split-night gedetecteerd of
+opgegeven is: de kop-KPI toont dan het **diagnostische deel** met zijn eigen
+ernstklasse en kleur, met de nacht-AHI ernaast. Op opnames zonder split
+verandert er niets aan de kop.
+
+## Waarom
+
+De nacht-AHI telt diagnostiek én titratie samen en verdunt daarmee precies wat
+er gediagnosticeerd moet worden. Op de casus die dit aanleiding gaf stond in de
+kop "Mild SAS, AHI 10,1/u" bij een patiënt die de verwijzer als ernstig kende;
+het diagnostische deel lag op **44,7/u** — een factor vier.
+
+De nacht-AHI verdwijnt niet: hij komt als tweede tegel te staan, want AASM
+schrijft hem voor. Maar de tegel die de ernstklasse draagt, hoort het deel te
+tonen waarop de diagnose rust.
+
+## Ook
+
+- **Aandachtspunt bovenaan.** Wie alleen de eerste bladzijde leest, zag geen
+  enkel teken dat de nacht in tweeën viel: de split-nightsectie stond pagina's
+  verderop. Nu staat er bij de aandachtspunten: "Split-night gedetecteerd
+  (therapie vanaf 2:15): de nacht-AHI van 10,1/u telt diagnostiek én titratie
+  samen. Diagnostisch deel 44,7/u, onder therapie 3,8/u."
+- **De eerlijke AHI wordt gekozen.** Boven een vijfde ongetypeerde events is
+  `ahi_total` een onvolledige telling en zegt alleen `ahi_incl_uncertain` iets;
+  kop en aandachtspunt kiezen dan die tweede. Een kop die 1,2/u meldt terwijl
+  er 70 ongetypeerde apneus onder liggen, is misleidender dan geen kop.
+- Een segment met minder dan een half uur slaap draagt de kop niet; dan blijft
+  de nacht-AHI leidend.
+
+602 tests.
+
+---
+
 # v0.35.1 — 2026-08-26 — de segment-AHI's staan nu ín het rapport, en een heranalyse geeft een nieuw PDF
 
 Pins `psgscoring[ml]==0.28.1`.

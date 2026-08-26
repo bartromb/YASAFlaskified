@@ -823,6 +823,40 @@ def _clinical_flags(rsum, pneumo, ss, asum, lang="nl", warnings=None):
     except (TypeError, ValueError):
         pass
 
+    # ── Split-night: hoort BOVENAAN, niet alleen in een sectie verderop ──
+    # De kop meldt één AHI over de hele nacht. Op de casus die dit aanleiding
+    # gaf stond daar "Mild SAS, AHI 10,1/u" terwijl het diagnostische deel op
+    # 83,5/u lag. Wie alleen de eerste bladzijde leest -- en dat is wat er
+    # gebeurt -- zag geen enkel teken dat de nacht in tweeën viel.
+    try:
+        _sn = (pneumo or {}).get("split_night") or {}
+        _seg = _sn.get("segments") or {}
+        if _sn.get("detected") and _seg:
+            _b = float(_sn.get("breakpoint_s") or 0)
+            _d = _seg.get("diagnostic") or {}
+            _th = _seg.get("therapeutic") or {}
+
+            def _beste(seg):
+                """De AHI die het beeld draagt.
+
+                Bij een falende effort-band is `ahi` een onvolledige telling en
+                `ahi_incl_uncertain` het eerlijke getal; boven een vijfde
+                ongetypeerd is die tweede de enige die iets zegt.
+                """
+                if (seg.get("uncertain_fraction") or 0) >= 0.20:
+                    return seg.get("ahi_incl_uncertain")
+                return seg.get("ahi")
+
+            _dv, _tv = _beste(_d), _beste(_th)
+            if _dv is not None and _tv is not None:
+                flags.append(t("pdf_flag_split_night", lang).format(
+                    tijd=f"{int(_b // 3600)}:{int((_b % 3600) // 60):02d}",
+                    ahi=f"{rsum.get('ahi_total'):.1f}"
+                        if rsum.get("ahi_total") is not None else "—",
+                    diag=f"{_dv:.1f}", ther=f"{_tv:.1f}"))
+    except (TypeError, ValueError):
+        pass
+
     # ── Arousal-index die niet bij de eventlast past ────────────────────
     #
     # AI 3,5/u bij AHI 42 met 217 respiratoire events kan fysiologisch niet.
@@ -1792,6 +1826,37 @@ def generate_pdf_report(results:dict, output_path:str,
         ahi_label = f"{t('pdf_residual',lang)} AHI  ({_sev_with_syndrome(ahi_v, _rsum_for_sev, lang)})"
     else:
         ahi_label = f"AHI  ({_sev_with_syndrome(ahi_v, _rsum_for_sev, lang)})"
+
+    # ── Split-night: het DIAGNOSTISCHE deel is de kop-KPI ──────────────
+    #
+    # Bij een split-night telt de nacht-AHI diagnostiek én titratie samen en
+    # verdunt daarmee precies wat er gediagnosticeerd moet worden: op de casus
+    # die dit aanleiding gaf 10,1/u over de nacht tegen 44,7/u (127,1 met de
+    # ongetypeerde apneus erbij) in het diagnostische deel — een factor vier.
+    #
+    # De nacht-AHI verdwijnt niet: hij komt als tweede tegel te staan, want
+    # AASM schrijft hem voor. Maar de eerste tegel — die de ernstklasse en de
+    # kleur draagt — hoort het deel te tonen waarop de diagnose rust.
+    _split_kpi = None
+    try:
+        _sn_k = ((results.get("pneumo") or {}).get("split_night") or {})
+        _sum_k = (_sn_k.get("summaries") or {}).get("diagnostic") or {}
+        _seg_k = (_sn_k.get("segments") or {}).get("diagnostic") or {}
+        if _sn_k.get("detected") and _sum_k and _seg_k.get("reliable"):
+            # Boven een vijfde ongetypeerd is `ahi_total` een onvolledige
+            # telling en zegt alleen `ahi_incl_uncertain` iets.
+            _onzeker = _seg_k.get("uncertain_fraction") or 0
+            _dv = (_sum_k.get("ahi_incl_uncertain") if _onzeker >= 0.20
+                   else _sum_k.get("ahi_total"))
+            if _dv is not None:
+                _split_kpi = {
+                    "waarde": _dv,
+                    "label": (f"{t('pdf_kpi_ahi_diag', lang)}  "
+                              f"({_sev(_dv, lang)})"),
+                    "slaap_min": (_seg_k.get("sleep_h") or 0) * 60,
+                }
+    except (TypeError, ValueError, AttributeError):
+        _split_kpi = None
     # TST, slaapefficiëntie, inslaaplatentie en WASO zijn allemaal
     # staging-uitkomsten. Zonder EEG bestaan ze niet, en ze tonen ze op grond
     # van een hypnogram uit een drukcurve is geen benadering maar een
@@ -1810,13 +1875,24 @@ def generate_pdf_report(results:dict, output_path:str,
              t("pdf_rei_denominator", lang), "u", NAVY),
         ])); sp(0.15)
     else:
-        story.append(_kpi([
-            (ahi_s, ahi_label, "/u", _sev_clr(ahi_v) if ahi_v else GR),
-            (_v(stats,"TST",fmt="{:.0f}"),  "TST", "min", NAVY),
-            (_v(stats,"SE",fmt="{:.1f}"),   t("pdf_se",lang),  "%",   NAVY),
-            (_v(stats,"SOL",fmt="{:.0f}"),  t("pdf_sol",lang),    "min", NAVY),
-            (_v(stats,"WASO",fmt="{:.0f}"), "WASO",                   "min", NAVY),
-        ])); sp(0.15)
+        if _split_kpi:
+            _dw = _split_kpi["waarde"]
+            story.append(_kpi([
+                (f"{_dw:.1f}", _split_kpi["label"], "/u", _sev_clr(_dw)),
+                (ahi_s, t("pdf_kpi_ahi_night", lang), "/u", GR),
+                (f"{_split_kpi['slaap_min']:.0f}",
+                 t("pdf_kpi_sleep_diag", lang), "min", NAVY),
+                (_v(stats, "TST", fmt="{:.0f}"), "TST", "min", NAVY),
+                (_v(stats, "SE", fmt="{:.1f}"), t("pdf_se", lang), "%", NAVY),
+            ])); sp(0.15)
+        else:
+            story.append(_kpi([
+                (ahi_s, ahi_label, "/u", _sev_clr(ahi_v) if ahi_v else GR),
+                (_v(stats,"TST",fmt="{:.0f}"),  "TST", "min", NAVY),
+                (_v(stats,"SE",fmt="{:.1f}"),   t("pdf_se",lang),  "%",   NAVY),
+                (_v(stats,"SOL",fmt="{:.0f}"),  t("pdf_sol",lang),    "min", NAVY),
+                (_v(stats,"WASO",fmt="{:.0f}"), "WASO",                   "min", NAVY),
+            ])); sp(0.15)
 
     # v0.8.43: Apnoe-type breakdown regel (dominante type + percentages)
     from reportlab.lib.styles import ParagraphStyle as _PS_v0843

@@ -174,3 +174,51 @@ def test_zonder_split_geen_sectie(tmp_path):
         import pytest
         pytest.skip("pdftotext niet beschikbaar")
     assert "Split-night" not in tekst
+
+
+def test_de_split_staat_bij_de_aandachtspunten_bovenaan():
+    """Wie alleen de eerste bladzijde leest, moet het zien.
+
+    De kop meldt één AHI over de hele nacht. Op de casus die dit aanleiding gaf
+    stond daar "Mild SAS, AHI 10,1/u" terwijl het diagnostische deel op 83,5/u
+    lag, en de split-nightsectie stond pagina's verderop. De sectie alléén is
+    niet genoeg.
+    """
+    from generate_pdf_report import _clinical_flags
+
+    res = _res_met_split()
+    pneumo = res["pneumo"]
+    rsum = pneumo["respiratory"]["summary"]
+    flags = _clinical_flags(rsum, pneumo, res.get("sleep_statistics"), {}, "en")
+    treffer = [f for f in flags if "Split-night" in f]
+    assert treffer, flags
+    assert "83.5" in treffer[0], treffer
+    assert "2:15" in treffer[0], treffer
+
+
+def test_zonder_split_geen_aandachtspunt():
+    from generate_pdf_report import _clinical_flags
+
+    res = _res_met_split()
+    res["pneumo"]["split_night"] = {"detected": False}
+    pneumo = res["pneumo"]
+    flags = _clinical_flags(pneumo["respiratory"]["summary"], pneumo,
+                            res.get("sleep_statistics"), {}, "en")
+    assert not [f for f in flags if "Split-night" in f]
+
+
+def test_het_aandachtspunt_kiest_de_eerlijke_ahi():
+    """Boven een vijfde ongetypeerd zegt alleen 'incl. ongetypeerd' iets.
+
+    Het diagnostische deel was 99 % ongetypeerd: `ahi` 1,2/u tegen
+    `ahi_incl_uncertain` 83,5/u. Het aandachtspunt dat 1,2 zou melden, is
+    misleidender dan geen aandachtspunt.
+    """
+    from generate_pdf_report import _clinical_flags
+
+    res = _res_met_split()
+    pneumo = res["pneumo"]
+    flags = _clinical_flags(pneumo["respiratory"]["summary"], pneumo,
+                            res.get("sleep_statistics"), {}, "en")
+    treffer = [f for f in flags if "Split-night" in f][0]
+    assert "83.5" in treffer and "1.2" not in treffer, treffer
