@@ -1,3 +1,20 @@
+# v0.36.2 — 2026-08-26 — de pin haalt de segmentreparatie op
+
+**Pin naar `psgscoring[ml]==0.30.0`** (was 0.29.0). Geen wijziging in deze
+repo; de reden voor de release zit in de bibliotheek.
+
+## Waarom dit een eigen versie is
+
+0.36.1 stond klaar met een pin op 0.29.0. Die pin dateert van vóór psgscoring
+0.30.0, en 0.30.0 bevat de reparatie waar de split-nightsegmenten de
+DEFINITIEVE eventlijst tellen in plaats van de lijst zoals die halverwege de
+pijplijn was — op de aanleidende opname 108 events in plaats van 71, een
+segment-AHI van 127,1/u in plaats van 83,5/u.
+
+Uitrollen met de oude pin zou een release zijn die zijn eigen changelog niet
+waarmaakt: het rapport toont dan nog steeds het verkeerde segmentgetal. Een
+veld dat de bibliotheek produceert is niet geleverd tot de pin het ophaalt.
+
 # v0.36.1 — 2026-08-26 — het breath-by-breath-paneel is geen referentie
 
 Pin ongewijzigd (`psgscoring[ml]==0.29.0`); geen gescoorde waarde verandert.
