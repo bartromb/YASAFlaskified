@@ -1,3 +1,41 @@
+# v0.35.1 — 2026-08-26 — de segment-AHI's staan nu ín het rapport, en een heranalyse geeft een nieuw PDF
+
+Pins `psgscoring[ml]==0.28.1`.
+
+## Split-night: de twee AHI's naast elkaar
+
+De vorige release detecteerde de split en zette het breekpunt in het
+provenanceblok, maar de kop bleef "Mild SAS, AHI 10,1/u" terwijl het
+diagnostische deel op **83,5/u** lag. Nieuwe sectie in het rapport:
+
+| | Slaap | AHI | AHI incl. ongetypeerd |
+|---|---|---|---|
+| Diagnostisch deel (vóór therapie) | 51 min | 1,2 /u | **83,5 /u** |
+| Onder therapie | 281 min | 0,6 /u | 1,1 /u |
+
+Met twee kwalificaties eronder wanneer ze van toepassing zijn: te weinig slaap
+in een segment, en welk aandeel van de events niet getypeerd kon worden (hier
+99 % in het diagnostische deel, omdat beide effort-banden waren afgekeurd).
+
+De nacht-AHI blijft in de kop staan zoals AASM hem voorschrijft — maar niet
+langer als enige waarheid.
+
+## Heranalyse gaf het OUDE rapport terug
+
+Een heranalyse draait op hetzelfde `job_id` en herschrijft `_results.json`. De
+downloadroute regenereert dan en stuurt no-cache-headers, maar de URL blijft
+identiek en Firefox serveert een bijlage van een identieke URL uit zijn eigen
+cache. Daarvoor bestaat `report_ver()`: de mtime van results.json als `?v=`.
+
+`results_extended.html` linkte als enige zonder die parameter — wie vanaf die
+pagina downloadde, kreeg na een heranalyse het vorige rapport. Beide links
+(PDF en Excel) zijn gerepareerd, en een test pint het patroon voor álle
+sjablonen: de volgende die het vergeet levert precies dezelfde stille fout op.
+
+602 tests.
+
+---
+
 # v0.35.0 — 2026-08-26 — split-night als keuze, en twee montagevlaggen
 
 Pins `psgscoring[ml]==0.28.0`.

@@ -16,9 +16,9 @@
       </small>
     </div>
     <div>
-    <a href="/results/{{ job_id }}/pdf" class="btn btn-outline-danger btn-sm">📄 PDF</a>
+    <a href="/results/{{ job_id }}/pdf?v={{ report_ver(job_id) }}" class="btn btn-outline-danger btn-sm">📄 PDF</a>
     <a href="/results/{{ job_id }}/psg" class="btn btn-outline-info btn-sm">🏥 PSG</a>
-    <a href="/results/{{ job_id }}/excel" class="btn btn-outline-success btn-sm">📊 Excel</a>
+    <a href="/results/{{ job_id }}/excel?v={{ report_ver(job_id) }}" class="btn btn-outline-success btn-sm">📊 Excel</a>
     <a href="/score_v12/{{ job_id }}" class="btn btn-warning btn-sm">📡 EDF Browser</a>
     {# Alleen voor beheerders: dit toont ruwe signalen om de scoring te
        BEOORDELEN, niet om een uitslag te lezen. De route zelf gaat door

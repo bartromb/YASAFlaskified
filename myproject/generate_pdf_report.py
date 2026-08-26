@@ -2517,6 +2517,47 @@ def generate_pdf_report(results:dict, output_path:str,
         nrem_ahi = rsum.get("ahi_nrem") if rsum.get("ahi_nrem") is not None else rsum.get("nrem_ahi")
         n_fri_pure = rsum.get("n_fri", 0) or 0
 
+        # ── Split-night ────────────────────────────────────────────
+        # De nacht-AHI hierboven telt diagnostiek én titratie samen en verdunt
+        # de diagnose: op de casus die dit aanleiding gaf stond "Mild SAS,
+        # AHI 10,1/u" in de kop terwijl het diagnostische deel op 83,5/u lag.
+        # Die twee getallen horen naast elkaar te staan, niet één ervan alleen.
+        _sn = ((results.get("pneumo") or {}).get("split_night")
+               or results.get("split_night") or {})
+        _seg = _sn.get("segments") or {}
+        if _sn.get("detected") and _seg:
+            story.append(_hdr(t("pdf_split_hdr", lang), color=BLUE)); sp(0.1)
+            _kop = ["", t("pdf_split_col_sleep", lang),
+                    t("pdf_split_col_ahi", lang),
+                    t("pdf_split_col_ahi_unc", lang)]
+            _rows = []
+            _noten = []
+            for _k, _lbl2 in (("diagnostic", "pdf_split_diagnostic"),
+                              ("therapeutic", "pdf_split_therapeutic")):
+                _d = _seg.get(_k) or {}
+                _u = _d.get("sleep_h")
+                _rows.append([
+                    t(_lbl2, lang),
+                    f"{_u * 60:.0f} min" if _u is not None else "—",
+                    f"{_d.get('ahi'):.1f} /u" if _d.get("ahi") is not None else "—",
+                    (f"{_d.get('ahi_incl_uncertain'):.1f} /u"
+                     if _d.get("ahi_incl_uncertain") is not None else "—"),
+                ])
+                if _d.get("reliable") is False:
+                    _noten.append(f"{t(_lbl2, lang)}: {t('pdf_split_short', lang)}")
+                _uf = _d.get("uncertain_fraction") or 0
+                if _uf >= 0.20:
+                    _noten.append(f"{t(_lbl2, lang)}: " +
+                                  t("pdf_split_untyped", lang).format(
+                                      pct=f"{_uf * 100:.0f}"))
+            story.append(_tbl(_kop, _rows,
+                              [5.2 * cm, 2.6 * cm, 3.0 * cm, 4.4 * cm]))
+            sp(0.06)
+            story.append(Paragraph(t("pdf_split_note", lang), styles["SM"]))
+            for _n in _noten:
+                story.append(Paragraph(_n, styles["SM"]))
+            sp(0.12)
+
         story.append(_hdr(t("pdf_rera_section_hdr", lang), color=BLUE)); sp(0.1)
         n_rera_fri  = rsum.get("n_rera_fri", 0) or 0
         n_rera_flat = rsum.get("n_rera_flattening", 0) or 0

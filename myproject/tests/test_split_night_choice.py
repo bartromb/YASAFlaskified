@@ -94,3 +94,83 @@ def test_de_teksten_bestaan_in_vier_talen():
         entry = TRANSLATIONS[sleutel]
         for taal in ("nl", "fr", "en", "de"):
             assert entry.get(taal), f"{sleutel}/{taal}"
+
+
+def _res_met_split(diag_uncertain=70, diag_sleep_h=0.85):
+    # De sectie leeft in het respiratoire blok van het rapport; zonder een
+    # samenvatting daar wordt dat hele blok overgeslagen en meet de test niets.
+    return {
+        "meta": {"eeg_channel": "C3"},
+        "sleep_statistics": {"success": True, "stats": {"TST": 332.0, "SE": 80.0}},
+        "hypnogram_timeline": {"success": True, "timeline": [
+            {"epoch": i, "stage": "N2", "time_min": i * 0.5} for i in range(664)]},
+        "pneumo": {
+            "meta": {"channels_used": {"eeg": "C3"}, "flow_channels": {},
+                     "scoring_profile": "aasm_v3_breath"},
+            "arousal": {"arousals": {"summary": {}}},
+            "respiratory": {"success": True, "events": [], "summary": {
+                "ahi_total": 10.1, "oahi": 10.1, "n_apnea_total": 0,
+                "n_hypopnea": 56, "n_ah_total": 56, "ahi_rem": 3.2,
+                "ahi_nrem": 30.9, "rem_min": 93.0, "nrem_min": 239.0,
+                "index_denominator_h": 5.533, "indices_computable": True,
+                "n_rera": 21, "rera_index": 3.7, "rdi": 13.9}},
+            "split_night": {
+                "detected": True, "breakpoint_s": 8100.0,
+                "method": "flow_amplitude+spo2_baseline",
+                "segments": {
+                    "diagnostic": {"sleep_h": diag_sleep_h, "n_events": 1,
+                                   "n_uncertain": diag_uncertain, "ahi": 1.2,
+                                   "ahi_incl_uncertain": 83.5,
+                                   "reliable": diag_sleep_h >= 0.5,
+                                   "uncertain_fraction": round(
+                                       diag_uncertain / (1 + diag_uncertain), 3)},
+                    "therapeutic": {"sleep_h": 4.683, "n_events": 3,
+                                    "n_uncertain": 2, "ahi": 0.6,
+                                    "ahi_incl_uncertain": 1.1,
+                                    "reliable": True, "uncertain_fraction": 0.4},
+                },
+            },
+        },
+    }
+
+
+def test_de_segment_ahi_s_staan_in_het_rapport(tmp_path):
+    """De kop meldde "Mild SAS, AHI 10,1/u" terwijl het diagnostische deel op
+    83,5/u lag. Die twee horen naast elkaar te staan."""
+    import subprocess
+
+    from generate_pdf_report import generate_pdf_report
+
+    uit = str(tmp_path / "r.pdf")
+    generate_pdf_report(_res_met_split(), uit, lang="nl")
+    if not os.path.exists(uit):
+        import pytest
+        pytest.skip("rapport niet gegenereerd")
+    try:
+        tekst = subprocess.run(["pdftotext", "-layout", uit, "-"],
+                               capture_output=True, text=True, timeout=60).stdout
+    except FileNotFoundError:
+        import pytest
+        pytest.skip("pdftotext niet beschikbaar")
+    assert "Split-night" in tekst
+    assert "83.5" in tekst, "de diagnostische AHI ontbreekt"
+    assert "1.1" in tekst, "de AHI onder therapie ontbreekt"
+    assert "niet getypeerd" in tekst, "het voorbehoud over ongetypeerde events ontbreekt"
+
+
+def test_zonder_split_geen_sectie(tmp_path):
+    import subprocess
+
+    from generate_pdf_report import generate_pdf_report
+
+    res = _res_met_split()
+    res["pneumo"]["split_night"] = {"detected": False}
+    uit = str(tmp_path / "r2.pdf")
+    generate_pdf_report(res, uit, lang="nl")
+    try:
+        tekst = subprocess.run(["pdftotext", "-layout", uit, "-"],
+                               capture_output=True, text=True, timeout=60).stdout
+    except FileNotFoundError:
+        import pytest
+        pytest.skip("pdftotext niet beschikbaar")
+    assert "Split-night" not in tekst
