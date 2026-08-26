@@ -1,3 +1,44 @@
+# v0.34.9 — 2026-08-26 — uploadgrens op 2 GB, uit één bron
+
+Pins `psgscoring[ml]==0.27.7` (ongewijzigd). Geen enkele gescoorde waarde
+verandert.
+
+## Wat er mis was
+
+`upload.html` droeg zijn eigen `const MAX_SIZE_MB = 500`, volledig los van
+`MAX_CONTENT_LENGTH`. Twee getallen die hetzelfde horen te zijn maar apart
+onderhouden worden, lopen uiteen: de browser weigerde een bestand dat de server
+had aangenomen. Een gebruiker liep er tegenaan met een BDF van 528 MB.
+
+Beide staan nu op **2 GB**, en de uploadpagina's halen de waarde uit de
+serverconfiguratie (`MAX_UPLOAD_MB`, afgeleid van `MAX_CONTENT_LENGTH`) in
+plaats van uit een eigen getal.
+
+BDF is 24-bit tegen 16-bit voor EDF, dus dezelfde nacht is er ruwweg anderhalf
+keer zo groot in. Een opname van 11 uur met 27 kanalen komt op ~550 MB — precies
+wat de oude grens weigerde.
+
+## Ook
+
+`index.html` (de klassieke, níét-gechunkte upload) controleert de bestandsgrootte
+nu ook in de browser. Zonder die controle merkt de gebruiker de grens daar pas
+als een 413, ná het versturen van gigabytes.
+
+De gechunkte uploadpagina verstuurt 2 MB per verzoek, dus `MAX_CONTENT_LENGTH`
+en de `client_max_body_size` van de proxy zien daar nooit het hele bestand: de
+client-side controle is er de enige echte poort. Op de klassieke pagina geldt
+`MAX_CONTENT_LENGTH` wél. Vandaar dat beide dezelfde bron moeten gebruiken.
+
+## Bij het bijwerken van een bestaande installatie
+
+`YASAFLASKIFIED_MAX_CONTENT_LENGTH` in `.env` **overrulet de default**. Staat
+daar nog een oude waarde, dan blijft de server op die grens staan en verandert er
+niets voor de gebruiker.
+
+581 tests.
+
+---
+
 # v0.34.8 — 2026-08-26 — BDF wordt natief gelezen, en gelijkspanning gaat eruit
 
 Pins `psgscoring[ml]==0.27.7` (ongewijzigd).

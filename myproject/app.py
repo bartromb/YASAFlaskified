@@ -153,7 +153,10 @@ app.config["PROCESSED_FOLDER"] = _cfg("PROCESSED_FOLDER", "/data/slaapkliniek/pr
 app.config["SECRET_KEY"]         = _cfg("SECRET_KEY", "supersecretkey")
 if app.config["SECRET_KEY"] == "supersecretkey":
     logger.warning("⚠️  SECURITY: Using default SECRET_KEY! Set YASAFLASKIFIED_SECRET_KEY in .env")
-app.config["MAX_CONTENT_LENGTH"] = int(_cfg("MAX_CONTENT_LENGTH", 500 * 1024 * 1024))
+# 2 GB. Een BDF is ~1,5x zo groot als dezelfde opname in EDF (24-bit
+# tegen 16-bit), en een nacht van 11 uur met 27 kanalen komt op ~550 MB.
+# De grens van 500 MB weigerde die bestanden.
+app.config["MAX_CONTENT_LENGTH"] = int(_cfg("MAX_CONTENT_LENGTH", 2 * 1024 * 1024 * 1024))
 app.config["MPLCONFIGDIR"]       = _cfg("MPLCONFIGDIR", os.environ.get("MPLCONFIGDIR", _MPLCONFIGDIR))
 
 # Database
@@ -788,6 +791,12 @@ def inject_i18n():
         "current_site": _site,
         "APP_VERSION":  APP_VERSION,
         "PSGSCORING_VERSION": PSGSCORING_VERSION,
+        # De uploadpagina's kenden hun eigen, hardgecodeerde grens (500 MB in
+        # upload.html) die los stond van MAX_CONTENT_LENGTH. Twee getallen die
+        # hetzelfde horen te zijn maar apart onderhouden worden, lopen uiteen --
+        # en dan weigert de browser een bestand dat de server had aangenomen,
+        # of andersom. Eén bron.
+        "MAX_UPLOAD_MB": app.config["MAX_CONTENT_LENGTH"] // (1024 * 1024),
     }
 
 

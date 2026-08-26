@@ -527,7 +527,7 @@ body { font-family: var(--sans); background: #f0f4f8; }
 // CONFIGURATIE
 // ═══════════════════════════════════════════════════════
 const CHUNK_SIZE  = 2 * 1024 * 1024;   // 2 MB per chunk
-const MAX_SIZE_MB = 500;
+const MAX_SIZE_MB = {{ MAX_UPLOAD_MB }};   // uit MAX_CONTENT_LENGTH
 let   selectedFile = null;
 let   isUploading  = false;
 

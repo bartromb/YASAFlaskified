@@ -112,6 +112,14 @@ function setFile(file) {
     alert("{{ t('invalid_edf_file') }}");
     return;
   }
+  // Deze pagina uploadt in één keer (niet in chunks), dus zonder deze controle
+  // merkt de gebruiker de grens pas na het versturen van gigabytes — als een
+  // 413 van de server.
+  const MAX_SIZE_MB = {{ MAX_UPLOAD_MB }};
+  if (file.size / 1024 / 1024 > MAX_SIZE_MB) {
+    alert("{{ t('file_too_large') }}".replace("{max_mb}", MAX_SIZE_MB));
+    return;
+  }
   const mb = (file.size / 1024 / 1024).toFixed(1);
   dropIco.textContent = "✅";
   dropTxt.innerHTML = `<strong>${file.name}</strong>`;
