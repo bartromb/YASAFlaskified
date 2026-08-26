@@ -143,10 +143,25 @@ cd /data/slaapkliniek
 NEWV=$(grep -oE "\"[0-9][^\"]*\"" myproject/version.py | head -1 | tr -d "\"")
 sed -i -E "s|^APP_VERSION=.*|APP_VERSION=${NEWV}|" .env && grep ^APP_VERSION= .env
 find . -name __pycache__ -type d -prune -exec rm -rf {} + 2>/dev/null || true
-docker compose build          # pulls the pinned psgscoring from PyPI
+# De build haalt de gepinde psgscoring van PyPI. Is die versie net geupload,
+# dan is hij nog niet op elke CDN-rand aanwezig en faalt pip met een fout die
+# eruitziet als een echte fout. Op 26-08-2026 gebeurde dat drie keer op een rij,
+# elke keer opgelost door simpelweg opnieuw te bouwen. Vandaar de lus.
+for poging in 1 2 3; do
+  docker compose build && break
+  echo "build-poging ${poging} mislukt (PyPI-propagatie?), opnieuw over 20 s"
+  sleep 20
+done
 docker compose up -d          # brief downtime while containers recreate
 '
 ```
+
+> **Een gefaalde `build` raakt productie niet.** De draaiende containers blijven
+> staan tot `up -d`; je kunt dus rustig opnieuw bouwen. Wat je NIET moet doen is
+> `up -d` draaien na een gefaalde build — dan herstart je de oude image onder een
+> nieuw `APP_VERSION`, en `docker compose ps` ziet er gezond uit terwijl de
+> uitrol niet gebeurd is. Controleer altijd dat `Image yasaflaskified:<versie>
+> Built` in de uitvoer staat.
 
 **Step 5 — verify (see §5). Step 6 — remove the old image** once healthy:
 ```bash

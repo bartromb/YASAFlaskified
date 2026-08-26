@@ -852,6 +852,12 @@ TRANSLATIONS = {
     "pdf_resp_arousals":    {"nl": "Respiratoire arousals", "fr": "Arousals respiratoires", "en": "Respiratory Arousals"},
     "pdf_spont_arousals":   {"nl": "Spontane arousals", "fr": "Arousals spontanés", "en": "Spontaneous Arousals"},
     "pdf_detected_breaths": {"nl": "Gedetecteerde ademhalingen", "fr": "Respirations détectées", "en": "Detected Breaths"},
+    "pdf_bb_not_a_reference": {
+        "nl": "Deze tellingen komen uit een ANDER instrument dan de scoring hierboven: ze rekenen per ademteug tegen een andere basislijn. Ze zijn NIET te lezen als \"gemiste events\". Op dertig gewone opnames varieerde de verhouding tussen deze telling en de gescoorde events van 0 % tot 173 % — op één opname werden er méér events gescoord dan hier geteld. Gebruik dit paneel om de signaalkwaliteit te beoordelen, niet om de AHI te controleren.",
+        "fr": "Ces comptages proviennent d'un instrument DIFFÉRENT de la cotation ci-dessus : ils raisonnent respiration par respiration contre une autre ligne de base. Ils ne se lisent PAS comme des « événements manqués ». Sur trente enregistrements ordinaires, le rapport entre ce comptage et les événements cotés variait de 0 % à 173 %. Utilisez ce panneau pour juger la qualité du signal, pas pour vérifier l'IAH.",
+        "en": "These counts come from a DIFFERENT instrument than the scoring above: they work breath by breath against a different baseline. They do NOT read as \"missed events\". Across thirty ordinary recordings the ratio between this count and the scored events ranged from 0% to 173% — on one recording more events were scored than counted here. Use this panel to judge signal quality, not to check the AHI.",
+        "de": "Diese Zählungen stammen aus einem ANDEREN Instrument als die Auswertung oben: sie rechnen atemzugweise gegen eine andere Basislinie. Sie sind NICHT als „verpasste Ereignisse\" zu lesen. Über dreißig gewöhnliche Aufzeichnungen schwankte das Verhältnis zwischen dieser Zählung und den gewerteten Ereignissen von 0 % bis 173 %. Nutzen Sie dieses Panel zur Beurteilung der Signalqualität, nicht zur Kontrolle des AHI.",
+    },
     "pdf_bb_apneas":        {"nl": "Breath-by-breath apneus", "fr": "Apnées breath-by-breath", "en": "Breath-by-breath Apneas"},
     "pdf_bb_hypopneas":     {"nl": "Breath-by-breath hypopneus", "fr": "Hypopnées breath-by-breath", "en": "Breath-by-breath Hypopneas"},
     "pdf_mean_flattening":  {"nl": "Gem. flattening index", "fr": "Index d'aplatissement moy.", "en": "Mean Flattening Index"},

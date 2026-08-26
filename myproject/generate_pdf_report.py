@@ -2860,7 +2860,18 @@ def generate_pdf_report(results:dict, output_path:str,
                               else t("pdf_flat_elevated", lang) if flat_val < 0.40
                               else t("pdf_flat_high", lang))
                 rows.append([t("pdf_mean_flattening", lang), f"{flat_val:.2f} ({flat_label})"])
-            story.append(_tbl([t("pdf_param", lang), t("pdf_value", lang)], rows, [9, 8])); sp(0.15)
+            story.append(_tbl([t("pdf_param", lang), t("pdf_value", lang)], rows, [9, 8]))
+            sp(0.06)
+            # Zonder deze regel nodigt het paneel uit tot de verkeerde
+            # conclusie. Op de Thaise casus stond hier "190 apneus" naast NUL
+            # gescoorde apneus, en dat werd — ook door mij — gelezen als bewijs
+            # van onderdetectie. Op dertig gewone opnames loopt die verhouding
+            # van 0 % tot 173 %: op één opname werden er MEER events gescoord
+            # dan hier geteld. Twee getallen die zo uiteenlopen meten niet
+            # hetzelfde ding.
+            story.append(Paragraph(
+                f"<i>{t('pdf_bb_not_a_reference', lang)}</i>", styles["SM"]))
+            sp(0.15)
 
         # Twee sensoren: melden dat AASM gevolgd is. Eén sensor: melden dat
         # dat NIET zo is. Dat tweede ontbrak, terwijl juist dat geval de

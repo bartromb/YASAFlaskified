@@ -1,3 +1,38 @@
+# v0.36.1 — 2026-08-26 — het breath-by-breath-paneel is geen referentie
+
+Pin ongewijzigd (`psgscoring[ml]==0.29.0`); geen gescoorde waarde verandert.
+
+## Wat er veranderde
+
+Het paneel "Breath-by-breath analyse" toonde zijn tellingen zonder uitleg,
+vlak onder de gescoorde events. Op de Thaise casus stond er **190 apneus**
+naast **nul** gescoorde apneus, en dat werd gelezen als bewijs van
+onderdetectie — ook door mij, een dag lang.
+
+Gemeten op dertig gewone MESA-opnames loopt de verhouding tussen die telling en
+de gescoorde events van **0 % tot 173 %**: op één opname werden er méér events
+gescoord dan de ademteller er vond. De twee rekenen per ademteug tegen
+verschillende basislijnen; ze meten niet hetzelfde.
+
+Onder het paneel staat nu, in vier talen, dat het een ander instrument is, met
+dat gemeten bereik erbij — een waarschuwing zonder getal is een mening, met
+0–173 % kan de lezer zelf wegen. En met wat het paneel wél doet: signaalkwaliteit
+beoordelen, niet de AHI controleren.
+
+## Ook
+
+`DEPLOY_RUNBOOK` §2 heeft nu een hertrylus om de build. Een net op PyPI gezette
+versie is niet meteen op elke CDN-rand aanwezig, en pip faalt dan met een fout
+die eruitziet als een echte fout; op 26-08 gebeurde dat drie keer, elke keer
+opgelost door opnieuw te bouwen. Met de waarschuwing erbij die er het meest toe
+doet: **`up -d` na een gefaalde build herstart de oude image onder een nieuw
+`APP_VERSION`** — dan ziet `docker compose ps` er gezond uit terwijl de uitrol
+niet gebeurd is.
+
+605 tests.
+
+---
+
 # v0.36.0 — 2026-08-26 — bij een split-night is het diagnostische deel de kop
 
 Pins `psgscoring[ml]==0.29.0`.
