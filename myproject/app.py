@@ -2156,6 +2156,19 @@ def _header_identifiers(filepath: str):
         return None
 
 
+def _split_breakpoint_s(waarde):
+    """Minuten na opnamestart -> seconden, of None bij onbruikbare invoer.
+
+    Liever geen breekpunt dan een verkeerd breekpunt: een typefout mag niet
+    stilzwijgend de halve nacht als 'therapie' bestempelen.
+    """
+    try:
+        m = float(str(waarde).strip().replace(",", "."))
+    except (TypeError, ValueError):
+        return None
+    return m * 60.0 if m > 0 else None
+
+
 @app.route("/anonymize/<job_id>", methods=["POST"])
 @login_required
 @job_access_required
@@ -2300,6 +2313,12 @@ def start_analysis():
         "language":         session.get("lang", "en"),
         # v0.8.22: scoring profiel
         "scoring_profile":  request.form.get("scoring_profile", "standard"),
+        # Split-night: "off" (default), "auto" of "manual". Bij "manual" geeft
+        # de gebruiker het tijdstip van CPAP-start in minuten na opnamestart;
+        # dat wint altijd van de detector, want wie erbij was weet het beter.
+        "split_night": request.form.get("split_night", "off"),
+        "split_night_breakpoint_s": _split_breakpoint_s(
+            request.form.get("split_night_minutes")),
         # v0.26.0: de studieprofiel-set wordt HIER opgelost, niet in de worker.
         # De weblaag heeft de database; een RQ-worker leest alleen zijn config.
         # Dat houdt `validate_study_set` op één plek in plaats van twee, en het

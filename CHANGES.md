@@ -1,3 +1,45 @@
+# v0.35.0 — 2026-08-26 — split-night als keuze, en twee montagevlaggen
+
+Pins `psgscoring[ml]==0.28.0`.
+
+**Reported values change** op de profielen die de arousal-classifier draaien:
+psgscoring 0.28.0 verschuift arousal-onsets standaard 2,0 s. De indices
+veranderen niet (AHI- en RDI-ernstklasse 0/30 op MESA), de getoonde tijdstippen
+wel — het provenanceblok meldt dat met "Arousal-onsets verschoven: +2.0 s".
+
+## Split-night is nu een keuze
+
+Op de kanaalpagina: **uit** (default), **automatisch detecteren**, of
+**handmatig** met het tijdstip van therapiestart in minuten na opnamestart. De
+handmatige waarde wint altijd van de detector — wie erbij was, weet het beter.
+Het breekpunt staat in het provenanceblok.
+
+Waarom dit nodig was: één AHI over diagnostiek én titratie verdunt de diagnose.
+Op de casus die dit aanleiding gaf las het rapport "Mild SAS, AHI 10,1/u" bij
+een patiënt die de verwijzer als ernstig kende; het diagnostische deel had
+ODI3 ~60/u.
+
+## Twee vlaggen die een montageprobleem zichtbaar maken
+
+**EEG-topografie.** Spindels horen frontocentraal maximaal, trage golven
+frontaal dominant. Staat het dubbel omgekeerd — trage golven occipitaal én
+spindels frontaal, elk met een factor 3 — dan komt er een aandachtspunt:
+"controleer de kanaallabels en de montage". Alleen vlaggen, nooit corrigeren:
+welke twee kanalen verwisseld zijn is van buitenaf niet vast te stellen, en een
+gok verplaatst de fout. Op de aanleidende casus was het spindels F4 804 / F3 521
+tegen C3 14 / C4 36, en trage golven O1/O2 elk 276 tegen F3 3 — terwijl de
+slaapstadiëring op een van die kanalen draaide.
+
+**Positiecodering.** Is `position_mapping_method` niet "coded", dan is de
+labelvolgorde een aanname. De positie-AHI-tabel blijft staan, maar met een
+voorbehoud eronder en zonder POSA-fenotype. Op die casus lag de patiënt
+"vrijwel de hele nacht PRO" met AHI Prone 18,8 tegen Left 8,2 — getallen die
+niet te weerleggen zijn.
+
+597 tests.
+
+---
+
 # v0.34.9 — 2026-08-26 — uploadgrens op 2 GB, uit één bron
 
 Pins `psgscoring[ml]==0.27.7` (ongewijzigd). Geen enkele gescoorde waarde

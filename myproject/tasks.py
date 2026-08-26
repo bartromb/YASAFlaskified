@@ -460,6 +460,27 @@ def run_analysis_job(job_id: str) -> dict:
     # hoort de lezer te weten. Zonder die hoogdoorlaat zou ELKE sample boven
     # de 500 µV-artefactregel liggen en was er geen uitkomst geweest; de
     # melding is dus een verklaring, geen excuus.
+    # EEG-topografie: staan spindels en trage golven waar ze horen? Zo niet,
+    # dan wijst dat op verwisselde labels of een andere referentie -- en de
+    # staging draaide op een van die kanalen.
+    try:
+        from generate_pdf_report import _topography_warning
+        _topo = _topography_warning(results)
+        if _topo:
+            analysis_warnings.append({
+                "code": "atypical_topography",
+                "severity": "warning",
+                "message": (
+                    "EEG-topografie atypisch: trage golven occipitaal "
+                    f"({_topo['sw_occipital']}) tegen frontaal "
+                    f"({_topo['sw_frontal']}), spindels frontaal "
+                    f"({_topo['spindles_frontal']}) tegen centraal "
+                    f"({_topo['spindles_central']}). Controleer de "
+                    "kanaallabels en de montage."),
+            })
+    except Exception as e:  # noqa: BLE001
+        logger.debug("topografiecheck mislukt (niet-kritiek): %s", e)
+
     _dc = _dc_samenvatting()
     if _dc.get("applied"):
         _namen = ", ".join(sorted(_dc["channels"]))
@@ -528,6 +549,8 @@ def run_analysis_job(job_id: str) -> dict:
                                                    raw_pneumo),
             artifact_epochs  = art_epochs,
             scoring_profile  = cfg.get("scoring_profile", "standard"),
+            split_night      = cfg.get("split_night", "off"),
+            split_night_breakpoint_s = cfg.get("split_night_breakpoint_s"),
         )
     finally:
         if _saved_lgbm_env is None:

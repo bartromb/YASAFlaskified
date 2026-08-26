@@ -506,6 +506,30 @@
            `family` komt uit psgscoring en is daar door een test vastgepind. De
            experimentele groep staat onderaan, achter een eigen kop, en de
            waarschuwing eronder is zichtbaar zonder de lijst te openen. #}
+        <div class="mb-3" id="splitNightBlok">
+          <label class="form-label" for="splitNight"><strong>{{ t('split_night_title') }}</strong></label>
+          <select name="split_night" class="form-select" id="splitNight">
+            <option value="off" selected>{{ t('split_night_off') }}</option>
+            <option value="auto">{{ t('split_night_auto') }}</option>
+            <option value="manual">{{ t('split_night_manual') }}</option>
+          </select>
+          <input type="number" name="split_night_minutes" id="splitNightMinutes"
+                 class="form-control mt-2" min="1" step="1" style="display:none"
+                 placeholder="{{ t('split_night_manual') }}">
+          <div class="form-text">{{ t('split_night_help') }}</div>
+        </div>
+        <script>
+          // Het minutenveld hoort alleen te bestaan als er iets in te vullen
+          // valt; een leeg getalveld naast een keuze die het niet gebruikt,
+          // nodigt uit tot invoer die genegeerd wordt.
+          (function () {
+            var sel = document.getElementById('splitNight');
+            var min = document.getElementById('splitNightMinutes');
+            if (!sel || !min) return;
+            function toon() { min.style.display = sel.value === 'manual' ? '' : 'none'; }
+            sel.addEventListener('change', toon); toon();
+          })();
+        </script>
         <select name="scoring_profile" class="form-select" id="scoringProfile">
           {% if available_profiles %}
             <optgroup label="{{ t('prof_grp_v3') }}">

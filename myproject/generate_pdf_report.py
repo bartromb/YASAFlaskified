@@ -387,6 +387,18 @@ def provenance_rows(results, lang="nl"):
     # Een DC-gekoppelde opname is vóór de analyse gefilterd. Dat verandert de
     # signalen waarop ALLES rust, dus het hoort in de provenance en niet alleen
     # in een waarschuwing die je kunt wegkijken. Alleen tonen als het gebeurd is.
+    # Split-night: het breekpunt hoort in de provenance, want alles wat
+    # eronder staat is per segment berekend. Zonder deze regel is niet te zien
+    # dat de nacht in tweeën is gelezen.
+    _sn = ((results.get("pneumo") or {}).get("split_night")
+           or results.get("split_night") or {})
+    if _sn.get("detected") and _sn.get("breakpoint_s"):
+        _b = float(_sn["breakpoint_s"])
+        _hoe = {"manual": "opgegeven", "flow_amplitude+spo2_baseline": "gedetecteerd"}.get(
+            _sn.get("method"), _sn.get("method") or "")
+        rows.append([_lbl("prov_split_night", "Split-night — start therapie"),
+                     f"{int(_b // 3600)}:{int((_b % 3600) // 60):02d} ({_hoe})"])
+
     _dc = (results.get("dc_highpass") or
            (results.get("meta") or {}).get("dc_highpass") or {})
     if _dc.get("applied"):
@@ -555,6 +567,7 @@ _WARNING_KEYS = {
     "eog_channel_missing": "pdf_warn_eog_missing",
     "all_epochs_artefact": "pdf_warn_all_artefact",
     "dc_highpass_applied": "pdf_warn_dc_highpass",
+    "atypical_topography": "pdf_warn_topography",
 }
 
 
@@ -641,7 +654,70 @@ def _position_rows(pos_sum, lang="nl"):
         rijen.append([f"AHI {naam}",
                       t("pdf_pos_too_short", lang).format(
                           min=_m, drempel=f"{drempel:.0f}")])
+    # Is de codering niet herkend, dan is de labelvolgorde een aanname en mag
+    # geen enkele rij als meting gelezen worden.
+    if rijen and not _position_mapping_is_coded(pos_sum):
+        rijen.append(["", t("pdf_pos_uncoded", lang)])
     return rijen
+
+
+def _channel_counts(blok):
+    """{kanaalnaam: aantal} uit een YASA-samenvatting, hoofdletterongevoelig."""
+    uit = {}
+    for rij in (blok or {}).get("summary") or []:
+        if not isinstance(rij, dict):
+            continue
+        naam = str(rij.get("Channel") or "").upper()
+        try:
+            uit[naam] = uit.get(naam, 0) + int(rij.get("Count") or 0)
+        except (TypeError, ValueError):
+            continue
+    return uit
+
+
+def _som(tellingen, namen):
+    """Telt kanalen op waarvan de naam een van `namen` bevat (F3 matcht EEG F3-A2)."""
+    return sum(v for k, v in tellingen.items() if any(n in k for n in namen))
+
+
+def _topography_warning(results):
+    """Staan de spindels en trage golven waar ze horen?
+
+    Spindels zijn frontocentraal maximaal, trage golven frontaal dominant. Op de
+    Thaise casus van 26-08-2026 stond het dubbel omgekeerd: spindels F4 804 /
+    F3 521 tegen C3 14 / C4 36, en trage golven O1/O2 elk 276 tegen F3 3. Dat
+    patroon is geen fysiologie maar een montage: verwisselde labels of een
+    andere referentie. Staging draaide er wél op.
+
+    Alleen vlaggen, nooit corrigeren -- welke twee kanalen verwisseld zijn, is
+    van buitenaf niet vast te stellen, en een gok zou de fout verplaatsen in
+    plaats van hem te tonen.
+    """
+    sp = _channel_counts(results.get("spindles"))
+    sw = _channel_counts(results.get("slow_waves"))
+    if not sp or not sw:
+        return None
+    sw_occ, sw_front = _som(sw, ("O1", "O2")), _som(sw, ("F3", "F4"))
+    sp_front, sp_centr = _som(sp, ("F3", "F4")), _som(sp, ("C3", "C4"))
+    # Beide omkeringen moeten meedoen. Eén ervan alleen komt voor bij een
+    # slecht kanaal; samen zijn ze een montagepatroon.
+    if (sw_front > 0 or sw_occ > 0) and (sp_centr > 0 or sp_front > 0):
+        if sw_occ > 3 * max(sw_front, 1) and sp_front > 3 * max(sp_centr, 1):
+            return {"sw_occipital": sw_occ, "sw_frontal": sw_front,
+                    "spindles_frontal": sp_front, "spindles_central": sp_centr}
+    return None
+
+
+def _position_mapping_is_coded(pos_sum):
+    """Is de houdingscodering herkend, of is de volgorde een aanname?
+
+    `position_mapping_method` staat sinds psgscoring 0.27.2 in de samenvatting.
+    "levels" betekent: de recorder gebruikt codes die wij niet kennen, en de
+    rangorde is geraden. Op de Thaise casus leverde dat vrijwel de hele nacht
+    "PRO" op -- onwaarschijnlijk en niet te weerleggen. De tabel mag dan blijven
+    staan, maar niet ongekwalificeerd.
+    """
+    return str((pos_sum or {}).get("position_mapping_method") or "") == "coded"
 
 
 _FRI_SENTINEL = object()
