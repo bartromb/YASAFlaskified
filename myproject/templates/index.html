@@ -52,7 +52,7 @@
         </div>
 
         <input type="file" name="edf_file" id="edfInput"
-               accept=".edf" class="d-none" required>
+               accept=".edf,.bdf" class="d-none" required>
 
         <div class="d-grid">
           <button type="submit" class="btn btn-primary btn-lg" id="uploadBtn" disabled>
@@ -108,7 +108,7 @@ const btn     = document.getElementById("uploadBtn");
 const form    = document.getElementById("uploadForm");
 
 function setFile(file) {
-  if (!file || !file.name.toLowerCase().endsWith(".edf")) {
+  if (!file || !/\.(edf|bdf)$/i.test(file.name)) {
     alert("{{ t('invalid_edf_file') }}");
     return;
   }

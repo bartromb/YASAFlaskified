@@ -401,7 +401,7 @@ body { font-family: var(--sans); background: #f0f4f8; }
       <div class="drop-zone" id="dropZone" onclick="document.getElementById('edfInput').click()">
         <span class="drop-icon" id="dropIcon">🧠</span>
         <div class="drop-main" id="dropMain">
-          Klik om te bladeren of sleep een .edf bestand hierheen
+          Klik om te bladeren of sleep een .edf- of .bdf-bestand hierheen
         </div>
         <div class="drop-sub" id="dropSub">
           Polysomnografie-opname van elk PSG-apparaat
@@ -413,7 +413,7 @@ body { font-family: var(--sans); background: #f0f4f8; }
         </div>
       </div>
 
-      <input type="file" id="edfInput" accept=".edf" class="d-none">
+      <input type="file" id="edfInput" accept=".edf,.bdf" class="d-none">
 
       {# EDF metadata na assembly #}
       <div class="edf-meta" id="edfMeta">
@@ -570,7 +570,7 @@ function log(msg, type = '') {
 function setFile(file) {
   if (!file) return;
 
-  if (!file.name.toLowerCase().endsWith('.edf')) {
+  if (!/\.(edf|bdf)$/i.test(file.name)) {
     log('{{ t("upload_only_edf") }}', 'log-warn');
     return;
   }
@@ -703,7 +703,8 @@ async function startUpload() {
       const res  = await EdfAnonymize.anonymizeFile(selectedFile, { studyCode: code });
       source   = res.blob;
       // De naam draagt in de praktijk vaker een naam dan de header.
-      sendName = EdfAnonymize.safeFilename(res.after.patient.split(/\s+/)[0]);
+      sendName = EdfAnonymize.safeFilename(res.after.patient.split(/\s+/)[0],
+                                           EdfAnonymize.extensionOf(selectedFile.name));
       showAnonPreview(res.before, res.after, sendName);
       log(`Header geanonimiseerd vóór verzenden → ${sendName}`, 'log-ok');
     } catch (err) {

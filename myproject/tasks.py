@@ -50,6 +50,11 @@ UPLOAD_FOLDER = os.environ.get(
 
 # ── Redis voortgang ──────────────────────────────────────────
 import redis as _redis
+from signal_io import (
+    apply_dc_highpass,
+    read_raw_signal,
+    source_candidates,
+)
 
 _progress_redis = None
 
@@ -77,6 +82,27 @@ def _set_progress(job_id: str, step: int, total: int, label: str):
 # EDF LADEN
 # ─────────────────────────────────────────────
 
+#: Wat de DC-hoogdoorlaat per laadstap deed. Module-globaal omdat `_load_edf`
+#: op drie plekken wordt aangeroepen (staging, analyse, pneumo) en het rapport
+#: één verslag hoort te tonen, niet drie losse. Wordt per taak gewist.
+_dc_rapport: dict = {}
+
+
+def _dc_samenvatting() -> dict:
+    """Eén verslag over alle laadstappen heen: welke kanalen, welke offsets."""
+    kanalen: dict = {}
+    cutoff = None
+    for verslag in _dc_rapport.values():
+        if verslag.get("applied"):
+            kanalen.update(verslag.get("channels") or {})
+            cutoff = verslag.get("cutoff_hz")
+    if not kanalen:
+        return {"applied": False, "channels": {}}
+    return {"applied": True, "cutoff_hz": cutoff, "channels": kanalen,
+            "n_channels": len(kanalen),
+            "max_offset_uv": max(abs(v) for v in kanalen.values())}
+
+
 def _load_edf(edf_path: str, needed_channels: list,
               label: str = "EDF") -> mne.io.BaseRaw:
     """
@@ -85,7 +111,7 @@ def _load_edf(edf_path: str, needed_channels: list,
     """
     logger.info("[%s] laden: %s", label, needed_channels)
     try:
-        raw_hdr   = mne.io.read_raw_edf(edf_path, preload=False, verbose=False)
+        raw_hdr   = read_raw_signal(edf_path, preload=False, verbose=False)
         all_ch    = raw_hdr.ch_names
         available = set(all_ch)
         to_keep   = list(dict.fromkeys(
@@ -96,13 +122,16 @@ def _load_edf(edf_path: str, needed_channels: list,
         to_exclude = [ch for ch in all_ch if ch not in set(to_keep)]
         logger.info("[%s] %d kanalen laden, %d uitsluiten",
                     label, len(to_keep), len(to_exclude))
-        raw = mne.io.read_raw_edf(
+        raw = read_raw_signal(
             edf_path, exclude=to_exclude, preload=True, verbose=False)
         logger.info("[%s] geladen: sfreq=%.0f Hz", label, raw.info["sfreq"])
+        _dc_rapport[label] = apply_dc_highpass(raw)
         return raw
     except Exception as e:
         logger.warning("[%s] mislukt (%s) — fallback: alles laden", label, e)
-        return mne.io.read_raw_edf(edf_path, preload=True, verbose=False)
+        raw = read_raw_signal(edf_path, preload=True, verbose=False)
+        _dc_rapport[label] = apply_dc_highpass(raw)
+        return raw
 
 
 def _pneumo_load_plan(pneumo_ch_list: list, eeg_ch: str | None,
@@ -174,7 +203,7 @@ def _pneumo_channel_map(pneumo_channels: dict | None, emg_ch: str | None,
 def _detect_pneumo_channels(edf_path: str, pneumo_channels: dict) -> list:
     """Detecteer respiratoire kanalen via header (geen data)."""
     try:
-        raw_hdr  = mne.io.read_raw_edf(edf_path, preload=False, verbose=False)
+        raw_hdr  = read_raw_signal(edf_path, preload=False, verbose=False)
         auto     = pneumo_detect_channels(raw_hdr.ch_names)
         merged   = {**auto, **{k: v for k, v in pneumo_channels.items() if v}}
         detected = list(dict.fromkeys(
@@ -200,6 +229,11 @@ def run_analysis_job(job_id: str) -> dict:
       raw_analyse : alle extra EEG kanalen       → spindles, SW, bandpower
       raw_pneumo  : respiratoire kanalen          → AHI, SpO2, PLM, snurk
     """
+    # Per taak wissen: de worker draait meerdere jobs achter elkaar in
+    # hetzelfde proces, en een verslag van de vorige opname zou hier
+    # als provenance van deze belanden.
+    _dc_rapport.clear()
+
     started = datetime.utcnow()
     logger.info("▶ Job gestart: %s | UPLOAD_FOLDER: %s", job_id, UPLOAD_FOLDER)
     _set_progress(job_id, 1, 10, "Config laden...")
@@ -254,7 +288,7 @@ def run_analysis_job(job_id: str) -> dict:
         _set_progress(job_id, 3, 10, "Polygrafie — geen slaapstaging...")
         # De opnameduur komt uit de EDF-header; daar is geen kanaal voor nodig.
         import mne as _mne
-        _hdr = _mne.io.read_raw_edf(edf_path, preload=False, verbose="ERROR")
+        _hdr = read_raw_signal(edf_path, preload=False, verbose="ERROR")
         n_epochs = int(_hdr.times[-1] // 30)
         del _hdr
         raw_staging = None
@@ -352,7 +386,7 @@ def run_analysis_job(job_id: str) -> dict:
 
     if pneumo_ch_list:
         try:
-            _hdr_names = mne.io.read_raw_edf(
+            _hdr_names = read_raw_signal(
                 edf_path, preload=False, verbose=False).ch_names
         except Exception:                       # noqa: BLE001
             _hdr_names = None
@@ -421,6 +455,24 @@ def run_analysis_job(job_id: str) -> dict:
 
     # Blokkerende bevindingen die de gebruiker MOET zien, niet als voetnoot.
     analysis_warnings: list[dict] = list(_channel_warnings)
+
+    # DC-gekoppelde opname: de signalen zijn bewerkt vóór de analyse, en dat
+    # hoort de lezer te weten. Zonder die hoogdoorlaat zou ELKE sample boven
+    # de 500 µV-artefactregel liggen en was er geen uitkomst geweest; de
+    # melding is dus een verklaring, geen excuus.
+    _dc = _dc_samenvatting()
+    if _dc.get("applied"):
+        _namen = ", ".join(sorted(_dc["channels"]))
+        analysis_warnings.append({
+            "code": "dc_highpass_applied",
+            "severity": "info",
+            "message": (
+                f"{_dc['n_channels']} kanalen droegen een gelijkspannings"
+                f"offset tot {_dc['max_offset_uv']:.0f} µV. Er is een "
+                f"hoogdoorlaat van {_dc['cutoff_hz']:.2f} Hz toegepast vóór "
+                f"de analyse, anders zou elke sample als artefact zijn "
+                f"weggevallen. Kanalen: {_namen}."),
+        })
 
     # ── Twee bewakingen op het artefactmasker ────────────────────────────
     #
@@ -518,6 +570,7 @@ def run_analysis_job(job_id: str) -> dict:
         **yasa_results,
         "pneumo":           pneumo_results,
         "analysis_warnings": analysis_warnings,
+        "dc_highpass": _dc,
         # Wat er WERKELIJK gedraaid heeft, niet wat er aangevinkt stond. Het
         # rapport moet "REI" boven een REI zetten, ook wanneer het studietype
         # per ongeluk op PSG bleef staan.
@@ -729,9 +782,7 @@ def generate_edfplus_job(job_id: str) -> dict:
             pass
 
     if not edf_path or not os.path.exists(edf_path):
-        import glob as _glob
-        candidates = [c for c in _glob.glob(os.path.join(UPLOAD_FOLDER, f"{job_id}*.edf"))
-                      if "_scored.edf" not in c]
+        candidates = source_candidates(UPLOAD_FOLDER, job_id)
         edf_path = candidates[0] if candidates else None
 
     if not edf_path or not os.path.exists(edf_path):
@@ -1136,7 +1187,7 @@ def run_profile_comparison(edf_path: str, results_dir: str, *,
     # een MESA-opname 175 s en 5,1 GiB tegen 0,5 s voor de kanalen die tellen.
     # Bij acht RQ-workers is dat het verschil tussen ~40 GiB en een handvol.
     try:
-        _cmp_names = mne.io.read_raw_edf(
+        _cmp_names = read_raw_signal(
             edf_path, preload=False, verbose=False).ch_names
     except Exception:                           # noqa: BLE001
         _cmp_names = None

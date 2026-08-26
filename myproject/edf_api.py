@@ -103,6 +103,11 @@ def _edf_path_for_job(job_id: str, upload_folder: str) -> str | None:
 
 # ── Cache (LRU, max 3 EDF-bestanden per worker) ──────────────────────────────
 from collections import OrderedDict
+from signal_io import (
+    read_raw_signal,
+    source_candidates,
+    strip_window_offset,
+)
 
 _MAX_CACHE = 3   # max RAM ~1.5 GB bij 3 × 500 MB PSG
 
@@ -157,7 +162,7 @@ def _get_raw(job_id: str, upload_folder: str):
     # an 8h 32-ch PSG would block the first /info request for 20-60s while
     # ~1-2 GB is loaded into RAM. Viewer access is sparse and sequential,
     # so lazy reads give much better time-to-first-signal.
-    raw = mne.io.read_raw_edf(edf_path, preload=False, verbose=False)
+    raw = read_raw_signal(edf_path, preload=False, verbose=False)
     _raw_cache.set(job_id, raw)
     logger.info("EDF geopend: %d kanalen, %.0f Hz, %.0f s",
                 len(raw.ch_names), raw.info["sfreq"], raw.times[-1])
@@ -231,6 +236,12 @@ def edf_epoch(job_id: str, epoch_idx: int,
     start_s = int(t0 * sfreq)
     stop_s  = int(t1 * sfreq)
     data, _  = raw[req_chs, start_s:stop_s]   # shape: (n_ch, n_samples)
+    # DC-gekoppelde opname: zonder dit volgt de schaal de staande
+    # offset en verschijnt het EEG als een vlakke lijn -- gain helpt
+    # daar niet tegen, want het signaal is duizenden malen kleiner dan
+    # de offset. Alleen boven de drempel, dus een gewone opname toont
+    # onveranderd wat er in het bestand staat.
+    strip_window_offset(data, req_chs)
 
     # Decimeer naar max 512 samples per kanaal (snelheid)
     n_out = 512

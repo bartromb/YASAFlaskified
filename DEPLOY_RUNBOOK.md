@@ -100,7 +100,8 @@ so waiting is nearly always the right call.
 ```bash
 cd ~/CODE/YASAFlaskified
 rsync -rlptz --checksum --no-owner --no-group --dry-run --itemize-changes \
-  --exclude='.git' --exclude='.env' --exclude='instance' --exclude='uploads' \
+  --exclude='.git' --exclude='.env' --exclude='config.json' \
+  --exclude='instance' --exclude='uploads' \
   --exclude='processed' --exclude='logs' --exclude='__pycache__' --exclude='*.pyc' \
   --exclude='.venv' --exclude='*.log' --exclude='node_modules' --exclude='.pytest_cache' \
   --exclude='.ruff_cache' --exclude='.hypothesis' --exclude='.mypy_cache' \
@@ -108,6 +109,13 @@ rsync -rlptz --checksum --no-owner --no-group --dry-run --itemize-changes \
 ```
 Inspect the list. Expect only code/docs to change — **never** `app.py`/compose/
 Dockerfile/nginx unintentionally, and **never** a data dir.
+
+> **`config.json` is nu ook uitgesloten.** De app leest zijn site-blok uit
+> `instance/config.json` (host-lokaal, bind-gemount) en anders uit
+> `config.json` in de app-root, die de Dockerfile uit `config.json.example`
+> zet. Een `config.json` die per ongeluk lokaal ontstaat, zou zonder deze
+> regel de instellingsgegevens van productie overschrijven — dezelfde klasse
+> fout als de `--delete` hieronder, alleen stiller.
 
 > **Never add `--delete`.** The server holds files that are deliberately absent
 > from the repo — `.env` and `myproject/.env` (gitignored), `logs/`,

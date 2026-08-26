@@ -31,6 +31,7 @@ import time
 import traceback
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
+from signal_io import is_signal_file, read_raw_signal
 
 logging.basicConfig(level=logging.INFO,
                     format="[%(asctime)s] %(levelname)s %(message)s")
@@ -54,7 +55,7 @@ def _analyse_single(edf_path: str, output_dir: str, profile: str) -> dict:
 
     try:
         t0 = time.time()
-        raw = mne.io.read_raw_edf(edf_path, preload=True, verbose=False)
+        raw = read_raw_signal(edf_path, preload=True, verbose=False)
 
         # Sleep staging
         staging = run_sleep_staging(raw)
@@ -165,7 +166,8 @@ def main():
     output_dir = Path(args.output_dir) if args.output_dir else input_dir / "batch_results"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    edfs = sorted(input_dir.glob("*.edf"))
+    edfs = sorted(p for p in input_dir.iterdir()
+                  if is_signal_file(p.name) and not p.name.endswith("_scored.edf"))
     if args.limit:
         edfs = edfs[:args.limit]
 

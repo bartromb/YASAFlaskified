@@ -176,7 +176,7 @@
                  accept="image/png,image/jpeg">
         </div>
         <div class="col-md-4" id="logoPreviewWrap" style="display:none">
-          <label class="form-label small mb-0">{{ t("rh_current_logo") }} <span class="text-muted">({{ t("rh_default_azorg") }})</span></label>
+          <label class="form-label small mb-0">{{ t("rh_current_logo") }} <span class="text-muted">({{ t("rh_default_logo") }})</span></label>
           <div>
             <img id="logoPreview" style="max-height:40px;border:1px solid #ccc;border-radius:4px" alt="logo">
             <button class="btn btn-outline-danger btn-sm ms-2 py-0" onclick="removeLogo()" title="{{ t('rh_use_other_logo') }}">✕</button>
@@ -299,8 +299,10 @@ async function loadReport() {
       document.getElementById("logoPreview").src = `/uploads/logos/${p.report_logo_path}`;
       document.getElementById("logoPreviewWrap").style.display = "";
     } else {
-      // v0.8.10: toon default AZORG logo
-      document.getElementById("logoPreview").src = "/static/AZORG_rood.png";
+      // Geen standaardlogo: een instelling stelt haar eigen briefhoofd in.
+      // Tot v0.34.7 stond hier het logo van één centrum, wat elke andere
+      // installatie een vreemd briefhoofd voorspiegelde.
+      document.getElementById("logoPreview").removeAttribute("src");
       document.getElementById("logoPreviewWrap").style.display = "";
     }
 

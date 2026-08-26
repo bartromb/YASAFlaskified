@@ -1,3 +1,88 @@
+# v0.34.8 — 2026-08-26 — BDF wordt natief gelezen, en gelijkspanning gaat eruit
+
+Pins `psgscoring[ml]==0.27.7` (ongewijzigd).
+
+**Geen enkele gescoorde waarde verandert op een gewone opname.** Alle drie de
+wijzigingen raken alleen bestanden die tot nu toe niet of verkeerd verwerkt
+werden, plus het briefhoofd van installaties die er geen hebben ingesteld.
+
+## 1. BDF wordt natief gelezen
+
+BDF is 24-bit, EDF is 16-bit. Een centrum dat zijn BDF eerst naar EDF
+exporteerde om te kunnen uploaden, scoorde daarna de conversie mee. `.bdf` mag
+nu rechtstreeks; `myproject/signal_io.py` kiest de lezer op de extensie, en de
+extensie **blijft behouden** bij upload en anonimisering — een BDF die als
+`.edf` aankomt zou als 16-bit gelezen worden en plausibele maar onjuiste
+amplitudes geven, en dat is een stille fout in plaats van een luide.
+
+De browser-anonimiseerder werkt ongewijzigd op BDF: de header heeft dezelfde
+indeling, alleen byte 0 is `0xFF BIOSEMI`. Geverifieerd dat de magic intact
+blijft en de signaaldata byte-identiek. De uitvoer blijft EDF+.
+
+## 2. Gelijkspanning-gekoppelde opnames worden hoogdoorgelaten
+
+Een BioSemi-achtige versterker neemt gelijkspanning mee op. Op de opname die dit
+aan het licht bracht droeg F3 een staande offset van 145 mV met het EEG er in
+microvolts bovenop:
+
+| kanaal | p95 vóór | p95 ná (0,3 Hz) |
+|---|---:|---:|
+| F3 | 144.629 µV | **24,2 µV** |
+| C4 | 20.403 µV | 125,5 µV |
+| Lt Leg | 14.666 µV | 205,4 µV |
+
+Eén feit verklaarde drie klachten: **vlakke lijnen in de viewer** (de schaal
+volgde de offset; gain hielp niet), een **"discontinuous" EDF na conversie**
+(16-bit kan 145 mV en microvoltdetail niet tegelijk dragen), en **100 % van de
+samples boven de 500 µV-artefactregel** — dus geen bruikbare uitkomst. Na
+filtering: 0,0 %. Herrefereren op A1/A2 werkt níét; elk kanaal draagt zijn eigen
+offset.
+
+Drempel is dezelfde 500 µV als de artefactregel, kantelfrequentie 0,3 Hz. De
+viewer krijgt een eigen behandeling omdat die lui per venster leest. Er komt een
+melding in het rapport én een regel in het provenanceblok.
+
+**Waarom dit automatisch gebeurt** terwijl gedragswijzigingen hier normaal
+achter een vlag gaan: een kanaal met een offset boven 500 µV wordt nu al
+volledig als artefact weggegooid. Er is geen bestaande bruikbare uitkomst om te
+breken, en een test bewaakt dat een gewone opname byte-identiek blijft.
+
+SpO2, hartslag, positie, flow, thermistor en ademhalingsbanden worden **nooit**
+gefilterd: daar is het gelijkspanningsniveau juist de meting, en een ademhaling
+van 12/min ligt op 0,2 Hz — vlak onder de kantelfrequentie. De uitsluitlijst
+gaat daarom vóór de naamherkenning: `EMG/Piezo` draagt "EMG" maar meet
+ademhaling.
+
+## 3. Geen instellingsnaam meer in de code
+
+Tot nu toe stond "Slaapkliniek AZORG" hardgecodeerd in twee rapportgenerators
+én in `config.json.example`, dat de Dockerfile als `config.json` in het image
+zet. Gemeten in productie: het site-blok wérd gelezen, maar kwam uit dat
+voorbeeldbestand. **Elke installatie kreeg dus het briefhoofd van een ander
+centrum op zijn rapport.**
+
+De code draagt nu geen naam en geen logo meer. De site-configuratie komt uit
+`instance/config.json` — host-lokaal, bind-gemount en uitgesloten van rsync, dus
+het overleeft zowel een deploy als een image-rebuild. Zonder configuratie blijft
+het briefhoofd leeg.
+
+De studiecode is uit de twee publieke teksten gehaald; **de validatiecaveat zelf
+blijft staan** — die bestaat om eerlijk te zijn over de validatiestand.
+
+**Bij het bijwerken van een bestaande installatie:** zet uw gegevens in
+`instance/config.json` vóór u uitrolt, anders verliest het rapport zijn
+briefhoofd.
+
+## Overig
+
+`--exclude='config.json'` toegevoegd aan de rsync in DEPLOY_RUNBOOK §2: zonder
+die regel zou een lokaal aangemaakte `config.json` de instellingsgegevens van
+productie overschrijven.
+
+576 tests.
+
+---
+
 # v0.34.7 — 2026-08-26 — een verschoven arousal-onset staat nu in het rapport
 
 Pins `psgscoring[ml]==0.27.7`.

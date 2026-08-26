@@ -28,6 +28,7 @@ import logging
 import os
 
 import numpy as np
+from signal_io import read_raw_signal, source_candidates
 
 logger = logging.getLogger("yasaflaskified.edfplus")
 
@@ -314,7 +315,7 @@ def _export_via_mne(edf_path: str, annotations: list[dict], output_path: str):
     """Fallback: MNE export (trager, vereist preload)."""
     import mne
 
-    raw = mne.io.read_raw_edf(edf_path, preload=True, verbose=False)
+    raw = read_raw_signal(edf_path, preload=True, verbose=False)
     raw.set_annotations(mne.Annotations([], [], []))
 
     if annotations:

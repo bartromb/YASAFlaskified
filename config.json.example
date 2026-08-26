@@ -1,37 +1,30 @@
 {
   "SECRET_KEY": "VERANDER_DIT_NAAR_EEN_LANGE_WILLEKEURIGE_STRING",
   "ADMIN_PASSWORD": "VERANDER_DIT_WACHTWOORD",
-
-  "UPLOAD_FOLDER":            "/data/slaapkliniek/uploads",
-  "PROCESSED_FOLDER":         "/data/slaapkliniek/processed",
-  "SQLALCHEMY_DATABASE_URI":  "sqlite:////data/slaapkliniek/instance/users.db",
-  "LOG_FILE":                 "/data/slaapkliniek/logs/app.log",
-  "LOG_LEVEL":                "INFO",
-
+  "UPLOAD_FOLDER": "/data/slaapkliniek/uploads",
+  "PROCESSED_FOLDER": "/data/slaapkliniek/processed",
+  "SQLALCHEMY_DATABASE_URI": "sqlite:////data/slaapkliniek/instance/users.db",
+  "LOG_FILE": "/data/slaapkliniek/logs/app.log",
+  "LOG_LEVEL": "INFO",
   "REDIS_HOST": "redis",
   "REDIS_PORT": 6379,
-
-  "MAX_CONTENT_LENGTH":        524288000,
-  "SESSION_LIFETIME_HOURS":    24,
-
+  "MAX_CONTENT_LENGTH": 524288000,
+  "SESSION_LIFETIME_HOURS": 24,
   "_comment_SESSION_COOKIE_SECURE": "Must be the string \"1\", not true: the app tests _cfg(...) == \"1\". Production runs behind HTTPS (Nginx/NPM); set \"0\" for local HTTP development.",
-  "SESSION_COOKIE_SECURE":     "1",
-
-  "REQUIRE_STRONG_PASSWORDS":  true,
-  "ENABLE_RATE_LIMITING":      true,
-  "JOB_TIMEOUT_SECONDS":       900,
-
+  "SESSION_COOKIE_SECURE": "1",
+  "REQUIRE_STRONG_PASSWORDS": true,
+  "ENABLE_RATE_LIMITING": true,
+  "JOB_TIMEOUT_SECONDS": 900,
   "_comment_JOB_ACCESS_STRICT": "Job-toegangscontrole. \"0\" tijdens de overgang: een job zonder rij in de job-tabel valt terug op de JSON-bestanden en logt 'job access fallback'. Zet op \"1\" zodra de backfill geslaagd is en die waarschuwingen wegblijven — dan is een onbekende job 404.",
-  "JOB_ACCESS_STRICT":         "0",
-
+  "JOB_ACCESS_STRICT": "0",
   "DEBUG": false,
-
   "site": {
-    "name":      "Slaapkliniek AZORG",
-    "address":   "",
-    "phone":     "",
-    "email":     "",
-    "logo_path": "AZORG_rood.png",
-    "url":       "https://www.slaapkliniek.be"
-  }
+    "name": "",
+    "address": "",
+    "phone": "",
+    "email": "",
+    "logo_path": "",
+    "url": ""
+  },
+  "_comment_site": "Naam, adres en logo van UW centrum. Laat leeg voor een rapport zonder briefhoofd. Zet dit bij voorkeur in instance/config.json: dat bestand overleeft een deploy en een image-rebuild, dit voorbeeldbestand niet."
 }

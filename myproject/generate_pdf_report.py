@@ -44,6 +44,8 @@ from reportlab.platypus import (
     TableStyle,
 )
 
+from signal_io import read_raw_signal, source_candidates
+
 # ── Pagina ─────────────────────────────────────────────────────
 W_A4, H_A4 = A4
 ML, MR, MT, MB = 2.0*cm, 2.0*cm, 1.8*cm, 1.6*cm
@@ -74,15 +76,37 @@ _SEV_LABELS = {
 }
 
 # ── Site-config ────────────────────────────────────────────────
-_DSITE = {"name":"Slaapkliniek AZORG","address":"","phone":"","email":"","logo_path":"AZORG_rood.png","url":"https://www.slaapkliniek.be"}
+# GEEN instellingsnaam in de code. Wie dit draait, zet zijn eigen gegevens in
+# `instance/config.json`; dat bestand is host-lokaal, bind-gemount en staat in
+# de rsync-uitsluitingen, dus een deploy raakt het niet. Stond hier tot v0.34.7
+# "Slaapkliniek AZORG" met bijbehorend logo, en dat verscheen op het rapport van
+# ELKE installatie -- ook bij de slaapcentra die het product uitproberen.
+_DSITE = {"name": "", "address": "", "phone": "", "email": "",
+          "logo_path": "", "url": ""}
+
+#: Zoekvolgorde voor de site-configuratie. `instance/` gaat vóór: dat is de
+#: enige plek die een deploy of een image-rebuild NIET overschrijft. De
+#: `config.json` in de app-root komt uit `config.json.example` via de Dockerfile
+#: en wordt bij elke rebuild teruggezet -- bruikbaar als voorbeeld, niet als
+#: plek voor de identiteit van een centrum.
+_SITE_PATHS = ("instance/config.json", "config.json")
+
+
+def _site_config_paths():
+    root = os.path.join(os.path.dirname(__file__), "..")
+    return [os.path.join(root, p) for p in _SITE_PATHS] + list(_SITE_PATHS)
+
 
 def _load_site(override=None):
     cfg = dict(_DSITE)
     try:
-        for p in [os.path.join(os.path.dirname(__file__),"..","config.json"),"config.json"]:
+        for p in _site_config_paths():
             if os.path.exists(p):
-                with open(p) as f: cfg.update(json.load(f).get("site",{}))
-                break
+                with open(p) as f:
+                    blok = json.load(f).get("site", {})
+                if blok:
+                    cfg.update(blok)
+                    break
     except Exception: pass
     if override: cfg.update(override)
     return cfg
@@ -360,6 +384,20 @@ def provenance_rows(results, lang="nl"):
     # nergens vermeld wordt, maakt twee rapporten van dezelfde nacht
     # onvergelijkbaar zonder dat iemand kan zien waarom -- dezelfde fout als de
     # drie waarvoor deze tabel is gebouwd. Alleen tonen als er geschoven is.
+    # Een DC-gekoppelde opname is vóór de analyse gefilterd. Dat verandert de
+    # signalen waarop ALLES rust, dus het hoort in de provenance en niet alleen
+    # in een waarschuwing die je kunt wegkijken. Alleen tonen als het gebeurd is.
+    _dc = (results.get("dc_highpass") or
+           (results.get("meta") or {}).get("dc_highpass") or {})
+    if _dc.get("applied"):
+        _n = _dc.get("n_channels") or len(_dc.get("channels") or {})
+        _max = _dc.get("max_offset_uv")
+        _txt = f"{_dc.get('cutoff_hz', 0.3):.2f} Hz — {_n} kanalen"
+        if _max:
+            _txt += f", offset tot {abs(float(_max)):.0f} µV"
+        rows.append([_lbl("prov_dc_highpass",
+                          "Gelijkspanning verwijderd (hoogdoorlaat)"), _txt])
+
     _off = _ar_sum.get("onset_offset_s")
     try:
         _off = float(_off) if _off is not None else 0.0
@@ -516,6 +554,7 @@ _WARNING_KEYS = {
     "emg_channel_missing": "pdf_warn_emg_missing",
     "eog_channel_missing": "pdf_warn_eog_missing",
     "all_epochs_artefact": "pdf_warn_all_artefact",
+    "dc_highpass_applied": "pdf_warn_dc_highpass",
 }
 
 
@@ -1175,7 +1214,7 @@ def epoch_panel_png(edf_path, channel_map, event, hypno=None,
     _own_raw = raw is None
     if _own_raw:
         try:
-            raw = mne.io.read_raw_edf(edf_path, preload=False, verbose=False)
+            raw = read_raw_signal(edf_path, preload=False, verbose=False)
         except Exception:
             return None
     available = raw.ch_names
@@ -1431,7 +1470,7 @@ def load_panel_raw(edf_path, channel_map):
     try:
         import mne
         mne.set_log_level("ERROR")
-        raw = mne.io.read_raw_edf(edf_path, preload=False, verbose=False)
+        raw = read_raw_signal(edf_path, preload=False, verbose=False)
         available = raw.ch_names
         # dict.fromkeys: ontdubbelen met behoud van volgorde. Meerdere rollen
         # kunnen naar hetzelfde kanaal wijzen — op een montage met één

@@ -2364,10 +2364,10 @@ _V0102_DISC = {
         "de": "Externe Validierung auf dem PSG-IPA-Datensatz (PhysioNet, 5 Aufzeichnungen, 47 unabhängige Scoring-Sitzungen) ergab einen mittleren |ΔAHI| = 1,9/h und eine Schweregrad-Konkordanz von 4/5 (80 %).",
     },
     "disc_s4_p2": {
-        "nl": "Een formele monocentrische validatiestudie (AZORG-YASA-2026-001, n≥50) is in voorbereiding. Tot peer-reviewed resultaten gepubliceerd zijn, moeten alle uitkomsten als <strong>voorlopig</strong> worden beschouwd en door een gekwalificeerde clinicus worden geverifieerd.",
-        "fr": "Une étude de validation monocentrique formelle (AZORG-YASA-2026-001, n≥50) est en préparation. Jusqu'à publication de résultats évalués par les pairs, toutes les sorties doivent être considérées comme <strong>préliminaires</strong> et vérifiées par un clinicien qualifié.",
-        "en": "A formal single-centre validation study (AZORG-YASA-2026-001, n≥50) is in preparation. Until peer-reviewed results are published, all outputs should be treated as <strong>preliminary</strong> and verified by a qualified clinician.",
-        "de": "Eine formelle monozentrische Validierungsstudie (AZORG-YASA-2026-001, n≥50) ist in Vorbereitung. Bis zur Veröffentlichung peer-reviewter Ergebnisse sind alle Ausgaben als <strong>vorläufig</strong> zu betrachten und von einer qualifizierten Klinikerin oder einem Kliniker zu verifizieren.",
+        "nl": "Een formele monocentrische validatiestudie (n≥50) is in voorbereiding. Tot peer-reviewed resultaten gepubliceerd zijn, moeten alle uitkomsten als <strong>voorlopig</strong> worden beschouwd en door een gekwalificeerde clinicus worden geverifieerd.",
+        "fr": "Une étude de validation monocentrique formelle (n≥50) est en préparation. Jusqu'à publication de résultats évalués par les pairs, toutes les sorties doivent être considérées comme <strong>préliminaires</strong> et vérifiées par un clinicien qualifié.",
+        "en": "A formal single-centre validation study (n≥50) is in preparation. Until peer-reviewed results are published, all outputs should be treated as <strong>preliminary</strong> and verified by a qualified clinician.",
+        "de": "Eine formelle monozentrische Validierungsstudie (n≥50) ist in Vorbereitung. Bis zur Veröffentlichung peer-reviewter Ergebnisse sind alle Ausgaben als <strong>vorläufig</strong> zu betrachten und von einer qualifizierten Klinikerin oder einem Kliniker zu verifizieren.",
     },
     "disc_s5_title": {
         "nl": "5. Geen garantie",
@@ -2799,7 +2799,7 @@ _V0102_PDF = {
     "anon_server":       {"nl": "Opladen zoals het is, daarna anonimiseren", "fr": "Téléverser tel quel, anonymiser ensuite", "en": "Upload as is, anonymise afterwards", "de": "Unverändert hochladen, danach anonymisieren"},
     "anon_server_desc":  {"nl": "Het bestand komt ongewijzigd op de server; op de volgende pagina ziet u de headervelden en kunt u ze daar wissen. Kies dit alleen wanneer u de header eerst wilt kunnen nakijken.", "fr": "Le fichier arrive inchangé sur le serveur ; à la page suivante vous voyez les champs d'en-tête et pouvez les effacer. À ne choisir que si vous devez d'abord vérifier l'en-tête.", "en": "The file reaches the server unchanged; on the next page you see the header fields and can clear them there. Choose this only when you need to inspect the header first.", "de": "Die Datei erreicht den Server unverändert; auf der nächsten Seite sehen Sie die Header-Felder und können sie dort löschen. Nur wählen, wenn Sie den Header zuerst prüfen müssen."},
     "anon_code_label":   {"nl": "Studienummer of label (optioneel)", "fr": "Numéro d'étude ou libellé (facultatif)", "en": "Study number or label (optional)", "de": "Studiennummer oder Label (optional)"},
-    "anon_code_placeholder": {"nl": "bv. AZORG-2026-014", "fr": "p. ex. AZORG-2026-014", "en": "e.g. AZORG-2026-014", "de": "z. B. AZORG-2026-014"},
+    "anon_code_placeholder": {"nl": "bv. STUDIE-2026-014", "fr": "p. ex. ETUDE-2026-014", "en": "e.g. STUDY-2026-014", "de": "z. B. STUDIE-2026-014"},
     "anon_code_hint":    {"nl": "Komt in het bestand te staan in plaats van de patiëntgegevens. Gebruik géén naam of geboortedatum. Laat leeg voor een automatische code die voor dezelfde opname altijd hetzelfde is.", "fr": "Sera inscrit dans le fichier à la place des données patient. N'utilisez ni nom ni date de naissance. Laissez vide pour un code automatique, identique pour un même enregistrement.", "en": "Goes into the file in place of the patient data. Do not use a name or date of birth. Leave empty for an automatic code that is always the same for the same recording.", "de": "Steht in der Datei anstelle der Patientendaten. Verwenden Sie weder Name noch Geburtsdatum. Leer lassen für einen automatischen Code, der für dieselbe Aufnahme stets gleich ist."},
     "anon_before":       {"nl": "Stond in de header:", "fr": "Dans l'en-tête :", "en": "Was in the header:", "de": "Stand im Header:"},
     "anon_after":        {"nl": "Wordt verzonden als:", "fr": "Sera envoyé comme :", "en": "Will be sent as:", "de": "Wird gesendet als:"},
@@ -2824,7 +2824,17 @@ _V0102_PDF = {
                           "fr": "Paramètres modifiés (environnement)",
                           "en": "Overridden parameters (environment)",
                           "de": "Abweichende Parameter (Umgebung)"},
+    "pdf_warn_dc_highpass": {
+        "nl": "Deze opname is gelijkspanning-gekoppeld: meerdere kanalen droegen een staande offset. Er is een hoogdoorlaatfilter toegepast vóór de analyse; zonder dat zou elk epoch als artefact zijn weggevallen.",
+        "fr": "Cet enregistrement est couplé en continu : plusieurs voies portaient un décalage permanent. Un filtre passe-haut a été appliqué avant l'analyse ; sans cela, chaque époque aurait été rejetée comme artefact.",
+        "en": "This recording is DC-coupled: several channels carried a standing offset. A high-pass filter was applied before analysis; without it every epoch would have been discarded as artefact.",
+        "de": "Diese Aufzeichnung ist gleichspannungsgekoppelt: mehrere Kanäle trugen einen konstanten Offset. Vor der Analyse wurde ein Hochpassfilter angewendet; ohne diesen wäre jede Epoche als Artefakt verworfen worden.",
+    },
     "prov_arousal_eeg":  {"nl": "Arousal-analyse — EEG", "fr": "Analyse des micro-éveils — EEG", "en": "Arousal analysis — EEG", "de": "Arousal-Analyse — EEG"},
+    "prov_dc_highpass":  {"nl": "Gelijkspanning verwijderd (hoogdoorlaat)",
+                          "fr": "Composante continue retirée (passe-haut)",
+                          "en": "DC offset removed (high-pass)",
+                          "de": "Gleichspannung entfernt (Hochpass)"},
     "prov_arousal_onset_offset": {"nl": "Arousal-onsets verschoven",
                           "fr": "Débuts de micro-éveils décalés",
                           "en": "Arousal onsets shifted",
@@ -2927,8 +2937,8 @@ _V0103_ANALYSIS = {
                           "en": "Polysomnography recording in European Data Format (.edf) — max 500 MB",
                           "de": "Polysomnographie-Aufnahme im European Data Format (.edf) — max. 500 MB"},
     "upload_drop_browse": {"nl": "Klik om te bladeren", "fr": "Cliquez pour parcourir", "en": "Click to browse", "de": "Zum Durchsuchen klicken"},
-    "upload_drop_or_drag":{"nl": "of sleep een .edf bestand hiernaartoe", "fr": "ou faites glisser un fichier .edf ici", "en": "or drag an .edf file here", "de": "oder ziehen Sie eine .edf-Datei hierher"},
-    "invalid_edf_file":   {"nl": "Selecteer een geldig .edf bestand.", "fr": "Veuillez sélectionner un fichier .edf valide.", "en": "Please select a valid .edf file.", "de": "Bitte wählen Sie eine gültige .edf-Datei aus."},
+    "upload_drop_or_drag":{"nl": "of sleep een .edf- of .bdf-bestand hiernaartoe", "fr": "ou faites glisser un fichier .edf ou .bdf ici", "en": "or drag an .edf or .bdf file here", "de": "oder ziehen Sie eine .edf- oder .bdf-Datei hierher"},
+    "invalid_edf_file":   {"nl": "Selecteer een geldig .edf- of .bdf-bestand.", "fr": "Veuillez sélectionner un fichier .edf ou .bdf valide.", "en": "Please select a valid .edf or .bdf file.", "de": "Bitte wählen Sie eine gültige .edf- oder .bdf-Datei aus."},
 
     # job_status.html
     "retry":                  {"nl": "Opnieuw proberen",     "fr": "Réessayer",                "en": "Retry",                "de": "Erneut versuchen"},
@@ -3003,7 +3013,7 @@ _V0104_EDITOR = {
     "rh_inst_label":      {"nl": "Naam instelling (header)", "fr": "Nom de l'établissement (en-tête)", "en": "Institution name (header)", "de": "Name der Einrichtung (Kopfzeile)"},
     "rh_logo_upload":     {"nl": "Logo uploaden (PNG/JPG, max 500KB)", "fr": "Téléverser un logo (PNG/JPG, max. 500 Ko)", "en": "Upload logo (PNG/JPG, max 500 KB)", "de": "Logo hochladen (PNG/JPG, max. 500 KB)"},
     "rh_current_logo":    {"nl": "Huidig logo",         "fr": "Logo actuel",         "en": "Current logo",         "de": "Aktuelles Logo"},
-    "rh_default_azorg":   {"nl": "standaard: AZORG",    "fr": "par défaut : AZORG",  "en": "default: AZORG",       "de": "Standard: AZORG"},
+    "rh_default_logo":    {"nl": "standaard: geen logo",  "fr": "par défaut : aucun logo",  "en": "default: no logo",       "de": "Standard: kein Logo"},
     "rh_use_other_logo":  {"nl": "Gebruik ander logo",  "fr": "Utiliser un autre logo","en": "Use a different logo","de": "Anderes Logo verwenden"},
 
     # Diagnosis quick-add button labels (short forms used as ＋ buttons)
@@ -3068,7 +3078,7 @@ _V0105_SWEEP = {
                            "de": "Professioneller Bericht sofort herunterladbar"},
 
     # report_editor.html — placeholder for institution name
-    "rh_inst_placeholder": {"nl": "bv. Slaapkliniek AZORG", "fr": "p.ex. Clinique du sommeil", "en": "e.g. Sleep Clinic", "de": "z. B. Schlafklinik"},
+    "rh_inst_placeholder": {"nl": "bv. Slaapkliniek", "fr": "p.ex. Clinique du sommeil", "en": "e.g. Sleep Clinic", "de": "z.B. Schlafklinik"},
 
     # results_extended.html — partial-save warning
     "saved_pdf_error": {"nl": "Opgeslagen, maar PDF fout:", "fr": "Enregistré, mais erreur PDF :", "en": "Saved, but PDF error:", "de": "Gespeichert, aber PDF-Fehler:"},
@@ -3077,7 +3087,7 @@ _V0105_SWEEP = {
     "no_events": {"nl": "Geen events", "fr": "Aucun événement", "en": "No events", "de": "Keine Ereignisse"},
 
     # upload.html — log + progress JS strings
-    "upload_only_edf":          {"nl": "⚠️ Alleen .edf bestanden zijn toegestaan.", "fr": "⚠️ Seuls les fichiers .edf sont autorisés.", "en": "⚠️ Only .edf files are allowed.", "de": "⚠️ Nur .edf-Dateien sind erlaubt."},
+    "upload_only_edf":          {"nl": "⚠️ Alleen .edf- en .bdf-bestanden zijn toegestaan.", "fr": "⚠️ Seuls les fichiers .edf et .bdf sont autorisés.", "en": "⚠️ Only .edf and .bdf files are allowed.", "de": "⚠️ Nur .edf- und .bdf-Dateien sind erlaubt."},
     "upload_chunks_uploading":  {"nl": "Chunks uploaden...", "fr": "Téléversement des chunks...", "en": "Uploading chunks...", "de": "Chunks werden hochgeladen..."},
     "upload_channels_detected": {"nl": "Kanalen gedetecteerd...", "fr": "Canaux détectés...", "en": "Channels detected...", "de": "Kanäle erkannt..."},
     "upload_next_channel_sel":  {"nl": "Doorgaan naar kanaalkeuze...", "fr": "Passage à la sélection des canaux...", "en": "Proceeding to channel selection...", "de": "Weiter zur Kanalauswahl..."},
@@ -3271,10 +3281,10 @@ _V0112_FRONT_FRESH = {
 
     "fp_road_1_t":   {"nl": "Klinische validatiestudie",  "fr": "Étude de validation clinique",
                       "en": "Clinical validation study",  "de": "Klinische Validierungsstudie"},
-    "fp_road_1_b":   {"nl": "Monocentrische studie AZORG-YASA-2026-001 (n ≥ 50, ethisch protocol v7.0) — vergelijkt automatische scoring met manuele scoring door een geregistreerd polysomnograaf.",
-                      "fr": "Étude monocentrique AZORG-YASA-2026-001 (n ≥ 50, protocole éthique v7.0) — compare le scoring automatique au scoring manuel par un polysomnographe agréé.",
-                      "en": "Single-centre study AZORG-YASA-2026-001 (n ≥ 50, ethics protocol v7.0) — compares automated scoring to manual scoring by a registered polysomnographer.",
-                      "de": "Monozentrische Studie AZORG-YASA-2026-001 (n ≥ 50, Ethikprotokoll v7.0) — vergleicht automatisches Scoring mit manuellem Scoring durch eine registrierte Polysomnographin."},
+    "fp_road_1_b":   {"nl": "Monocentrische validatiestudie (n ≥ 50, ethisch protocol v7.0) — vergelijkt automatische scoring met manuele scoring door een geregistreerd polysomnograaf.",
+                      "fr": "Étude de validation monocentrique (n ≥ 50, protocole éthique v7.0) — compare le scoring automatique au scoring manuel par un polysomnographe agréé.",
+                      "en": "Single-centre validation study (n ≥ 50, ethics protocol v7.0) — compares automated scoring to manual scoring by a registered polysomnographer.",
+                      "de": "Monozentrische Validierungsstudie (n ≥ 50, Ethikprotokoll v7.0) — vergleicht automatisches Scoring mit manuellem Scoring durch eine registrierte Polysomnographin."},
 
     "fp_road_2_t":   {"nl": "Peer-reviewed publicatie",   "fr": "Publication évaluée par les pairs",
                       "en": "Peer-reviewed publication",  "de": "Peer-reviewte Publikation"},

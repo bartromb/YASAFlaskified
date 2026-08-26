@@ -314,13 +314,17 @@ def generate_psg_report(
     )
 
     if institution is None:
+        # Geen instellingsnaam in de code: die hoort in instance/config.json.
+        # Zie de toelichting bij `_DSITE` in generate_pdf_report.py.
+        from generate_pdf_report import _load_site
+        _s = _load_site()
         institution = {
-            "name":       "Slaapkliniek AZORG",
-            "department": "YASAFlaskified",
-            "address":    "",
+            "name":       _s.get("name") or "",
+            "department": "",
+            "address":    _s.get("address") or "",
             "city":       "",
-            "tel":        "",
-            "web":        "www.slaapkliniek.be",
+            "tel":        _s.get("phone") or "",
+            "web":        _s.get("url") or "",
         }
 
     # v0.8.11: custom header/logo uit patient_info (via rapport editor)
@@ -355,9 +359,16 @@ def generate_psg_report(
         if os.path.exists(_lp):
             _logo_path = _lp
     if not _logo_path:
-        _lp = os.path.join(os.path.dirname(__file__), "static", "AZORG_rood.png")
-        if os.path.exists(_lp):
-            _logo_path = _lp
+        # Geen standaardlogo: een instelling zet haar eigen `logo_path` in
+        # instance/config.json. Een hardgecodeerd logo verscheen tot v0.34.7 op
+        # het rapport van elke installatie.
+        from generate_pdf_report import _load_site
+        _cfg_logo = (_load_site() or {}).get("logo_path") or ""
+        if _cfg_logo:
+            _lp = _cfg_logo if os.path.isabs(_cfg_logo) else os.path.join(
+                os.path.dirname(__file__), "static", _cfg_logo)
+            if os.path.exists(_lp):
+                _logo_path = _lp
 
     inst_lines = []
     if _logo_path:

@@ -126,12 +126,24 @@
   }
 
   /** Bestandsnaam zonder identificatie — de naam staat er vaker in dan in de header. */
-  function safeFilename(code) {
-    return `${(code || 'ANON').replace(/[^A-Za-z0-9_-]/g, '')}.edf`;
+  function safeFilename(code, ext) {
+    // De extensie MOET meekomen. De server kiest er zijn lezer mee: een BDF
+    // die als .edf aankomt wordt als 16-bit gelezen en levert plausibele maar
+    // onjuiste amplitudes op — een stille fout in plaats van een luide.
+    const e = String(ext || '.edf').toLowerCase();
+    const safe = (e === '.bdf' || e === '.edf') ? e : '.edf';
+    return `${(code || 'ANON').replace(/[^A-Za-z0-9_-]/g, '')}${safe}`;
+  }
+
+  /** `.edf` of `.bdf` uit een bestandsnaam; `.edf` als er niets bruikbaars staat. */
+  function extensionOf(name) {
+    const m = String(name || '').toLowerCase().match(/\.(edf|bdf)$/);
+    return m ? `.${m[1]}` : '.edf';
   }
 
   global.EdfAnonymize = {
-    readIdentifiers, anonymizeFile, safeFilename, pseudonym, sanitizeStudyCode,
+    readIdentifiers, anonymizeFile, safeFilename, extensionOf, pseudonym,
+    sanitizeStudyCode,
     // De veldfuncties zijn geen publieke API maar worden wel getoetst: een
     // test in Node vergelijkt ze veld voor veld met edf_anonymize.py, zodat
     // de twee implementaties niet stil uit elkaar lopen.

@@ -444,11 +444,15 @@ class FileUploadHandler:
     def sanitize_filename(self, filename):
         filename = secure_filename(filename.strip())
         filename = os.path.basename(filename)
-        if not filename.lower().endswith(".edf"):
+        # .edf en .bdf allebei toegestaan. De extensie MOET behouden blijven:
+        # de rest van de keten kiest er de lezer mee, en een BDF die .edf gaat
+        # heten wordt daarna als 16-bit gelezen -- plausibele, onjuiste
+        # amplitudes in plaats van een hoorbare fout.
+        if not is_signal_file(filename):
             filename = f"{filename}.edf"
         if len(filename) > 255:
             raise UploadError("Filename too long")
-        if not filename or filename == ".edf":
+        if not filename or filename in (".edf", ".bdf"):
             raise UploadError("Invalid filename")
         return filename
 
@@ -463,12 +467,13 @@ class FileUploadHandler:
             raise UploadError(f"Failed to save chunk: {str(e)}")
 
     def assemble_file(self, file_id, total_chunks, final_filename):
-        assembled_path = self._safe_path(f"{file_id}_assembled.edf")
+        _ext = signal_extension(final_filename)
+        assembled_path = self._safe_path(f"{file_id}_assembled{_ext}")
         final_path     = self._safe_path(final_filename)
         if os.path.exists(final_path):
             timestamp  = int(time.time())
             final_path = self._safe_path(
-                f"{os.path.splitext(final_filename)[0]}_{timestamp}.edf",
+                f"{os.path.splitext(final_filename)[0]}_{timestamp}{_ext}",
             )
             logger.warning(f"File exists, using new name: {final_path}")
         try:
@@ -520,7 +525,7 @@ class EDFProcessor:
 
     def parse_channels(self, filepath):
         try:
-            edf      = mne.io.read_raw_edf(filepath, preload=False, verbose=False)
+            edf      = read_raw_signal(filepath, preload=False, verbose=False)
             channels = edf.info["ch_names"]
             eeg_ch   = self._identify_eeg_channels(channels)
             eog_ch   = self._identify_eog_channels(channels)
@@ -568,7 +573,7 @@ class EDFProcessor:
     def process_sleep_staging(self, filepath, selected_channels, output_dir):
         """Originele pipeline: hypnogram PDF + CSV + statistieken .txt."""
         try:
-            edf = mne.io.read_raw_edf(filepath, preload=True, verbose=False)
+            edf = read_raw_signal(filepath, preload=True, verbose=False)
             eeg_channels = selected_channels.get("eeg", [])
             if not eeg_channels:
                 all_channels = self.parse_channels(filepath)
@@ -721,6 +726,12 @@ app.jinja_env.globals["report_ver"] = _report_ver
 from functools import wraps
 
 from i18n import DEFAULT_LANG, LANG_FLAGS, LANG_NAMES, SUPPORTED_LANGS, get_translation
+from signal_io import (
+    is_signal_file,
+    read_raw_signal,
+    signal_extension,
+    source_candidates,
+)
 
 
 def requires_role(*roles):
@@ -1965,7 +1976,7 @@ def channel_select(job_id):
         return redirect(url_for("upload_file"))
 
     try:
-        raw          = mne.io.read_raw_edf(filepath, preload=False, verbose=False)
+        raw          = read_raw_signal(filepath, preload=False, verbose=False)
         channels     = raw.ch_names
         sfreq        = raw.info["sfreq"]
         duration_min = round(raw.times[-1] / 60, 1)
@@ -2875,9 +2886,7 @@ def reanalyze_study(job_id):
 
     # 2. Fallback: standaard naamgeving
     if not edf_path or not os.path.exists(edf_path):
-        import glob as _glob
-        candidates = _glob.glob(os.path.join(upload_folder, f"{job_id}*.edf"))
-        candidates = [c for c in candidates if "_scored.edf" not in c]
+        candidates = source_candidates(upload_folder, job_id)
         if candidates:
             edf_path = candidates[0]
 
@@ -2926,9 +2935,7 @@ def download_edfplus(job_id):
             with open(cfg_path) as f:
                 edf_path = json.load(f).get("edf_path")
         if not edf_path or not os.path.exists(edf_path):
-            import glob as _glob
-            candidates = [c for c in _glob.glob(os.path.join(upload_folder, f"{job_id}*.edf"))
-                         if "_scored.edf" not in c]
+            candidates = source_candidates(upload_folder, job_id)
             edf_path = candidates[0] if candidates else None
 
         if not edf_path or not os.path.exists(edf_path):
@@ -3266,12 +3273,9 @@ def api_save_report(job_id):
         edfplus_ok = False
         try:
             from generate_edfplus import generate_edfplus
-            edf_path = data.get("meta", {}).get("edf_path") or \
-                       os.path.join(upload_folder, f"{job_id}*.edf")
-            # Zoek origineel EDF
-            import glob as _glob
-            candidates = [c for c in _glob.glob(os.path.join(upload_folder, f"{job_id}*.edf"))
-                         if "_scored.edf" not in c]
+            edf_path = data.get("meta", {}).get("edf_path")
+            # Zoek het originele opnamebestand (.edf of .bdf)
+            candidates = source_candidates(upload_folder, job_id)
             if candidates:
                 scored_path = os.path.join(upload_folder, f"{job_id}_scored.edf")
                 generate_edfplus(candidates[0], data, scored_path)

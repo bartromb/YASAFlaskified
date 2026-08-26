@@ -22,6 +22,8 @@ rapport:
 
 import base64
 import glob
+
+from signal_io import source_candidates
 import json
 import logging
 import os
@@ -349,8 +351,7 @@ def resolve_edf_path(job_id, upload_folder):
                 return pad
         except Exception:
             pass
-    kandidaten = [c for c in glob.glob(os.path.join(upload_folder, f"{job_id}*.edf"))
-                  if "_scored.edf" not in c]
+    kandidaten = source_candidates(upload_folder, job_id)
     return kandidaten[0] if kandidaten else None
 
 
