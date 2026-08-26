@@ -353,6 +353,22 @@ def provenance_rows(results, lang="nl"):
     if _arousal_row_needed(meta.get("eeg_channel"), pmeta, _ar_sum):
         rows.append([_lbl("prov_arousal_eeg", "Arousal-analyse — EEG"), _ar_eeg])
 
+    # psgscoring kan de arousal-onsets over een vast aantal seconden schuiven
+    # (`arousal_onset_offset_s`, default 0,0). Staat die vlag aan, dan liggen
+    # de onsets in DIT rapport ergens anders dan de detector ze vond, en is de
+    # AHI/RDI met die verschoven arousals berekend. Een verschuiving die
+    # nergens vermeld wordt, maakt twee rapporten van dezelfde nacht
+    # onvergelijkbaar zonder dat iemand kan zien waarom -- dezelfde fout als de
+    # drie waarvoor deze tabel is gebouwd. Alleen tonen als er geschoven is.
+    _off = _ar_sum.get("onset_offset_s")
+    try:
+        _off = float(_off) if _off is not None else 0.0
+    except (TypeError, ValueError):
+        _off = 0.0
+    if _off:
+        rows.append([_lbl("prov_arousal_onset_offset", "Arousal-onsets verschoven"),
+                     f"{_off:+.1f} s"])
+
     # Env-overrides overrulen profielwaarden. Zonder deze regel betekent
     # dezelfde profielnaam op twee machines iets anders, en juist dit blok
     # hoort de UITVOERING te tonen in plaats van de keuze. Alleen tonen wanneer

@@ -1,3 +1,43 @@
+# v0.34.7 — 2026-08-26 — een verschoven arousal-onset staat nu in het rapport
+
+Pins `psgscoring[ml]==0.27.7`.
+
+**Geen enkele gerapporteerde waarde verandert** bij de huidige profielen: de
+nieuwe psgscoring-vlag `arousal_onset_offset_s` staat overal op 0,0. Deze
+release zorgt ervoor dat je het zíet als iemand hem aanzet.
+
+## Wat erbij komt
+
+Het provenanceblok krijgt een regel **"Arousal-onsets verschoven: +2.0 s"**
+zodra psgscoring een verschuiving heeft toegepast. Staat de vlag op 0, ontbreekt
+het veld (oudere psgscoring) of is de waarde onleesbaar, dan komt er géén regel
+— een tabel die op elk rapport "0,0 s" zet, verdrinkt de regels die er wel toe
+doen. Label in nl/fr/en/de.
+
+## Waarom dit erin moet
+
+Met de vlag aan liggen de arousal-onsets in het rapport ergens anders dan de
+detector ze vond, en zijn AHI en RDI met die verschoven arousals berekend. Twee
+rapporten van dezelfde nacht zouden dan verschillende onsets tonen zonder dat er
+iets op de bladzijde staat dat het verschil verklaart — precies de fout waarvoor
+dat blok gebouwd is.
+
+Dit is ook het patroon waarop de REM-AHI-caveat eerder strandde: de bibliotheek
+produceerde een veld, het rapport las het nooit, en niemand merkte het tot er
+naar gevraagd werd.
+
+## Hoe het geverifieerd is
+
+Niet alleen op een handgebouwd fixture — dat slaagt ook als het de verkeerde
+vorm heeft, terwijl de regel in het echte rapport onzichtbaar blijft. De
+controle draait de volle arousalstap op een echte opname (PSG-IPA SN2) en geeft
+de ECHTE psgscoring-uitvoer aan `provenance_rows()`: `+2.0 s` zichtbaar bij
+offset 2, geen regel bij 0.
+
+546 tests.
+
+---
+
 # v0.34.6 — 2026-08-25 — de arousal-analyse krijgt alle drie de hersenregio's
 
 Pins `psgscoring[ml]==0.27.6`.
