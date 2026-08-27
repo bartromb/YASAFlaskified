@@ -282,7 +282,14 @@ server {
     listen 80;
     server_name ${SERVER_NAME};
 
-    client_max_body_size 520M;
+    # Moet MINSTENS gelijk zijn aan MAX_CONTENT_LENGTH in de app (2 GB).
+    # Stond op 520M terwijl de app sinds 0.34.9 2 GB toestaat: een BDF van
+    # 553 MB -- een gewone nacht, want BDF is ruim de helft groter dan
+    # dezelfde nacht in EDF -- werd door nginx met 413 geweigerd voordat de
+    # app hem ooit zag. De gebruiker ziet dan een fout die niets over zijn
+    # bestand zegt.
+    client_max_body_size 2G;
+    client_body_timeout 600s;
 
     location / {
         proxy_pass http://127.0.0.1:${APP_PORT};

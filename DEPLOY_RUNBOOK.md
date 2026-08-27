@@ -18,8 +18,18 @@ the older `DEPLOY.md` for day-to-day operations.
 | **Test VM** | `bart@192.168.1.253` (`us01`) | `/data/slaapkliniek` — **git checkout**, owned by `bart` (in `docker` group) | **git fetch + reset** | none (throwaway) |
 | **Fresh server** | new Ubuntu 22.04+/Debian | created by the script | **`deploy.sh`** (bootstrap) | — |
 
-Common to all: host **nginx** terminates TLS and reverse-proxies to the app on
-`127.0.0.1:8071`; stack = `kliniek_app` (gunicorn) + `kliniek_worker1..8` (RQ) +
+Common to all: a reverse proxy terminates TLS and forwards to the app on
+`127.0.0.1:8071`;
+
+> **Productie doet dit anders dan dit runbook lang beweerde.** Op Hetzner is
+> host-nginx `inactive`; poort 80/443 worden bediend door **nginx-proxy-manager**
+> in een container (naast `portainer`). Dat is op 2026-08-27 vastgesteld met
+> `systemctl is-active nginx` en `ss -tlnp`. `deploy.sh` zet wél host-nginx op —
+> dat pad geldt voor een VERSE server, niet voor productie. Wie een
+> proxy-instelling op productie wil wijzigen (uploadgrens, timeouts) moet dus in
+> nginx-proxy-manager zijn, niet in `/etc/nginx/`.
+
+ stack = `kliniek_app` (gunicorn) + `kliniek_worker1..8` (RQ) +
 `kliniek_redis`. Persistent host dirs: `/data/slaapkliniek/{uploads,processed,logs,instance}`.
 Secrets in `/data/slaapkliniek/.env` (never committed). Admin login lives in
 `instance/users.db` (the `ADMIN_PASSWORD` in `instance/config.json` is only the

@@ -1,3 +1,33 @@
+# v0.36.7 — 2026-08-27 — een verse installatie weigerde een gewone BDF
+
+Pin ongewijzigd (`psgscoring[ml]==0.30.0`); geen gescoorde waarde verandert.
+Raakt alleen `deploy.sh` en het runbook.
+
+## `deploy.sh` zette de uploadgrens op 520M
+
+De app staat sinds 0.34.9 **2 GB** toe, juist omdat een BDF ruim de helft groter
+is dan dezelfde nacht in EDF. `deploy.sh` schreef nog
+`client_max_body_size 520M` in de nginx-configuratie.
+
+Een verse installatie weigerde daardoor een BDF van **553 MB** — één gewone
+nacht — met een 413, vóórdat de app het bestand ooit zag. De gebruiker krijgt
+dan een foutmelding die niets over zijn bestand zegt, op precies het
+bestandstype waarvoor de grens verhoogd was.
+
+Nu `2G`, met `client_body_timeout 600s` erbij. Een test koppelt de nginx-grens
+aan `MAX_CONTENT_LENGTH` zodat ze niet opnieuw uit elkaar kunnen lopen.
+
+## Waarom dit nergens opviel
+
+**Productie gebruikt geen host-nginx.** Poort 80/443 worden bediend door
+`nginx-proxy-manager` in een container; `systemctl is-active nginx` geeft
+`inactive`. Het runbook beweerde het tegendeel.
+
+Het gat bestond dus uitsluitend voor NIEUWE installaties — en dat is precies de
+weg waarlangs een ander slaapcentrum binnenkomt. Het runbook is gecorrigeerd,
+met de aantekening dat een proxy-instelling op productie in nginx-proxy-manager
+hoort en niet in `/etc/nginx/`.
+
 # v0.36.6 — 2026-08-27 — de eenheid volgt de taal van het rapport
 
 Pin ongewijzigd (`psgscoring[ml]==0.30.0`); geen gescoorde waarde verandert.

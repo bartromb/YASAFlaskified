@@ -1,5 +1,5 @@
 """Single source of truth for YASAFlaskified version string."""
-__version__ = "0.36.6"
+__version__ = "0.36.7"
 
 
 def _psgscoring_version() -> str:
