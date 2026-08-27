@@ -1,3 +1,38 @@
+# v0.36.6 — 2026-08-27 — de eenheid volgt de taal van het rapport
+
+Pin ongewijzigd (`psgscoring[ml]==0.30.0`); geen gescoorde waarde verandert.
+
+## `/u` is Nederlands, en stond in elk rapport
+
+`/u` betekent "per uur". Het stond op **37 plaatsen hardgecodeerd** in de
+rapportcode, dus ook in Engelse, Franse en Duitse rapporten. De vertaalde
+strings deden het wél goed (`"nl": "< 10–15/u", "fr": "< 10–15/h"`), zodat één
+Engels rapport beide vormen droeg.
+
+Het viel op doordat een zin die ik zelf had toegevoegd eruit kwam als:
+
+    Severe OSAS without CPAP (AHI 83.5/u ...). On CPAP 1.1/h ...
+
+Twee eenheden in één zin. Nu komt de eenheid uit `unit_per_hour` (nl `/u`, de
+rest `/h`). Gemeten op een gerenderd rapport: Engels 40× `/h` en 0× `/u`,
+Nederlands 39× `/u` en 0× `/h`.
+
+## Niet aangeraakt: het Nederlandstalige PSG-rapport
+
+`generate_psg_report.py` is één rapport met hardgecodeerde Nederlandse labels
+("Drempel", "Ernst", "Bespreking PLM"). Daar is `/u` juist; alleen de eenheden
+vertalen zou het inconsistent maken. Een test legt die grens vast.
+
+## Bijvangst: "None %·min/u" in een klinisch rapport
+
+De hypoxic-burden-regel gebruikte `ss.get("hypoxic_burden", "—")`. Die default
+komt er NIET als de sleutel bestaat met waarde `None` — en dat is precies wat
+het burden-plafond van 0.28.0 doet boven 150. Het rapport toonde dan letterlijk
+`None %·min/u`.
+
+Gevonden door het gerenderde rapport op `None` en `nan` te doorzoeken in plaats
+van de code te lezen.
+
 # v0.36.5 — 2026-08-27 — de split-notitie stond bij de verkeerde index
 
 Pin ongewijzigd (`psgscoring[ml]==0.30.0`); geen gescoorde waarde verandert.

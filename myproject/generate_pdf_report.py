@@ -247,19 +247,20 @@ def _apnea_breakdown_line(rsum, lang="nl"):
 
 def _phenotype_summary_line(rsum, lang="nl"):
     """B4: compact one-line phenotype summary for page 1 (POSA / REM-predominant)."""
+    _UH = t("unit_per_hour", lang)
     ph = (rsum or {}).get("phenotypes") or {}
     tags = []
     posa = ph.get("positional_osa")
     if posa and posa.get("flag"):
         s = t("pdf_pheno_posa", lang)
         if posa.get("ahi_supine") is not None and posa.get("ahi_non_supine") is not None:
-            s += f" (supine {posa['ahi_supine']} vs non-supine {posa['ahi_non_supine']}/u)"
+            s += f" (supine {posa['ahi_supine']} vs non-supine {posa['ahi_non_supine']}{_UH})"
         tags.append(s)
     remp = ph.get("rem_predominant")
     if remp and remp.get("flag"):
         s = t("pdf_pheno_rem", lang)
         if remp.get("rem_ahi") is not None and remp.get("nrem_ahi") is not None:
-            s += f" (REM {remp['rem_ahi']} vs NREM {remp['nrem_ahi']}/u)"
+            s += f" (REM {remp['rem_ahi']} vs NREM {remp['nrem_ahi']}{_UH})"
         tags.append(s)
     if not tags:
         return None
@@ -635,6 +636,7 @@ def _position_rows(pos_sum, lang="nl"):
     NIETS: niet te onderscheiden van een houding waarin de patiënt nooit
     gelegen heeft. Die twee horen verschillend te lezen.
     """
+    _UH = t("unit_per_hour", lang)
     pos_sum = pos_sum or {}
     ahi_pos = pos_sum.get("ahi_per_pos") or {}
     minuten = pos_sum.get("sleep_time_min") or {}
@@ -642,7 +644,7 @@ def _position_rows(pos_sum, lang="nl"):
     rijen = []
     for naam, ahi in sorted(ahi_pos.items()):
         if ahi is not None:
-            rijen.append([f"AHI {naam}", f"{ahi:.1f} /u"])
+            rijen.append([f"AHI {naam}", f"{ahi:.1f} {_UH}"])
             continue
         m = minuten.get(naam)
         if not m:                      # nooit in die houding geslapen
@@ -897,6 +899,7 @@ def _auto_conclusion(rsum, pneumo, ss, lang="nl"):
     """B1: descriptive auto-generated impression (informational; the physician's
     manual diagnosis always takes precedence). Combines severity+syndrome with
     phenotype and burden qualifiers into one sentence."""
+    _UH = t("unit_per_hour", lang)
     try:
         ahi = float(rsum.get("ahi_total", 0) or 0)
     except Exception:
@@ -946,7 +949,7 @@ def _auto_conclusion(rsum, pneumo, ss, lang="nl"):
             quals.append(t("pdf_concl_hypoxemia", lang))
     except Exception:
         pass
-    txt = f"{sev} (AHI {ahi:.1f}/u"
+    txt = f"{sev} (AHI {ahi:.1f}{_UH}"
     if quals:
         txt += ", " + ", ".join(quals)
     txt += ")."
@@ -1718,6 +1721,9 @@ def generate_pdf_report(results:dict, output_path:str,
     if not lang:
         lang = (results.get("patient_info", {}).get("lang")
                 or site.get("language", "en"))
+    # De eenheid van een index per uur, in de taal van het rapport. Stond
+    # hardgecodeerd als "/u" -- ook in Engelse rapporten.
+    _UH = t("unit_per_hour", lang)
 
     # v0.8.11: patient_info kan custom header/logo bevatten (via rapport editor)
     pat_hdr = results.get("patient_info", {})
@@ -1925,7 +1931,7 @@ def generate_pdf_report(results:dict, output_path:str,
         _den_h = ((results.get("pneumo") or {}).get("respiratory") or {}) \
             .get("summary", {}).get("index_denominator_h")
         story.append(_kpi([
-            (ahi_s, ahi_label, "/u", _sev_clr(ahi_v) if ahi_v else GR),
+            (ahi_s, ahi_label, _UH, _sev_clr(ahi_v) if ahi_v else GR),
             (f"{_rec_min:.0f}" if isinstance(_rec_min, (int, float)) else "—",
              t("pdf_rec_time", lang), "min", NAVY),
             (f"{_den_h:.1f}" if isinstance(_den_h, (int, float)) else "—",
@@ -1935,10 +1941,10 @@ def generate_pdf_report(results:dict, output_path:str,
         if _split_kpi:
             _dw = _split_kpi["waarde"]
             story.append(_kpi([
-                (f"{_dw:.1f}", _split_kpi["label"], "/u", _sev_clr(_dw)),
+                (f"{_dw:.1f}", _split_kpi["label"], "{_UH}", _sev_clr(_dw)),
                 (f"{_split_kpi['therapie']:.1f}"
                  if _split_kpi.get("therapie") is not None else "—",
-                 t("pdf_kpi_ahi_cpap", lang), "/u",
+                 t("pdf_kpi_ahi_cpap", lang), _UH,
                  _sev_clr(_split_kpi["therapie"])
                  if _split_kpi.get("therapie") is not None else GR),
                 (f"{_split_kpi['slaap_min']:.0f}",
@@ -1948,7 +1954,7 @@ def generate_pdf_report(results:dict, output_path:str,
             ])); sp(0.15)
         else:
             story.append(_kpi([
-                (ahi_s, ahi_label, "/u", _sev_clr(ahi_v) if ahi_v else GR),
+                (ahi_s, ahi_label, _UH, _sev_clr(ahi_v) if ahi_v else GR),
                 (_v(stats,"TST",fmt="{:.0f}"),  "TST", "min", NAVY),
                 (_v(stats,"SE",fmt="{:.1f}"),   t("pdf_se",lang),  "%",   NAVY),
                 (_v(stats,"SOL",fmt="{:.0f}"),  t("pdf_sol",lang),    "min", NAVY),
@@ -2497,8 +2503,8 @@ def generate_pdf_report(results:dict, output_path:str,
         _prof_labels = {"strict": "Strict", "standard": "Standard (AASM)", "sensitive": "Sensitive"}
         _prof_lbl = _prof_labels.get(_active_prof, _active_prof)
         ab = Table([[Paragraph(
-            f"{_ahi_lbl} = {ahi:.1f}/u  →  <b>{sev}</b>{_split_note}   |   "
-            f"{_oahi_lbl} = {oahi:.1f}/u  →  <b>{osev}</b>{_therapy_note}"
+            f"{_ahi_lbl} = {ahi:.1f}{_UH}  →  <b>{sev}</b>{_split_note}   |   "
+            f"{_oahi_lbl} = {oahi:.1f}{_UH}  →  <b>{osev}</b>{_therapy_note}"
             f"   |   Profile: {_prof_lbl}",
             ParagraphStyle("AB", fontName="Helvetica-Bold", fontSize=9,
                            textColor=W, leading=12))]],
@@ -2517,10 +2523,10 @@ def generate_pdf_report(results:dict, output_path:str,
             _1a = _dual["rule_1a"]; _1b = _dual["rule_1b_4pct"]
             _dual_rows = [
                 [t("pdf_ahi_rule1a", lang),
-                 f"{_1a.get('ahi')} /u",
+                 f"{_1a.get('ahi')} {_UH}",
                  _sev_with_syndrome(_1a.get("ahi"), rsum, lang)],
                 [t("pdf_ahi_rule1b", lang),
-                 f"{_1b.get('ahi')} /u",
+                 f"{_1b.get('ahi')} {_UH}",
                  _sev_with_syndrome(_1b.get("ahi"), rsum, lang)],
             ]
             story.append(KeepTogether([_tbl(
@@ -2588,7 +2594,7 @@ def generate_pdf_report(results:dict, output_path:str,
             )
 
         hdr_conf = [
-            t("pdf_param", lang), "n", "/u",
+            t("pdf_param", lang), "n", _UH,
             "★★★\n≥0.85", "★★\n0.60–0.84",
             "~\n0.40–0.59", "?\n<0.40"
         ]
@@ -2723,8 +2729,8 @@ def generate_pdf_report(results:dict, output_path:str,
                 _rows.append([
                     t(_lbl2, lang),
                     f"{_u * 60:.0f} min" if _u is not None else "—",
-                    f"{_d.get('ahi'):.1f} /u" if _d.get("ahi") is not None else "—",
-                    (f"{_d.get('ahi_incl_uncertain'):.1f} /u"
+                    f"{_d.get('ahi'):.1f} {_UH}" if _d.get("ahi") is not None else "—",
+                    (f"{_d.get('ahi_incl_uncertain'):.1f} {_UH}"
                      if _d.get("ahi_incl_uncertain") is not None else "—"),
                 ])
                 if _d.get("reliable") is False:
@@ -2754,7 +2760,7 @@ def generate_pdf_report(results:dict, output_path:str,
         _rera_h = (rera_n / rera_idx) if (rera_n and rera_idx) else None
 
         def _idx(n):
-            return f"{n / _rera_h:.1f} /u" if _rera_h else "—"
+            return f"{n / _rera_h:.1f} {_UH}" if _rera_h else "—"
 
         # De FRI-rij deelde hier zelf; sectie 8d deed het met een ANDERE
         # noemer. Nu leest ze het veld dat psgscoring publiceert, en 8d
@@ -2764,10 +2770,10 @@ def generate_pdf_report(results:dict, output_path:str,
         ext_rows = [
             [t("pdf_rera_amp_arousal", lang),  str(n_rera_fri), _idx(n_rera_fri)],
             [t("pdf_rera_flat_arousal", lang), str(n_rera_flat), _idx(n_rera_flat)],
-            [t("pdf_rera_total", lang),  str(rera_n), f"{rera_idx:.1f} /u"],
+            [t("pdf_rera_total", lang),  str(rera_n), f"{rera_idx:.1f} {_UH}"],
             [t("pdf_fri_no_criteria", lang), str(n_fri_pure),
-             f"{_fri_i:.1f} /u" if _fri_i is not None else "—"],
-            [t("pdf_rdi_formula", lang),          "", f"{rdi_val:.1f} /u"],
+             f"{_fri_i:.1f} {_UH}" if _fri_i is not None else "—"],
+            [t("pdf_rdi_formula", lang),          "", f"{rdi_val:.1f} {_UH}"],
         ]
         story.append(KeepTogether([_tbl(
             [t("pdf_param",lang), "n", "Index"],
@@ -2775,8 +2781,8 @@ def generate_pdf_report(results:dict, output_path:str,
             [8, 2, 4])])); sp(0.1)
 
         stage_rows = [
-            ["REM AHI",  f"{rem_ahi:.1f} /u" if rem_ahi is not None else "—"],
-            ["NREM AHI", f"{nrem_ahi:.1f} /u" if nrem_ahi is not None else "—"],
+            ["REM AHI",  f"{rem_ahi:.1f} {_UH}" if rem_ahi is not None else "—"],
+            ["NREM AHI", f"{nrem_ahi:.1f} {_UH}" if nrem_ahi is not None else "—"],
         ]
         # Positional AHI (from position analysis)
         pos_sum = pneumo.get("position", {}).get("summary", {})
@@ -2801,7 +2807,7 @@ def generate_pdf_report(results:dict, output_path:str,
         if _posa:
             _yn = t("pdf_pheno_yes", lang) if _posa.get("flag") else t("pdf_pheno_no", lang)
             _txt = (f"<b>{t('pdf_pheno_posa', lang)}:</b> {_yn} "
-                    f"(supine {_posa.get('ahi_supine')} vs non-supine {_posa.get('ahi_non_supine')} /u"
+                    f"(supine {_posa.get('ahi_supine')} vs non-supine {_posa.get('ahi_non_supine')} {_UH}"
                     + (f", {_posa.get('supine_non_supine_ratio')}×"
                        if _posa.get('supine_non_supine_ratio') is not None else "") + ")")
             if _posa.get("flag") and _posa.get("positional_therapy_candidate"):
@@ -2812,7 +2818,7 @@ def generate_pdf_report(results:dict, output_path:str,
             _yn = t("pdf_pheno_yes", lang) if _remp.get("flag") else t("pdf_pheno_no", lang)
             _pheno_lines.append(
                 f"<b>{t('pdf_pheno_rem', lang)}:</b> {_yn} "
-                f"(REM {_remp.get('rem_ahi')} vs NREM {_remp.get('nrem_ahi')} /u, "
+                f"(REM {_remp.get('rem_ahi')} vs NREM {_remp.get('nrem_ahi')} {_UH}, "
                 f"{_remp.get('rem_nrem_ratio')}×)")
         if _pheno_lines:
             story.append(_hdr(t("pdf_pheno_hdr", lang), color=BLUE)); sp(0.05)
@@ -2847,11 +2853,11 @@ def generate_pdf_report(results:dict, output_path:str,
                  f"{n_spo2_cc} events",
                  t("pdf_fix2_desc",lang)],
                 [t("pdf_fix3_name",lang),
-                 (f"{n_csr_fl} events  →  AHI {ahi_csr:.1f}/u" if ahi_csr else f"{n_csr_fl} events"),
+                 (f"{n_csr_fl} events  →  AHI {ahi_csr:.1f}{_UH}" if ahi_csr else f"{n_csr_fl} events"),
                  t("pdf_fix3_desc",lang)],
                 [t("pdf_fix4_name",lang),
                  f"{n_noise} ruis  +  {n_border} borderline",
-                 (f"AHI excl. ruis (<0.40): {ahi_noise:.1f}/u" if ahi_noise else t("pdf_conf_signal_noise", lang))],
+                 (f"AHI excl. ruis (<0.40): {ahi_noise:.1f}{_UH}" if ahi_noise else t("pdf_conf_signal_noise", lang))],
                 [t("pdf_fix5_name",lang),
                  t("pdf_corrected",lang),
                  t("pdf_fix5_desc",lang)],
@@ -2922,17 +2928,17 @@ def generate_pdf_report(results:dict, output_path:str,
             # v0.15.0 (B6): arousal aetiology as per-hour indices (AASM V.A Note 4)
             _ar_rows = [
                 [t("pdf_arousal_index", lang),
-                 f"{asum.get('arousal_index','—')} /u  ({t('pdf_arousal_ref', lang)})"],
+                 f"{asum.get('arousal_index','—')} {_UH}  ({t('pdf_arousal_ref', lang)})"],
             ]
             if asum.get("respiratory_arousal_index") is not None:
                 _ar_rows.append([t("pdf_resp_arousal_index", lang),
-                                 f"{asum.get('respiratory_arousal_index')} /u"])
+                                 f"{asum.get('respiratory_arousal_index')} {_UH}"])
             if asum.get("spontaneous_arousal_index") is not None:
                 _ar_rows.append([t("pdf_spont_arousal_index", lang),
-                                 f"{asum.get('spontaneous_arousal_index')} /u"])
+                                 f"{asum.get('spontaneous_arousal_index')} {_UH}"])
             if asum.get("plm_arousal_index") is not None:
                 _ar_rows.append([t("pdf_plm_arousal_index", lang),
-                                 f"{asum.get('plm_arousal_index')} /u"])
+                                 f"{asum.get('plm_arousal_index')} {_UH}"])
             _ar_rows += [
                 [t("pdf_resp_arousals",lang),    str(asum.get("n_respiratory_arousals","—"))],
                 [t("pdf_spont_arousals",lang),        str(asum.get("n_spontaneous_arousals","—"))],
@@ -3168,7 +3174,7 @@ def generate_pdf_report(results:dict, output_path:str,
         story.append(_tbl([t("pdf_param", lang), t("pdf_value", lang)], [
             [t("pdf_fri_count", lang),  str(n_fri)],
             [t("pdf_fri_index", lang),
-             f"{fri_index:.1f} /u" if fri_index is not None else "—"],
+             f"{fri_index:.1f} {_UH}" if fri_index is not None else "—"],
             [t("pdf_fri_r1b", lang),    str(n_reinstated)],
         ], [9, 8])); sp(0.1)
         story.append(Paragraph(
@@ -3220,8 +3226,8 @@ def generate_pdf_report(results:dict, output_path:str,
             [t('pdf_min_spo2', lang),   f"{ss.get('min_spo2','—')} %",  ""],
             *_ev_nadir_row,
             [t("pdf_time_below90",lang),       f"{ss.get('pct_below_90','—')} %","< 1%"],
-            ["ODI 3%",           f"{ss.get('odi_3pct','—')} /u",    "< 5/u"],
-            ["ODI 4%",           f"{ss.get('odi_4pct','—')} /u",    "< 5/u"],
+            ["ODI 3%",           f"{ss.get('odi_3pct','—')} {_UH}",    "< 5{_UH}"],
+            ["ODI 4%",           f"{ss.get('odi_4pct','—')} {_UH}",    "< 5{_UH}"],
             # De referentiewaarde "< 20" komt uit Azarbarzin et al. (Eur Heart
             # J 2019) en geldt voor DIE definitie: basislijn = maximum SpO2 in
             # de 100 s vóór het eventeinde, oppervlakte over een uit het
@@ -3234,7 +3240,12 @@ def generate_pdf_report(results:dict, output_path:str,
             # suggereert een vergelijkbaarheid die er niet is.
             [("Hypoxic burden" if ss.get("hypoxic_burden_method") == "azarbarzin"
               else f"Hypoxic burden ({ss.get('hypoxic_burden_method') or '?'})"),
-             f"{ss.get('hypoxic_burden','—')} %·min/h",
+             # `.get(k, "—")` geeft de default NIET terug als de sleutel
+             # bestaat met waarde None -- en dat is precies wat het
+             # burden-plafond doet boven 150. Er stond letterlijk
+             # "None %·min/u" in een klinisch rapport.
+             (f"{ss['hypoxic_burden']} %·min{_UH}"
+              if ss.get("hypoxic_burden") is not None else "—"),
              ("< 20" if ss.get("hypoxic_burden_method") == "azarbarzin" else "")],
             [t("pdf_ventilatory_burden", lang),
              (f"{rsum.get('ventilatory_burden')} %"
@@ -3285,7 +3296,7 @@ def generate_pdf_report(results:dict, output_path:str,
             [t('pdf_resp_assoc', lang), str(ps.get("n_resp_associated","—"))],
             [t("pdf_plms_series",lang),           str(ps.get("n_plm","—"))],
             [t("pdf_plm_series",lang),                 str(ps.get("n_plm_series","—"))],
-            ["PLMI",                       f"{plmi:.1f} /u  —  {ps.get('plm_severity','—')}"],
+            ["PLMI",                       f"{plmi:.1f} {_UH}  —  {ps.get('plm_severity','—')}"],
         ],[9,8])); sp(0.1)
 
     # ── 10b. RONCHOPATHIE (snurk-analyse) ─────────────────────
@@ -3296,7 +3307,7 @@ def generate_pdf_report(results:dict, output_path:str,
         story.append(_tbl([t("pdf_param", lang), t("pdf_value", lang)], [
             [t("pdf_snore_min", lang),     f"{snore_s.get('snore_min', '—')} min"],
             [t("pdf_snore_pct", lang),     f"{snore_s.get('snore_pct_tst', '—')} %"],
-            [t("pdf_snore_index", lang),   f"{snore_s.get('snore_index', '—')} /u"],
+            [t("pdf_snore_index", lang),   f"{snore_s.get('snore_index', '—')} {_UH}"],
         ], [9, 8])); sp(0.1)
     else:
         story.append(Paragraph(

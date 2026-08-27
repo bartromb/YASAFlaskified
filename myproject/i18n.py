@@ -1959,6 +1959,11 @@ TRANSLATIONS.update(_PDF_PHENO_VB)
 
 # v0.15.0 — AASM v3 clinician-report enrichments (dual AHI, aetiology, flags, conclusion)
 _PDF_AASM_V3 = {
+    # De eenheid van een index per uur. Stond op 37 plaatsen hardgecodeerd als
+    # "/u" -- Nederlands voor "per uur" -- ook in Engelse, Franse en Duitse
+    # rapporten. Een Engelstalige lezer las "83.5/u" naast "83.5/h" in dezelfde
+    # zin en moest raden of dat twee grootheden waren.
+    "unit_per_hour": {"nl": "/u", "fr": "/h", "en": "/h", "de": "/h"},
     "pdf_severity": {"nl": "Ernst", "fr": "Sévérité", "en": "Severity", "de": "Schweregrad"},
     "pdf_ahi_dual_hdr": {
         "nl": "AHI volgens hypopneu-criterium (AASM v3)",
@@ -2009,21 +2014,21 @@ _PDF_AASM_V3 = {
                                "en": "without CPAP", "de": "ohne CPAP"},
     "pdf_concl_on_cpap": {
         "nl": "Onder CPAP {ther}/u (split-night; het gemiddelde over de hele nacht telt beide delen samen).",
-        "fr": "Sous CPAP {ther}/u (nuit divisée ; la moyenne sur la nuit entière additionne les deux parties).",
-        "en": "On CPAP {ther}/u (split-night; the whole-night average combines both parts).",
-        "de": "Mit CPAP {ther}/u (Split-Night; der Gesamtdurchschnitt fasst beide Teile zusammen).",
+        "fr": "Sous CPAP {ther}/h (nuit divisée ; la moyenne sur la nuit entière additionne les deux parties).",
+        "en": "On CPAP {ther}/h (split-night; the whole-night average combines both parts).",
+        "de": "Mit CPAP {ther}/h (Split-Night; der Gesamtdurchschnitt fasst beide Teile zusammen).",
     },
     "pdf_classbar_split": {
         "nl": "split-night — zonder CPAP {diag}/u",
-        "fr": "nuit divisée — sans CPAP {diag}/u",
-        "en": "split-night — without CPAP {diag}/u",
-        "de": "Split-Night — ohne CPAP {diag}/u",
+        "fr": "nuit divisée — sans CPAP {diag}/h",
+        "en": "split-night — without CPAP {diag}/h",
+        "de": "Split-Night — ohne CPAP {diag}/h",
     },
     "pdf_ahi_dual_split_note": {
         "nl": "Deze AHI's gelden voor de HELE nacht en tellen de uren onder CPAP mee; de ernstkolom classificeert dus een gemiddelde van twee onvergelijkbare helften. Zonder CPAP: {diag}/u.",
-        "fr": "Ces IAH portent sur la nuit ENTIÈRE et incluent les heures sous CPAP ; la colonne sévérité classe donc une moyenne de deux moitiés non comparables. Sans CPAP : {diag}/u.",
-        "en": "These AHIs cover the WHOLE night and include the hours on CPAP, so the severity column classifies an average of two halves that are not comparable. Without CPAP: {diag}/u.",
-        "de": "Diese AHI-Werte gelten für die GANZE Nacht einschliesslich der Stunden unter CPAP; die Schweregrad-Spalte klassifiziert somit einen Mittelwert aus zwei nicht vergleichbaren Hälften. Ohne CPAP: {diag}/u.",
+        "fr": "Ces IAH portent sur la nuit ENTIÈRE et incluent les heures sous CPAP ; la colonne sévérité classe donc une moyenne de deux moitiés non comparables. Sans CPAP : {diag}/h.",
+        "en": "These AHIs cover the WHOLE night and include the hours on CPAP, so the severity column classifies an average of two halves that are not comparable. Without CPAP: {diag}/h.",
+        "de": "Diese AHI-Werte gelten für die GANZE Nacht einschliesslich der Stunden unter CPAP; die Schweregrad-Spalte klassifiziert somit einen Mittelwert aus zwei nicht vergleichbaren Hälften. Ohne CPAP: {diag}/h.",
     },
     "pdf_concl_none": {
         "nl": "Geen significante slaapapneu (AHI &lt; 5/u).",

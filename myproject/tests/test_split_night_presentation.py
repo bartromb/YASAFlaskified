@@ -303,14 +303,16 @@ def test_de_classificatiebalk_noemt_het_deel_zonder_cpap():
         "de split-notitie hangt niet achter de AHI"
 
 
-def test_de_samenvatting_mengt_geen_twee_eenheden():
-    """Het rapport schrijft overal `/u`. Een zin met `/u` en `/h` door elkaar
-    leest als twee verschillende grootheden."""
+def test_de_samenvatting_gebruikt_een_eenheid_per_taal():
+    """Twee eenheden in een zin leest als twee grootheden. Nederlands schrijft
+    `/u`, de andere talen `/h` -- maar nooit door elkaar."""
     from generate_pdf_report import _auto_conclusion
 
-    for taal in ("nl", "fr", "en", "de"):
+    for taal, eenheid, fout in (("nl", "/u", "/h"), ("fr", "/h", "/u"),
+                                ("en", "/h", "/u"), ("de", "/h", "/u")):
         tekst = _auto_conclusion({"ahi_total": 13.7}, _pneumo(83.5), {}, lang=taal)
-        assert "/h" not in tekst, f"{taal}: {tekst}"
+        assert eenheid in tekst, f"{taal} mist {eenheid}: {tekst}"
+        assert fout not in tekst, f"{taal} mengt {fout} erdoor: {tekst}"
 
 
 def test_de_criteriatabel_zegt_waarop_de_ernstkolom_rust():
@@ -328,10 +330,10 @@ def test_de_voetnoot_noemt_de_hele_nacht_en_het_deel_zonder_cpap():
     from i18n import TRANSLATIONS
 
     entry = TRANSLATIONS["pdf_ahi_dual_split_note"]
-    for taal in ("nl", "fr", "en", "de"):
+    for taal, eenheid in (("nl", "/u"), ("fr", "/h"), ("en", "/h"), ("de", "/h")):
         tekst = entry[taal]
         assert "{diag}" in tekst, taal
-        assert "/h" not in tekst, f"{taal} mengt eenheden: {tekst}"
+        assert eenheid in tekst, f"{taal} gebruikt niet {eenheid}: {tekst}"
 
 
 def test_geen_voetnoot_zonder_split_night():
