@@ -3497,6 +3497,40 @@ def dashboard():
                           "orange"  if ahi_f < 30 else "danger"
             except Exception:
                 ahi_f = None; sev_cls = "secondary"
+
+            # ── Split-night: één AHI is hier misleidend ────
+            # De lijst toont per studie één getal. Op een split-night middelt
+            # dat de diagnostische uren met de titratie-uren, en juist het
+            # eerste deel draagt de diagnose. Toon dan beide helften in plaats
+            # van het gemiddelde; de ernstkleur volgt het deel ZONDER therapie.
+            _sn_d  = (data.get("pneumo", {}) or {}).get("split_night") or {}
+            _seg_d = _sn_d.get("segments") or {}
+            split_detected = bool(_sn_d.get("detected") and _seg_d)
+            ahi_diag = ahi_ther = None
+            ahi_diag_sev = None
+            if split_detected:
+                def _seg_ahi(naam):
+                    _sg = _seg_d.get(naam) or {}
+                    _v = (_sg.get("ahi_incl_uncertain")
+                          if (_sg.get("uncertain_fraction") or 0) >= 0.20
+                          else _sg.get("ahi"))
+                    try:
+                        return float(_v) if _v is not None else None
+                    except (TypeError, ValueError):
+                        return None
+                ahi_diag, ahi_ther = _seg_ahi("diagnostic"), _seg_ahi("therapeutic")
+                if ahi_diag is None:
+                    split_detected = False
+                else:
+                    sev_cls = "success" if ahi_diag < 5 else \
+                              "warning" if ahi_diag < 15 else \
+                              "orange"  if ahi_diag < 30 else "danger"
+                    # De ernstwoord-string die de balk kleurt hoort bij het
+                    # DIAGNOSTISCHE deel; `rsum["severity"]` slaat op de hele
+                    # nacht en zou hier de verkeerde klasse tonen.
+                    ahi_diag_sev = ("normal" if ahi_diag < 5 else
+                                    "mild"   if ahi_diag < 15 else
+                                    "moderate" if ahi_diag < 30 else "severe")
             # ── v0.8.39: ODI + PLMi ────────────────────────
             # ODI_3% (confirmed key: pneumo.spo2.summary.odi_3pct)
             odi_val = ssum.get("odi_3pct")
@@ -3537,6 +3571,10 @@ def dashboard():
                 "se":                stats.get("SE", "—"),
                 "ahi":               f"{ahi_f:.1f}" if ahi_f is not None else "—",
                 "ahi_sev":           rsum.get("severity", "—"),
+                "split_night":       split_detected,
+                "ahi_diag":          f"{ahi_diag:.1f}" if ahi_diag is not None else "—",
+                "ahi_ther":          f"{ahi_ther:.1f}" if ahi_ther is not None else "—",
+                "ahi_diag_sev":      ahi_diag_sev or "—",
                 "sev_cls":           sev_cls,
                 # v0.18.3: uit de losse geschiedenislijst hierheen. Die lijst
                 # toonde dezelfde studies met net andere kolommen, dus je moest

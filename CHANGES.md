@@ -1,3 +1,40 @@
+# v0.36.3 — 2026-08-27 — split-night: het gemiddelde uit de kop, de grens op de grafiek
+
+Pin ongewijzigd (`psgscoring[ml]==0.30.0`); geen gescoorde waarde verandert.
+Dit gaat over wat het rapport TOONT.
+
+## Eén AHI over een split-night is een gemiddelde van twee onvergelijkbare helften
+
+De kop droeg de nacht-AHI als tweede tegel. Op de casus die dit aanleiding gaf
+stond daar eerst "Mild SAS, AHI 10,1/u" terwijl het diagnostische deel op
+83,5/u lag. Dat getal is niet zozeer fout als wel betekenisloos: het telt de
+uren vóór de titratie samen met de uren eronder, en juist het eerste deel
+draagt de diagnose.
+
+De kop toont nu **AHI zonder CPAP** en **AHI met CPAP** naast elkaar. Het
+nachtgemiddelde is niet verdwenen — het staat in de split-nightsectie, waar de
+context erbij staat.
+
+## Hetzelfde in de studielijst
+
+De lijst toonde per studie één AHI met een ernstbalk. Op een split-night stond
+daar het gemiddelde, en de balk kleurde ernaar. Nu staan beide helften er, en
+de balk volgt het deel zonder therapie.
+
+Ook `data-sev` volgt dat deel. Anders filtert de lijst op een getal dat nergens
+op het scherm staat: een studie die rood oplicht zou uit een filter op "severe"
+vallen.
+
+## Een markering waar het tweede deel begint
+
+Op elk nachtpaneel — hypnogram, events, positie, snurken, saturatie — staat nu
+een verticale streep op het breekpunt, met het label "start CPAP".
+
+Zonder die streep is een saturatiecurve die halverwege herstelt niet te
+onderscheiden van een patiënt die vanzelf beter wordt. De streep loopt via
+`_ov_setup`, dat alle vijf de panelen aanmaakt, zodat er geen paneel kan
+achterblijven; een test controleert dat alle vijf hem doorgeven.
+
 # v0.36.2 — 2026-08-26 — de pin haalt de segmentreparatie op
 
 **Pin naar `psgscoring[ml]==0.30.0`** (was 0.29.0). Geen wijziging in deze

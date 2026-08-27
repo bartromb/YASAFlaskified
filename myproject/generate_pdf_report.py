@@ -851,8 +851,6 @@ def _clinical_flags(rsum, pneumo, ss, asum, lang="nl", warnings=None):
             if _dv is not None and _tv is not None:
                 flags.append(t("pdf_flag_split_night", lang).format(
                     tijd=f"{int(_b // 3600)}:{int((_b % 3600) // 60):02d}",
-                    ahi=f"{rsum.get('ahi_total'):.1f}"
-                        if rsum.get("ahi_total") is not None else "—",
                     diag=f"{_dv:.1f}", ther=f"{_tv:.1f}"))
     except (TypeError, ValueError):
         pass
@@ -1044,8 +1042,14 @@ _OV_DPI = 150
 _OV_LEFT = 0.09   # fraction — vaste linkermarge voor y-labels
 _OV_RIGHT = 0.98
 
-def _ov_setup(hc, dur_h, show_xticklabels=True):
-    """Maak figuur + ax met identieke marges voor alle overview-panelen."""
+def _ov_setup(hc, dur_h, show_xticklabels=True, split_h=None, split_label=None):
+    """Maak figuur + ax met identieke marges voor alle overview-panelen.
+
+    `split_h` tekent een verticale markering waar het tweede deel van de nacht
+    begint. Die hoort op ELK paneel: wie de saturatie of de stadia bekijkt moet
+    kunnen zien welk deel onder therapie ligt, anders leest hij een herstel als
+    een eigenschap van de patiënt in plaats van als het effect van de CPAP.
+    """
     fig, ax = plt.subplots(figsize=(_OV_WC/2.54, hc/2.54), dpi=_OV_DPI)
     fig.patch.set_facecolor("white"); ax.set_facecolor("white")
     bot = 0.22 if show_xticklabels else 0.08
@@ -1062,6 +1066,15 @@ def _ov_setup(hc, dur_h, show_xticklabels=True):
     ax.spines[["top","right"]].set_visible(False)
     ax.spines["left"].set_linewidth(0.4); ax.spines["bottom"].set_linewidth(0.4)
     ax.tick_params(axis="both", length=2, width=0.4)
+    if split_h is not None and 0 < split_h < dur_h:
+        ax.axvline(split_h, color="#8e44ad", linewidth=1.1,
+                   linestyle=(0, (4, 2)), alpha=0.95, zorder=5)
+        if split_label:
+            ax.annotate(split_label, xy=(split_h, 1.0),
+                        xycoords=("data", "axes fraction"),
+                        xytext=(3, -1), textcoords="offset points",
+                        fontsize=5, color="#8e44ad", fontweight="600",
+                        ha="left", va="top", zorder=6)
     return fig, ax
 
 def _ov_finish(fig, hc):
@@ -1075,7 +1088,7 @@ POS_LABELS = {0:"BUK",1:"LNK",2:"RUG",3:"REC",4:"STA"}
 POS_LABELS_FR = {0:"PRO",1:"GAU",2:"DOS",3:"DRO",4:"DEB"}
 POS_LABELS_EN = {0:"PRO",1:"LFT",2:"SUP",3:"RGT",4:"UPR"}
 
-def _hypno_ov(timeline, dur_h, hc=2.2, lang="nl"):
+def _hypno_ov(timeline, dur_h, hc=2.2, lang="nl", split_h=None, split_label=None):
     """Hypnogram voor overview (x-as in uren)."""
     stages = [ep.get("stage","W") for ep in timeline]
     order = {"W":0,"N1":1,"N2":2,"N3":3,"R":4}
@@ -1084,7 +1097,8 @@ def _hypno_ov(timeline, dur_h, hc=2.2, lang="nl"):
     x_h = np.arange(n) * epoch_h
     y = [order.get(s,0) for s in stages]
 
-    fig, ax = _ov_setup(hc, dur_h, show_xticklabels=False)
+    fig, ax = _ov_setup(hc, dur_h, show_xticklabels=False,
+                        split_h=split_h, split_label=split_label)
     ax.step(x_h, y, where="post", color="#1a3a5c", linewidth=0.7, alpha=0.9)
     for i,(s,yv) in enumerate(zip(stages,y)):
         ax.fill_between([x_h[i], x_h[i]+epoch_h], [yv-.4,yv-.4], [yv+.4,yv+.4],
@@ -1095,9 +1109,10 @@ def _hypno_ov(timeline, dur_h, hc=2.2, lang="nl"):
     for yy in [0,1,2,3,4]: ax.axhline(yy, color="#e0e6ed", linewidth=0.3, zorder=0)
     return _ov_finish(fig, hc)
 
-def _events_ov(events, dur_h, rejected_hyps=None, hc=2.0):
+def _events_ov(events, dur_h, rejected_hyps=None, hc=2.0, split_h=None, split_label=None):
     """Events tijdlijn: OA/CA/MA/HYP/FR — altijd alle rijen zichtbaar."""
-    fig, ax = _ov_setup(hc, dur_h, show_xticklabels=False)
+    fig, ax = _ov_setup(hc, dur_h, show_xticklabels=False,
+                        split_h=split_h, split_label=split_label)
     type_map = {"obstructive":0, "central":1, "mixed":2}
     labels = ["OA","CA","MA","HYP","FR"]
     clr_map = {"obstructive":"#e74c3c","central":"#3498db","mixed":"#9b59b6"}
@@ -1126,7 +1141,7 @@ def _events_ov(events, dur_h, rejected_hyps=None, hc=2.0):
     for yy in range(5): ax.axhline(yy, color="#e0e6ed", linewidth=0.3, zorder=0)
     return _ov_finish(fig, hc)
 
-def _pos_ov(pos_per_epoch, dur_h, hc=1.6, lang="nl"):
+def _pos_ov(pos_per_epoch, dur_h, hc=1.6, lang="nl", split_h=None, split_label=None):
     """Positie-tijdlijn (x-as in uren)."""
     # x-labels alleen op laatste plot
     labels = POS_LABELS if lang=="nl" else POS_LABELS_FR if lang=="fr" else POS_LABELS_EN
@@ -1135,7 +1150,8 @@ def _pos_ov(pos_per_epoch, dur_h, hc=1.6, lang="nl"):
     x_h = np.arange(n) * epoch_h
     y = np.array([min(p,4) for p in pos_per_epoch])
 
-    fig, ax = _ov_setup(hc, dur_h, show_xticklabels=False)
+    fig, ax = _ov_setup(hc, dur_h, show_xticklabels=False,
+                        split_h=split_h, split_label=split_label)
     ax.step(x_h, y, where="post", color="#27ae60", linewidth=0.8)
     for i,yv in enumerate(y):
         ax.fill_between([x_h[i], x_h[i]+epoch_h], [yv-.3,yv-.3], [yv+.3,yv+.3],
@@ -1146,12 +1162,13 @@ def _pos_ov(pos_per_epoch, dur_h, hc=1.6, lang="nl"):
     for yy in range(5): ax.axhline(yy, color="#e0e6ed", linewidth=0.3, zorder=0)
     return _ov_finish(fig, hc)
 
-def _snore_ov(rms_1s, dur_h, hc=1.4):
+def _snore_ov(rms_1s, dur_h, hc=1.4, split_h=None, split_label=None):
     """Snurk-amplitude (PHONO) — x-as in uren."""
     y = np.array(rms_1s, dtype=float)
     x_h = np.arange(len(y)) / 3600
 
-    fig, ax = _ov_setup(hc, dur_h, show_xticklabels=False)
+    fig, ax = _ov_setup(hc, dur_h, show_xticklabels=False,
+                        split_h=split_h, split_label=split_label)
     ax.fill_between(x_h, 0, y, color="#95a5a6", alpha=0.4, linewidth=0)
     ax.plot(x_h, y, color="#7f8c8d", linewidth=0.3)
     threshold = float(np.percentile(y, 60))
@@ -1160,12 +1177,12 @@ def _snore_ov(rms_1s, dur_h, hc=1.4):
 
     return _ov_finish(fig, hc)
 
-def _spo2_ov(ts, dur_h, hc=1.6):
+def _spo2_ov(ts, dur_h, hc=1.6, split_h=None, split_label=None):
     """SpO2 tijdlijn — x-as in uren."""
     y = np.array(ts, dtype=float)
     x_h = np.arange(len(y)) / 3600  # SpO2 timeseries at 1 Hz
 
-    fig, ax = _ov_setup(hc, dur_h)
+    fig, ax = _ov_setup(hc, dur_h, split_h=split_h, split_label=split_label)
     ax.fill_between(x_h, y, 90, where=(y<90), color="#e74c3c", alpha=0.3)
     ax.plot(x_h, y, color="#2980b9", linewidth=0.8)
     ax.axhline(90, color="#e74c3c", linewidth=0.6, linestyle="--", alpha=0.7)
@@ -1849,11 +1866,20 @@ def generate_pdf_report(results:dict, output_path:str,
             _dv = (_sum_k.get("ahi_incl_uncertain") if _onzeker >= 0.20
                    else _sum_k.get("ahi_total"))
             if _dv is not None:
+                # De AHI onder therapie hoort ernaast: dat is wat de
+                # titratie heeft opgeleverd, en zonder dat getal zegt het
+                # diagnostische deel niets over het effect.
+                _sum_t = (_sn_k.get("summaries") or {}).get("therapeutic") or {}
+                _seg_t = (_sn_k.get("segments") or {}).get("therapeutic") or {}
+                _onz_t = _seg_t.get("uncertain_fraction") or 0
+                _tv_k = (_sum_t.get("ahi_incl_uncertain") if _onz_t >= 0.20
+                         else _sum_t.get("ahi_total"))
                 _split_kpi = {
                     "waarde": _dv,
-                    "label": (f"{t('pdf_kpi_ahi_diag', lang)}  "
+                    "label": (f"{t('pdf_kpi_ahi_no_cpap', lang)}  "
                               f"({_sev(_dv, lang)})"),
                     "slaap_min": (_seg_k.get("sleep_h") or 0) * 60,
+                    "therapie": _tv_k,
                 }
     except (TypeError, ValueError, AttributeError):
         _split_kpi = None
@@ -1879,7 +1905,11 @@ def generate_pdf_report(results:dict, output_path:str,
             _dw = _split_kpi["waarde"]
             story.append(_kpi([
                 (f"{_dw:.1f}", _split_kpi["label"], "/u", _sev_clr(_dw)),
-                (ahi_s, t("pdf_kpi_ahi_night", lang), "/u", GR),
+                (f"{_split_kpi['therapie']:.1f}"
+                 if _split_kpi.get("therapie") is not None else "—",
+                 t("pdf_kpi_ahi_cpap", lang), "/u",
+                 _sev_clr(_split_kpi["therapie"])
+                 if _split_kpi.get("therapie") is not None else GR),
                 (f"{_split_kpi['slaap_min']:.0f}",
                  t("pdf_kpi_sleep_diag", lang), "min", NAVY),
                 (_v(stats, "TST", fmt="{:.0f}"), "TST", "min", NAVY),
@@ -2011,6 +2041,20 @@ def generate_pdf_report(results:dict, output_path:str,
     n_epochs = len(timeline) if timeline else 0
     dur_h = n_epochs * 30 / 3600 if n_epochs > 0 else float(meta.get("duration_min", 480)) / 60
 
+    # Split-night: waar begint het tweede deel? Elk paneel hieronder krijgt
+    # dezelfde markering, zodat de saturatiecurve en de stadia niet los van
+    # elkaar gelezen worden -- een SpO2 die halverwege herstelt is anders niet
+    # te onderscheiden van een patiënt die vanzelf beter wordt.
+    _ov_split_h, _ov_split_lbl = None, None
+    try:
+        _sn_ov = ((results.get("pneumo") or {}).get("split_night")
+                  or results.get("split_night") or {})
+        if _sn_ov.get("detected") and _sn_ov.get("breakpoint_s") is not None:
+            _ov_split_h = float(_sn_ov["breakpoint_s"]) / 3600.0
+            _ov_split_lbl = t("pdf_split_marker", lang)
+    except (TypeError, ValueError):
+        _ov_split_h, _ov_split_lbl = None, None
+
     # Hypnogram — niet bij polygrafie.
     #
     # Zonder EEG bestaat er geen hypnogram. Wat er stond was gescoord op een
@@ -2020,7 +2064,8 @@ def generate_pdf_report(results:dict, output_path:str,
     if timeline and not is_polygraphy:
         story.append(Paragraph("<b>HYPNO</b>", styles["SM"]))
         try:
-            story.append(_hypno_ov(timeline, dur_h, hc=2.2, lang=lang))
+            story.append(_hypno_ov(timeline, dur_h, hc=2.2, lang=lang,
+                                       split_h=_ov_split_h, split_label=_ov_split_lbl))
             leg = "  ".join(f'<font color="{STAGE_CLR[s]}">■</font> {s}'
                             for s in ["W","N1","N2","N3","R"])
             story.append(Paragraph(leg, styles["SM"]))
@@ -2032,7 +2077,8 @@ def generate_pdf_report(results:dict, output_path:str,
     rejected_hyps = pneumo.get("respiratory", {}).get("rejected_hypopneas", [])
     if (resp_events or rejected_hyps) and dur_h > 0:
         story.append(Paragraph("<b>EVENT</b>", styles["SM"]))
-        try: story.append(_events_ov(resp_events, dur_h, rejected_hyps=rejected_hyps))
+        try: story.append(_events_ov(resp_events, dur_h, rejected_hyps=rejected_hyps,
+                                        split_h=_ov_split_h, split_label=_ov_split_lbl))
         except: pass
         sp(0.1)
 
@@ -2041,7 +2087,8 @@ def generate_pdf_report(results:dict, output_path:str,
     pos_epochs = pos_data.get("pos_per_epoch", [])
     if pos_epochs:
         story.append(Paragraph("<b>POS</b>", styles["SM"]))
-        try: story.append(_pos_ov(pos_epochs, dur_h, hc=1.6, lang=lang))
+        try: story.append(_pos_ov(pos_epochs, dur_h, hc=1.6, lang=lang,
+                                     split_h=_ov_split_h, split_label=_ov_split_lbl))
         except: pass
         sp(0.1)
 
@@ -2049,7 +2096,8 @@ def generate_pdf_report(results:dict, output_path:str,
     snore_rms = pneumo.get("snore", {}).get("rms_1s", [])
     if snore_rms and len(snore_rms) > 60:
         story.append(Paragraph("<b>PHONO</b>", styles["SM"]))
-        try: story.append(_snore_ov(snore_rms, dur_h, hc=1.4))
+        try: story.append(_snore_ov(snore_rms, dur_h, hc=1.4,
+                                       split_h=_ov_split_h, split_label=_ov_split_lbl))
         except: pass
         sp(0.1)
 
@@ -2057,7 +2105,8 @@ def generate_pdf_report(results:dict, output_path:str,
     spo2_ts = pneumo.get("spo2", {}).get("timeseries")
     if spo2_ts and len(spo2_ts) > 10:
         story.append(Paragraph("<b>SpO2</b>", styles["SM"]))
-        try: story.append(_spo2_ov(spo2_ts, dur_h, hc=1.6))
+        try: story.append(_spo2_ov(spo2_ts, dur_h, hc=1.6,
+                                      split_h=_ov_split_h, split_label=_ov_split_lbl))
         except: pass
         sp(0.1)
 

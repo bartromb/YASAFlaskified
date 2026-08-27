@@ -195,7 +195,10 @@
                 data-name="{{ (s.patient_name + ' ' + s.patient_firstname)|lower }}"
                 data-id="{{ s.patient_id|lower }}"
                 data-date="{{ s.date|lower }}"
-                data-sev="{{ s.ahi_sev|lower }}"
+                {# Op een split-night toont de balk het diagnostische deel;
+                   het ernstfilter moet dan op datzelfde deel werken, anders
+                   filtert de lijst op een getal dat nergens staat. #}
+                data-sev="{{ (s.ahi_diag_sev if s.split_night else s.ahi_sev)|lower }}"
                 data-status="{{ s.status|lower }}">
 
               {% if can_bulk %}
@@ -222,9 +225,25 @@
               {# Geboortedatum #}
               <td class="small">{{ s.dob }}</td>
 
-              {# AHI — severity strip (v0.10.0) #}
+              {# AHI — severity strip (v0.10.0)
+
+                 Split-night: het gemiddelde over de hele nacht zegt hier
+                 niets, want het telt de diagnostische uren en de titratie
+                 samen. Toon beide helften; de balk volgt het deel ZONDER
+                 therapie, want daarop rust de diagnose. #}
               <td class="text-center">
-                {{ sev_strip(s.ahi, s.ahi_sev) }}
+                {% if s.split_night %}
+                  <div title="{{ t('dash_split_tooltip') }}">
+                    {{ sev_strip(s.ahi_diag, s.ahi_diag_sev) }}
+                    <div class="text-muted" style="font-size:.7rem;line-height:1.15">
+                      {{ t('dash_split_no_cpap') }} ·
+                      <span class="fw-semibold">{{ s.ahi_ther }}</span>
+                      {{ t('dash_split_cpap') }}
+                    </div>
+                  </div>
+                {% else %}
+                  {{ sev_strip(s.ahi, s.ahi_sev) }}
+                {% endif %}
               </td>
 
               {# OAHI + obstructief/centraal — voorheen alleen in /results #}

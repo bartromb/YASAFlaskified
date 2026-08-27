@@ -2858,10 +2858,10 @@ _V0102_PDF = {
         "de": "Bei einer Split-Night verwässert ein einziger AHI über Diagnostik und Titration die Diagnose. Wählen Sie dies, wenn der Patient zwischendurch auf CPAP gewechselt hat; der Bericht zeigt dann beide Teile getrennt.",
     },
     "pdf_flag_split_night": {
-        "nl": "Split-night gedetecteerd (therapie vanaf {tijd}): de nacht-AHI van {ahi}/u telt diagnostiek én titratie samen. Diagnostisch deel {diag}/u, onder therapie {ther}/u — zie de split-nightsectie.",
-        "fr": "Nuit divisée détectée (traitement à partir de {tijd}) : l'IAH de la nuit de {ahi}/h additionne diagnostic et titration. Partie diagnostique {diag}/h, sous traitement {ther}/h — voir la section nuit divisée.",
-        "en": "Split-night detected (therapy from {tijd}): the whole-night AHI of {ahi}/h combines diagnosis and titration. Diagnostic part {diag}/h, under therapy {ther}/h — see the split-night section.",
-        "de": "Split-Night erkannt (Therapie ab {tijd}): der Gesamt-AHI von {ahi}/h fasst Diagnostik und Titration zusammen. Diagnostischer Teil {diag}/h, unter Therapie {ther}/h — siehe Split-Night-Abschnitt.",
+        "nl": "Split-night gedetecteerd (CPAP vanaf {tijd}). AHI zonder CPAP {diag}/u, met CPAP {ther}/u. Eén AHI over de hele nacht middelt twee onvergelijkbare helften en staat daarom niet in de kop — zie de split-nightsectie.",
+        "fr": "Nuit divisée détectée (CPAP à partir de {tijd}). IAH sans CPAP {diag}/h, sous CPAP {ther}/h. Un IAH sur la nuit entière moyenne deux moitiés non comparables et ne figure donc pas en tête — voir la section nuit divisée.",
+        "en": "Split-night detected (CPAP from {tijd}). AHI without CPAP {diag}/h, on CPAP {ther}/h. A single whole-night AHI averages two halves that are not comparable, so it is not shown here — see the split-night section.",
+        "de": "Split-Night erkannt (CPAP ab {tijd}). AHI ohne CPAP {diag}/h, mit CPAP {ther}/h. Ein Gesamt-AHI mittelt zwei nicht vergleichbare Hälften und steht daher nicht im Kopf — siehe Split-Night-Abschnitt.",
     },
     "pdf_kpi_ahi_diag": {"nl": "AHI diagnostisch deel",
                          "fr": "IAH partie diagnostique",
@@ -2869,6 +2869,26 @@ _V0102_PDF = {
                          "de": "AHI diagnostischer Teil"},
     "pdf_kpi_ahi_night": {"nl": "AHI hele nacht", "fr": "IAH nuit entière",
                           "en": "AHI whole night", "de": "AHI ganze Nacht"},
+    # Op een split-night is de nacht-AHI een gemiddelde over twee
+    # onvergelijkbare helften. De kop toont daarom de twee delen; de nacht-AHI
+    # staat nog in de split-nightsectie, waar de context erbij staat.
+    "pdf_kpi_ahi_no_cpap": {"nl": "AHI zonder CPAP", "fr": "IAH sans CPAP",
+                            "en": "AHI without CPAP", "de": "AHI ohne CPAP"},
+    "pdf_kpi_ahi_cpap": {"nl": "AHI met CPAP", "fr": "IAH sous CPAP",
+                         "en": "AHI on CPAP", "de": "AHI mit CPAP"},
+    # Markering op de nachtgrafieken waar het tweede deel begint.
+    "pdf_split_marker": {"nl": "start CPAP", "fr": "début CPAP",
+                         "en": "CPAP start", "de": "CPAP-Start"},
+    # Dashboard: split-night toont twee AHI's in plaats van het gemiddelde.
+    "dash_split_no_cpap": {"nl": "zonder", "fr": "sans", "en": "without", "de": "ohne"},
+    "dash_split_cpap": {"nl": "met CPAP", "fr": "sous CPAP",
+                        "en": "on CPAP", "de": "mit CPAP"},
+    "dash_split_tooltip": {
+        "nl": "Split-night: AHI zonder CPAP en onder CPAP. Eén AHI over de hele nacht middelt twee onvergelijkbare helften.",
+        "fr": "Nuit divisée : IAH sans CPAP et sous CPAP. Un IAH sur la nuit entière moyenne deux moitiés non comparables.",
+        "en": "Split-night: AHI without CPAP and on CPAP. A single whole-night AHI averages two halves that are not comparable.",
+        "de": "Split-Night: AHI ohne und mit CPAP. Ein Gesamt-AHI mittelt zwei nicht vergleichbare Hälften.",
+    },
     "pdf_kpi_sleep_diag": {"nl": "slaap diagnostisch", "fr": "sommeil diagnostique",
                            "en": "sleep diagnostic", "de": "Schlaf diagnostisch"},
     "pdf_split_hdr": {"nl": "Split-night — de nacht in twee delen",
