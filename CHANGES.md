@@ -1,3 +1,39 @@
+# v0.36.8 — 2026-08-27 — de config-template verlaagde de grens die 0.36.7 verhoogde
+
+Pin ongewijzigd (`psgscoring[ml]==0.30.0`). Raakt `config.json.example` en de
+documentatie voor bestaande installaties.
+
+## De tweede grens
+
+0.36.7 zette de nginx-grens op 2G. Dat was niet genoeg: `config.json.example`
+bevatte `"MAX_CONTENT_LENGTH": 524288000` — **500 MB**.
+
+`deploy.sh` kopieert die template naar `instance/config.json`, en die waarde
+overschrijft de app-default van 2 GB. Elke verse installatie had dus TWEE
+grenzen tegen zich, op verschillende plaatsen, waarvan 0.36.7 er maar één
+repareerde.
+
+De sleutel is uit de template gehaald: de app-default is nu de enige bron. Een
+commentaarregel legt uit wanneer je hem wél zet, en dat je dan ook nginx moet
+verlagen.
+
+## Opnieuw `deploy.sh` draaien repareert een bestaande installatie niet
+
+Het script overschrijft een bestaande `instance/config.json` bewust nooit — dat
+zou de SECRET_KEY en het adminwachtwoord weggooien. De 500 MB blijft dus staan
+op elke server die al draait.
+
+`docs/bestaande_installatie_uploadgrens.md` geeft het veilige recept: twee
+bewerkingen, geen dataverlies, TLS onaangeroerd. Met de uitdrukkelijke
+waarschuwing `redeploy.sh` hier NIET te gebruiken — dat doet
+`docker compose down -v` en `rm -rf` op de applicatiemap.
+
+## Waarom dit onopgemerkt bleef
+
+Onze productieserver is niet met `deploy.sh` opgezet en heeft de sleutel niet,
+dus daar gold de 2 GB en ging een BDF van 553 MB gewoon door. De
+installatieweg voor een nieuw centrum was de enige die niemand liep.
+
 # v0.36.7 — 2026-08-27 — een verse installatie weigerde een gewone BDF
 
 Pin ongewijzigd (`psgscoring[ml]==0.30.0`); geen gescoorde waarde verandert.

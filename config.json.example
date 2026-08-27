@@ -8,7 +8,7 @@
   "LOG_LEVEL": "INFO",
   "REDIS_HOST": "redis",
   "REDIS_PORT": 6379,
-  "MAX_CONTENT_LENGTH": 524288000,
+  "_comment_MAX_CONTENT_LENGTH": "BEWUST AFWEZIG. De app hanteert 2 GB; deze template zette hier 500 MB en overschreef die default stil, zodat elke verse installatie een BDF van een gewone nacht (553 MB) weigerde -- precies het bestandstype waarvoor de grens verhoogd was. Zet deze sleutel alleen als u de grens wilt VERLAGEN, en verlaag dan ook client_max_body_size in de nginx-configuratie: de kleinste van de twee wint, en nginx geeft een 413 die niets over het bestand zegt.",
   "SESSION_LIFETIME_HOURS": 24,
   "_comment_SESSION_COOKIE_SECURE": "Must be the string \"1\", not true: the app tests _cfg(...) == \"1\". Production runs behind HTTPS (Nginx/NPM); set \"0\" for local HTTP development.",
   "SESSION_COOKIE_SECURE": "1",

@@ -23,6 +23,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DEPLOY = os.path.join(REPO, "deploy.sh")
+TEMPLATE = os.path.join(REPO, "config.json.example")
 
 
 def _naar_bytes(waarde: str) -> int:
@@ -58,3 +59,35 @@ def test_een_gewone_bdf_past():
     m = re.search(r"client_max_body_size\s+(\S+?);", bron)
     assert _naar_bytes(m.group(1)) >= 600 * 1024 ** 2, \
         "een BDF van één nacht past niet door de nginx-grens"
+
+
+def test_de_config_template_verlaagt_de_grens_niet_stil():
+    """`config.json.example` zette `MAX_CONTENT_LENGTH` op 500 MB. `deploy.sh`
+    kopieert die template naar `instance/config.json`, en dat bestand
+    OVERSCHRIJFT de app-default van 2 GB.
+
+    Elke verse installatie weigerde daardoor een BDF van een gewone nacht, en
+    opnieuw `deploy.sh` draaien repareerde het niet -- het script overschrijft
+    een bestaande `instance/config.json` bewust nooit. Productie liep er niet
+    tegenaan omdat daar de sleutel ontbreekt."""
+    import json
+
+    from app import app as flask_app
+
+    with open(TEMPLATE, encoding="utf-8") as f:
+        cfg = json.load(f)
+    waarde = cfg.get("MAX_CONTENT_LENGTH")
+    if waarde is None:
+        return                                    # app-default (2 GB) geldt
+    assert waarde >= flask_app.config["MAX_CONTENT_LENGTH"], (
+        f"de template zet {waarde} bytes en verlaagt daarmee stil de app-grens "
+        f"van {flask_app.config['MAX_CONTENT_LENGTH']}")
+
+
+def test_de_template_blijft_geldige_json():
+    """Een kapotte template laat `deploy.sh` een half-geconfigureerd bestand
+    achter; het script controleert alleen op placeholders, niet op syntaxis."""
+    import json
+
+    with open(TEMPLATE, encoding="utf-8") as f:
+        json.load(f)
