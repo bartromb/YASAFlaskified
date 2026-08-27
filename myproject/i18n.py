@@ -2002,6 +2002,23 @@ _PDF_AASM_V3 = {
         "fr": "Résumé automatisé (à titre indicatif — conclusion par le médecin)",
         "en": "Automated summary (informational — conclusion by the physician)",
         "de": "Automatische Zusammenfassung (informativ — Beurteilung durch den Arzt)"},
+    # Split-night: de samenvatting mag niet op het nachtgemiddelde rusten.
+    # Dat middelt de diagnostische uren met de titratie-uren, en noemde een
+    # patiënt met 83,5/u vóór CPAP "Mild OSAS (AHI 13,7/u)".
+    "pdf_concl_without_cpap": {"nl": "zonder CPAP", "fr": "sans CPAP",
+                               "en": "without CPAP", "de": "ohne CPAP"},
+    "pdf_concl_on_cpap": {
+        "nl": "Onder CPAP {ther}/u (split-night; het gemiddelde over de hele nacht telt beide delen samen).",
+        "fr": "Sous CPAP {ther}/u (nuit divisée ; la moyenne sur la nuit entière additionne les deux parties).",
+        "en": "On CPAP {ther}/u (split-night; the whole-night average combines both parts).",
+        "de": "Mit CPAP {ther}/u (Split-Night; der Gesamtdurchschnitt fasst beide Teile zusammen).",
+    },
+    "pdf_classbar_split": {
+        "nl": "split-night — zonder CPAP {diag}/u",
+        "fr": "nuit divisée — sans CPAP {diag}/u",
+        "en": "split-night — without CPAP {diag}/u",
+        "de": "Split-Night — ohne CPAP {diag}/u",
+    },
     "pdf_concl_none": {
         "nl": "Geen significante slaapapneu (AHI &lt; 5/u).",
         "fr": "Pas d'apnée du sommeil significative (IAH &lt; 5/h).",

@@ -225,3 +225,82 @@ def test_het_ernstfilter_volgt_het_getoonde_deel(split_env):
         html = c.get("/dashboard").data.decode()
     assert 'data-sev="severe"' in html, html[:0] or "data-sev volgt de hele nacht"
     assert 'data-sev="mild"' not in html
+
+
+# ── 5. De geautomatiseerde samenvatting ────────────────────────────────
+#
+# De kop, de studielijst en de grafieken waren gerepareerd; de samenvatting
+# onderaan las nog `ahi_total`. Op de aanleidende opname stond daar
+# "Mild OSAS (AHI 13,7/u)" terwijl de kop van hetzelfde rapport 83,5/u zonder
+# CPAP meldde. Eén rapport dat zichzelf tegenspreekt.
+
+def _pneumo(diag_ahi, ther_ahi=1.1, reliable=True):
+    return {"split_night": {
+        "detected": True, "breakpoint_s": 8100.0,
+        "segments": {
+            "diagnostic": {"ahi": diag_ahi, "ahi_incl_uncertain": diag_ahi,
+                           "reliable": reliable, "uncertain_fraction": 0.0,
+                           "sleep_h": 0.85},
+            "therapeutic": {"ahi": ther_ahi, "ahi_incl_uncertain": ther_ahi,
+                            "reliable": True, "uncertain_fraction": 0.0,
+                            "sleep_h": 4.68},
+        }}}
+
+
+def test_de_samenvatting_rust_op_het_diagnostische_deel():
+    from generate_pdf_report import _auto_conclusion
+
+    tekst = _auto_conclusion({"ahi_total": 13.7, "severity": "Mild"},
+                             _pneumo(83.5), {}, lang="en")
+    assert "83.5" in tekst, tekst
+    assert "13.7" not in tekst, "de samenvatting draagt nog het nachtgemiddelde"
+    assert "severe" in tekst.lower(), tekst
+    assert "without CPAP" in tekst and "1.1" in tekst, tekst
+
+
+def test_een_milde_nacht_met_een_zwaar_eerste_deel_heet_niet_normaal():
+    """De ondergrens (AHI < 5 -> 'geen significante slaapapneu') stond op het
+    nachtgemiddelde. Een nacht die daaronder uitkomt maar vóór CPAP zwaar is,
+    zou als normaal gerapporteerd zijn."""
+    from generate_pdf_report import _auto_conclusion
+
+    tekst = _auto_conclusion({"ahi_total": 4.2, "severity": "Normal"},
+                             _pneumo(60.0), {}, lang="en")
+    assert "60.0" in tekst, tekst
+    assert "no significant" not in tekst.lower(), tekst
+
+
+def test_een_onbetrouwbaar_segment_valt_terug_op_de_nacht():
+    """Onder een half uur slaap draagt een segment geen index. Dan is het
+    nachtgemiddelde het enige getal dat er is."""
+    from generate_pdf_report import _auto_conclusion
+
+    tekst = _auto_conclusion({"ahi_total": 13.7, "severity": "Mild"},
+                             _pneumo(83.5, reliable=False), {}, lang="en")
+    assert "13.7" in tekst and "83.5" not in tekst, tekst
+
+
+def test_een_gewone_nacht_verandert_niet():
+    from generate_pdf_report import _auto_conclusion
+
+    tekst = _auto_conclusion({"ahi_total": 22.0, "severity": "Moderate"},
+                             {}, {}, lang="en")
+    assert "22.0" in tekst and "CPAP" not in tekst, tekst
+
+
+def test_de_classificatiebalk_noemt_het_deel_zonder_cpap():
+    bron = _bron("generate_pdf_report.py")
+    i = bron.index("_split_note")
+    assert "pdf_classbar_split" in bron[i:i + 900]
+    j = bron.index("{_therapy_note}{_split_note}")
+    assert j > i, "de balk toont de split-notitie niet"
+
+
+def test_de_samenvatting_mengt_geen_twee_eenheden():
+    """Het rapport schrijft overal `/u`. Een zin met `/u` en `/h` door elkaar
+    leest als twee verschillende grootheden."""
+    from generate_pdf_report import _auto_conclusion
+
+    for taal in ("nl", "fr", "en", "de"):
+        tekst = _auto_conclusion({"ahi_total": 13.7}, _pneumo(83.5), {}, lang=taal)
+        assert "/h" not in tekst, f"{taal}: {tekst}"

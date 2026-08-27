@@ -901,9 +901,38 @@ def _auto_conclusion(rsum, pneumo, ss, lang="nl"):
         ahi = float(rsum.get("ahi_total", 0) or 0)
     except Exception:
         return None
-    if ahi < 5:
+
+    # ── Split-night: het nachtgemiddelde is hier de verkeerde grootheid ──
+    # Het telt de uren vóór de titratie samen met de uren eronder. Op de casus
+    # die dit aan het licht bracht stond er "Mild OSAS (AHI 13,7/u)" terwijl
+    # het diagnostische deel op 83,5/u lag -- de samenvatting sprak de kop van
+    # hetzelfde rapport tegen.
+    #
+    # De ondergrens hoort mee te verhuizen: een nacht die gemiddeld onder 5/u
+    # uitkomt maar vóór CPAP zwaar is, zou anders "geen significante
+    # slaapapneu" heten.
+    _ther = None
+    try:
+        _sn = (pneumo or {}).get("split_night") or {}
+        _seg = _sn.get("segments") or {}
+        _d, _th = _seg.get("diagnostic") or {}, _seg.get("therapeutic") or {}
+        if _sn.get("detected") and _d.get("reliable"):
+            def _kies(seg):
+                v = (seg.get("ahi_incl_uncertain")
+                     if (seg.get("uncertain_fraction") or 0) >= 0.20
+                     else seg.get("ahi"))
+                return float(v) if v is not None else None
+            _dv = _kies(_d)
+            if _dv is not None:
+                ahi, _ther = _dv, _kies(_th)
+    except (TypeError, ValueError):
+        _ther = None
+
+    if ahi < 5 and _ther is None:
         return t("pdf_concl_none", lang)
     sev = _sev_with_syndrome(ahi, rsum, lang)          # e.g. "Matig OSAS"
+    if _ther is not None:
+        sev = f"{sev} {t('pdf_concl_without_cpap', lang)}"
     quals = []
     ph = (rsum or {}).get("phenotypes") or {}
     if (ph.get("positional_osa") or {}).get("flag"):
@@ -921,6 +950,8 @@ def _auto_conclusion(rsum, pneumo, ss, lang="nl"):
     if quals:
         txt += ", " + ", ".join(quals)
     txt += ")."
+    if _ther is not None:
+        txt += " " + t("pdf_concl_on_cpap", lang).format(ther=f"{_ther:.1f}")
     return txt
 
 
@@ -2438,6 +2469,22 @@ def generate_pdf_report(results:dict, output_path:str,
         _ahi_lbl = "REI" if is_polygraphy else (f"{t('pdf_residual',lang)} AHI" if is_titration else "AHI")
         _oahi_lbl = "REI" if is_polygraphy else (f"{t('pdf_residual',lang)} OAHI" if is_titration else "OAHI")
         _therapy_note = f"  [{t('pdf_therapy',lang)}: {therapy_label}]" if is_titration else ""
+        # Split-night: het ernstlabel achter de nacht-AHI classificeert een
+        # gemiddelde van twee onvergelijkbare helften. Het getal blijft (AASM
+        # schrijft het voor), maar niet zonder te zeggen wat eronder ligt.
+        _split_note = ""
+        try:
+            _sn_b = (pneumo or {}).get("split_night") or {}
+            _d_b = (_sn_b.get("segments") or {}).get("diagnostic") or {}
+            if _sn_b.get("detected") and _d_b.get("reliable"):
+                _dv_b = (_d_b.get("ahi_incl_uncertain")
+                         if (_d_b.get("uncertain_fraction") or 0) >= 0.20
+                         else _d_b.get("ahi"))
+                if _dv_b is not None:
+                    _split_note = ("  [" + t("pdf_classbar_split", lang).format(
+                        diag=f"{float(_dv_b):.1f}") + "]")
+        except (TypeError, ValueError):
+            _split_note = ""
         cb    = rsum.get("confidence_bands") or {}
         thr   = rsum.get("oahi_thresholds")  or {}
         avg_c = rsum.get("avg_classification_confidence")
@@ -2449,7 +2496,7 @@ def generate_pdf_report(results:dict, output_path:str,
         _prof_lbl = _prof_labels.get(_active_prof, _active_prof)
         ab = Table([[Paragraph(
             f"{_ahi_lbl} = {ahi:.1f}/u  →  <b>{sev}</b>   |   "
-            f"{_oahi_lbl} = {oahi:.1f}/u  →  <b>{osev}</b>{_therapy_note}"
+            f"{_oahi_lbl} = {oahi:.1f}/u  →  <b>{osev}</b>{_therapy_note}{_split_note}"
             f"   |   Profile: {_prof_lbl}",
             ParagraphStyle("AB", fontName="Helvetica-Bold", fontSize=9,
                            textColor=W, leading=12))]],

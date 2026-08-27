@@ -1,3 +1,40 @@
+# v0.36.4 — 2026-08-27 — de samenvatting sprak de kop tegen
+
+Pin ongewijzigd (`psgscoring[ml]==0.30.0`); geen gescoorde waarde verandert.
+
+## Dezelfde fout, één laag dieper
+
+0.36.3 haalde het nachtgemiddelde uit de kop, de studielijst en de grafieken.
+De geautomatiseerde samenvatting onderaan bleef `ahi_total` lezen. Op de
+aanleidende opname stond daar **"Mild OSAS (AHI 13,7/u)"** terwijl de kop van
+hetzelfde rapport 83,5/u zonder CPAP meldde — één rapport dat zichzelf
+tegensprak, en de zin die een arts het snelst overneemt.
+
+De samenvatting rust nu op het diagnostische deel:
+*"Severe OSAS without CPAP (AHI 83,5/u, significant nocturnal hypoxemia). On
+CPAP 1,1/u (split-night; the whole-night average combines both parts)."*
+
+## De ondergrens moest mee
+
+`ahi < 5` gaf "geen significante slaapapneu" en keerde meteen terug — op het
+NACHTgemiddelde. Een split-night die gemiddeld onder 5/u uitkomt maar vóór CPAP
+zwaar is, werd zo als normaal gerapporteerd. Een test pint dat vast: met een
+diagnostisch deel van 60/u naast een nachtgemiddelde van 4,2/u mag daar niet
+"no significant sleep apnea" staan.
+
+## De classificatiebalk is gekwalificeerd
+
+`AHI = 13,7/u → Mild OSAS` classificeert een gemiddelde van twee
+onvergelijkbare helften. Het getal blijft — AASM schrijft het voor — maar er
+staat nu `[split-night — zonder CPAP 83,5/u]` achter.
+
+## Aangetroffen, niet gerepareerd
+
+Het rapport schrijft op **48 plaatsen** een hardgecodeerde `/u`, ook in Engelse,
+Franse en Duitse rapporten, en er is geen eenheidssleutel in `i18n`. Mijn nieuwe
+zinnen volgen die conventie zodat er niet twee eenheden in één zin staan. De
+rapportbrede reparatie is een eigen ingreep en is bewust niet hier meegenomen.
+
 # v0.36.3 — 2026-08-27 — split-night: het gemiddelde uit de kop, de grens op de grafiek
 
 Pin ongewijzigd (`psgscoring[ml]==0.30.0`); geen gescoorde waarde verandert.
