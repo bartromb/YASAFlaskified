@@ -29,7 +29,10 @@ Technical supplement: **[psgscoring Technical Reference](https://github.com/bart
 
 ## What it does
 
-Upload an anonymised EDF recording via browser → receive a complete PSG analysis within 5–10 minutes. No local Python, Docker, or GPU required.
+Upload an anonymised **EDF or BDF** recording via browser → receive a complete
+PSG analysis within 5–10 minutes. No local Python, Docker, or GPU required.
+BDF is read natively — 24-bit stays 24-bit, with no conversion step that would
+clip a DC-coupled amplifier's range.
 
 **Try it:** [slaapkliniek.be](https://slaapkliniek.be) — request a free account via the corresponding author.
 
@@ -42,12 +45,14 @@ Upload an anonymised EDF recording via browser → receive a complete PSG analys
 | 3 | Arousal detection | K-complex exclusion + CVR coupling |
 | 4 | PLM scoring | AASM rules + WASM criteria |
 | 5 | SpO₂ analysis | ODI 3%/4%, baseline (P90), T90 |
-| 6 | Signal quality | Per-channel grading (flat-line, clipping, disconnect) |
+| 6 | Signal quality | Per-channel grading (flat-line, clipping, disconnect), file-invariance tested |
 | 7 | Clinical reports | PDF, Excel, EDF+, FHIR R4 — NL/FR/EN/DE |
 
 ### Key features
 
-- **AHI confidence interval** — every study scored at three stringency levels, reported as a range
+- **AHI across profiles** — every study scored under several profiles, with the
+  matrix in the report, so a severity class that depends on the hypopnea rule is
+  visible rather than implied by a single number
 - **Graded evidence** — the AASM Rule 1A conjunction as a product of graded
   terms rather than a chain of yes/no cuts; on MESA (n=150, held out) that
   raises event agreement over the rule cascade without costing AHI accuracy
@@ -57,6 +62,14 @@ Upload an anonymised EDF recording via browser → receive a complete PSG analys
 - **Visual event review** — an administrator route (`/review/<job_id>`) that
   draws every scored respiratory event with its signals, its qualifying rule,
   and the neighbouring events that were *not* scored
+- **Split-night studies** — the transition to titration is detected from flow
+  amplitude and SpO₂ baseline together, and the diagnostic and therapeutic
+  halves are indexed separately. The headline is the half without therapy: a
+  single average over both hides exactly the diagnosis you are looking for
+- **BDF and DC-coupled amplifiers** — 24-bit BDF is read natively, and a
+  standing DC offset (which makes EEG look like a flat line no gain can fix) is
+  detected and removed with a high-pass before analysis, with a note in the
+  report
 - **Configurable scoring profiles** — strict / standard / sensitive
 - **Interactive EDF browser** — event overlay with epoch navigation
 - **Multi-site access control** — data isolation per clinical centre, enforced from a `job` table in the database on every job route ([details](MULTI_SITE_GUIDE.md#toegangsmodel-klinische-sites-binnen-één-stack))
@@ -97,13 +110,23 @@ generated `SECRET_KEY`, the job-registry backfill, and optionally a Let's
 Encrypt certificate:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/bartromb/YASAFlaskified/main/deploy.sh | sudo bash
+curl -sSL https://raw.githubusercontent.com/bartromb/YASAFlaskified/main/deploy.sh \
+  | sudo YASA_USER=yourname YASA_DOMAIN=yourdomain.com bash
 ```
 
+`YASA_USER` is **required** when piping: there is no tty to ask, and no
+`SUDO_USER` to infer from. `YASA_DOMAIN` is optional but triggers the Let's
+Encrypt certificate — without it you get an HTTP-only site.
+
 It is version-agnostic: it installs whatever `myproject/version.py` declares,
-so it does not need bumping per release. To purge an existing install and
-reinstall from scratch, use [`redeploy.sh`](redeploy.sh) — it generates a
-**new** admin password.
+so it does not need bumping per release.
+
+**Re-running it does not reset your configuration.** It keeps `.env` and
+`instance/config.json` — deliberately, since those hold your `SECRET_KEY` and
+admin password. If you need a genuinely clean install, use
+[`redeploy.sh`](redeploy.sh), which purges the application directory and
+generates a **new** admin password. It also rewrites the Nginx site file, so
+pass `YASA_DOMAIN` again or the TLS block that certbot added is lost.
 
 **Existing Docker host.** If you already run Docker and want to manage Nginx
 and TLS yourself:
@@ -143,12 +166,20 @@ print because we have an interest in you adopting the software:
 3. **Test it against your own scoring first.** Score a few dozen recordings
    your team has already read, and look at Bland-Altman and weighted κ — not a
    mean AHI. An average hides exactly the spread that matters.
-4. **The AHI is an estimate with an interval.** Each study gets a robustness
-   grade A/B/C. A C means the AHI depends heavily on where the threshold is
-   drawn — information about the recording, not a defect.
+4. **The AHI is an estimate, and the report shows how much it moves.** Each
+   study is scored under several profiles and the report carries the resulting
+   matrix, so you can see whether the severity class survives a different
+   hypopnea rule. On one split-night recording the diagnostic AHI ran from 83.5
+   to 127.1/h across two accepted rules — the clinical picture held, the number
+   did not. (An earlier A/B/C "robustness grade" was removed in v0.15.0: a
+   coloured letter reads as a quality verdict, and it assumed strict ≤ standard
+   ≤ sensitive, which measurement contradicted.)
 5. **Personal data stays your responsibility.** The hosted instance runs in the
-   EU (Hetzner, Germany), but upload only pseudonymised EDFs; use
-   [`anonymize_edf.py`](anonymize_edf.py). For identifiable data, self-host —
+   EU (Hetzner, Germany), but upload only pseudonymised recordings; use
+   [`anonymize_edf.py`](anonymize_edf.py), which handles BDF unchanged and
+   leaves the signal data byte-for-byte identical. Note that anonymising the
+   *filename* does not touch the header — the patient and recording identifiers
+   live inside the file. For identifiable data, self-host —
    your centre then remains the data controller.
 6. **No support SLA.** This is one clinical team, not a company. Issues are
    read and usually answered, with no guaranteed response time. To keep scored
