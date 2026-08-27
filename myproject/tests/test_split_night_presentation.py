@@ -292,8 +292,15 @@ def test_de_classificatiebalk_noemt_het_deel_zonder_cpap():
     bron = _bron("generate_pdf_report.py")
     i = bron.index("_split_note")
     assert "pdf_classbar_split" in bron[i:i + 900]
-    j = bron.index("{_therapy_note}{_split_note}")
-    assert j > i, "de balk toont de split-notitie niet"
+    # De notitie noemt een AHI (83,5), geen OAHI. Ze hoort dus achter het
+    # AHI-label; achter de OAHI leest ze als een obstructieve index.
+    bar = bron[bron.index("{_ahi_lbl} = {ahi:.1f}"):]
+    bar = bar[:bar.index("Profile:")]
+    i_ahi = bar.index("{sev}")
+    i_note = bar.index("{_split_note}")
+    i_oahi = bar.index("{_oahi_lbl}")
+    assert i_ahi < i_note < i_oahi, \
+        "de split-notitie hangt niet achter de AHI"
 
 
 def test_de_samenvatting_mengt_geen_twee_eenheden():
@@ -304,3 +311,33 @@ def test_de_samenvatting_mengt_geen_twee_eenheden():
     for taal in ("nl", "fr", "en", "de"):
         tekst = _auto_conclusion({"ahi_total": 13.7}, _pneumo(83.5), {}, lang=taal)
         assert "/h" not in tekst, f"{taal}: {tekst}"
+
+
+def test_de_criteriatabel_zegt_waarop_de_ernstkolom_rust():
+    """De tabel vergelijkt hypopneucriteria -- daarvoor zijn de nachtcijfers
+    juist. Maar de ernstkolom classificeert dan wel een gemiddelde van twee
+    onvergelijkbare helften, en dat hoort erbij te staan."""
+    bron = _bron("generate_pdf_report.py")
+    i_tab = bron.index('t("pdf_ahi_dual_hdr", lang), "AHI"')
+    i_note = bron.index("pdf_ahi_dual_split_note")
+    assert i_note > i_tab, "de voetnoot staat niet bij de tabel"
+    assert i_note - i_tab < 1200, "de voetnoot staat te ver van de tabel"
+
+
+def test_de_voetnoot_noemt_de_hele_nacht_en_het_deel_zonder_cpap():
+    from i18n import TRANSLATIONS
+
+    entry = TRANSLATIONS["pdf_ahi_dual_split_note"]
+    for taal in ("nl", "fr", "en", "de"):
+        tekst = entry[taal]
+        assert "{diag}" in tekst, taal
+        assert "/h" not in tekst, f"{taal} mengt eenheden: {tekst}"
+
+
+def test_geen_voetnoot_zonder_split_night():
+    """`_split_diag` blijft None op een gewone nacht, anders staat er een
+    waarschuwing onder elke tabel."""
+    bron = _bron("generate_pdf_report.py")
+    assert "_split_diag = None" in bron
+    i = bron.index("if _split_diag is not None:")
+    assert "pdf_ahi_dual_split_note" in bron[i:i + 500]

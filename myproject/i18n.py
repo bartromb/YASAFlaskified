@@ -2019,6 +2019,12 @@ _PDF_AASM_V3 = {
         "en": "split-night — without CPAP {diag}/u",
         "de": "Split-Night — ohne CPAP {diag}/u",
     },
+    "pdf_ahi_dual_split_note": {
+        "nl": "Deze AHI's gelden voor de HELE nacht en tellen de uren onder CPAP mee; de ernstkolom classificeert dus een gemiddelde van twee onvergelijkbare helften. Zonder CPAP: {diag}/u.",
+        "fr": "Ces IAH portent sur la nuit ENTIÈRE et incluent les heures sous CPAP ; la colonne sévérité classe donc une moyenne de deux moitiés non comparables. Sans CPAP : {diag}/u.",
+        "en": "These AHIs cover the WHOLE night and include the hours on CPAP, so the severity column classifies an average of two halves that are not comparable. Without CPAP: {diag}/u.",
+        "de": "Diese AHI-Werte gelten für die GANZE Nacht einschliesslich der Stunden unter CPAP; die Schweregrad-Spalte klassifiziert somit einen Mittelwert aus zwei nicht vergleichbaren Hälften. Ohne CPAP: {diag}/u.",
+    },
     "pdf_concl_none": {
         "nl": "Geen significante slaapapneu (AHI &lt; 5/u).",
         "fr": "Pas d'apnée du sommeil significative (IAH &lt; 5/h).",

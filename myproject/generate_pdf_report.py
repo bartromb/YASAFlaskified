@@ -2473,6 +2473,7 @@ def generate_pdf_report(results:dict, output_path:str,
         # gemiddelde van twee onvergelijkbare helften. Het getal blijft (AASM
         # schrijft het voor), maar niet zonder te zeggen wat eronder ligt.
         _split_note = ""
+        _split_diag = None
         try:
             _sn_b = (pneumo or {}).get("split_night") or {}
             _d_b = (_sn_b.get("segments") or {}).get("diagnostic") or {}
@@ -2481,8 +2482,9 @@ def generate_pdf_report(results:dict, output_path:str,
                          if (_d_b.get("uncertain_fraction") or 0) >= 0.20
                          else _d_b.get("ahi"))
                 if _dv_b is not None:
+                    _split_diag = float(_dv_b)
                     _split_note = ("  [" + t("pdf_classbar_split", lang).format(
-                        diag=f"{float(_dv_b):.1f}") + "]")
+                        diag=f"{_split_diag:.1f}") + "]")
         except (TypeError, ValueError):
             _split_note = ""
         cb    = rsum.get("confidence_bands") or {}
@@ -2495,8 +2497,8 @@ def generate_pdf_report(results:dict, output_path:str,
         _prof_labels = {"strict": "Strict", "standard": "Standard (AASM)", "sensitive": "Sensitive"}
         _prof_lbl = _prof_labels.get(_active_prof, _active_prof)
         ab = Table([[Paragraph(
-            f"{_ahi_lbl} = {ahi:.1f}/u  →  <b>{sev}</b>   |   "
-            f"{_oahi_lbl} = {oahi:.1f}/u  →  <b>{osev}</b>{_therapy_note}{_split_note}"
+            f"{_ahi_lbl} = {ahi:.1f}/u  →  <b>{sev}</b>{_split_note}   |   "
+            f"{_oahi_lbl} = {oahi:.1f}/u  →  <b>{osev}</b>{_therapy_note}"
             f"   |   Profile: {_prof_lbl}",
             ParagraphStyle("AB", fontName="Helvetica-Bold", fontSize=9,
                            textColor=W, leading=12))]],
@@ -2524,6 +2526,16 @@ def generate_pdf_report(results:dict, output_path:str,
             story.append(KeepTogether([_tbl(
                 [t("pdf_ahi_dual_hdr", lang), "AHI", t("pdf_severity", lang)],
                 _dual_rows, [8, 3, 3])]))
+            # Op een split-night classificeert de ernstkolom het
+            # nachtgemiddelde. De tabel zelf blijft -- ze vergelijkt
+            # hypopneucriteria, en daarvoor zijn de nachtcijfers de juiste --
+            # maar niet zonder te zeggen waarop ze rust.
+            if _split_diag is not None:
+                story.append(Paragraph(
+                    f"<i>{t('pdf_ahi_dual_split_note', lang).format(diag=f'{_split_diag:.1f}')}</i>",
+                    ParagraphStyle("DualSplit", fontName="Helvetica", fontSize=7,
+                                   textColor=colors.HexColor("#8e44ad"), leading=9,
+                                   spaceAfter=2)))
             sp(0.05)
 
         # ── v0.15.0 (B3): AASM AHI severity reference scale ──────────────────

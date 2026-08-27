@@ -1,3 +1,29 @@
+# v0.36.5 — 2026-08-27 — de split-notitie stond bij de verkeerde index
+
+Pin ongewijzigd (`psgscoring[ml]==0.30.0`); geen gescoorde waarde verandert.
+
+## De notitie hing achter de OAHI
+
+0.36.4 zette `[split-night — zonder CPAP 83,5/u]` in de classificatiebalk, maar
+achter de OAHI in plaats van achter de AHI:
+
+    AHI = 13,7/u -> Mild OSAS | OAHI = 7,8/u -> Mild OSA [split-night — zonder CPAP 83,5/u]
+
+83,5 is een AHI. Zo gelezen is het een obstructieve index, en dat is een ander
+getal. De notitie staat nu achter het AHI-label. Een test pint de volgorde vast
+in plaats van alleen te controleren dat de notitie ergens staat.
+
+## De criteriatabel classificeerde nog het nachtgemiddelde
+
+`AHI volgens hypopneu-criterium` toont per regel een AHI met een ernstkolom
+ernaast. Op een split-night stond daar tweemaal "Mild OSAS" op het
+nachtgemiddelde — de derde plek waar hetzelfde gemiddelde als ernstklasse werd
+gepresenteerd.
+
+De tabel blijft zoals ze is: ze vergelijkt hypopneucriteria, en daarvoor zijn de
+nachtcijfers de juiste. Er staat nu een voetnoot onder die zegt dat deze AHI's
+de uren onder CPAP meetellen, met de waarde zonder CPAP erbij.
+
 # v0.36.4 — 2026-08-27 — de samenvatting sprak de kop tegen
 
 Pin ongewijzigd (`psgscoring[ml]==0.30.0`); geen gescoorde waarde verandert.
