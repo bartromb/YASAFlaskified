@@ -1,3 +1,60 @@
+# v0.37.0 — 2026-08-30 — arousalscoring volgt de AASM-regel van 10 s
+
+Pin naar **`psgscoring[ml]==0.31.1`** (was 0.30.0). Deze release verandert een
+getal dat in het rapport staat: **de arousal-index daalt**, en RERA en RDI
+bewegen mee omdat ze dezelfde arousallijst lezen. Geen enkele uitvoersleutel
+verdwijnt of komt erbij; 639 tests tegen de gepinde versie.
+
+## Wat er in de scoring verandert
+
+`psgscoring` 0.31.0 zette de AASM-regel aan dat een arousal wordt voorafgegaan
+door ten minste 10 s stabiele slaap. De detector toetste daarvan alleen de
+hypnogramkant — een epoch waarin net een arousal zat heet nog steeds N2 — en
+zag een voorgaande arousal dus nooit. Twee bursts van 4 s uit elkaar leverden
+twee arousals waar er één hoort te staan. In multi-derivatie telde het dubbel,
+want de union fuseert alleen bij overlap.
+
+Samen daarmee schoof het werkpunt van de classifier van 0,80 naar 0,70; die
+twee horen bij elkaar, want de regel haalt ~15 % van de events weg en het
+optimum schuift mee.
+
+Gemeten event-F1 tegen menselijke scoorders (PSG-IPA n=5 / MESA n=30):
+
+| | PSG-IPA | MESA |
+|---|---|---|
+| oud (0,80, regel uit) | 0,5144 | 0,4101 |
+| nieuw (0,70, regel aan) | **0,5559** | 0,4171 |
+
+Op PSG-IPA — twaalf scoorders per opname — wint de regel op 15 van de 15 paren,
+en bij een gelijke eventtelling levert het nieuwe werkpunt +0,042 F1. Op MESA
+repliceert de regel bij gelijke drempel (p = 0,024 en p = 0,008), maar daar was
+0,80 het betere werkpunt geweest. De keuze is gemaakt op het multi-scoorder-
+cohort en is een klinisch besluit, geen statistische conclusie. Volledig
+verslag: `docs/arousal_10s_regel_20260830.md` in de psgscoring-werkmap.
+
+## Wat er in de tekst van het rapport verandert
+
+Het hypopnee-criterium beloofde "(≥3% desaturation **OR arousal**)" op elk
+profiel dat die regel toestaat — ook waar de arousal-tak helemaal niet draait.
+`aasm_v3_rec` zegt nu wat het werkelijk doet:
+
+    1A (RECOMMENDED): ≥30% flow reduction ≥10 s + ≥3% desaturation
+    (arousal limb permitted by the rule but not enabled in this profile)
+
+`aasm_v3_breath` past de tak wél toe en toont het volledige criterium. Dat
+verschil tussen beide profielen was tot nu toe nergens af te lezen.
+
+## Voor wie een oude opname opnieuw opent
+
+Een opname die vóór deze release gescoord is en nu opnieuw geanalyseerd wordt,
+toont een **lagere arousal-index** dan het rapport dat al verstuurd is. Dat is
+geen fout en geen regressie: het oude getal telde arousals dubbel die de AASM
+als één ziet. De AHI verandert niet — de arousal-tak van Rule 1A staat op
+`aasm_v3_rec` uit, dus arousals kwalificeren daar geen hypopneeën.
+
+`PSGSCORING_VERSION` wordt uit het geïnstalleerde pakket gelezen, dus de
+herkomstregel in het rapport noemt vanzelf 0.31.1.
+
 # v0.36.8 — 2026-08-27 — de config-template verlaagde de grens die 0.36.7 verhoogde
 
 Pin ongewijzigd (`psgscoring[ml]==0.30.0`). Raakt `config.json.example` en de
