@@ -1,3 +1,43 @@
+# v0.37.3 — 2026-08-31 — subtypering: obstructief blijft obstructief bij Cheyne-Stokes
+
+Pin naar **`psgscoring[ml]==0.31.3`** (was 0.31.2). **Dit verandert een
+gerapporteerd getal.** De AHI blijft gelijk; de **OAHI stijgt** op opnames met
+Cheyne-Stokes, en de verdeling obstructief/centraal in sectie 8 verschuift.
+
+## Wat er veranderde
+
+Tot nu toe maakte psgscoring van elke obstructieve of gemengde apneu binnen een
+Cheyne-Stokes-cyclus een *centrale* apneu. Bij CSR zakt de ademinspanning
+periodiek weg, dus een obstructief event in het dal ziet er effortarm uit — en
+de regel las dat als "centraal".
+
+Gemeten op MESA (52 opnames, 841 gematchte apneus op de 38 CSR-nachten):
+
+| | regel aan | regel uit |
+|---|---:|---:|
+| Cohen κ | 0,090 | **0,185** |
+| recall obstructief | 0,680 | **0,901** |
+| recall centraal | **0,466** | 0,276 |
+
+De fout obstructief → centraal zakt van 232 naar 72 van de 725. De prijs staat
+erbij: er worden ook minder échte centrale events herkend.
+
+## Wat een lezer merkt
+
+* **De OAHI kan hoger uitvallen** bij patiënten met Cheyne-Stokes. Op één
+  testopname ging hij van 0,0 naar 6,3/u, omdat het enige obstructieve event
+  daar was weggeherclassificeerd.
+* **De verdeling in sectie 8 verschuift** van centraal naar obstructief.
+* De **AHI verandert niet** — die telt alle apneutypes.
+* Bij een heranalyse van een oudere opname is dit zichtbaar. Een patiënt die
+  eerder als overwegend centraal getypeerd werd, kan nu overwegend obstructief
+  lezen.
+
+De profielen `mesa_shhs` en `chicago_1999` houden het oude gedrag: zij
+reproduceren gepubliceerde resultaten.
+
+646 tests tegen de gepinde versie.
+
 # v0.37.2 — 2026-08-31 — CSR-herclassificatie draagt geen kunstmatig vertrouwen meer
 
 Pin naar **`psgscoring[ml]==0.31.2`** (was 0.31.1). Geen index verandert: AHI,
