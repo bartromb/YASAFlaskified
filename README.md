@@ -78,7 +78,7 @@ clip a DC-coupled amplifier's range.
 ## Validation
 
 - **PSG-IPA** (PhysioNet): 5 recordings, 59 scorer sessions — bias +1.69/h, MAE 1.76/h, r = 0.997, weighted κ = 0.839, severity concordance 4/5
-- **MESA** (NSRR, n=150, held out): bias −5.30/h, MAE 10.12/h on the default profile; breath-graded scoring raises event F1 by +0.029 (p = 7·10⁻⁸). Full table in the [psgscoring README](https://github.com/bartromb/psgscoring#validation)
+- **MESA** (NSRR, n=150, held out): bias **−1.4/h** against a like-for-like reference, MAE 9.0/h on the default profile; breath-graded scoring raises event F1 by +0.029 (p = 7·10⁻⁸). The often-quoted −5.3/h is measured against a reference that credits hypopneas qualifying only through an arousal — a limb this profile does not apply — so about three quarters of it is a rule we do not run rather than events we miss. Both figures and the caveats are in the [psgscoring README](https://github.com/bartromb/psgscoring#validation)
 - **AZORG** (approved, EC 2026-07-23): n≥50, Bland-Altman, weighted κ — protocol AZORG-YASA-2026-001
 
 Five recordings and one external cohort is enough to expose defects, not
