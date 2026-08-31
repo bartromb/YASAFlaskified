@@ -1,3 +1,48 @@
+# v0.37.1 — 2026-08-31 — sectie 8 classificeerde het nachtgemiddelde bij split-night
+
+Pin ongewijzigd (`psgscoring[ml]==0.31.1`). Alleen de rapporttekst; geen event
+verandert, geen index wordt anders berekend.
+
+## De classificatiebalk van sectie 8 was overgeslagen
+
+Bij een split-night opende sectie 8 met het NACHTGEMIDDELDE als primair getal,
+inclusief ernstwoord en balkkleur. Bij een korte diagnostische periode gevolgd
+door vele uren onder therapie trekt dat gemiddelde naar de therapiewaarde: de
+balk toonde dan een milde ernst, in de bijbehorende kleur, terwijl het deel
+zonder therapie ernstig was. De criteriatabel eronder herhaalde het ernstwoord
+tweemaal.
+
+De kop, de historielijst, de nachtgrafieken en de automatische conclusie waren
+hier in 0.36.x al voor gerepareerd. Deze balk niet — hij kreeg destijds een
+notitie tussen haakjes achter het nachtcijfer, en dat liet precies het probleem
+staan: het primaire getal en de kleur bleven het gemiddelde.
+
+De balk leidt nu met de diagnostische helft:
+
+    AHI zonder CPAP = 83,5/u  →  Ernstig OSAS   |   hele nacht: AHI 13,7/u · OAHI 7,8/u
+
+De **kleur volgt mee**. Dat is geen detail: een gele balk boven een ernstige
+patiënt is het eerste dat iemand ziet. De nachtcijfers blijven staan als
+context — weglaten zou een tweede fout zijn, de AASM schrijft ze voor — maar
+zonder ernstwoord. In de criteriatabel staat in de ernstkolom een streepje met
+de bestaande toelichting eronder: een ernstwoord tonen met daaronder de
+mededeling dat het een gemiddelde van twee onvergelijkbare helften
+classificeert, is slechter dan het niet tonen.
+
+## Twee dingen opgeruimd
+
+De oude notitie (`pdf_classbar_split`) is **dood** geworden: ze vulde alleen
+wanneer de diagnostische waarde bestaat, en juist dan neemt de balk nu de
+andere tak. Verwijderd.
+
+De balktekst staat nu in `_classbar()` in plaats van in de renderfunctie.
+Daarbinnen was ze alleen te toetsen door een hele PDF te bouwen en vervolgens
+reportlab-opmaak te controleren in plaats van klinische logica. Een test pint
+nu dat label én kleur dezelfde grootheid volgen — dat ze los berekend werden,
+is hoe ze uiteen konden lopen.
+
+646 tests.
+
 # v0.37.0 — 2026-08-30 — arousalscoring volgt de AASM-regel van 10 s
 
 Pin naar **`psgscoring[ml]==0.31.1`** (was 0.30.0). Deze release verandert een

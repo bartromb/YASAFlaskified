@@ -289,18 +289,23 @@ def test_een_gewone_nacht_verandert_niet():
 
 
 def test_de_classificatiebalk_noemt_het_deel_zonder_cpap():
-    bron = _bron("generate_pdf_report.py")
-    i = bron.index("_split_note")
-    assert "pdf_classbar_split" in bron[i:i + 900]
-    # De notitie noemt een AHI (83,5), geen OAHI. Ze hoort dus achter het
-    # AHI-label; achter de OAHI leest ze als een obstructieve index.
-    bar = bron[bron.index("{_ahi_lbl} = {ahi:.1f}"):]
-    bar = bar[:bar.index("Profile:")]
-    i_ahi = bar.index("{sev}")
-    i_note = bar.index("{_split_note}")
-    i_oahi = bar.index("{_oahi_lbl}")
-    assert i_ahi < i_note < i_oahi, \
-        "de split-notitie hangt niet achter de AHI"
+    """VERVANGEN op 30-08-2026, en het waarom hoort erbij.
+
+    Deze test pinde de POSITIE van een notitie tussen haakjes achter de
+    nacht-AHI. Die opzet was zelf het probleem: het primaire getal en de
+    ernstkleur bleven het nachtgemiddelde, dat bij een korte diagnostische
+    periode naar de therapiewaarde trekt. De balk toonde dan een milde ernst
+    terwijl het deel zonder therapie ernstig was.
+
+    De balk LEIDT nu met de diagnostische helft en de notitie is weg -- ze
+    vulde alleen wanneer `_split_diag` gezet is, en juist dan neemt de balk de
+    andere tak. Het gedrag wordt getoetst in sectie 6 hieronder, op
+    `_classbar()` zelf in plaats van op de broncode.
+    """
+    from generate_pdf_report import _classbar
+    txt, _sev, _k = _classbar(split_diag=83.5, **_BAR)
+    assert "without CPAP" in txt and txt.index("83.5") < txt.index("13.7"), (
+        "de diagnostische helft staat niet vooraan")
 
 
 def test_de_samenvatting_gebruikt_een_eenheid_per_taal():
@@ -343,3 +348,81 @@ def test_geen_voetnoot_zonder_split_night():
     assert "_split_diag = None" in bron
     i = bron.index("if _split_diag is not None:")
     assert "pdf_ahi_dual_split_note" in bron[i:i + 500]
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  6. Sectie 8 — de classificatiebalk (gemeld 30-08-2026)
+# ══════════════════════════════════════════════════════════════════════
+#
+# Een echt rapport opende sectie 8 met "AHI = 13,7/u -> Mild OSAS" bij een
+# patient die zonder CPAP op 83,5/u zat, in een balk met de kleur die bij 13,7
+# hoort. De kop, de historielijst, de nachtgrafieken en de automatische
+# conclusie waren hier al voor gerepareerd; deze balk was overgeslagen.
+#
+# Dit toetst het GEDRAG, niet de broncode: `_classbar` staat daarom los van de
+# renderfunctie. Binnen die functie zou een test een hele PDF moeten bouwen en
+# vervolgens reportlab-opmaak toetsen in plaats van klinische logica.
+
+_BAR = dict(ahi=13.7, oahi=7.8, rsum={}, lang="en", unit="/h",
+            ahi_lbl="AHI", oahi_lbl="OAHI", therapy_note="",
+            prof_lbl="aasm_v3_rec")
+
+
+def test_zonder_split_night_blijft_de_balk_ongewijzigd():
+    from generate_pdf_report import _classbar
+    txt, sev, kleurwaarde = _classbar(split_diag=None, **_BAR)
+    assert txt.startswith("AHI = 13.7/h")
+    assert "OAHI = 7.8/h" in txt
+    assert kleurwaarde == 13.7
+    assert "without CPAP" not in txt
+
+
+def test_met_split_night_leidt_de_diagnostische_helft():
+    from generate_pdf_report import _classbar
+    txt, sev, _k = _classbar(split_diag=83.5, **_BAR)
+    assert txt.startswith("AHI without CPAP = 83.5/h"), txt
+    assert "Severe" in sev, (
+        f"de ernst hoort van de diagnostische helft te komen, kreeg {sev!r}")
+
+
+def test_de_balkKLEUR_volgt_de_diagnostische_helft():
+    """Een gele balk boven een ernstige patient is het eerste dat iemand ziet."""
+    from generate_pdf_report import _classbar, _sev_clr
+    _t, _s, kleurwaarde = _classbar(split_diag=83.5, **_BAR)
+    assert kleurwaarde == 83.5, (
+        "de kleur volgt nog de nacht-AHI; label en kleur lopen dan uiteen")
+    assert _sev_clr(83.5) != _sev_clr(13.7), "fixture onderscheidt de kleuren niet"
+
+
+def test_de_nachtcijfers_blijven_zichtbaar_als_context():
+    """Weglaten zou een tweede fout zijn: de AASM schrijft de nacht-AHI voor."""
+    from generate_pdf_report import _classbar
+    txt, _s, _k = _classbar(split_diag=83.5, **_BAR)
+    assert "13.7" in txt and "7.8" in txt
+    assert "whole night" in txt
+
+
+def test_geen_tweede_ernstwoord_naast_het_eerste():
+    """Twee ernstlabels naast elkaar -- een ernstige AHI en een milde OAHI --
+    is precies de verwarring die de melding uitlokte."""
+    from generate_pdf_report import _classbar
+    txt, _s, _k = _classbar(split_diag=83.5, **_BAR)
+    assert txt.count("<b>") == 1, f"meer dan één ernstlabel in de balk: {txt}"
+
+
+def test_de_nieuwe_contextsleutel_bestaat_in_vier_talen():
+    from i18n import TRANSLATIONS
+    v = TRANSLATIONS["pdf_classbar_wholenight"]
+    for taal in ("nl", "fr", "en", "de"):
+        assert taal in v and "{ahi}" in v[taal] and "{oahi}" in v[taal], taal
+
+
+def test_de_criteriatabel_toont_geen_ernst_op_een_nachtgemiddelde():
+    """Bron-inspectie: `_dual_sev` is een closure in de renderfunctie.
+
+    Een ernstwoord tonen met eronder de mededeling dat het een gemiddelde van
+    twee onvergelijkbare helften classificeert, is slechter dan het niet tonen.
+    """
+    src = _bron("generate_pdf_report.py")
+    assert "def _dual_sev(v):" in src
+    assert 'return "—" if _split_diag is not None else _sev_with_syndrome' in src

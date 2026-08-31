@@ -185,6 +185,43 @@ def _apnea_syndrome(rsum, lang="nl"):
         return {"nl":"OSAS","fr":"SAOS","en":"OSAS","de":"OSAS"}.get(lang, "OSAS")
     return {"nl":"gemengde SAS","fr":"SAS mixte","en":"mixed SAS","de":"gemischte SAS"}.get(lang, "mixed SAS")
 
+def _classbar(*, ahi, oahi, split_diag, rsum, lang, unit,
+              ahi_lbl, oahi_lbl, therapy_note, prof_lbl):
+    """De tekst van de classificatiebalk in sectie 8, en waarop hij kleurt.
+
+    Staat LOS van de renderfunctie omdat hij daarbinnen alleen te toetsen is
+    door een volledige PDF te bouwen -- en dan toetst de test de reportlab-
+    opmaak in plaats van de klinische logica.
+
+    Op een split-night LEIDT de balk met de diagnostische helft. Andersom --
+    zoals het tot 30-08-2026 stond -- classificeert sectie 8 het
+    NACHTGEMIDDELDE. Bij een korte diagnostische periode gevolgd door vele uren
+    onder therapie trekt dat gemiddelde naar de therapiewaarde: de balk toont
+    dan een milde ernst, in de bijbehorende kleur, terwijl het deel zonder
+    therapie ernstig is. De kop, de historielijst, de nachtgrafieken en de
+    automatische conclusie waren hier al voor gerepareerd; deze balk was
+    overgeslagen.
+
+    Returns ``(tekst, ernstlabel, waarde_voor_de_kleur)``. Die derde is er
+    omdat de kleur dezelfde grootheid moet volgen als het label; ze los
+    berekenen is precies hoe ze uiteen gingen lopen.
+    """
+    if split_diag is not None:
+        sev = _sev_with_syndrome(split_diag, rsum, lang)
+        txt = (f"{t('pdf_kpi_ahi_no_cpap', lang)} = {split_diag:.1f}{unit}  →  "
+               f"<b>{sev}</b>   |   "
+               + t("pdf_classbar_wholenight", lang).format(
+                   ahi=f"{ahi:.1f}", oahi=f"{oahi:.1f}")
+               + f"   |   Profile: {prof_lbl}")
+        return txt, sev, split_diag
+    sev = _sev_with_syndrome(ahi, rsum, lang)
+    osev = _sev(oahi, lang)
+    txt = (f"{ahi_lbl} = {ahi:.1f}{unit}  →  <b>{sev}</b>   |   "
+           f"{oahi_lbl} = {oahi:.1f}{unit}  →  <b>{osev}</b>{therapy_note}"
+           f"   |   Profile: {prof_lbl}")
+    return txt, sev, ahi
+
+
 def _sev_with_syndrome(ahi, rsum, lang="nl"):
     """
     Severity-label gecombineerd met dynamisch syndroom-type.
@@ -2478,7 +2515,6 @@ def generate_pdf_report(results:dict, output_path:str,
         # Split-night: het ernstlabel achter de nacht-AHI classificeert een
         # gemiddelde van twee onvergelijkbare helften. Het getal blijft (AASM
         # schrijft het voor), maar niet zonder te zeggen wat eronder ligt.
-        _split_note = ""
         _split_diag = None
         try:
             _sn_b = (pneumo or {}).get("split_night") or {}
@@ -2489,10 +2525,8 @@ def generate_pdf_report(results:dict, output_path:str,
                          else _d_b.get("ahi"))
                 if _dv_b is not None:
                     _split_diag = float(_dv_b)
-                    _split_note = ("  [" + t("pdf_classbar_split", lang).format(
-                        diag=f"{_split_diag:.1f}") + "]")
         except (TypeError, ValueError):
-            _split_note = ""
+            _split_diag = None
         cb    = rsum.get("confidence_bands") or {}
         thr   = rsum.get("oahi_thresholds")  or {}
         avg_c = rsum.get("avg_classification_confidence")
@@ -2502,10 +2536,14 @@ def generate_pdf_report(results:dict, output_path:str,
         _active_prof = pneumo.get("meta", {}).get("scoring_profile", "standard")
         _prof_labels = {"strict": "Strict", "standard": "Standard (AASM)", "sensitive": "Sensitive"}
         _prof_lbl = _prof_labels.get(_active_prof, _active_prof)
+        _bar_txt, sev, _clr_val = _classbar(
+            ahi=ahi, oahi=oahi, split_diag=_split_diag, rsum=rsum, lang=lang,
+            unit=_UH, ahi_lbl=_ahi_lbl, oahi_lbl=_oahi_lbl,
+            therapy_note=_therapy_note,
+            prof_lbl=_prof_lbl)
+        clr = _sev_clr(_clr_val)
         ab = Table([[Paragraph(
-            f"{_ahi_lbl} = {ahi:.1f}{_UH}  →  <b>{sev}</b>{_split_note}   |   "
-            f"{_oahi_lbl} = {oahi:.1f}{_UH}  →  <b>{osev}</b>{_therapy_note}"
-            f"   |   Profile: {_prof_lbl}",
+            _bar_txt,
             ParagraphStyle("AB", fontName="Helvetica-Bold", fontSize=9,
                            textColor=W, leading=12))]],
             colWidths=[CW])
@@ -2521,13 +2559,20 @@ def generate_pdf_report(results:dict, output_path:str,
         _dual = rsum.get("ahi_dual") or {}
         if _dual.get("rule_1a") and _dual.get("rule_1b_4pct"):
             _1a = _dual["rule_1a"]; _1b = _dual["rule_1b_4pct"]
+            # Op een split-night classificeert deze kolom een gemiddelde van
+            # twee onvergelijkbare helften. Een ernstwoord tonen met eronder
+            # de mededeling dat het niets betekent, is slechter dan het niet
+            # tonen. De AHI's zelf blijven: de tabel vergelijkt
+            # hypopneucriteria, en daarvoor zijn de nachtcijfers de juiste.
+            def _dual_sev(v):
+                return "—" if _split_diag is not None else _sev_with_syndrome(v, rsum, lang)
             _dual_rows = [
                 [t("pdf_ahi_rule1a", lang),
                  f"{_1a.get('ahi')} {_UH}",
-                 _sev_with_syndrome(_1a.get("ahi"), rsum, lang)],
+                 _dual_sev(_1a.get("ahi"))],
                 [t("pdf_ahi_rule1b", lang),
                  f"{_1b.get('ahi')} {_UH}",
-                 _sev_with_syndrome(_1b.get("ahi"), rsum, lang)],
+                 _dual_sev(_1b.get("ahi"))],
             ]
             story.append(KeepTogether([_tbl(
                 [t("pdf_ahi_dual_hdr", lang), "AHI", t("pdf_severity", lang)],

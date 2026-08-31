@@ -2024,6 +2024,15 @@ _PDF_AASM_V3 = {
         "en": "split-night — without CPAP {diag}/h",
         "de": "Split-Night — ohne CPAP {diag}/h",
     },
+    # Split-night: de balk LEIDT met de diagnostische helft en degradeert de
+    # nachtcijfers naar context. Andersom stond er "Mild OSAS" boven een
+    # patient met 83,5/u in het diagnostische deel.
+    "pdf_classbar_wholenight": {
+        "nl": "hele nacht: AHI {ahi}/u · OAHI {oahi}/u",
+        "fr": "nuit entière : IAH {ahi}/h · IAHO {oahi}/h",
+        "en": "whole night: AHI {ahi}/h · OAHI {oahi}/h",
+        "de": "ganze Nacht: AHI {ahi}/h · OAHI {oahi}/h",
+    },
     "pdf_ahi_dual_split_note": {
         "nl": "Deze AHI's gelden voor de HELE nacht en tellen de uren onder CPAP mee; de ernstkolom classificeert dus een gemiddelde van twee onvergelijkbare helften. Zonder CPAP: {diag}/u.",
         "fr": "Ces IAH portent sur la nuit ENTIÈRE et incluent les heures sous CPAP ; la colonne sévérité classe donc une moyenne de deux moitiés non comparables. Sans CPAP : {diag}/h.",
