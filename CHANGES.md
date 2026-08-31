@@ -1,3 +1,35 @@
+# v0.37.2 — 2026-08-31 — CSR-herclassificatie draagt geen kunstmatig vertrouwen meer
+
+Pin naar **`psgscoring[ml]==0.31.2`** (was 0.31.1). Geen index verandert: AHI,
+OAHI, RDI en de arousal-index blijven gelijk. Wat verandert is de
+**sterrenkolom** bij events die door de Cheyne-Stokes-regel als centraal zijn
+geherclassificeerd, en er kan een nieuwe waarschuwing bij komen.
+
+## Waarom
+
+Een uitgeleverd rapport toonde "centraal 29 (40 %)" op twee sterren bij een
+split-night met 83,5/u zonder CPAP en 1,1/u ermee. Die 29 events waren niet als
+centraal gedetecteerd maar geherclassificeerd, en de regel die dat doet zette
+hun confidence op 0,80 — precies de band die twee sterren geeft. Die stap is op
+MESA gemeten en haalt κ 0,091 op CSR-nachten. Een respons die zo volledig is op
+CPAP wijst juist op obstructieve events.
+
+Events houden nu hun eigen confidence. In dezelfde situatie meldt psgscoring
+voortaan de tegenspraak tussen de therapierespons en de subtypering.
+
+## Wat een lezer merkt
+
+* Bij CSR-opnames staan geherclassificeerde centrale events **lager in de
+  sterrenkolom** dan voorheen. Dat is geen verslechtering: het oude getal kwam
+  uit de regel zelf, niet uit een meting.
+* Bij een split-night waar de therapie aanslaat én de meerderheid van de
+  centrale events uit herclassificatie komt, verschijnt een expliciete
+  waarschuwing om de subtypering te controleren vóór een uitspraak over
+  centrale slaapapneu.
+* De AHI en elke afgeleide index zijn onveranderd.
+
+646 tests tegen de gepinde versie.
+
 # v0.37.1 — 2026-08-31 — sectie 8 classificeerde het nachtgemiddelde bij split-night
 
 Pin ongewijzigd (`psgscoring[ml]==0.31.1`). Alleen de rapporttekst; geen event
