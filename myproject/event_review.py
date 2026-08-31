@@ -21,13 +21,12 @@ rapport:
 """
 
 import base64
-import glob
-
-from signal_io import source_candidates
 import json
 import logging
 import os
 from datetime import datetime, timezone
+
+from signal_io import source_candidates
 
 logger = logging.getLogger(__name__)
 

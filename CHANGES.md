@@ -36,7 +36,36 @@ erbij: er worden ook minder échte centrale events herkend.
 De profielen `mesa_shhs` en `chicago_1999` houden het oude gedrag: zij
 reproduceren gepubliceerde resultaten.
 
-646 tests tegen de gepinde versie.
+## Ook in deze release: de topografiewaarschuwing ging nooit af
+
+`run_analysis_job` riep de EEG-topografiecheck aan met een variabelenaam die
+daar niet bestaat (`results` in plaats van `yasa_results`). De `NameError` viel
+in een `except Exception` die op debug-niveau logde, dus de melding verdween
+zonder spoor: geen rapport, geen zichtbare log, geen mislukte job. De check is
+**sinds zijn invoering geen enkele keer afgegaan**.
+
+Wat hij had moeten vlaggen, is de omgekeerde montage van de Thaise opname van
+26-08-2026: trage golven occipitaal (O1/O2 elk 276) tegen frontaal (F3 3), en
+spindels frontaal (F4 804 / F3 521) tegen centraal (C3 14 / C4 36). Dat patroon
+is geen fysiologie maar een montagefout -- verwisselde labels of een andere
+referentie -- en de staging draaide er wel op.
+
+Vanaf nu verschijnt bij zo'n opname `EEG-topografie atypisch` in het
+aandachtsblok van het rapport. Het blijft een vlag: welke twee kanalen
+verwisseld zijn, valt van buitenaf niet vast te stellen, en een gok zou de fout
+verplaatsen in plaats van hem te tonen.
+
+Het except-blok logt nu op `warning` met het fouttype erbij, zodat de volgende
+fout op deze plek niet opnieuw onzichtbaar blijft.
+
+Meegenomen: de ruff-poort stond sinds ten minste 26-08-2026 rood en meldde deze
+`F821` bij elke push, plus tien dode imports. Hij is weer groen. En een
+testbestand importeerde `myproject.yasa_analysis` terwijl `pythonpath =
+["myproject"]` de kale naam levert: dat faalde alleen onder `pytest`, niet
+onder `python -m pytest`, dat de werkmap zelf op het pad zet -- vijf tests die
+lokaal groen leken en in CI rood stonden.
+
+652 tests tegen de gepinde versie, ruff en mypy groen.
 
 # v0.37.2 — 2026-08-31 — CSR-herclassificatie draagt geen kunstmatig vertrouwen meer
 

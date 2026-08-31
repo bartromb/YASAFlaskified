@@ -43,8 +43,7 @@ from reportlab.platypus import (
     Table,
     TableStyle,
 )
-
-from signal_io import read_raw_signal, source_candidates
+from signal_io import read_raw_signal
 
 # ── Pagina ─────────────────────────────────────────────────────
 W_A4, H_A4 = A4

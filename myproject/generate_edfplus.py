@@ -28,7 +28,7 @@ import logging
 import os
 
 import numpy as np
-from signal_io import read_raw_signal, source_candidates
+from signal_io import read_raw_signal
 
 logger = logging.getLogger("yasaflaskified.edfplus")
 

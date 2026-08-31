@@ -55,7 +55,6 @@ from datetime import datetime, timedelta
 from logging.handlers import RotatingFileHandler
 
 import matplotlib
-import mne
 import numpy as np
 import pandas as pd
 import yasa

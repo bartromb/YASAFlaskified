@@ -103,9 +103,9 @@ def _edf_path_for_job(job_id: str, upload_folder: str) -> str | None:
 
 # ── Cache (LRU, max 3 EDF-bestanden per worker) ──────────────────────────────
 from collections import OrderedDict
+
 from signal_io import (
     read_raw_signal,
-    source_candidates,
     strip_window_offset,
 )
 
@@ -155,7 +155,6 @@ def _get_raw(job_id: str, upload_folder: str):
     if not edf_path:
         raise FileNotFoundError(f"EDF niet gevonden voor job {job_id}")
 
-    import mne
     logger.info("EDF openen voor viewer (lazy): %s", edf_path)
     # preload=False: open the file header + index only. Per-epoch reads
     # pull just the requested 30s slice from disk (~1 MB). With preload=True

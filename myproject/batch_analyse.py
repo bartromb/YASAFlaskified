@@ -31,6 +31,7 @@ import time
 import traceback
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
+
 from signal_io import is_signal_file, read_raw_signal
 
 logging.basicConfig(level=logging.INFO,

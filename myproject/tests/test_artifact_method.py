@@ -30,14 +30,14 @@ def _raw(n_ep=60, sf=100.0, spikes=(5, 22, 41)):
 
 
 def test_the_default_is_still_the_amplitude_rule():
-    from myproject.yasa_analysis import ARTIFACT_METHOD_DEFAULT
+    from yasa_analysis import ARTIFACT_METHOD_DEFAULT
     assert ARTIFACT_METHOD_DEFAULT == "amplitude", (
         "de default artefactmethode is verschoven; dat verandert TST, "
         "n_artifact_epochs en de arousaldetectie in een klap")
 
 
 def test_both_methods_flag_a_gross_artefact():
-    from myproject.yasa_analysis import run_artifact_detection
+    from yasa_analysis import run_artifact_detection
 
     raw = _raw()
     amp = run_artifact_detection(raw, ["EEG1", "EEG2"])
@@ -50,7 +50,7 @@ def test_both_methods_flag_a_gross_artefact():
 
 
 def test_an_unknown_method_falls_back_to_the_default_without_crashing():
-    from myproject.yasa_analysis import run_artifact_detection
+    from yasa_analysis import run_artifact_detection
 
     r = run_artifact_detection(_raw(), ["EEG1", "EEG2"], method="onzin")
     assert r["success"]
@@ -58,7 +58,7 @@ def test_an_unknown_method_falls_back_to_the_default_without_crashing():
 
 
 def test_the_env_switches_the_method(monkeypatch):
-    from myproject.yasa_analysis import run_artifact_detection
+    from yasa_analysis import run_artifact_detection
 
     monkeypatch.setenv("YASAFLASKIFIED_ARTIFACT_METHOD", "yasa")
     r = run_artifact_detection(_raw(), ["EEG1", "EEG2"], hypno=["N2"] * 60)
@@ -83,7 +83,7 @@ def test_the_call_site_passes_the_hypnogram():
 
 
 def test_the_yasa_path_reports_whether_it_had_a_hypnogram():
-    from myproject.yasa_analysis import run_artifact_detection
+    from yasa_analysis import run_artifact_detection
 
     met = run_artifact_detection(_raw(), ["EEG1", "EEG2"], method="yasa",
                                  hypno=["N2"] * 60)

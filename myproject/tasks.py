@@ -287,7 +287,6 @@ def run_analysis_job(job_id: str) -> dict:
     if is_polygraphy:
         _set_progress(job_id, 3, 10, "Polygrafie — geen slaapstaging...")
         # De opnameduur komt uit de EDF-header; daar is geen kanaal voor nodig.
-        import mne as _mne
         _hdr = read_raw_signal(edf_path, preload=False, verbose="ERROR")
         n_epochs = int(_hdr.times[-1] // 30)
         del _hdr
@@ -465,7 +464,7 @@ def run_analysis_job(job_id: str) -> dict:
     # staging draaide op een van die kanalen.
     try:
         from generate_pdf_report import _topography_warning
-        _topo = _topography_warning(results)
+        _topo = _topography_warning(yasa_results)
         if _topo:
             analysis_warnings.append({
                 "code": "atypical_topography",
@@ -479,7 +478,11 @@ def run_analysis_job(job_id: str) -> dict:
                     "kanaallabels en de montage."),
             })
     except Exception as e:  # noqa: BLE001
-        logger.debug("topografiecheck mislukt (niet-kritiek): %s", e)
+        # Niet-kritiek voor de analyse, maar wel op warning-niveau: op
+        # debug verdween een NameError hier spoorloos, en de
+        # topografiecheck is sindsdien geen enkele keer afgegaan.
+        logger.warning("topografiecheck mislukt (%s): %s",
+                       type(e).__name__, e)
 
     _dc = _dc_samenvatting()
     if _dc.get("applied"):
