@@ -1,3 +1,66 @@
+# v0.37.4 — 2026-08-31 — bij een split-night gaat nu ELKE index over het juiste stuk nacht
+
+Pin naar **`psgscoring[ml]==0.31.5`** (was 0.31.3).
+
+Sinds v0.36.0 splitst het rapport de AHI van een split-night in een
+diagnostisch deel en een deel onder therapie. De **arousalindex, de RDI, de ODI
+en de PLM-index deden dat niet**: die stonden een paar centimeter lager op de
+pagina, over de HELE nacht gerekend, inclusief de uren onder CPAP. Ze lezen als
+getallen over dezelfde meting, en dat zijn ze niet.
+
+De fout heeft een richting. De therapie werkt, dus het tweede deel drukt elk van
+die indices omlaag; wat overblijft laat het diagnostische deel milder lijken dan
+het is. Bij 36 arousals per uur in twee diagnostische uren en nul onder therapie
+stond er 18/u.
+
+## Wat een lezer merkt
+
+Onder de bestaande split-tabel staat een tweede tabel met beide helften naast
+elkaar:
+
+| | Diagnostisch | Onder therapie |
+|---|---:|---:|
+| RDI | 40,0/u | 1,2/u |
+| Arousal index (AI) | 36,0/u | 0,0/u |
+| waarvan respiratoir | 30,0/u | 0,0/u |
+| ODI3 | 33,0/u | 1,5/u |
+| T90 | 14,0 % | 0,4 % |
+| PLMI | 22,0/u | 2,0/u |
+
+`PLMI` telt de bewegingen die deel uitmaken van een gekwalificeerde reeks, niet
+alle beenbewegingen — dezelfde teller als de nachtindex. Dat was in psgscoring
+0.31.4 één release lang mis en is in 0.31.5 gerepareerd; de gepinde versie hier
+draagt de reparatie.
+
+De nachtgetallen blijven daarnaast staan — die zijn wat de AASM voorschrijft.
+Een rij waarvan beide helften ontbreken verschijnt niet: bij polygrafie bestaan
+er geen arousals, en een rij met "—" suggereert een gemeten nul.
+
+De tabel staat er in vier talen, met een regel eronder die uitlegt waarom hij
+er is.
+
+## De saturatie werd al gesplitst en door niemand gelezen
+
+`psgscoring` rekende ODI en T90 **sinds 0.29.0** per segment. Geen enkele
+consument las het veld — geen PDF-sectie, geen sjabloon, geen route. Dat is
+dezelfde klasse fout als `analysis_warnings` zonder lezer en de
+topografiecheck die op een niet-bestaande variabele draaide: een getal dat het
+rapport niet haalt, bestaat klinisch niet.
+
+De nieuwe tests renderen de PDF en lezen hem terug, in alle vier de talen.
+
+## Ook de houding en het snurken
+
+De positie-AHI en de snurkindex staan er per helft bij (psgscoring 0.31.5). Dat
+is bij een split-night geen bijzaak: ligt de patiënt in het diagnostische deel
+vooral op de rug en onder therapie op de zij, dan verklaart de **houding** een
+deel van de daling die anders volledig aan de CPAP wordt toegeschreven. Eén
+positie-AHI over de hele nacht laat dat niet zien.
+
+Daarmee gaat elke index in het rapport over het stuk nacht waar hij bij hoort.
+
+676 tests tegen de gepinde versie (24 nieuw), ruff en mypy groen.
+
 # v0.37.3 — 2026-08-31 — subtypering: obstructief blijft obstructief bij Cheyne-Stokes
 
 Pin naar **`psgscoring[ml]==0.31.3`** (was 0.31.2). **Dit verandert een

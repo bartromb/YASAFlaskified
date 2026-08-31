@@ -2792,6 +2792,86 @@ def generate_pdf_report(results:dict, output_path:str,
                 story.append(Paragraph(_n, styles["SM"]))
             sp(0.12)
 
+            # ── De rest van de indexfamilie, ook per deel ────────────────
+            #
+            # Tot v0.37.3 stond hier een diagnostische AHI, en dáárnaast --
+            # in de secties hieronder -- een arousalindex, een RDI, een ODI en
+            # een PLM-index over de HELE nacht. Twee soorten getallen onder
+            # elkaar alsof ze over hetzelfde stuk slaap gingen. De richting van
+            # die fout is niet neutraal: de therapiehelft drukt elk van die
+            # indices omlaag, dus de meting waarop de diagnose rust las
+            # stelselmatig milder.
+            #
+            # De saturatie werd al sinds psgscoring 0.29.0 per segment
+            # uitgerekend en door niemand gelezen -- dezelfde klasse fout als
+            # `analysis_warnings` zonder lezer.
+            _ar = _sn.get("arousal") or {}
+            _rd = _sn.get("rdi") or {}
+            _pl = _sn.get("plm") or {}
+            _sp = _sn.get("spo2") or {}
+
+            def _cel(blok, sleutel, decim=1, eenheid=_UH):
+                w = (blok or {}).get(sleutel)
+                if w is None:
+                    return "—"
+                return f"{float(w):.{decim}f}{(' ' + eenheid) if eenheid else ''}"
+
+            _extra_defs = [
+                (t("pdf_rdi_formula", lang),        _rd, "rdi",   1, _UH),
+                (t("pdf_arousal_index", lang),      _ar, "arousal_index", 1, _UH),
+                (t("pdf_resp_arousal_index", lang), _ar,
+                 "respiratory_arousal_index", 1, _UH),
+                ("ODI3",                            _sp, "odi_3pct", 1, _UH),
+                ("T90",                             _sp, "pct_below_90", 1, "%"),
+                ("PLMI",                            _pl, "plm_index", 1, _UH),
+                (t("pdf_snore_index", lang),
+                 _sn.get("snore") or {}, "snore_index", 1, _UH),
+            ]
+            _extra = []
+            for _lab, _blk, _key, _dec, _eh in _extra_defs:
+                _dv = (_blk.get("diagnostic") or {}).get(_key)
+                _tv = (_blk.get("therapeutic") or {}).get(_key)
+                # Een rij die in BEIDE helften leeg is, zegt niets en suggereert
+                # een gemeten nul. Polygrafie heeft geen arousals; die rijen
+                # horen dan te ontbreken, niet op "—" te staan.
+                if _dv is None and _tv is None:
+                    continue
+                _extra.append([
+                    _lab,
+                    _cel(_blk.get("diagnostic"), _key, _dec, _eh),
+                    _cel(_blk.get("therapeutic"), _key, _dec, _eh),
+                ])
+            # De positie-AHI is genest ({houding: ahi}) en past niet in de
+            # vorm hierboven. Hij hoort er wel bij: ligt de patiënt
+            # diagnostisch vooral op de rug en onder therapie op de zij, dan
+            # verklaart de HOUDING een deel van de daling die anders volledig
+            # aan de CPAP wordt toegeschreven.
+            _po = _sn.get("position") or {}
+            _pd = ((_po.get("diagnostic") or {}).get("ahi_per_pos") or {})
+            _pt = ((_po.get("therapeutic") or {}).get("ahi_per_pos") or {})
+            for _h in sorted(set(_pd) | set(_pt)):
+                _dv, _tv = _pd.get(_h), _pt.get(_h)
+                if _dv is None and _tv is None:
+                    continue
+                _extra.append([
+                    f"AHI {_h}",
+                    f"{_dv:.1f} {_UH}" if _dv is not None else "—",
+                    f"{_tv:.1f} {_UH}" if _tv is not None else "—",
+                ])
+
+            if _extra:
+                story.append(Paragraph(
+                    f"<b>{t('pdf_split_other_hdr', lang)}</b>", styles["SM"]))
+                sp(0.04)
+                story.append(_tbl(
+                    ["", t("pdf_split_col_diag", lang),
+                     t("pdf_split_col_ther", lang)],
+                    _extra, [7.2 * cm, 4.0 * cm, 4.0 * cm]))
+                sp(0.04)
+                story.append(Paragraph(t("pdf_split_other_note", lang),
+                                       styles["SM"]))
+                sp(0.12)
+
         story.append(_hdr(t("pdf_rera_section_hdr", lang), color=BLUE)); sp(0.1)
         n_rera_fri  = rsum.get("n_rera_fri", 0) or 0
         n_rera_flat = rsum.get("n_rera_flattening", 0) or 0

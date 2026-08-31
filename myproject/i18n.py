@@ -2941,6 +2941,35 @@ _V0102_PDF = {
     "pdf_split_col_sleep": {"nl": "Slaap", "fr": "Sommeil", "en": "Sleep",
                             "de": "Schlaf"},
     "pdf_split_col_ahi": {"nl": "AHI", "fr": "IAH", "en": "AHI", "de": "AHI"},
+    # Korte kolomkoppen voor de tweede split-tabel; de lange labels hierboven
+    # zijn rijlabels en passen niet in een kolom van 3 cm.
+    "pdf_split_col_diag": {"nl": "Diagnostisch", "fr": "Diagnostique",
+                           "en": "Diagnostic", "de": "Diagnostisch"},
+    "pdf_split_col_ther": {"nl": "Onder therapie", "fr": "Sous traitement",
+                           "en": "On therapy", "de": "Unter Therapie"},
+    "pdf_split_other_hdr": {
+        "nl": "De overige indices per deel van de nacht",
+        "fr": "Les autres index par partie de la nuit",
+        "en": "The remaining indices per part of the night",
+        "de": "Die übrigen Indizes je Nachtabschnitt"},
+    "pdf_split_other_note": {
+        "nl": "Deze indices deelden tot v0.37.3 door de HELE nacht, ook door de "
+              "uren onder therapie. Een geslaagde titratie drukt elk van deze "
+              "getallen omlaag, dus het nachtgemiddelde laat het diagnostische "
+              "deel milder lijken dan het is.",
+        "fr": "Jusqu'à la v0.37.3, ces index étaient rapportés sur la nuit "
+              "ENTIÈRE, heures sous traitement comprises. Un titrage réussi "
+              "abaisse chacun de ces chiffres : la moyenne de la nuit fait donc "
+              "paraître la partie diagnostique plus bénigne qu'elle ne l'est.",
+        "en": "Until v0.37.3 these indices were computed over the WHOLE night, "
+              "including the hours on therapy. A successful titration lowers "
+              "each of them, so the night average makes the diagnostic part "
+              "look milder than it is.",
+        "de": "Bis v0.37.3 wurden diese Indizes über die GESAMTE Nacht "
+              "berechnet, einschließlich der Stunden unter Therapie. Eine "
+              "erfolgreiche Titration senkt jeden dieser Werte, sodass der "
+              "Nachtdurchschnitt den diagnostischen Teil milder erscheinen "
+              "lässt, als er ist."},
     "pdf_split_col_ahi_unc": {"nl": "AHI incl. ongetypeerd",
                               "fr": "IAH incl. non typés",
                               "en": "AHI incl. untyped",
