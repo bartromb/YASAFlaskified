@@ -1,3 +1,49 @@
+# v0.37.5 — 2026-09-02 — de subtypering van apneus is gerepareerd
+
+Pin naar **`psgscoring[ml]==0.31.6`** (was 0.31.5). **Dit verandert een klinisch
+getal.** De verdeling obstructief/centraal in sectie 8 verschuift; de AHI niet.
+
+## Wat er mis was
+
+Op PSG-IPA noemde het pakket 60 van de 75 menselijk-centrale apneus
+obstructief — vier op de vijf fout. De omgekeerde richting klopte bijna perfect
+(153 van 154), dus het was geen classificatiefout maar een eenzijdige bias.
+
+Drie beslisregels lazen ruis als obstructie. Fasehoek, paradoxcorrelatie en
+ruwe variabiliteit beschrijven de *vorm* van een signaal en zeggen niets over
+of er signaal *is*; bij een centrale apneu bewegen thorax en abdomen per
+definitie nauwelijks, dus daar besloten ze op ruis.
+
+## Wat een lezer merkt
+
+**Meer centrale apneus, minder obstructieve.** Gemeten op twee cohorten:
+
+| cohort | recall centraal | recall obstructief |
+|---|---|---|
+| PSG-IPA, oud | 20,0 % | 99,4 % |
+| PSG-IPA, nieuw | **66,7 %** | 98,7 % |
+| MESA, oud | 30,6 % | 88,9 % |
+| MESA, nieuw | **61,4 %** | 71,9 % |
+
+Bij een heranalyse van een oudere opname kan een patiënt die eerder als
+overwegend obstructief werd getypeerd nu overwegend centraal lezen. Dat
+onderscheid stuurt de therapiekeuze — CPAP tegen ASV — dus het is de moeite
+waard oude rapporten van patiënten met veel centrale events opnieuw te bekijken.
+
+De prijs staat er eerlijk bij: op MESA daalt de obstructieve recall van 88,9
+naar 71,9 %. Aanvaard omdat de andere kant zwaarder weegt.
+
+## Ook nieuw
+
+* Elke AHI draagt nu de **gemeten overeenstemming tussen twee menselijke
+  scoorders** bij die ziektelast. Op PSG-IPA halen twaalf scoorders onderling
+  F1 0,948 op de zwaarste opname en 0,553 op de lichtste — waar de ene expert
+  één event scoorde en de andere achtendertig. Een AHI van 8 en een AHI van 40
+  dragen niet dezelfde zekerheid.
+* Het veld `ahi_rule` zegt welke AASM-regel de gerapporteerde AHI draagt.
+
+676 tests tegen de gepinde versie, ruff en mypy groen.
+
 # v0.37.4 — 2026-08-31 — bij een split-night gaat nu ELKE index over het juiste stuk nacht
 
 Pin naar **`psgscoring[ml]==0.31.5`** (was 0.31.3).
