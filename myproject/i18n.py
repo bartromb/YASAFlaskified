@@ -2794,6 +2794,16 @@ _V0102_PDF = {
     # is een spanne die korte onderbrekingen overbrugt, de REM-duur telt
     # uitsluitend R-epochs. Zonder deze noot nodigt het paneel uit tot
     # vermenigvuldigen en straft dat af.
+    # v0.38.x: de verwachte menselijke scoordersovereenstemming bij deze
+    # ziektelast. Het veld beschrijft de OPNAME (hoe eens zouden twee mensen
+    # het zijn over deze nacht), niet de detector — de formulering moet die
+    # kant kiezen, anders leest het als een kwaliteitsclaim van de software.
+    "pdf_scorer_agreement": {
+        "nl": "Menselijke scoorders halen bij deze ziektelast onderling naar verwachting een overeenstemming (event-F1) van {f1} — eigenschap van de opname, niet van de analyse (referentie: {n} scoorderparen, PSG-IPA).",
+        "fr": "Des cotateurs humains atteindraient entre eux, pour cette charge de maladie, une concordance (F1) attendue de {f1} — propriété de l'enregistrement, non de l'analyse (référence : {n} paires de cotateurs, PSG-IPA).",
+        "en": "Human scorers would be expected to agree with each other at event-F1 {f1} for this disease burden — a property of the recording, not of the analysis (reference: {n} scorer pairs, PSG-IPA).",
+        "de": "Menschliche Auswerter erreichen bei dieser Krankheitslast untereinander eine erwartete Übereinstimmung (Event-F1) von {f1} — eine Eigenschaft der Aufzeichnung, nicht der Analyse (Referenz: {n} Auswerterpaare, PSG-IPA).",
+    },
     "pdf_rem_period_note": {
         "nl": "Een REM-periode is een aaneengesloten spanne die onderbrekingen tot {gap} min overbrugt; de REM-duur telt alleen R-epochs. Periodes × gemiddelde is daarom hoger dan de REM-duur.",
         "fr": "Une période REM est un intervalle continu tolérant des interruptions jusqu'à {gap} min ; la durée REM ne compte que les époques R. Périodes × moyenne dépasse donc la durée REM.",

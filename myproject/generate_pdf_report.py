@@ -329,6 +329,22 @@ except Exception:                               # oudere installatie in dev
 REM_GAP_TOLERANCE_MIN = 2.0
 
 
+def scorer_agreement_note(rsum, lang="nl"):
+    """De verwachte menselijke scoordersovereenstemming bij deze ziektelast.
+
+    Leest `summary["scorer_agreement_expectation"]` (psgscoring >= 0.31.x).
+    Ontbreekt het veld — oudere bibliotheek — dan geen noot: het rapport
+    verzint niets. Het veld beschrijft de OPNAME, niet de detector; zie de
+    i18n-aantekening bij `pdf_scorer_agreement`.
+    """
+    exp = (rsum or {}).get("scorer_agreement_expectation") or {}
+    f1 = exp.get("f1_human")
+    n = exp.get("n_scorer_pairs")
+    if f1 is None or not n:
+        return None
+    return t("pdf_scorer_agreement", lang).format(f1=f"{f1:.2f}", n=n)
+
+
 def rem_ahi_caveat(rsum, lang="nl"):
     """Kwalificeer de REM-AHI wanneer er te weinig REM was om hem te dragen.
 
@@ -2915,6 +2931,13 @@ def generate_pdf_report(results:dict, output_path:str,
             [t("pdf_param",lang), t("pdf_value",lang)],
             stage_rows,
             [8, 6])])); sp(0.1)
+        _agree_note = scorer_agreement_note(rsum, lang)
+        if _agree_note:
+            # Zelfde presentatie als de REM-noot maar neutraal grijs: dit is
+            # context, geen waarschuwing. Geen glyphs — zie de REM-noot.
+            story.append(Paragraph(
+                f"<i><font color='#7f8c8d'>{_agree_note}</font></i>",
+                styles["SM"])); sp(0.1)
         _rem_note = rem_ahi_caveat(rsum, lang)
         if _rem_note:
             # Geen waarschuwingsglyph: ⚠ ontbreekt in het ingebedde lettertype
