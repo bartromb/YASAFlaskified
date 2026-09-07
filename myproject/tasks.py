@@ -383,12 +383,18 @@ def run_analysis_job(job_id: str) -> dict:
     logger.info("Pneumo-kanalen detecteren...")
     pneumo_ch_list = _detect_pneumo_channels(edf_path, pneumo_channels)
 
+    # De volledige headerlijst van het EDF — niet alleen voor het laadplan:
+    # het rapport toonde tot 0.38.1 de pneumo-subset onder het kopje
+    # "kanalen in EDF-bestand" en toetste er provenance-afwezigheidsclaims
+    # tegen. Op rapport 91a67fa3 "ontbraken" daardoor F3, O1 en het EOG die
+    # gewoon in het bestand zaten. Alleen namen uit de header, geen data.
+    try:
+        _hdr_names = list(read_raw_signal(
+            edf_path, preload=False, verbose=False).ch_names)
+    except Exception:                           # noqa: BLE001
+        _hdr_names = None
+
     if pneumo_ch_list:
-        try:
-            _hdr_names = read_raw_signal(
-                edf_path, preload=False, verbose=False).ch_names
-        except Exception:                       # noqa: BLE001
-            _hdr_names = None
         pneumo_needed = _pneumo_load_plan(pneumo_ch_list, eeg_ch, emg_ch,
                                           eeg_all=_hdr_names)
         logger.info("PNEUMO EDF laden (%d kanalen, kin-EMG=%s)...",
@@ -597,6 +603,10 @@ def run_analysis_job(job_id: str) -> dict:
         "pneumo":           pneumo_results,
         "analysis_warnings": analysis_warnings,
         "dc_highpass": _dc,
+        # v0.38.2: de échte kanaallijst uit de EDF-header. Het rapportpaneel
+        # "kanalen in EDF-bestand" en de provenance-afwezigheidsclaims lezen
+        # deze lijst; pneumo.meta.all_channels is slechts de analyse-subset.
+        "edf_channels":     _hdr_names,
         # Wat er WERKELIJK gedraaid heeft, niet wat er aangevinkt stond. Het
         # rapport moet "REI" boven een REI zetten, ook wanneer het studietype
         # per ongeluk op PSG bleef staan.

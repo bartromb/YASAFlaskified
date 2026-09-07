@@ -904,7 +904,9 @@ TRANSLATIONS = {
                              "en": "Lowest SpO2 during an event",
                              "de": "Niedrigste SpO2 während eines Ereignisses"},
     "pdf_fri_index":        {"nl": "FRI (flow-reductie-index)", "fr": "IFR (indice de réduction de flux)", "en": "FRI (Flow Reduction Index)"},
-    "pdf_fri_r1b":          {"nl": "Waarvan hersteld via Rule 1B (arousal)", "fr": "Dont restaurés via Rule 1B (arousal)", "en": "Of which reinstated via Rule 1B (arousal)"},
+    # Arousal-herstel valt onder Regel 1A (≥30% flow + desat óf arousal);
+    # het label zei "Rule 1B" — het criterium dat juist géén arousal kent.
+    "pdf_fri_r1b":          {"nl": "Waarvan hersteld via Regel 1A (arousal)", "fr": "Dont restaurés via la règle 1A (arousal)", "en": "Of which reinstated via Rule 1A (arousal)"},
     "pdf_fri_note":         {"nl": "Flow-reducties (≥30%, ≥10s) die niet voldoen aan hypopnea-criteria: geen ≥3% desaturatie en geen arousal. Geen onderdeel van AHI. Klinische relevantie bij UARS/RDI-evaluatie.",
                              "fr": "Réductions de flux (≥30%, ≥10s) ne répondant pas aux critères d'hypopnée : pas de désaturation ≥3% ni d'arousal. Non incluses dans l'IAH. Pertinence clinique pour l'évaluation SARVAS/IDR.",
                              "en": "Flow reductions (≥30%, ≥10s) not meeting hypopnea criteria: no ≥3% desaturation and no arousal. Not included in AHI. Clinically relevant for UARS/RDI evaluation."},
@@ -1246,7 +1248,7 @@ _DE_PATCH = {
     "pdf_fri_count": "Flow Reductions Without Criteria",
     "pdf_fri_index": "FRI (Flow Reduction Index)",
     "pdf_fri_note": "Flow reductions (≥30%, ≥10s) not meeting Hypopnoe criteria: no ≥3% desaturation and no arousal. Neint included in AHI. Clinically relevant for UARS/RDI evaluation.",
-    "pdf_fri_r1b": "Of which reinstated via Rule 1B (arousal)",
+    "pdf_fri_r1b": "Davon über Regel 1A (Arousal) wiederhergestellt",
     "pdf_hypopnea": "Hypopnoe",
     "pdf_institution": "Institution:",
     "pdf_longest": "Longest",
@@ -1791,16 +1793,19 @@ _PDF_V027b = {
         "de": "Ereignisse pro Stunde Aufzeichnungszeit (TIB) statt TST.",
     },
     "pdf_slow_waves_detected": {
-        "nl": "trage golven gedetecteerd.",
-        "fr": "ondes lentes détectées.",
-        "en": "slow waves detected.",
-        "de": "langsame Wellen erkannt.",
+        "nl": "tragegolfdetecties (kanalen samengeteld).",
+        "fr": "détections d'ondes lentes (canaux additionnés).",
+        "en": "slow-wave detections (channels summed).",
+        "de": "Detektionen langsamer Wellen (Kanäle aufsummiert).",
     },
+    # "Kanalen samengeteld": het totaal telt dezelfde spindel/golf op elk
+    # kanaal opnieuw mee (604 = som van de 6 kanaalrijen); zonder die
+    # kwalificatie leest de kop als een nachttotaal.
     "pdf_spindles_detected": {
-        "nl": "spindels gedetecteerd (N1+N2).",
-        "fr": "fuseaux détectés (N1+N2).",
-        "en": "spindles detected (N1+N2).",
-        "de": "Spindeln erkannt (N1+N2).",
+        "nl": "spindeldetecties (N1+N2, kanalen samengeteld).",
+        "fr": "détections de fuseaux (N1+N2, canaux additionnés).",
+        "en": "spindle detections (N1+N2, channels summed).",
+        "de": "Spindeldetektionen (N1+N2, Kanäle aufsummiert).",
     },
 }
 TRANSLATIONS.update(_PDF_V027b)
@@ -1880,9 +1885,18 @@ _PDF_V036 = {
         "en": "Time in saturation bands",
         "de": "Zeit in Sättigungsbändern",
     },
-    "SpO₂ range":      {"nl": "SpO₂-bereik",      "fr": "Plage SpO₂",      "en": "SpO₂ range",      "de": "SpO₂-Bereich"},
+    # ASCII "SpO2": deze cellen zijn platte Table-strings (geen Paragraph),
+    # dus <sub>-markup werkt er niet en het ₂-glyph ontbreekt in Helvetica —
+    # in productie stond er "SpO■ range" (rapport 91a67fa3, 2026-09-07).
+    "SpO₂ range":      {"nl": "SpO2-bereik",      "fr": "Plage SpO2",      "en": "SpO2 range",      "de": "SpO2-Bereich"},
     "Duration (min)":   {"nl": "Duur (min)",        "fr": "Durée (min)",      "en": "Duration (min)",   "de": "Dauer (min)"},
     "% of recording":   {"nl": "% van opname",      "fr": "% de l'enregistrement", "en": "% of recording", "de": "% der Aufzeichnung"},
+    # De bandpercentages uit psgscoring zijn % van de SLAAPTIJD (spo2.py,
+    # total_sleep_s als noemer); "% of recording" beloofde de opnametijd.
+    "% of sleep time (TST)": {"nl": "% van slaaptijd (TST)",
+                              "fr": "% du temps de sommeil (TST)",
+                              "en": "% of sleep time (TST)",
+                              "de": "% der Schlafzeit (TST)"},
     # ESS + OSAS score
     "Symptom assessment and severity profile": {
         "nl": "Symptoomanalyse en ernstprofiel",
@@ -1890,6 +1904,7 @@ _PDF_V036 = {
         "en": "Symptom assessment and severity profile",
         "de": "Symptomanalyse und Schweregradprofil",
     },
+    "Symptom assessment (ESS)": {"nl": "Symptoombeoordeling (ESS)", "fr": "Évaluation des symptômes (ESS)", "en": "Symptom assessment (ESS)", "de": "Symptombewertung (ESS)"},
     "OSAS severity profile": {"nl": "OSAS-ernstprofiel", "fr": "Profil de sévérité SAOS", "en": "OSAS severity profile", "de": "OSAS-Schweregradprofil"},
     "OSAS code":        {"nl": "OSAS-code",        "fr": "Code SAOS",        "en": "OSAS code",        "de": "OSAS-Code"},
     "Dimension":        {"nl": "Dimensie",          "fr": "Dimension",        "en": "Dimension",        "de": "Dimension"},
@@ -4322,3 +4337,98 @@ _RIP_GATE_V0270 = {
         "de": "Energieverhältnis Thorax/Abdomen"},
 }
 TRANSLATIONS.update(_RIP_GATE_V0270)
+
+# v0.38.2 — reparaties uit de rapportreview van 2026-09-07 (91a67fa3):
+# POSA-tegenspraak, kanaalpaneel-etiket, arousal-optelvoetnoot, ontbrekende
+# aandachtspunten, onvertaalde fragmenten en de burden-leegte zonder reden.
+_PDF_V0382 = {
+    # POSA is niet vaststelbaar wanneer de houdingscodering niet herkend is:
+    # de labelvolgorde is dan een aanname (zie _position_mapping_is_coded).
+    # Het rapport beweerde POSA op drie plaatsen naast een caveat die
+    # "niet bepaalbaar" zei.
+    "pdf_pheno_posa_unknown": {
+        "nl": "niet bepaalbaar — houdingscodering van deze recorder niet herkend",
+        "fr": "non déterminable — codage de position de cet enregistreur non reconnu",
+        "en": "not determinable — this recorder's position coding was not recognised",
+        "de": "nicht bestimmbar — Positionskodierung dieses Rekorders nicht erkannt"},
+    # Kanaalpaneel: oudere resultaten dragen alleen de analyse-subset
+    # (pneumo-raw); dat mag niet "EDF-bestand" heten.
+    "pdf_ch_total_analysis": {
+        "nl": "kanalen gebruikt in de analyse (deel van het EDF-bestand)",
+        "fr": "canaux utilisés dans l'analyse (partie du fichier EDF)",
+        "en": "channels used in the analysis (subset of the EDF file)",
+        "de": "in der Analyse verwendete Kanäle (Teil der EDF-Datei)"},
+    # 8b: AI = respiratoir + spontaan; PLM-arousals zijn een deelverzameling
+    # van "spontaan". Zonder deze regel leest de tabel als een optelling
+    # die niet klopt (8,4 + 13,3 + 1,7 ≠ 21,7).
+    "pdf_arousal_sum_note": {
+        "nl": ("Arousal-index = respiratoir + spontaan. \"Spontaan\" betekent "
+               "hier: niet aan een respiratoir event gekoppeld; "
+               "PLM-gekoppelde arousals tellen daarbinnen mee."),
+        "fr": ("Index d'éveils = respiratoire + spontané. « Spontané » "
+               "signifie ici : non couplé à un événement respiratoire ; les "
+               "éveils liés aux MPM y sont inclus."),
+        "en": ("Arousal index = respiratory + spontaneous. \"Spontaneous\" "
+               "here means: not coupled to a respiratory event; PLM-coupled "
+               "arousals are counted within it."),
+        "de": ("Arousal-Index = respiratorisch + spontan. \"Spontan\" heißt "
+               "hier: nicht an ein respiratorisches Ereignis gekoppelt; "
+               "PLM-gekoppelte Arousals zählen darin mit.")},
+    # Aandachtspunt: ventilatoire last boven de referentie stond wél in de
+    # tabel maar haalde de voorpagina niet, terwijl T90 dat wel deed.
+    "pdf_flag_vent_burden": {
+        "nl": "Verhoogde ventilatoire last ({vb} %, referentie ≤ 25 %)",
+        "fr": "Charge ventilatoire élevée ({vb} %, référence ≤ 25 %)",
+        "en": "Elevated ventilatory burden ({vb} %, reference ≤ 25 %)",
+        "de": "Erhöhte ventilatorische Last ({vb} %, Referenz ≤ 25 %)"},
+    # Hypoxic burden "—" zonder reden: het plafond of een onbruikbare
+    # basislijn zet het veld bewust op None — dat is een uitspraak.
+    "pdf_burden_none_note": {
+        "nl": ("Hypoxic burden: niet berekenbaar op deze opname (geen "
+               "bruikbare desaturatie-basislijn, of boven het rapporteerbare "
+               "plafond). Het veld blijft leeg in plaats van een "
+               "onbetrouwbaar getal te tonen."),
+        "fr": ("Charge hypoxique : non calculable sur cet enregistrement "
+               "(pas de ligne de base de désaturation exploitable, ou "
+               "au-dessus du plafond rapportable). Le champ reste vide "
+               "plutôt que d'afficher un chiffre non fiable."),
+        "en": ("Hypoxic burden: not computable on this recording (no usable "
+               "desaturation baseline, or above the reportable ceiling). "
+               "The field is left empty rather than showing an unreliable "
+               "number."),
+        "de": ("Hypoxische Last: auf dieser Aufzeichnung nicht berechenbar "
+               "(keine brauchbare Desaturierungs-Baseline oder über der "
+               "berichtbaren Obergrenze). Das Feld bleibt leer, statt eine "
+               "unzuverlässige Zahl zu zeigen.")},
+    # Besluit: de kop zegt "(experimental)", maar de verwijzer leest het
+    # Besluit — daar hoort de profielwaarschuwing dus ook.
+    "pdf_concl_exploratory": {
+        "nl": ("Gescoord met experimenteel profiel {prof} — niet het "
+               "klinische standaardprofiel; indices zijn niet vergelijkbaar "
+               "met een run onder het standaardprofiel."),
+        "fr": ("Coté avec le profil expérimental {prof} — pas le profil "
+               "clinique standard ; les index ne sont pas comparables à une "
+               "analyse sous le profil standard."),
+        "en": ("Scored with experimental profile {prof} — not the clinical "
+               "default; indices are not comparable to a run under the "
+               "default profile."),
+        "de": ("Mit experimentellem Profil {prof} bewertet — nicht das "
+               "klinische Standardprofil; Indizes sind nicht mit einem Lauf "
+               "unter dem Standardprofil vergleichbar.")},
+    # PLMI-ernst komt als Engels woord uit psgscoring (_classify_plmi).
+    "plm_severity_unknown":  {"nl": "onbekend",  "fr": "inconnu",  "en": "unknown",  "de": "unbekannt"},
+    "plm_severity_normal":   {"nl": "normaal",   "fr": "normal",   "en": "normal",   "de": "normal"},
+    "plm_severity_mild":     {"nl": "licht",     "fr": "léger",    "en": "mild",     "de": "leicht"},
+    "plm_severity_moderate": {"nl": "matig",     "fr": "modéré",   "en": "moderate", "de": "mäßig"},
+    "plm_severity_severe":   {"nl": "ernstig",   "fr": "sévère",   "en": "severe",   "de": "schwer"},
+    # Kolomkoppen van de YASA-spindel/tragegolftabellen: de gangbare vier
+    # vertaald; technische YASA-veldnamen (Rms, Abspower, Ptp, ...) blijven
+    # onvertaald staan — een verzonnen vertaling zou minder herkenbaar zijn
+    # dan de veldnaam uit de literatuur. t() geeft onbekende sleutels
+    # ongewijzigd terug, dus die vallen vanzelf door.
+    "Count":        {"nl": "Aantal",     "fr": "Nombre",     "en": "Count",     "de": "Anzahl"},
+    "Duration":     {"nl": "Duur",       "fr": "Durée",      "en": "Duration",  "de": "Dauer"},
+    "Frequency":    {"nl": "Frequentie", "fr": "Fréquence",  "en": "Frequency", "de": "Frequenz"},
+    "Amplitude":    {"nl": "Amplitude",  "fr": "Amplitude",  "en": "Amplitude", "de": "Amplitude"},
+}
+TRANSLATIONS.update(_PDF_V0382)

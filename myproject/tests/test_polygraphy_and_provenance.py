@@ -33,12 +33,17 @@ from generate_pdf_report import provenance_rows  # noqa: E402
 # ─────────────────────────────────────────────────────────────
 
 def _results(eeg="C4", eog="EOG1", emg="EMG1", all_ch=None, used_eeg=None):
+    # 0.38.2: de afwezigheidsclaim toetst tegen `edf_channels` (de echte
+    # header), niet meer tegen de pneumo-subset — die droeg per constructie
+    # geen EOG en maakte de claim vals op elk rapport mét EOG in het EDF.
+    ch = (all_ch if all_ch is not None else
+          ["Snore", "Pressure Flow", "Flow Th.", "RIP Thora", "RIP Abdom",
+           "SpO2", "PLMl", "PLMr", "Pos.", "Pulse", "ECG II", "C3", "C4"])
     return {
         "meta": {"eeg_channel": eeg, "eog_channel": eog, "emg_channel": emg},
+        "edf_channels": ch,
         "pneumo": {"meta": {
-            "all_channels": all_ch if all_ch is not None else
-                ["Snore", "Pressure Flow", "Flow Th.", "RIP Thora", "RIP Abdom",
-                 "SpO2", "PLMl", "PLMr", "Pos.", "Pulse", "ECG II", "C3", "C4"],
+            "all_channels": ch,
             "channels_used": {"eeg": used_eeg} if used_eeg else {},
             "flow_channels": {"apnea_sensor": "Flow Th.",
                               "hypopnea_sensor": "Pressure Flow"},

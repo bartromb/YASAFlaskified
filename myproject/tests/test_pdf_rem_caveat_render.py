@@ -100,7 +100,10 @@ def test_both_rem_ahi_rows_show_the_same_number(tmp_path):
     txt = _pdf_text(out)
     assert "11.1" not in txt, "§8c toont nog de tweede berekening"
     assert "22.2" not in txt
-    assert txt.count("64.2") >= 2, "beide REM-AHI-rijen horen dezelfde bron te lezen"
+    # 0.38.2: de tweede rij ("REM AHI" boven de positietabel) is geschrapt —
+    # hetzelfde getal stond twee keer op één pagina. Er hoort er nu precies
+    # ÉÉN te staan, uit de ene bron; twee zou de duplicatie terugbrengen.
+    assert txt.count("64.2") == 1, "de REM-AHI hoort precies één keer te staan"
 
 
 def test_enough_rem_leaves_the_report_clean(tmp_path):

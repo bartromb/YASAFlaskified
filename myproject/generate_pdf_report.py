@@ -281,12 +281,17 @@ def _apnea_breakdown_line(rsum, lang="nl"):
 
 # ── v0.15.0: clinician-report enrichments (B1 conclusion, B4 phenotypes, B5 flags) ──
 
-def _phenotype_summary_line(rsum, lang="nl"):
+def _phenotype_summary_line(rsum, lang="nl", pneumo=None):
     """B4: compact one-line phenotype summary for page 1 (POSA / REM-predominant)."""
     _UH = t("unit_per_hour", lang)
     ph = (rsum or {}).get("phenotypes") or {}
     tags = []
     posa = ph.get("positional_osa")
+    # Niet-herkende houdingscodering: geen POSA-claim op de voorpagina.
+    # De uitleg staat bij de positietabel (pdf_pos_uncoded); een claim hier
+    # zou diezelfde caveat tegenspreken.
+    if posa and posa.get("flag") and not _posa_claimable(pneumo):
+        posa = None
     if posa and posa.get("flag"):
         s = t("pdf_pheno_posa", lang)
         if posa.get("ahi_supine") is not None and posa.get("ahi_non_supine") is not None:
@@ -402,7 +407,14 @@ def provenance_rows(results, lang="nl"):
     # het bestand die kanalen niet had; het blok bevestigde dus een keuze in
     # plaats van de uitvoering, en dat is precies de fout waartegen het bestaat.
     # Toetsen tegen de werkelijke kanaallijst en het verschil benoemen.
-    present = set(pmeta.get("all_channels") or [])
+    #
+    # Die "werkelijke" lijst was tot 0.38.1 de pneumo-subset, en die draagt
+    # per constructie geen EOG (_pneumo_load_plan): elk rapport met een EOG
+    # in het EDF meldde hier "niet in dit EDF-bestand" — een valse claim over
+    # het bestand (91a67fa3). De echte headerlijst wint; ontbreekt hij
+    # (oudere resultaten), dan liever GEEN afwezigheidsclaim dan een valse:
+    # de subset kan de claim alleen ontkrachten, niet dragen.
+    present = set(results.get("edf_channels") or [])
 
     def _staging_ch(name):
         if not name:
@@ -774,6 +786,21 @@ def _position_mapping_is_coded(pos_sum):
     return str((pos_sum or {}).get("position_mapping_method") or "") == "coded"
 
 
+def _posa_claimable(pneumo):
+    """Mag het rapport POSA als fenotype beweren?
+
+    Rapport 91a67fa3 (2026-09-07) droeg de caveat "de houdingscodering van
+    deze recorder is niet herkend ... het POSA-fenotype is niet bepaalbaar"
+    -- en beweerde POSA tegelijk op de voorpagina, in het fenotypeblok én in
+    het automatische Besluit. Die drie lazen alleen ``posa["flag"]``; de
+    caveat las de houdingssamenvatting. Eén poort voor alle vier: is de
+    codering niet herkend, dan is elke supine/non-supine-uitspraak een gok
+    op de labelvolgorde en mag geen enkele consument hem als meting brengen.
+    """
+    return _position_mapping_is_coded(
+        ((pneumo or {}).get("position") or {}).get("summary"))
+
+
 _FRI_SENTINEL = object()
 
 
@@ -829,7 +856,8 @@ def _clinical_flags(rsum, pneumo, ss, asum, lang="nl", warnings=None):
             flags.append(txt)
     ph = (rsum or {}).get("phenotypes") or {}
     posa = ph.get("positional_osa")
-    if posa and posa.get("flag") and posa.get("positional_therapy_candidate"):
+    if (posa and posa.get("flag") and posa.get("positional_therapy_candidate")
+            and _posa_claimable(pneumo)):
         flags.append(t("pdf_flag_positional", lang))
     remp = ph.get("rem_predominant")
     if remp and remp.get("flag"):
@@ -841,7 +869,22 @@ def _clinical_flags(rsum, pneumo, ss, asum, lang="nl", warnings=None):
     try:
         t90 = ss.get("pct_below_90")
         if t90 is not None and float(t90) >= 10:
-            flags.append(t("pdf_flag_hypoxemia", lang).format(pct=f"{float(t90):.0f}"))
+            # Zelfde precisie als sectie 9: daar staat 19,5 %, hier stond
+            # "T90 20%" — dezelfde waarde met twee afrondingen leest als
+            # twee metingen.
+            flags.append(t("pdf_flag_hypoxemia", lang).format(pct=f"{float(t90):.1f}"))
+    except Exception:
+        pass
+    # Ventilatoire last boven de referentie stond in de SpO2-tabel maar
+    # haalde de voorpagina niet, terwijl T90 dat wel deed. Zelfde poort als
+    # de tabelreferentie: bij centraal-dominante studies geldt de
+    # OSA-afgeleide norm niet (v0.16.5).
+    try:
+        _vb = (rsum or {}).get("ventilatory_burden")
+        if (_vb is not None and float(_vb) > 25
+                and not _is_central_dominant(rsum)):
+            flags.append(t("pdf_flag_vent_burden", lang).format(
+                vb=f"{float(_vb):.1f}"))
     except Exception:
         pass
     try:
@@ -990,7 +1033,8 @@ def _auto_conclusion(rsum, pneumo, ss, lang="nl"):
         sev = f"{sev} {t('pdf_concl_without_cpap', lang)}"
     quals = []
     ph = (rsum or {}).get("phenotypes") or {}
-    if (ph.get("positional_osa") or {}).get("flag"):
+    if ((ph.get("positional_osa") or {}).get("flag")
+            and _posa_claimable(pneumo)):
         quals.append(t("pdf_concl_positional", lang))
     if (ph.get("rem_predominant") or {}).get("flag"):
         quals.append(t("pdf_concl_rem", lang))
@@ -1007,7 +1051,34 @@ def _auto_conclusion(rsum, pneumo, ss, lang="nl"):
     txt += ")."
     if _ther is not None:
         txt += " " + t("pdf_concl_on_cpap", lang).format(ther=f"{_ther:.1f}")
+    # De kop van sectie 8 zegt "(experimental)", maar de verwijzer leest het
+    # Besluit -- dat verzweeg tot 0.38.1 dat de indices uit een
+    # niet-standaardprofiel komen (91a67fa3 draaide aasm_v3_breath_dual).
+    _prof_note = _exploratory_profile_note(pneumo, lang)
+    if _prof_note:
+        txt += " " + _prof_note
     return txt
+
+
+def _exploratory_profile_note(pneumo, lang="nl"):
+    """De profielwaarschuwing voor het Besluit, of None.
+
+    De familie komt uit de psgscoring-registry; is die niet importeerbaar of
+    kent hij het profiel niet (oudere resultaten, hernoemd profiel), dan
+    zwijgt de noot -- een gok zou hier erger zijn dan stilte, want het
+    Besluit is de meest gelezen regel van het rapport.
+    """
+    naam = ((pneumo or {}).get("meta") or {}).get("scoring_profile")
+    if not naam:
+        return None
+    try:
+        from psgscoring.profiles import get_profile
+        familie = getattr(get_profile(str(naam)), "family", None)
+    except Exception:
+        return None
+    if familie != "exploratory":
+        return None
+    return t("pdf_concl_exploratory", lang).format(prof=naam)
 
 
 # ── Componenten ────────────────────────────────────────────────
@@ -1777,6 +1848,14 @@ def generate_pdf_report(results:dict, output_path:str,
     # hardgecodeerd als "/u" -- ook in Engelse rapporten.
     _UH = t("unit_per_hour", lang)
 
+    # Taalgebonden t() voor de pdf_report_additions-secties. Die roepen
+    # ``tr('Sleep latencies')`` aan ZONDER taal, en ``t(key, None)`` valt
+    # terug op DEFAULT_LANG="en" -- vandaar "Time in saturation bands" en
+    # "not provided" midden in een Nederlands rapport (91a67fa3), terwijl
+    # alle vertalingen al jaren in i18n.py stonden.
+    def _t_add(key, **_kw):
+        return t(key, lang)
+
     # v0.8.11: patient_info kan custom header/logo bevatten (via rapport editor)
     pat_hdr = results.get("patient_info", {})
     if pat_hdr.get("report_header_name"):
@@ -1993,7 +2072,7 @@ def generate_pdf_report(results:dict, output_path:str,
         if _split_kpi:
             _dw = _split_kpi["waarde"]
             story.append(_kpi([
-                (f"{_dw:.1f}", _split_kpi["label"], "{_UH}", _sev_clr(_dw)),
+                (f"{_dw:.1f}", _split_kpi["label"], _UH, _sev_clr(_dw)),
                 (f"{_split_kpi['therapie']:.1f}"
                  if _split_kpi.get("therapie") is not None else "—",
                  t("pdf_kpi_ahi_cpap", lang), _UH,
@@ -2031,7 +2110,7 @@ def generate_pdf_report(results:dict, output_path:str,
     # ── v0.15.0 (B4): page-1 clinical phenotype summary (POSA / REM-predominant) ──
     # (Signal-quality/confidence banners and the strict/std/sensitive AHI-robustness
     #  banner were removed from the PDF in v0.15.0 — see CHANGES.md.)
-    _p1_pheno = _phenotype_summary_line(rsum, lang)
+    _p1_pheno = _phenotype_summary_line(rsum, lang, pneumo=pneumo)
     if _p1_pheno:
         story.append(Paragraph(_p1_pheno, ParagraphStyle(
             "P1Pheno", fontName="Helvetica", fontSize=8,
@@ -2085,7 +2164,15 @@ def generate_pdf_report(results:dict, output_path:str,
             styles["SM"])); sp(0.1)
 
     # ── 0a. Registratie: kanalen in EDF ────────────────────────
-    all_ch = pneumo.get("meta", {}).get("all_channels", [])
+    # `pneumo.meta.all_channels` is de pneumo-SUBSET die YASAFlaskified zelf
+    # samenstelde, niet het EDF: op rapport 91a67fa3 stonden F3 en O1 wél in
+    # de spindeltabellen maar niet in dit paneel, en de provenance meldde een
+    # EOG "niet in dit EDF-bestand" dat er vermoedelijk gewoon in zat. Sinds
+    # 0.38.2 levert tasks.py de échte headerlijst als `edf_channels`; alleen
+    # dan mag het label "EDF-bestand" zeggen.
+    _edf_ch = results.get("edf_channels") or []
+    all_ch = _edf_ch or pneumo.get("meta", {}).get("all_channels", [])
+    _ch_lbl_key = "pdf_ch_total" if _edf_ch else "pdf_ch_total_analysis"
     if all_ch:
         story.append(_hdr(t("rpt_sec0a", lang))); sp(0.1)
         # Groepeer kanalen in rijen van 4, geen header, klein lettertype
@@ -2107,7 +2194,7 @@ def generate_pdf_report(results:dict, output_path:str,
         ]))
         story.append(ch_tbl); sp(0.1)
         story.append(Paragraph(
-            f"<i>{len(all_ch)} {t('pdf_ch_total', lang)}</i>",
+            f"<i>{len(all_ch)} {t(_ch_lbl_key, lang)}</i>",
             styles["SM"])); sp(0.1)
 
     # ── 0a-bis. Herkomst: welk kanaal voedde welke analyse ─────
@@ -2244,7 +2331,7 @@ def generate_pdf_report(results:dict, output_path:str,
         _hypno = results.get("hypnogram", results.get("hypno", []))
         if _hypno and len(_hypno) > 10:
             try:
-                draw_stage_latencies(story, hypno=_hypno, t=t)
+                draw_stage_latencies(story, hypno=_hypno, t=_t_add)
             except Exception:
                 pass
 
@@ -2283,8 +2370,13 @@ def generate_pdf_report(results:dict, output_path:str,
                 _tr_tbl.setStyle(TableStyle([
                     ("BACKGROUND", (i+1, i+1), (i+1, i+1), colors.HexColor("#e8f5e9")),
                 ]))
+            # n telde elk epochpaar, dus ook 647× "W→W" — blijven is geen
+            # wissel. De matrix houdt de diagonaal (informatief), de teller
+            # telt alleen echte overgangen.
+            _n_wissels = sum(_trans[s1][s2] for s1 in _stages_order
+                             for s2 in _stages_order if s1 != s2)
             story.append(Paragraph(
-                f"<b>{t('pdf_transitions', lang)}</b> (n={len(timeline)-1})",
+                f"<b>{t('pdf_transitions', lang)}</b> (n={_n_wissels})",
                 styles["SM"]))
             story.append(_tr_tbl); sp(0.15)
 
@@ -2313,7 +2405,10 @@ def generate_pdf_report(results:dict, output_path:str,
             _skip={"Stage","stage","Channel","channel"}
             keys=[k for k in summ[0] if k not in _skip]
             rows=[[_detector_row_label(s)]+[_rnd(s.get(k)) for k in keys] for s in summ]
-            story.append(_tbl([t("pdf_channel",lang)]+[k.replace("_"," ").capitalize() for k in keys],rows))
+            # t() geeft onbekende sleutels ongewijzigd terug: de gangbare
+            # kolommen (Count, Duration, ...) zijn vertaald, technische
+            # YASA-veldnamen vallen door.
+            story.append(_tbl([t("pdf_channel",lang)]+[t(k.replace("_"," ").capitalize(), lang) for k in keys],rows))
       else:
         story.append(Paragraph(f"{t('pdf_not_available', lang)}: {spd.get('error','—')}",styles["SM"]))
       sp(0.12)
@@ -2328,7 +2423,7 @@ def generate_pdf_report(results:dict, output_path:str,
             _skip={"Stage","stage","Channel","channel"}
             keys=[k for k in summ[0] if k not in _skip]
             rows=[[_detector_row_label(s)]+[_rnd(s.get(k)) for k in keys] for s in summ]
-            story.append(_tbl([t("pdf_channel",lang)]+[k.replace("_"," ").capitalize() for k in keys],rows))
+            story.append(_tbl([t("pdf_channel",lang)]+[t(k.replace("_"," ").capitalize(), lang) for k in keys],rows))
       else:
         story.append(Paragraph(f"{t('pdf_not_available', lang)}: {sw.get('error','—')}",styles["SM"]))
       sp(0.12)
@@ -2920,17 +3015,18 @@ def generate_pdf_report(results:dict, output_path:str,
             ext_rows,
             [8, 2, 4])])); sp(0.1)
 
-        stage_rows = [
-            ["REM AHI",  f"{rem_ahi:.1f} {_UH}" if rem_ahi is not None else "—"],
-            ["NREM AHI", f"{nrem_ahi:.1f} {_UH}" if nrem_ahi is not None else "—"],
-        ]
+        # REM/NREM-AHI stond hier ÉN in "Overige respiratoire indices" — twee
+        # keer hetzelfde getal op één pagina. De rij bij de overige indices
+        # wint: die draagt de REM-betrouwbaarheidscaveat.
+        stage_rows = []
         # Positional AHI (from position analysis)
         pos_sum = pneumo.get("position", {}).get("summary", {})
         stage_rows.extend(_position_rows(pos_sum, lang))
-        story.append(KeepTogether([_tbl(
-            [t("pdf_param",lang), t("pdf_value",lang)],
-            stage_rows,
-            [8, 6])])); sp(0.1)
+        if stage_rows:
+            story.append(KeepTogether([_tbl(
+                [t("pdf_param",lang), t("pdf_value",lang)],
+                stage_rows,
+                [8, 6])])); sp(0.1)
         _agree_note = scorer_agreement_note(rsum, lang)
         if _agree_note:
             # Zelfde presentatie als de REM-noot maar neutraal grijs: dit is
@@ -2951,7 +3047,14 @@ def generate_pdf_report(results:dict, output_path:str,
         _ph = rsum.get("phenotypes") or {}
         _pheno_lines = []
         _posa = _ph.get("positional_osa")
-        if _posa:
+        if _posa and not _posa_claimable(pneumo):
+            # Houdingscodering niet herkend: ja/nee én de supine-getallen
+            # rusten op een geraden labelvolgorde. Geen claim -- de
+            # positietabel legt uit waarom (pdf_pos_uncoded).
+            _pheno_lines.append(
+                f"<b>{t('pdf_pheno_posa', lang)}:</b> "
+                f"{t('pdf_pheno_posa_unknown', lang)}")
+        elif _posa:
             _yn = t("pdf_pheno_yes", lang) if _posa.get("flag") else t("pdf_pheno_no", lang)
             _txt = (f"<b>{t('pdf_pheno_posa', lang)}:</b> {_yn} "
                     f"(supine {_posa.get('ahi_supine')} vs non-supine {_posa.get('ahi_non_supine')} {_UH}"
@@ -3063,7 +3166,7 @@ def generate_pdf_report(results:dict, output_path:str,
                 draw_position_stage_table(
                     story, events=resp_events, hypno=_hypno,
                     position_data=position_data, sf_pos=1,
-                    tst_hours=float(str(stats.get("TST", 0) or 0))/60, t=t)
+                    tst_hours=float(str(stats.get("TST", 0) or 0))/60, t=_t_add)
             except Exception:
                 pass
         sp(0.1)
@@ -3100,6 +3203,14 @@ def generate_pdf_report(results:dict, output_path:str,
             # Deze sectie gaat over arousal-ETIOLOGIE — waar arousals vandaan
             # komen — en dat is een andere vraag dan hoeveel RERA's er zijn.
             story.append(_tbl([t("pdf_param",lang),t("pdf_value",lang)], _ar_rows,[9,8])); sp(0.1)
+            # 8,4 + 13,3 + 1,7 ≠ 21,7: PLM-arousals zijn een deelverzameling
+            # van "spontaan" (= niet aan een respiratoir event gekoppeld,
+            # zie psgscoring arousal.py). Zonder deze regel leest de tabel
+            # als een optelling die niet klopt.
+            if asum.get("respiratory_arousal_index") is not None:
+                story.append(Paragraph(
+                    f"<i>{t('pdf_arousal_sum_note', lang)}</i>",
+                    styles["SM"])); sp(0.1)
     else:
         story.append(Paragraph(f"{t('pdf_not_available', lang)}: {resp.get('error','—')}",styles["SM"]))
     sp(0.12)
@@ -3373,8 +3484,8 @@ def generate_pdf_report(results:dict, output_path:str,
             [t('pdf_min_spo2', lang),   f"{ss.get('min_spo2','—')} %",  ""],
             *_ev_nadir_row,
             [t("pdf_time_below90",lang),       f"{ss.get('pct_below_90','—')} %","< 1%"],
-            ["ODI 3%",           f"{ss.get('odi_3pct','—')} {_UH}",    "< 5{_UH}"],
-            ["ODI 4%",           f"{ss.get('odi_4pct','—')} {_UH}",    "< 5{_UH}"],
+            ["ODI 3%",           f"{ss.get('odi_3pct','—')} {_UH}",    f"< 5{_UH}"],
+            ["ODI 4%",           f"{ss.get('odi_4pct','—')} {_UH}",    f"< 5{_UH}"],
             # De referentiewaarde "< 20" komt uit Azarbarzin et al. (Eur Heart
             # J 2019) en geldt voor DIE definitie: basislijn = maximum SpO2 in
             # de 100 s vóór het eventeinde, oppervlakte over een uit het
@@ -3401,6 +3512,13 @@ def generate_pdf_report(results:dict, output_path:str,
              # the VB norm is OBSTRUCTIVE-OSA-derived and not calibrated for central apnea.
              ("" if _is_central_dominant(rsum) else "≤ 25%")],
         ],[8,4.5,4.5]))
+        # Een leeg burden-veld is een uitspraak (plafond of onbruikbare
+        # basislijn), geen vergeten cel — maar "—" zonder reden leest als het
+        # tweede (91a67fa3). Alleen tonen wanneer het veld bewust None is.
+        if ("hypoxic_burden" in ss and ss.get("hypoxic_burden") is None):
+            story.append(Paragraph(
+                f"<i>{t('pdf_burden_none_note', lang)}</i>",
+                styles["SM"])); sp(0.1)
         # De hypoxic burden meet de oppervlakte van event-gerelateerde
         # desaturaties TEN OPZICHTE VAN de baseline. Bij aanhoudende hypoxemie
         # ligt die baseline al laag en ogen de dips klein: één patiënt zat
@@ -3428,7 +3546,7 @@ def generate_pdf_report(results:dict, output_path:str,
     if spo2.get("success") and ss:
         try:
             tib_min = float(str(stats.get("TIB", 480) or 480))
-            draw_spo2_bands(story, spo2_summary=ss, tib_min=tib_min, t=t)
+            draw_spo2_bands(story, spo2_summary=ss, tib_min=tib_min, t=_t_add)
         except Exception:
             pass
 
@@ -3437,13 +3555,21 @@ def generate_pdf_report(results:dict, output_path:str,
     if plm.get("success") and ps:
         story.append(_hdr(t("rpt_sec10", lang))); sp(0.1)
         plmi=_f(ps,"plm_index") or 0
+        # De ernst komt als Engels woord uit psgscoring (_classify_plmi);
+        # een onbekende waarde valt door op het woord zelf, niet op de
+        # i18n-sleutel.
+        _sev_raw = str(ps.get("plm_severity") or "")
+        _sev_txt = t(f"plm_severity_{_sev_raw}", lang) if _sev_raw else ""
+        if _sev_txt == f"plm_severity_{_sev_raw}":
+            _sev_txt = _sev_raw
         story.append(_tbl([t("pdf_param",lang),t("pdf_value",lang)],[
             [t("pdf_total_lms",lang),                 str(ps.get("n_lm_total","—"))],
             [t('pdf_lms_sleep', lang),          str(ps.get("n_lm_sleep","—"))],
             [t('pdf_resp_assoc', lang), str(ps.get("n_resp_associated","—"))],
             [t("pdf_plms_series",lang),           str(ps.get("n_plm","—"))],
             [t("pdf_plm_series",lang),                 str(ps.get("n_plm_series","—"))],
-            ["PLMI",                       f"{plmi:.1f} {_UH}  —  {ps.get('plm_severity','—')}"],
+            ["PLMI",                       f"{plmi:.1f} {_UH}  —  {_sev_txt}"
+             if _sev_txt else f"{plmi:.1f} {_UH}"],
         ],[9,8])); sp(0.1)
 
     # ── 10b. RONCHOPATHIE (snurk-analyse) ─────────────────────
@@ -3466,7 +3592,7 @@ def generate_pdf_report(results:dict, output_path:str,
         try:
             draw_snoring_crosstab(
                 story, snore_data=snore, hypno=_hypno,
-                position_data=pneumo.get("position", {}), t=t)
+                position_data=pneumo.get("position", {}), t=_t_add)
         except Exception:
             pass
 
@@ -3595,7 +3721,7 @@ def generate_pdf_report(results:dict, output_path:str,
     except (ValueError, TypeError):
         ess_value = None
     try:
-        draw_ess_section(story, results=pneumo, ess=ess_value, t=t)
+        draw_ess_section(story, results=pneumo, ess=ess_value, t=_t_add)
     except Exception:
         pass
     sp(0.15)

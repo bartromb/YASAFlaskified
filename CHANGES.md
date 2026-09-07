@@ -1,3 +1,78 @@
+# v0.38.2 — 2026-09-07 — het rapport spreekt zichzelf niet meer tegen
+
+Zeventien reparaties uit één review van een productierapport (0.38.0,
+profiel `aasm_v3_breath_dual`). Geen indexverandering: alle getallen blijven
+identiek, alleen wat het rapport erover ZEGT is gerepareerd. psgscoring
+blijft gepind op 0.32.0.
+
+## De twee die er klinisch toe doen
+
+**POSA werd beweerd én onbepaalbaar verklaard — in hetzelfde rapport.** Bij
+een niet-herkende houdingscodering zei de caveat terecht "het POSA-fenotype
+is niet bepaalbaar", maar voorpagina, fenotypeblok én het automatische
+Besluit beweerden POSA gewoon: zij lazen alleen `posa["flag"]`, de caveat
+las de houdingssamenvatting. Eén poort (`_posa_claimable`) bedient nu alle
+vier: bij onherkende codering staat er "niet bepaalbaar" en verdwijnen de
+supine/non-supine-claims, het therapie-aandachtspunt en het
+Besluit-bijvoeglijk. Bij herkende codering verandert er niets.
+
+**"17 kanalen in EDF-bestand" was niet het EDF.** Het paneel toonde de
+pneumo-subset die de app zelf samenstelt; het echte EDF droeg meer (F3 en O1
+stonden wél in de spindeltabellen maar niet in "het EDF"), en de provenance
+meldde een EOG "niet in dit EDF-bestand" dat er gewoon in zat — de subset
+draagt per constructie geen EOG. `tasks.py` legt nu de echte headerlijst
+vast (`edf_channels`); het paneel zegt alleen nog "EDF-bestand" als die er
+is, en de afwezigheidsclaim toetst uitsluitend tegen de echte lijst. Oudere
+resultaten krijgen een eerlijk label ("kanalen gebruikt in de analyse") en
+géén afwezigheidsclaims.
+
+## Verkeerde labels bij juiste getallen
+
+- "Waarvan hersteld via **Rule 1B** (arousal)" heet nu **Regel 1A** — het
+  arousal-criterium ís 1A; 1B kent juist geen arousal.
+- De saturatiebandtabel zei "% of recording" maar deelt (in psgscoring) door
+  de **slaaptijd**; label is nu "% van slaaptijd (TST)", en de
+  fallback-noemer volgt dezelfde definitie.
+- "Stadiawissels (n=1318)" telde elk epochpaar, ook 647× W→W; de teller telt
+  nu alleen echte overgangen, de matrix houdt de diagonaal.
+- Spindel-/tragegolfkoppen zeggen "kanalen samengeteld" — het totaal telt
+  dezelfde spindel op elk kanaal opnieuw mee.
+- 8b kreeg een voetnoot: AI = respiratoir + spontaan; PLM-arousals zijn een
+  deelverzameling van "spontaan" (8,4 + 13,3 + 1,7 ≠ 21,7 was geen rekenfout
+  maar een leesinstructie die ontbrak).
+
+## Wat de lezer nog miste
+
+- Ventilatoire last boven de referentie (≤ 25 %) is nu een aandachtspunt op
+  de voorpagina, net als T90 (zelfde centraal-dominant-uitzondering als de
+  tabelreferentie).
+- Een lege hypoxic burden krijgt zijn reden erbij (bewust None: plafond of
+  onbruikbare basislijn) in plaats van een kaal "—".
+- Het Besluit meldt het wanneer er met een exploratory-profiel gescoord is —
+  de kop zei al "(experimental)", maar de verwijzer leest het Besluit.
+- T90 op de voorpagina in dezelfde precisie als sectie 9 (19,5 %, niet 20 %).
+
+## Cosmetisch maar zichtbaar
+
+- `< 5{_UH}` stond letterlijk in de ODI-referenties (accolades zonder
+  f-string); zelfde latente fout in de split-night-KPI.
+- De additions-secties (saturatiebanden, ESS, latenties, kruistabellen)
+  renderden Engels in elk niet-Engels rapport: ze riepen `t(key)` zonder
+  taal aan en vielen op DEFAULT_LANG="en" terug, terwijl de vertalingen al
+  in i18n.py stonden. De rapportfunctie bindt de taal nu.
+- "SpO■" in de bandtabel: het ₂-glyph ontbreekt in Helvetica-Table-cellen;
+  ASCII "SpO2" daar.
+- PLMI-ernst ("moderate") en de YASA-kolomkoppen (Count, Duration, ...)
+  vertaald; technische YASA-veldnamen blijven bewust onvertaald.
+- REM/NREM-AHI stond twee keer op pagina 5; de rij mét REM-caveat wint.
+
+## Tests
+
+21 nieuwe rendertests (`test_pdf_review_fixes_20260907.py`) die de PDF echt
+renderen en de tekstlaag teruglezen, elk eerst rood gezien op het oude
+gedrag; 2 bestaande tests aangepast aan het bewust gewijzigde gedrag
+(deduplicatie, claimbron). Suite: 701 groen.
+
 # v0.37.5 — 2026-09-02 — de subtypering van apneus is gerepareerd
 
 Pin naar **`psgscoring[ml]==0.31.6`** (was 0.31.5). **Dit verandert een klinisch

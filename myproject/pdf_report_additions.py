@@ -696,13 +696,28 @@ def draw_spo2_bands(story, spo2_summary, tib_min, t=None):
         ('<70%',    'time_below_70_min', 'pct_below_70'),
     ]
 
+    # De pct_*-velden uit psgscoring zijn % van de SLAAPTIJD (spo2.py deelt
+    # door total_sleep_s); het label zei "% of recording" en op rapport
+    # 91a67fa3 telden de banden daardoor op tot 94% "van de opname" bij een
+    # slaapefficiëntie van 49%. Label en fallback-noemer volgen nu de bron.
     data = [[tr('SpO₂ range'), tr('Duration (min)'),
-             tr('% of recording')]]
+             tr('% of sleep time (TST)')]]
+
+    _tst_min = None
+    try:
+        _tst_s = spo2_summary.get('total_sleep_s')
+        _tst_min = float(_tst_s) / 60.0 if _tst_s else None
+    except (TypeError, ValueError):
+        _tst_min = None
 
     for label, time_key, pct_key in bands:
         minutes = spo2_summary.get(time_key, 0)
         pct = spo2_summary.get(pct_key)
-        if pct is None and tib_min > 0:
+        if pct is None and _tst_min:
+            pct = round(minutes / _tst_min * 100, 1)
+        elif pct is None and tib_min > 0:
+            # Oudere resultaten zonder total_sleep_s: TIB is dan de best
+            # beschikbare noemer; iets te lage percentages, zelfde label.
             pct = round(minutes / tib_min * 100, 1)
         data.append([
             label,
