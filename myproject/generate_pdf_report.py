@@ -285,6 +285,10 @@ def _phenotype_summary_line(rsum, lang="nl", pneumo=None):
     """B4: compact one-line phenotype summary for page 1 (POSA / REM-predominant)."""
     _UH = t("unit_per_hour", lang)
     ph = (rsum or {}).get("phenotypes") or {}
+    # Split-night: beide fenotypes zijn nachtoordelen over onvergelijkbare
+    # helften — geen claim op de voorpagina; het fenotypeblok legt uit waarom.
+    if _split_confounded(pneumo):
+        return None
     tags = []
     posa = ph.get("positional_osa")
     # Niet-herkende houdingscodering: geen POSA-claim op de voorpagina.
@@ -459,7 +463,12 @@ def provenance_rows(results, lang="nl"):
            or results.get("split_night") or {})
     if _sn.get("detected") and _sn.get("breakpoint_s"):
         _b = float(_sn["breakpoint_s"])
-        _hoe = {"manual": "opgegeven", "flow_amplitude+spo2_baseline": "gedetecteerd"}.get(
+        # Deze woorden stonden hardgecodeerd Nederlands — "(gedetecteerd)"
+        # midden in een Engels rapport (80722e9c). Onbekende methodes vallen
+        # door op de ruwe methodenaam.
+        _hoe = {"manual": _lbl("prov_split_manual", "opgegeven"),
+                "flow_amplitude+spo2_baseline":
+                    _lbl("prov_split_detected", "gedetecteerd")}.get(
             _sn.get("method"), _sn.get("method") or "")
         rows.append([_lbl("prov_split_night", "Split-night — start therapie"),
                      f"{int(_b // 3600)}:{int((_b % 3600) // 60):02d} ({_hoe})"])
@@ -469,9 +478,11 @@ def provenance_rows(results, lang="nl"):
     if _dc.get("applied"):
         _n = _dc.get("n_channels") or len(_dc.get("channels") or {})
         _max = _dc.get("max_offset_uv")
-        _txt = f"{_dc.get('cutoff_hz', 0.3):.2f} Hz — {_n} kanalen"
+        _txt = _lbl("prov_dc_value", "{hz} Hz — {n} kanalen").format(
+            hz=f"{_dc.get('cutoff_hz', 0.3):.2f}", n=_n)
         if _max:
-            _txt += f", offset tot {abs(float(_max)):.0f} µV"
+            _txt += _lbl("prov_dc_offset", ", offset tot {uv} µV").format(
+                uv=f"{abs(float(_max)):.0f}")
         rows.append([_lbl("prov_dc_highpass",
                           "Gelijkspanning verwijderd (hoogdoorlaat)"), _txt])
 
@@ -801,6 +812,38 @@ def _posa_claimable(pneumo):
         ((pneumo or {}).get("position") or {}).get("summary"))
 
 
+def _edf_naam_bruikbaar(naam: str) -> bool:
+    """Is dit headerveld een naam, of vrije recordertekst?
+
+    Het EDF-naamveld is vrije tekst. Op 80722e9c stond er
+    "20260629 Anonymous01 Height 169 cm. We" (afgekapt op de 80-byte
+    headergrens) en het rapport diende dat op als "20260629, Anonymous01
+    Height 169 cm. We" — een datum als achternaam. Een naam heeft geen
+    cijfers en niet meer dan een handvol woorden; alles daarbuiten blijft
+    weg en het veld toont "—". Liever geen naam dan headerjunk als naam.
+    """
+    tokens = naam.split()
+    if not tokens or len(tokens) > 4:
+        return False
+    return not any(any(c.isdigit() for c in tok) for tok in tokens)
+
+
+def _split_confounded(pneumo):
+    """Zijn nachtbrede oordelen hier oordelen over twee onvergelijkbare helften?
+
+    Zelfde klasse als de POSA-poort, één laag hoger: op split-night 80722e9c
+    stond "REM-predominant OSA: no (REM 1.9 vs NREM 18.3/h)" — maar de REM
+    lag onder CPAP, dus zelfs het "no" is onbewijsbaar; en de houdingsmix
+    loopt over de therapiegrens heen. De ernstkolom kreeg deze poort al
+    (v0.37.4); fenotypes en stadium-AHI lazen er nooit doorheen. Dezelfde
+    voorwaarde als de KPI- en ernstpoort: gedetecteerd én een betrouwbaar
+    diagnostisch deel — een onbetrouwbare detectie mag geen claims wissen.
+    """
+    sn = (pneumo or {}).get("split_night") or {}
+    seg = (sn.get("segments") or {}).get("diagnostic") or {}
+    return bool(sn.get("detected") and seg.get("reliable"))
+
+
 _FRI_SENTINEL = object()
 
 
@@ -837,7 +880,8 @@ def _fri_index(rsum, stats=None):
     return round(n_fri / tst_h, 1) if tst_h > 0 else None
 
 
-def _clinical_flags(rsum, pneumo, ss, asum, lang="nl", warnings=None):
+def _clinical_flags(rsum, pneumo, ss, asum, lang="nl", warnings=None,
+                    artifacts=None):
     """B5: descriptive clinician attention points (NOT medical advice).
 
     v0.34.1: `analysis_warnings` uit `tasks.py` komt hier binnen. Die lijst
@@ -855,13 +899,41 @@ def _clinical_flags(rsum, pneumo, ss, asum, lang="nl", warnings=None):
         if txt:
             flags.append(txt)
     ph = (rsum or {}).get("phenotypes") or {}
+    # Op een split-night zijn beide fenotypes nachtoordelen over
+    # onvergelijkbare helften; dan geen fenotype-aandachtspunten.
+    _split_conf = _split_confounded(pneumo)
     posa = ph.get("positional_osa")
     if (posa and posa.get("flag") and posa.get("positional_therapy_candidate")
-            and _posa_claimable(pneumo)):
+            and _posa_claimable(pneumo) and not _split_conf):
         flags.append(t("pdf_flag_positional", lang))
     remp = ph.get("rem_predominant")
-    if remp and remp.get("flag"):
+    if remp and remp.get("flag") and not _split_conf:
         flags.append(t("pdf_flag_rem", lang))
+    # Kort diagnostisch deel: AASM/CMS hanteren ≥ 2 u diagnostische slaap
+    # voor een split-night. Op 80722e9c rustte "AHI zonder CPAP 83,5/u" op
+    # 51 minuten — viermaal prominent, nergens gevlagd — en de
+    # per-deel-indices (AI 157,7/u, PLMI 168,2/u) lazen op die noemer als
+    # metingen.
+    try:
+        _sn_f = (pneumo or {}).get("split_night") or {}
+        _seg_f = (_sn_f.get("segments") or {}).get("diagnostic") or {}
+        _sh = _seg_f.get("sleep_h")
+        if (_sn_f.get("detected") and _seg_f.get("reliable")
+                and _sh is not None and float(_sh) * 60 < 120):
+            flags.append(t("pdf_flag_split_short_diag", lang).format(
+                min=f"{float(_sh) * 60:.0f}"))
+    except (TypeError, ValueError):
+        pass
+    # Hoog artefactaandeel: alleen 100 % was blokkerend; 25 % van de epochs
+    # weg verschuift elke noemer en stond nergens op de voorpagina.
+    try:
+        _sa_f = (artifacts or {}).get("summary") or {}
+        _pa = _sa_f.get("artifact_percent")
+        if _pa is not None and float(_pa) >= 20:
+            flags.append(t("pdf_flag_artifact_fraction", lang).format(
+                pct=f"{float(_pa):.1f}"))
+    except (TypeError, ValueError):
+        pass
     if (pneumo.get("cheyne_stokes") or {}).get("criteria_met"):
         flags.append(t("pdf_flag_csr", lang))
     elif _central_component_present(rsum, pneumo):
@@ -1033,10 +1105,13 @@ def _auto_conclusion(rsum, pneumo, ss, lang="nl"):
         sev = f"{sev} {t('pdf_concl_without_cpap', lang)}"
     quals = []
     ph = (rsum or {}).get("phenotypes") or {}
+    # Fenotypes zijn nachtoordelen; op een split-night horen ze niet in de
+    # samenvatting (de AHI zelf is hierboven al per deel gekozen).
+    _split_conf = _split_confounded(pneumo)
     if ((ph.get("positional_osa") or {}).get("flag")
-            and _posa_claimable(pneumo)):
+            and _posa_claimable(pneumo) and not _split_conf):
         quals.append(t("pdf_concl_positional", lang))
-    if (ph.get("rem_predominant") or {}).get("flag"):
+    if (ph.get("rem_predominant") or {}).get("flag") and not _split_conf:
         quals.append(t("pdf_concl_rem", lang))
     if _central_component_present(rsum, pneumo):
         quals.append(t("pdf_concl_central", lang))
@@ -1890,7 +1965,8 @@ def generate_pdf_report(results:dict, output_path:str,
         form_name = (pat.get("patient_name") or "").strip()
         edf_name = (edf_pat.get("name") or "").strip()
         name_is_code = form_name.isdigit() or form_name == edf_pat.get("patient_code")
-        if edf_name and (not form_name or name_is_code):
+        if (edf_name and _edf_naam_bruikbaar(edf_name)
+                and (not form_name or name_is_code)):
             parts = edf_name.split()
             if len(parts) >= 2:
                 pat["patient_name"] = parts[0]
@@ -2123,7 +2199,8 @@ def generate_pdf_report(results:dict, output_path:str,
         rsum, pneumo,
         pneumo.get("spo2", {}).get("summary", {}),
         pneumo.get("arousal", {}).get("summary", {}), lang,
-        warnings=results.get("analysis_warnings"))
+        warnings=results.get("analysis_warnings"),
+        artifacts=results.get("artifacts"))
     if _p1_flags:
         _fl_hdr = ParagraphStyle("FlagHdr", fontName="Helvetica-Bold", fontSize=7.5,
                                  textColor=colors.HexColor("#7a5c00"), leading=10)
@@ -2823,7 +2900,7 @@ def generate_pdf_report(results:dict, output_path:str,
                 + (["", "", ""] if _show_corrob else []))
 
         conf_rows.append(
-            ["A+H totaal",
+            [t("pdf_ah_total", lang),
              str(rsum.get("n_ah_total","—")),
              _v(rsum,"ahi_total",fmt="{:.1f}"),
              "", "", "", ""] + (["", "", ""] if _show_corrob else []))
@@ -3027,6 +3104,13 @@ def generate_pdf_report(results:dict, output_path:str,
                 [t("pdf_param",lang), t("pdf_value",lang)],
                 stage_rows,
                 [8, 6])])); sp(0.1)
+            # Positie-AHI's zijn nachtwaarden; op een split-night mengen ze
+            # behandelde en onbehandelde uren (AHI Prone: 35,0 diagnostisch
+            # tegen 11,4 over de nacht op 80722e9c).
+            if _split_confounded(pneumo):
+                story.append(Paragraph(
+                    f"<i>{t('pdf_split_stage_ahi_note', lang)}</i>",
+                    styles["SM"])); sp(0.1)
         _agree_note = scorer_agreement_note(rsum, lang)
         if _agree_note:
             # Zelfde presentatie als de REM-noot maar neutraal grijs: dit is
@@ -3046,8 +3130,15 @@ def generate_pdf_report(results:dict, output_path:str,
         # ── v0.10.0: klinische fenotypes (POSA, REM-predominant) ──────────
         _ph = rsum.get("phenotypes") or {}
         _pheno_lines = []
+        _split_conf_ph = _split_confounded(pneumo)
         _posa = _ph.get("positional_osa")
-        if _posa and not _posa_claimable(pneumo):
+        if _posa and _split_conf_ph:
+            # Split-night: de houdingsmix loopt over de therapiegrens; een
+            # ja/nee mét getallen zou een nachtoordeel als diagnose brengen.
+            _pheno_lines.append(
+                f"<b>{t('pdf_pheno_posa', lang)}:</b> "
+                f"{t('pdf_pheno_split_na', lang)}")
+        elif _posa and not _posa_claimable(pneumo):
             # Houdingscodering niet herkend: ja/nee én de supine-getallen
             # rusten op een geraden labelvolgorde. Geen claim -- de
             # positietabel legt uit waarom (pdf_pos_uncoded).
@@ -3064,7 +3155,14 @@ def generate_pdf_report(results:dict, output_path:str,
                 _txt += " — " + t("pdf_pheno_posa_therapy", lang)
             _pheno_lines.append(_txt)
         _remp = _ph.get("rem_predominant")
-        if _remp:
+        if _remp and _split_conf_ph:
+            # De REM lag (deels) onder therapie: REM- tegen NREM-AHI over de
+            # hele nacht vergelijkt behandeld met onbehandeld — zelfs het
+            # "nee" is dan onbewijsbaar (80722e9c: REM 1,9 ónder CPAP).
+            _pheno_lines.append(
+                f"<b>{t('pdf_pheno_rem', lang)}:</b> "
+                f"{t('pdf_pheno_split_na', lang)}")
+        elif _remp:
             _yn = t("pdf_pheno_yes", lang) if _remp.get("flag") else t("pdf_pheno_no", lang)
             _pheno_lines.append(
                 f"<b>{t('pdf_pheno_rem', lang)}:</b> {_yn} "
@@ -3106,8 +3204,11 @@ def generate_pdf_report(results:dict, output_path:str,
                  (f"{n_csr_fl} events  →  AHI {ahi_csr:.1f}{_UH}" if ahi_csr else f"{n_csr_fl} events"),
                  t("pdf_fix3_desc",lang)],
                 [t("pdf_fix4_name",lang),
-                 f"{n_noise} ruis  +  {n_border} borderline",
-                 (f"AHI excl. ruis (<0.40): {ahi_noise:.1f}{_UH}" if ahi_noise else t("pdf_conf_signal_noise", lang))],
+                 t("pdf_fix4_impact", lang).format(n_noise=n_noise,
+                                                   n_border=n_border),
+                 (t("pdf_fix4_ahi_excl", lang).format(
+                     v=f"{ahi_noise:.1f}{_UH}")
+                  if ahi_noise else t("pdf_conf_signal_noise", lang))],
                 [t("pdf_fix5_name",lang),
                  t("pdf_corrected",lang),
                  t("pdf_fix5_desc",lang)],
@@ -3116,7 +3217,7 @@ def generate_pdf_report(results:dict, output_path:str,
             if n_local_rej > 0:
                 corr_rows.append(
                     [t("pdf_fix6_name",lang),
-                     f"{n_local_rej} afgewezen",
+                     t("pdf_fix6_rejected", lang).format(n=n_local_rej),
                      t("pdf_fix6_desc",lang)])
             n_ecg_reclass = rsum.get("n_ecg_reclassified_central", 0) or 0
             if n_ecg_reclass > 0:
@@ -3156,6 +3257,11 @@ def generate_pdf_report(results:dict, output_path:str,
              [t("pdf_avg_apnea_dur", lang), f"{rsum.get('avg_apnea_dur_s','—')} s", ""],
              [t("pdf_max_apnea_dur", lang),  f"{rsum.get('max_apnea_dur_s','—')} s", ""],
             ], [8, 4, 5])])); sp(0.1)
+        # AHI REM/NREM zijn nachtwaarden — op een split-night geen diagnose.
+        if _split_confounded(pneumo):
+            story.append(Paragraph(
+                f"<i>{t('pdf_split_stage_ahi_note', lang)}</i>",
+                styles["SM"])); sp(0.1)
 
         # v0.8.37: Position × stage cross-table
         resp_events = resp.get("events", [])

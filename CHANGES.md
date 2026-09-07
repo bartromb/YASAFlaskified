@@ -1,3 +1,53 @@
+# v0.38.3 — 2026-09-07 — de split-night-poort dekt nu ook fenotypes; geen Nederlands meer in Engelse rapporten
+
+Review van het eerste 0.38.2-productierapport (80722e9c, Engels, split-night
+met CPAP vanaf 2:15). Geen indexverandering; psgscoring blijft 0.32.0.
+
+## Split-night: de poort stopte bij de AHI
+
+De ernstkolom zegt sinds v0.37.4 "—" op een split-night, maar drie lagen
+lazen er nooit doorheen:
+
+- **Fenotypes** (POSA én REM-predominant) werden beoordeeld over de hele
+  nacht: "REM-predominant OSA: no (REM 1.9 vs NREM 18.3/h)" — terwijl de
+  REM ónder CPAP lag, dus zelfs het "no" onbewijsbaar was. Eén poort
+  (`_split_confounded`, zelfde voorwaarde als de ernstpoort) bedient nu
+  voorpagina-fenotyperegel, fenotypeblok ("niet beoordeelbaar op een
+  split-night"), aandachtspunten en het Besluit.
+- **Stadium- en positie-AHI's** (AHI REM/NREM, AHI per houding) zijn
+  nachtwaarden die behandelde en onbehandelde uren mengen (AHI Prone: 35,0
+  diagnostisch tegen 11,4 over de nacht); beide tabellen dragen nu een noot.
+- **Kort diagnostisch deel**: AASM/CMS hanteren ≥ 2 u diagnostische slaap;
+  hier rustte "AHI zonder CPAP 83,5/u" op 51 minuten — viermaal prominent,
+  nergens gevlagd, met AI 157,7/u en PLMI 168,2/u op die korte noemer als
+  "metingen" ernaast. Onder de 2 uur staat er nu een aandachtspunt.
+
+## De spiegel van 0.38.2
+
+0.38.2 repareerde Engels in Nederlandse rapporten; de omgekeerde richting
+bestond ook — hardgecodeerd Nederlands in élk niet-Nederlands rapport:
+"(gedetecteerd)" bij de split-methode, "11 kanalen, offset tot … µV" in de
+DC-regel, "0 ruis + 14 borderline" en "87 afgewezen" in de correctietabel,
+en het rijlabel "A+H totaal". Alles via i18n-sleutels in vier talen.
+
+## Overig
+
+- **Headerjunk wordt geen naam**: het vrije EDF-naamveld ("20260629
+  Anonymous01 Height 169 cm. We", afgekapt op de 80-byte headergrens) werd
+  als "achternaam, voornaam" opgediend. Een naam heeft geen cijfers en
+  hooguit vier woorden; anders blijft het veld "—". Zelfde guard in de
+  prefill van de kanaalkeuzepagina. (De Patiënt-ID-overname uit de header
+  blijft bewust: de anonymize-stap schrobt dat veld al wanneer hij
+  gebruikt wordt.)
+- **Hoog artefactaandeel** (≥ 20 % van de epochs) is nu een aandachtspunt;
+  alleen 100 % was blokkerend, en 25 % verschoof elke noemer onzichtbaar.
+- KPI-label "sleep diagnostic" → "diagnostic sleep" (idem nl/de).
+
+## Tests
+
+12 nieuwe rendertests (`test_pdf_split_night_review_20260907.py`), eerst
+rood gezien; suite 713 groen.
+
 # v0.38.2 — 2026-09-07 — het rapport spreekt zichzelf niet meer tegen
 
 Zeventien reparaties uit één review van een productierapport (0.38.0,

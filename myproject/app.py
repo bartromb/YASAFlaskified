@@ -2059,7 +2059,16 @@ def channel_select(job_id):
 
         edf_lastname = ""
         edf_firstname = ""
+        # Vrije recordertekst is geen naam: op 80722e9c prefillde dit veld
+        # "20260629 Anonymous01 Height 169 cm. We" als achternaam+voornaam.
+        # Zelfde regel als _edf_naam_bruikbaar in generate_pdf_report.py:
+        # geen cijfers, hooguit vier woorden — anders leeg laten.
+        _naam_ok = False
         if edf_pat.get("name"):
+            _tk = edf_pat["name"].split()
+            _naam_ok = (0 < len(_tk) <= 4 and
+                        not any(any(c.isdigit() for c in w) for w in _tk))
+        if _naam_ok:
             parts = edf_pat["name"].split()
             if len(parts) >= 2:
                 # v0.8.37: Handle Belgian/Dutch compound surnames

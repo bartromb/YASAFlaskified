@@ -4432,3 +4432,90 @@ _PDF_V0382 = {
     "Amplitude":    {"nl": "Amplitude",  "fr": "Amplitude",  "en": "Amplitude", "de": "Amplitude"},
 }
 TRANSLATIONS.update(_PDF_V0382)
+
+# v0.38.3 — tweede rapportreview van 2026-09-07 (80722e9c, EN, split-night):
+# de spiegel van 0.38.2 (Nederlands lekte in Engelse rapporten) plus de
+# split-night-gaten (fenotypes, kort diagnostisch deel) en het artefactaandeel.
+_PDF_V0383 = {
+    # Provenance: split-methode en DC-regel stonden hardgecodeerd Nederlands.
+    "prov_split_detected": {"nl": "gedetecteerd", "fr": "détecté",
+                            "en": "detected", "de": "erkannt"},
+    "prov_split_manual":   {"nl": "opgegeven", "fr": "indiqué",
+                            "en": "specified", "de": "angegeben"},
+    "prov_dc_value": {"nl": "{hz} Hz — {n} kanalen",
+                      "fr": "{hz} Hz — {n} canaux",
+                      "en": "{hz} Hz — {n} channels",
+                      "de": "{hz} Hz — {n} Kanäle"},
+    "prov_dc_offset": {"nl": ", offset tot {uv} µV",
+                       "fr": ", décalage jusqu'à {uv} µV",
+                       "en": ", offset up to {uv} µV",
+                       "de": ", Offset bis {uv} µV"},
+    # Correctietabel: "ruis" en "afgewezen" stonden in elke taal Nederlands.
+    "pdf_fix4_impact": {"nl": "{n_noise} ruis  +  {n_border} borderline",
+                        "fr": "{n_noise} bruit  +  {n_border} borderline",
+                        "en": "{n_noise} noise  +  {n_border} borderline",
+                        "de": "{n_noise} Rauschen  +  {n_border} Borderline"},
+    "pdf_fix4_ahi_excl": {"nl": "AHI excl. ruis (<0.40): {v}",
+                          "fr": "IAH excl. bruit (<0.40) : {v}",
+                          "en": "AHI excl. noise (<0.40): {v}",
+                          "de": "AHI exkl. Rauschen (<0.40): {v}"},
+    "pdf_fix6_rejected": {"nl": "{n} afgewezen", "fr": "{n} rejetées",
+                          "en": "{n} rejected", "de": "{n} verworfen"},
+    "pdf_ah_total": {"nl": "A+H totaal", "fr": "A+H total",
+                     "en": "A+H total", "de": "A+H gesamt"},
+    # Fenotypes op een split-night: de REM lag onder CPAP en de houdingsmix
+    # loopt over de therapiegrens — een nachtoordeel is dan geen oordeel.
+    # Zelfde klasse als de POSA-poort van 0.38.2, één laag hoger.
+    "pdf_pheno_split_na": {
+        "nl": ("niet beoordeelbaar op een split-night — de twee nachthelften "
+               "zijn niet vergelijkbaar"),
+        "fr": ("non évaluable sur une nuit divisée — les deux moitiés de la "
+               "nuit ne sont pas comparables"),
+        "en": ("not assessable on a split-night — the two halves of the "
+               "night are not comparable"),
+        "de": ("bei einer Split-Night nicht beurteilbar — die beiden "
+               "Nachthälften sind nicht vergleichbar")},
+    "pdf_split_stage_ahi_note": {
+        "nl": ("Waarden over de hele nacht, inclusief de uren onder therapie "
+               "— op een split-night niet als diagnose te lezen."),
+        "fr": ("Valeurs sur la nuit entière, y compris les heures sous "
+               "traitement — à ne pas lire comme diagnostic sur une nuit "
+               "divisée."),
+        "en": ("Whole-night values, including the hours on therapy — not to "
+               "be read as diagnostic on a split-night."),
+        "de": ("Werte über die ganze Nacht, einschließlich der Stunden unter "
+               "Therapie — bei einer Split-Night nicht als Diagnose zu "
+               "lesen.")},
+    # AASM/CMS hanteren ≥ 2 u diagnostische slaap voor een split-night; op
+    # 80722e9c rustte "AHI zonder CPAP 83,5/u" op 51 minuten, viermaal
+    # prominent en nergens gevlagd — en AI 157,7/u en PLMI 168,2/u op die
+    # noemer lazen als metingen.
+    "pdf_flag_split_short_diag": {
+        "nl": ("Kort diagnostisch deel ({min} min slaap, < 2 u AASM): de AHI "
+               "zonder therapie en de per-deel-indices rusten op een korte "
+               "noemer"),
+        "fr": ("Partie diagnostique courte ({min} min de sommeil, < 2 h "
+               "AASM) : l'IAH sans traitement et les index par partie "
+               "reposent sur un dénominateur court"),
+        "en": ("Short diagnostic part ({min} min of sleep, < 2 h AASM): the "
+               "AHI without therapy and the per-part indices rest on a short "
+               "denominator"),
+        "de": ("Kurzer diagnostischer Teil ({min} min Schlaf, < 2 h AASM): "
+               "der AHI ohne Therapie und die Teil-Indizes beruhen auf einem "
+               "kurzen Nenner")},
+    "pdf_flag_artifact_fraction": {
+        "nl": ("Hoog artefactaandeel ({pct} % van de epochs) — de indices "
+               "rusten op de resterende slaaptijd"),
+        "fr": ("Fraction d'artefacts élevée ({pct} % des époques) — les "
+               "index reposent sur le temps de sommeil restant"),
+        "en": ("High artifact fraction ({pct} % of epochs) — indices rest on "
+               "the remaining sleep time"),
+        "de": ("Hoher Artefaktanteil ({pct} % der Epochen) — die Indizes "
+               "beruhen auf der verbleibenden Schlafzeit")},
+}
+TRANSLATIONS.update(_PDF_V0383)
+
+# "sleep diagnostic" was krom in elke taal behalve het Frans.
+TRANSLATIONS["pdf_kpi_sleep_diag"] = {
+    "nl": "diagnostische slaap", "fr": "sommeil diagnostique",
+    "en": "diagnostic sleep", "de": "diagnostischer Schlaf"}
