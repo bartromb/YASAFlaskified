@@ -4561,3 +4561,121 @@ TRANSLATIONS["prov_autonomic_off"] = {
     "fr": "inactif — {reason}",
     "en": "off — {reason}",
     "de": "aus — {reason}"}
+
+# v0.38.6 — landingspagina "Wat is nieuw" ververst (stond op v0.11).
+# Zes tegels op de stand van najaar 2026; zelfde toon als de rest van de
+# pagina: klinisch, met de grenzen erbij, geen reclame.
+_FP_NEW_V0386 = {
+    "fp_new_title": {"nl": "Wat is nieuw (najaar 2026)",
+                     "fr": "Nouveautés (automne 2026)",
+                     "en": "What's new (autumn 2026)",
+                     "de": "Was ist neu (Herbst 2026)"},
+    "fp_new_lead": {
+        "nl": "De recentste klinische uitbreidingen — elk met de meting erachter:",
+        "fr": "Les extensions cliniques les plus récentes — chacune avec sa mesure :",
+        "en": "The most recent clinical additions — each with its measurement behind it:",
+        "de": "Die neuesten klinischen Erweiterungen — jede mit der Messung dahinter:"},
+    "fp_new_1_t": {"nl": "Autonome arousal-herordening (Pleth/hartslag)",
+                   "fr": "Réordonnancement autonome des éveils (Pleth/FC)",
+                   "en": "Autonomic arousal re-ranking (Pleth/heart rate)",
+                   "de": "Autonome Arousal-Umordnung (Pleth/Herzfrequenz)"},
+    "fp_new_1_b": {
+        "nl": ("Op montages met vingerplethysmogram en hartslag worden arousal-kandidaten "
+               "herordend met een bevroren model op polsgolf- en hartslagkenmerken — vooraf "
+               "geregistreerd gerepliceerd op 40 onafhankelijke nachten; de AHI verandert nooit."),
+        "fr": ("Sur les montages avec pléthysmogramme digital et fréquence cardiaque, les "
+               "candidats d'éveil sont réordonnés par un modèle figé sur l'onde de pouls et la "
+               "FC — réplication pré-enregistrée sur 40 nuits indépendantes ; l'IAH ne change jamais."),
+        "en": ("On montages with a finger plethysmogram and heart rate, arousal candidates are "
+               "re-ranked by a frozen model over pulse-wave and heart-rate features — "
+               "pre-registered replication on 40 independent nights; the AHI never changes."),
+        "de": ("Auf Montagen mit Fingerplethysmogramm und Herzfrequenz werden Arousal-Kandidaten "
+               "durch ein eingefrorenes Modell über Pulswellen- und HF-Merkmale umgeordnet — "
+               "vorregistriert repliziert an 40 unabhängigen Nächten; der AHI ändert sich nie.")},
+    "fp_new_2_t": {"nl": "Gemeten in de eenheid van FDA-gecleardee systemen",
+                   "fr": "Mesuré dans l'unité des systèmes homologués FDA",
+                   "en": "Measured in the currency of FDA-cleared systems",
+                   "de": "Gemessen in der Einheit FDA-zugelassener Systeme"},
+    "fp_new_2_b": {
+        "nl": ("Respiratoire events uitgedrukt zoals de 510(k)-validaties: overeenstemming tegen een "
+               "2-van-3-scoorderconsensus, hier over álle 220 drietallen van twaalf scoorders — op of "
+               "boven de gepubliceerde cijfers, mét de populatiekanttekeningen erbij."),
+        "fr": ("Événements respiratoires exprimés comme dans les validations 510(k) : accord contre un "
+               "consensus 2-sur-3, ici sur les 220 trios de douze cotateurs — au niveau ou au-dessus "
+               "des chiffres publiés, avec les réserves de population."),
+        "en": ("Respiratory events expressed the way 510(k) validations report them: agreement against "
+               "a 2-of-3 scorer consensus, here across all 220 trios of twelve scorers — at or above "
+               "the published figures, population caveats stated."),
+        "de": ("Respiratorische Ereignisse ausgedrückt wie in 510(k)-Validierungen: Übereinstimmung "
+               "gegen einen 2-von-3-Konsens, hier über alle 220 Dreiergruppen von zwölf Scorern — auf "
+               "oder über den publizierten Zahlen, mit den Populationsvorbehalten.")},
+    "fp_new_3_t": {"nl": "Het rapport zegt hoe zeker het is",
+                   "fr": "Le rapport dit à quel point il est sûr",
+                   "en": "The report tells you how certain it is",
+                   "de": "Der Bericht sagt, wie sicher er ist"},
+    "fp_new_3_b": {
+        "nl": ("Naast de eventtabel staat de verwachte overeenstemming tussen twee ménselijke scoorders "
+               "bij deze ziektelast — een eigenschap van de opname, niet van de software. Centrale "
+               "apneus dragen een expliciet advies tot handmatige bevestiging."),
+        "fr": ("À côté du tableau des événements figure l'accord attendu entre deux cotateurs humains "
+               "pour cette charge de maladie — une propriété de l'enregistrement, pas du logiciel. Les "
+               "apnées centrales portent un avis explicite de confirmation manuelle."),
+        "en": ("Next to the event table sits the expected agreement between two human scorers at this "
+               "disease burden — a property of the recording, not the software. Central apneas carry "
+               "an explicit manual-confirmation advisory."),
+        "de": ("Neben der Ereignistabelle steht die erwartete Übereinstimmung zweier menschlicher "
+               "Scorer bei dieser Krankheitslast — eine Eigenschaft der Aufzeichnung, nicht der "
+               "Software. Zentrale Apnoen tragen einen expliziten Hinweis zur manuellen Bestätigung.")},
+    "fp_new_4_t": {"nl": "Split-night in twee helften",
+                   "fr": "Nuit divisée en deux moitiés",
+                   "en": "Split-nights in halves",
+                   "de": "Split-Night in zwei Hälften"},
+    "fp_new_4_b": {
+        "nl": ("De overgang naar titratie wordt zelf gedetecteerd; diagnose en therapie krijgen elk hun "
+               "eigen indices. Ernstklasse, fenotypes en stadium-AHI's worden nooit uitgesproken over "
+               "twee onvergelijkbare nachthelften."),
+        "fr": ("La transition vers la titration est détectée automatiquement ; diagnostic et traitement "
+               "reçoivent chacun leurs index. Sévérité, phénotypes et IAH par stade ne sont jamais "
+               "énoncés sur deux moitiés non comparables."),
+        "en": ("The transition to titration is detected automatically; diagnosis and therapy each get "
+               "their own indices. Severity, phenotypes and stage-AHIs are never asserted across two "
+               "incomparable halves."),
+        "de": ("Der Übergang zur Titration wird selbst erkannt; Diagnose und Therapie erhalten eigene "
+               "Indizes. Schweregrad, Phänotypen und Stadien-AHI werden nie über zwei unvergleichbare "
+               "Nachthälften ausgesagt.")},
+    "fp_new_5_t": {"nl": "Volledige herkomst van elk getal",
+                   "fr": "Provenance complète de chaque chiffre",
+                   "en": "Full provenance of every number",
+                   "de": "Vollständige Herkunft jeder Zahl"},
+    "fp_new_5_b": {
+        "nl": ("Welk kanaal elke analyse voedde, welke sensor is afgekeurd en waarom, of de autonome "
+               "herordening draaide (en zo nee: de reden) — de kanaalkeuze bepaalt het resultaat en "
+               "staat daarom ín het rapport."),
+        "fr": ("Quel canal a alimenté chaque analyse, quel capteur a été rejeté et pourquoi, si le "
+               "réordonnancement autonome a tourné (sinon : la raison) — le choix des canaux détermine "
+               "le résultat et figure donc dans le rapport."),
+        "en": ("Which channel fed each analysis, which sensor was rejected and why, whether the "
+               "autonomic re-ranking ran (and if not: the reason) — channel choice determines the "
+               "result, so it lives in the report."),
+        "de": ("Welcher Kanal welche Analyse speiste, welcher Sensor verworfen wurde und warum, ob die "
+               "autonome Umordnung lief (und wenn nicht: der Grund) — die Kanalwahl bestimmt das "
+               "Ergebnis und steht darum im Bericht.")},
+    "fp_new_6_t": {"nl": "Dubbele AHI en fysiologische lastmaten",
+                   "fr": "IAH double et mesures de charge physiologiques",
+                   "en": "Dual AHI and physiological burden measures",
+                   "de": "Doppelter AHI und physiologische Lastmaße"},
+    "fp_new_6_b": {
+        "nl": ("Regel 1A (3 %/arousal) en Regel 1B/CMS (4 %) naast elkaar, plus hypoxic en ventilatory "
+               "burden en klinische fenotypes (POSA — alleen bij herkende houdingscodering — en "
+               "REM-predominantie)."),
+        "fr": ("Règle 1A (3 %/éveil) et règle 1B/CMS (4 %) côte à côte, plus charges hypoxique et "
+               "ventilatoire et phénotypes cliniques (SAOS positionnel — uniquement si le codage de "
+               "position est reconnu — et prédominance REM)."),
+        "en": ("Rule 1A (3 %/arousal) and Rule 1B/CMS (4 %) side by side, plus hypoxic and ventilatory "
+               "burden and clinical phenotypes (positional OSA — only when position coding is "
+               "recognised — and REM predominance)."),
+        "de": ("Regel 1A (3 %/Arousal) und Regel 1B/CMS (4 %) nebeneinander, dazu hypoxische und "
+               "ventilatorische Last und klinische Phänotypen (lageabhängiges OSAS — nur bei erkannter "
+               "Positionskodierung — und REM-Prädominanz).")},
+}
+TRANSLATIONS.update(_FP_NEW_V0386)

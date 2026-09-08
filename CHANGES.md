@@ -1,3 +1,11 @@
+# v0.38.6 — 2026-09-08 — landingspagina ververst (stond op v0.11) + README's
+
+Alleen tekst, geen gedragsverandering. De "Wat is nieuw"-sectie van
+slaapkliniek.be beschrijft nu de stand van najaar 2026 (autonome
+herordening, FDA-valuta-meting, scoorderverwachting, split-night,
+herkomst, dubbele AHI) in vier talen; de GitHub-README's van
+YASAFlaskified en psgscoring zijn meegetrokken.
+
 # v0.38.5 — 2026-09-08 — pin psgscoring 0.34.0: de autonome re-ranker staat AAN op aasm_v3_rec
 
 **Dit verandert een klinisch getal op montages met Pleth + hartslag: de

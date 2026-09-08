@@ -11,7 +11,7 @@ AI-based sleep staging + AASM-compliant respiratory scoring + multilingual clini
 <!-- static release badge: the dynamic github/v/release endpoint intermittently
      fails with "Unable to select next GitHub token from pool" (shields.io token-pool
      rate limit). Bump the version here on each new release. -->
-[![Release](https://img.shields.io/badge/release-v0.37.5-blue)](https://github.com/bartromb/YASAFlaskified/releases/latest)
+[![Release](https://img.shields.io/badge/release-v0.38.5-blue)](https://github.com/bartromb/YASAFlaskified/releases/latest)
 
 ## Demo
 
@@ -35,6 +35,28 @@ BDF is read natively — 24-bit stays 24-bit, with no conversion step that would
 clip a DC-coupled amplifier's range.
 
 **Try it:** [slaapkliniek.be](https://slaapkliniek.be) — request a free account via the corresponding author.
+
+### Recent (September 2026)
+
+- **Autonomic arousal re-ranking** — on montages with a finger plethysmogram
+  and heart-rate channel, arousal candidates are re-ranked by a frozen
+  logistic model over pulse-wave and heart-rate features (pre-registered
+  replication on 40 held-out nights: median ΔF1 +0.0097, p = 0.0001, count
+  unchanged; AHI never touched). The report's provenance table shows whether
+  it ran, and why not when it didn't.
+- **Measured in the FDA currency** — respiratory event agreement expressed
+  exactly the way 510(k) autoscorers report it (percent agreement on pooled
+  epochs vs a 2-of-3 scorer consensus): median PPA 78.8 % across all 220
+  three-scorer panels of a 12-scorer reference set — at or above published
+  FDA-cleared figures, with the population caveats stated.
+- **The report tells you how much to trust it** — expected human
+  inter-scorer agreement at this disease burden printed next to the event
+  table (a property of the recording, not the software); central apneas
+  carry an explicit manual-confirmation advisory; positional phenotypes are
+  only claimed when the recorder's position coding is recognised.
+- **Split-nights in halves** — diagnosis and titration are indexed
+  separately; severity, phenotypes and stage-AHIs are never asserted across
+  two incomparable halves.
 
 ### Analysis pipeline
 
