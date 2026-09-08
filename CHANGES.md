@@ -1,3 +1,19 @@
+# v0.38.4 — 2026-09-08 — pin psgscoring 0.33.0 + CSA-bevestigingsnoot
+
+Pin naar **`psgscoring[ml]==0.33.0`** (was 0.32.0). **Geen
+indexverandering**: 0.33.0 is gedragsidentiek aan 0.32.0 zolang geen vlag
+wordt aangezet (golden 9/9 byte-identiek), en alle nieuwe vlaggen staan
+default uit — inclusief de autonome arousal-re-ranker (pleth fase 1,
+gerepliceerd ΔF1 +0,0097 op 40 disjuncte verse MESA-nachten en klinisch
+aan/uit-gecontroleerd op de Thaise split-night: respiratoir byte-gelijk,
+telling 209→212). Aanzetten is een aparte, bewuste beslissing.
+
+Nieuw in het rapport: **handmatige-bevestigingsnoot bij centrale apneus**
+(vier talen, alleen wanneer er centrale apneus geteld zijn, mét
+prevalentie) — de productstance van FDA-gecleardee autoscoring, onderbouwd
+door het eigen basiskansdossier: het individuele subtype-label is minder
+betrouwbaar dan de telling.
+
 # v0.38.3 — 2026-09-07 — de split-night-poort dekt nu ook fenotypes; geen Nederlands meer in Engelse rapporten
 
 Review van het eerste 0.38.2-productierapport (80722e9c, Engels, split-night
