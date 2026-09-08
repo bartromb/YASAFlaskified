@@ -4541,3 +4541,23 @@ TRANSLATIONS["pdf_central_review_note"] = {
            "die Zählung; eine manuelle Bestätigung zentraler Apnoen wird "
            "empfohlen."),
 }
+
+# v0.38.5 — de autonome arousal-re-ranker (psgscoring 0.34.0, aan op
+# aasm_v3_rec) in de Herkomst-tabel: actief mét model en k, geweigerd mét
+# reden. De reden zelf komt uit psgscoring (NL) en gaat onvertaald door —
+# hij is provenance, geen lopende tekst.
+TRANSLATIONS["prov_autonomic"] = {
+    "nl": "Arousal-herordening (autonoom, Pleth/HR)",
+    "fr": "Réordonnancement des éveils (autonome, Pleth/FC)",
+    "en": "Arousal re-ranking (autonomic, Pleth/HR)",
+    "de": "Arousal-Umordnung (autonom, Pleth/HF)"}
+TRANSLATIONS["prov_autonomic_on"] = {
+    "nl": "actief — {model}, k={k}",
+    "fr": "actif — {model}, k={k}",
+    "en": "active — {model}, k={k}",
+    "de": "aktiv — {model}, k={k}"}
+TRANSLATIONS["prov_autonomic_off"] = {
+    "nl": "uit — {reason}",
+    "fr": "inactif — {reason}",
+    "en": "off — {reason}",
+    "de": "aus — {reason}"}

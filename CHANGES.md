@@ -1,3 +1,14 @@
+# v0.38.5 — 2026-09-08 — pin psgscoring 0.34.0: de autonome re-ranker staat AAN op aasm_v3_rec
+
+**Dit verandert een klinisch getal op montages met Pleth + hartslag: de
+arousalselectie** (gebruikersbeslissing 08-09; replicatie ΔF1 +0,0097 op
+40 disjuncte verse nachten, klinische aan/uit-controle respiratoir
+byte-gelijk met telling 209→212). De AHI verandert nooit; montages
+zonder Pleth/hartslag veranderen niet. De Herkomst-tabel toont de status
+voortaan expliciet: "Arousal-herordening (autonoom, Pleth/HR): actief —
+model, k" of "uit — reden". Rollback: pin terug naar 0.33.0 (zelfde
+keten, vlag uit).
+
 # v0.38.4 — 2026-09-08 — pin psgscoring 0.33.0 + CSA-bevestigingsnoot
 
 Pin naar **`psgscoring[ml]==0.33.0`** (was 0.32.0). **Geen

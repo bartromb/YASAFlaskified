@@ -446,6 +446,24 @@ def provenance_rows(results, lang="nl"):
     if _arousal_row_needed(meta.get("eeg_channel"), pmeta, _ar_sum):
         rows.append([_lbl("prov_arousal_eeg", "Arousal-analyse — EEG"), _ar_eeg])
 
+    # Autonome re-ranker (psgscoring 0.34.0, AAN op aasm_v3_rec): de
+    # arousalselectie hangt dan mede af van Pleth/hartslag — dat hoort in
+    # de Herkomst, actief én geweigerd-met-reden. Oudere resultaten dragen
+    # het veld niet en krijgen geen rij.
+    _auton = (((pneumo.get("arousal") or {}).get("summary") or {})
+              .get("autonomic_rerank")
+              or _ar_sum.get("autonomic_rerank"))
+    if isinstance(_auton, dict):
+        if _auton.get("active"):
+            _val = _lbl("prov_autonomic_on",
+                        "actief — {model}, k={k}").format(
+                model=_auton.get("model", "?"), k=_auton.get("k", "?"))
+        else:
+            _val = _lbl("prov_autonomic_off", "uit — {reason}").format(
+                reason=_auton.get("reason", "?"))
+        rows.append([_lbl("prov_autonomic",
+                          "Arousal-herordening (autonoom, Pleth/HR)"), _val])
+
     # psgscoring kan de arousal-onsets over een vast aantal seconden schuiven
     # (`arousal_onset_offset_s`, default 0,0). Staat die vlag aan, dan liggen
     # de onsets in DIT rapport ergens anders dan de detector ze vond, en is de
