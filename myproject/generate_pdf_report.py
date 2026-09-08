@@ -2916,6 +2916,25 @@ def generate_pdf_report(results:dict, output_path:str,
         # het niveau ruim 30 procentpunt te hoog.
         story.append(Paragraph(
             f"<i>{t('pdf_conf_bands_note', lang)}</i>", styles["SM"]))
+        # Centrale apneus: de telling is bruikbaar, het individuele label
+        # niet — onder lage centrale prevalentie telt de automaat een
+        # veelvoud van wat de mens ziet en geen gemeten drempel repareert
+        # dat (basiskansdossier 2026-09-02). FDA-gecleardee autoscoring
+        # neemt dezelfde stance (EnsoSleep: "CSA should be manually
+        # reviewed"). Alleen tonen als er iets te bevestigen valt.
+        try:
+            _n_ce = int(rsum.get("n_central") or 0)
+            _n_alle_ap = _n_ce + int(rsum.get("n_obstructive") or 0) \
+                + int(rsum.get("n_mixed") or 0)
+            if _n_ce > 0:
+                _pct_ce = 100.0 * _n_ce / _n_alle_ap if _n_alle_ap else 0.0
+                story.append(Paragraph(
+                    f"<i><font color='#e67e22'>"
+                    + t("pdf_central_review_note", lang).format(
+                        n=_n_ce, pct=f"{_pct_ce:.0f}")
+                    + "</font></i>", styles["SM"]))
+        except (TypeError, ValueError):
+            pass
         sp(0.12)
 
         # v0.15.0: the OAHI 3-point confidence sweep + robustness grade (the

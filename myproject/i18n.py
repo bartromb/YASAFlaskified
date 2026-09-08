@@ -4519,3 +4519,25 @@ TRANSLATIONS.update(_PDF_V0383)
 TRANSLATIONS["pdf_kpi_sleep_diag"] = {
     "nl": "diagnostische slaap", "fr": "sommeil diagnostique",
     "en": "diagnostic sleep", "de": "diagnostischer Schlaf"}
+
+# Centrale apneus: handmatige-bevestigingsnoot (productstance overgenomen
+# van FDA-gecleardee autoscoring; onderbouwing in psgscoring/docs/
+# gegradeerde_subtypering_basiskans_20260902.md en commerciele_autoscoring_
+# 20260907.md — de telling is bruikbaar, het individuele label niet).
+TRANSLATIONS["pdf_central_review_note"] = {
+    "nl": ("Centrale apneus: n={n} ({pct} % van de apneus). Automatische "
+           "subtypering van individuele events is minder betrouwbaar dan de "
+           "telling; handmatige bevestiging van centrale apneus wordt "
+           "aanbevolen."),
+    "fr": ("Apnées centrales : n={n} ({pct} % des apnées). Le sous-typage "
+           "automatique des événements individuels est moins fiable que le "
+           "décompte ; une confirmation manuelle des apnées centrales est "
+           "recommandée."),
+    "en": ("Central apneas: n={n} ({pct} % of apneas). Automatic subtyping "
+           "of individual events is less reliable than the count; manual "
+           "confirmation of central apneas is recommended."),
+    "de": ("Zentrale Apnoen: n={n} ({pct} % der Apnoen). Die automatische "
+           "Subtypisierung einzelner Ereignisse ist weniger zuverlässig als "
+           "die Zählung; eine manuelle Bestätigung zentraler Apnoen wird "
+           "empfohlen."),
+}
