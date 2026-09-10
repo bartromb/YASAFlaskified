@@ -189,6 +189,35 @@ def generate_demo_edf(duration_min: int = DEMO_DURATION_MIN,
         else:
             _insert_hypopnea(et, rng.uniform(12, 22))
 
+    # ── Autonome respons + corticale arousal per event-einde ─────────
+    # (v0.38.7, voor de demovideo én realisme): na elk respiratoir event
+    # hoort een arousal — een EEG-burst met EMG-bump — en de autonome
+    # handtekening die de re-ranker leest: een PWA-daling in het
+    # plethysmogram en een hartslagstijging. Zonder deze respons toont de
+    # Herkomst-rij "Arousal re-ranking" nooit "active" op de demo.
+    pleth_amp = np.ones(n_samples)          # per-slag-amplitudemodulatie
+    pulse_rise = np.zeros(n_samples)        # bpm bovenop de basislijn
+    for _ev in events_inserted:
+        end_s = _ev["onset_s"] + _ev["duration_s"]
+        # corticale arousal: 4 s 11 Hz-burst + EMG-bump
+        a_s = int(end_s * sf); a_e = min(int((end_s + 4) * sf), n_samples)
+        if a_s < a_e:
+            t_b = t[a_s:a_e] - t[a_s]
+            eeg[a_s:a_e] += 55 * np.sin(2 * np.pi * 11.0 * t_b)
+            emg[a_s:a_e] += 25
+        # PWA-daling: amplitude naar 55 % gedurende 7 s
+        p_e = min(int((end_s + 7) * sf), n_samples)
+        if a_s < p_e:
+            pleth_amp[a_s:p_e] = 0.55
+        # hartslag +14 bpm gedurende 10 s, lineair terug
+        h_e = min(int((end_s + 10) * sf), n_samples)
+        if a_s < h_e:
+            pulse_rise[a_s:h_e] = np.linspace(14, 0, h_e - a_s)
+
+    # Vingerplethysmogram: polsgolf ~1,2 Hz met de amplitudemodulatie
+    pleth = pleth_amp * np.sin(2 * np.pi * 1.2 * t) \
+        + rng.standard_normal(n_samples) * 0.03
+
     # Clamp SpO2
     spo2 = np.clip(spo2, 70, 100)
 
@@ -208,6 +237,12 @@ def generate_demo_edf(duration_min: int = DEMO_DURATION_MIN,
     # ── Write EDF with pyedflib ───────────────────────────────────
     channels = [
         ("EEG C3-A2",    "uV",   eeg,      -500, 500),
+        # Drie regionale afleidingen: de arousal-union (en dus het
+        # multi-pad waarop de autonome re-ranker leeft) vergt er >1.
+        ("EEG C4-A1",    "uV",   eeg + rng.standard_normal(n_samples) * 4,
+         -500, 500),
+        ("EEG O2-A1",    "uV",   eeg * 0.8 + rng.standard_normal(n_samples) * 5,
+         -500, 500),
         ("EOG E1-A2",    "uV",   eog,      -500, 500),
         ("EMG chin",     "uV",   emg,      -100, 100),
         ("Nasal Pres",   "cmH2O", flow,    -200, 200),
@@ -215,7 +250,9 @@ def generate_demo_edf(duration_min: int = DEMO_DURATION_MIN,
         ("Thorax",       "mV",   thorax,   -200, 200),
         ("Abdomen",      "mV",   abdomen,  -200, 200),
         ("SpO2",         "%",    spo2,      50,  100),
-        ("Pulse",        "bpm",  np.full(n_samples, 72.0) + rng.standard_normal(n_samples) * 2, 30, 200),
+        ("Pulse",        "bpm",  np.full(n_samples, 72.0) + pulse_rise
+         + rng.standard_normal(n_samples) * 1.5, 30, 200),
+        ("Pleth",        "mV",   pleth,     -3,   3),
         ("Position",     "",     position,   0,    5),
         ("ECG II",       "mV",   ecg,     -1000, 1000),
         ("Snore",        "dB",   rng.standard_normal(n_samples) * 2, -50, 50),
