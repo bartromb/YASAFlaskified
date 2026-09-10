@@ -9,13 +9,12 @@ exports: en/nl/fr/de), 1920×1080, H.264, doel ≤ 10 MB per taal.
 - [ ] Schone browser, 1920×1080-venster, cursor zichtbaar, geen bladwijzers/extensies in beeld.
 - [ ] Demo-account (geen echte gebruikersnaam in beeld; "demo" volstaat).
 - [ ] Demo-opname: `python myproject/generate_demo_edf.py` → synthetische EDF,
-      **géén patiëntdata in de video**. NB: de demo-EDF heeft geen
-      Pleth-kanaal, dus de Herkomst-rij toont "Arousal re-ranking …:
-      off — pleth ontbreekt". Dat is een bewust shot (scène 7c): het
-      rapport zegt óók wat er níet draaide en waarom.
-      *Optionele upgrade vóór opname:* Pleth + hartslagrespons toevoegen
-      aan `generate_demo_edf.py` zodat de rij "active — …, k=…" toont —
-      klein codewerk, apart te vragen.
+      **géén patiëntdata in de video**. Sinds v0.38.7 draagt de demo-EDF
+      Pleth + hartslagrespons + arousal-bursts en ademamplitudevariatie;
+      de Herkomst-rij toont "active — autonomic_rerank_v1, k=…" en het
+      rapport is klinisch plausibel (opnames 10-09: AHI 29,1, moderate,
+      arousal-index 10,9). Events horen vlak vóór een epochgrens in
+      vóórspelde slaapepochs te liggen (zie `event_times=(onset, duur)`).
 - [ ] Taal van de sessie instellen per export (NL/FR/EN/DE) — de app en
       het rapport volgen mee, dus élke taalversie is echt die taal.
 - [ ] Eén analyse vooraf al gedraaid (voor scène 6-8 zonder wachttijd).
@@ -34,7 +33,7 @@ Tijden zijn richtwaarden; knip strak, geen dode seconden.
 | 6 | 44–52 s | Dashboard: joblijst met AHI/ODI/PLMI-kolommen; klik het klare rapport open | Alle onderzoeken op één dashboard. |
 | 7a | 52–60 s | PDF p. 1: KPI's + **Aandachtspunten**-kader (cursor volgt de bullets) | Het rapport benoemt zelf wat je aandacht vraagt. |
 | 7b | 60–70 s | Scroll naar **Herkomst-tabel**; cursor op de rijen apneu/hypopneu-sensor en **"Arousal re-ranking (autonomic, Pleth/HR)"** | Elke analyse toont welk kanaal hem voedde — de kanaalkeuze bepaalt het resultaat. |
-| 7c | 70–78 s | Zoom op die rerank-rij ("off — pleth ontbreekt" op de demo; "active — …, k=…" mét Pleth) + de **scoorderverwachting**-noot eronder | Draaide iets niet, dan staat er waarom. En het rapport zegt hoe eens twee ménselijke scoorders het hier zouden zijn. |
+| 7c | 70–78 s | Zoom op die rerank-rij ("active — autonomic_rerank_v1, k=…" op de demo; "off — …" mét reden als een kanaal ontbreekt) + de **scoorderverwachting**-noot eronder | Draaide iets niet, dan staat er waarom. En het rapport zegt hoe eens twee ménselijke scoorders het hier zouden zijn. |
 | 8 | 78–90 s | `/review/<job>`: eventcontrole met signaalpanelen; klik één event open, panel verschijnt | Elk gescoord event is controleerbaar op het signaal zelf. |
 | 9 | 90–100 s | Terug naar landing; slotkaart (tekst in post): URL + disclaimer | slaapkliniek.be — screening en second reader. Vervangt geen manuele scoring of diagnose. |
 
