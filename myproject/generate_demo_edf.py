@@ -37,31 +37,55 @@ def _breathing_signal(t, rate_hz=0.25, amp=1.0):
     return amp * np.sin(2 * np.pi * rate_hz * t)
 
 
+def _ruis_1_over_f(rng, n, sf=None):
+    """1/f-achtige achtergrond: echte EEG-spectra zijn niet wit, en YASA's
+    features (spectrale verhoudingen) zien wit ruis als artefact/wake."""
+    sf = sf or DEMO_SF
+    wit = rng.standard_normal(n)
+    f = np.fft.rfftfreq(n, 1.0 / sf)
+    f[0] = f[1] if n > 1 else 1.0
+    spec = np.fft.rfft(wit) / np.sqrt(f)
+    x = np.fft.irfft(spec, n)
+    return x / (np.std(x) + 1e-12)
+
+
 def _eeg_signal(t, stage="N2"):
-    """Simplified EEG: stage-dependent spectral content."""
+    """EEG per stadium, gebouwd op YASA's featureset (v0.38.7).
+
+    De vorige versie (witte ruis + één continue sinus per stadium) werd
+    door YASA vrijwel volledig als W gestaged — de demo-TST was 4 min en
+    het rapport toonde AHI 0,0. Nu: 1/f-achtergrond met per stadium de
+    dragende kenmerken — alfa in W, theta in N1/REM, spindelbursts +
+    K-complexen in N2, hoog-amplitude delta in N3.
+    """
     rng = np.random.default_rng(42)
-    noise = rng.standard_normal(len(t)) * 15  # µV
+    n = len(t)
+    basis = _ruis_1_over_f(rng, n)
     if stage == "W":
-        # Alpha (8-12 Hz)
-        return noise + 20 * np.sin(2 * np.pi * 10 * t)
-    elif stage == "N1":
-        return noise + 10 * np.sin(2 * np.pi * 6 * t)
-    elif stage == "N2":
-        # Spindles (12-14 Hz bursts) + K-complexes
-        spindle = 15 * np.sin(2 * np.pi * 13 * t)
-        # Add spindle bursts every ~30s
-        spindle_env = np.zeros(len(t))
-        for burst_t in np.arange(5, t[-1], 30):
-            mask = (t >= burst_t) & (t < burst_t + 0.5)
-            spindle_env[mask] = 1.0
-        return noise + spindle * spindle_env
-    elif stage == "N3":
-        # Delta (0.5-2 Hz), high amplitude
-        return noise + 60 * np.sin(2 * np.pi * 1 * t)
-    elif stage == "R":
-        # Low amplitude, mixed frequency
-        return noise * 0.7 + 8 * np.sin(2 * np.pi * 5 * t)
-    return noise
+        return 12 * basis + 22 * np.sin(2 * np.pi * 10 * t) \
+            + 6 * rng.standard_normal(n)
+    if stage == "N1":
+        return 16 * basis + 12 * np.sin(2 * np.pi * 5.5 * t)
+    if stage == "N2":
+        x = 26 * basis + 14 * np.sin(2 * np.pi * 4.0 * t) \
+            + 18 * np.sin(2 * np.pi * 1.2 * t)
+        # spindelbursts (13 Hz, ~1 s) elke ~4 s
+        for b0 in np.arange(2.0, max(t[-1] - 1, 2.0), 4.0):
+            m = (t >= b0) & (t < b0 + 1.0)
+            x[m] += 30 * np.sin(2 * np.pi * 13 * t[m]) \
+                * np.hanning(int(np.sum(m)) or 1)
+        # K-complex elke ~12 s: trage hoge golf
+        for k0 in np.arange(6.0, max(t[-1] - 1, 6.0), 12.0):
+            m = (t >= k0) & (t < k0 + 1.2)
+            x[m] += -70 * np.sin(2 * np.pi * (t[m] - k0) / 1.2)
+        return x
+    if stage == "N3":
+        return 18 * basis + 75 * np.sin(2 * np.pi * 0.8 * t) \
+            + 25 * np.sin(2 * np.pi * 1.7 * t)
+    if stage == "R":
+        return 14 * basis + 9 * np.sin(2 * np.pi * 5 * t) \
+            + 5 * np.sin(2 * np.pi * 3 * t)
+    return 15 * basis
 
 
 def generate_demo_edf(duration_min: int = DEMO_DURATION_MIN,
@@ -121,6 +145,8 @@ def generate_demo_edf(duration_min: int = DEMO_DURATION_MIN,
             emg[s:e] *= 3
         elif stage == "R":
             emg[s:e] *= 0.3
+        else:
+            emg[s:e] *= 0.6
 
     # ── Generate respiratory channels ─────────────────────────────
     flow = np.zeros(n_samples)
