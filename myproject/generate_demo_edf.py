@@ -67,14 +67,13 @@ def _eeg_signal(t, stage="N2"):
     if stage == "N1":
         return 16 * basis + 12 * np.sin(2 * np.pi * 5.5 * t)
     if stage == "N2":
-        x = 26 * basis + 14 * np.sin(2 * np.pi * 4.0 * t) \
-            + 18 * np.sin(2 * np.pi * 1.2 * t)
-        # spindelbursts (13 Hz, ~1 s) elke ~4 s
-        for b0 in np.arange(2.0, max(t[-1] - 1, 2.0), 4.0):
+        x = 22 * basis + 10 * np.sin(2 * np.pi * 4.0 * t)
+        # spindelbursts (13 Hz, ~1 s) elke 5 s
+        for b0 in np.arange(2.0, max(t[-1] - 1, 2.0), 5.0):
             m = (t >= b0) & (t < b0 + 1.0)
             x[m] += 30 * np.sin(2 * np.pi * 13 * t[m]) \
                 * np.hanning(int(np.sum(m)) or 1)
-        # K-complex elke ~12 s: trage hoge golf
+        # K-complex elke ~12 s
         for k0 in np.arange(6.0, max(t[-1] - 1, 6.0), 12.0):
             m = (t >= k0) & (t < k0 + 1.2)
             x[m] += -70 * np.sin(2 * np.pi * (t[m] - k0) / 1.2)
@@ -145,8 +144,7 @@ def generate_demo_edf(duration_min: int = DEMO_DURATION_MIN,
             emg[s:e] *= 3
         elif stage == "R":
             emg[s:e] *= 0.3
-        else:
-            emg[s:e] *= 0.6
+
 
     # ── Generate respiratory channels ─────────────────────────────
     flow = np.zeros(n_samples)
