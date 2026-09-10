@@ -153,10 +153,35 @@ def generate_demo_edf(duration_min: int = DEMO_DURATION_MIN,
     abdomen = np.zeros(n_samples)
     spo2 = np.full(n_samples, 96.0)
 
-    # Normal breathing everywhere first
-    flow[:] = _breathing_signal(t, rate_hz=0.25, amp=100)
-    thorax[:] = _breathing_signal(t, rate_hz=0.25, amp=50)
-    abdomen[:] = _breathing_signal(t, rate_hz=0.25, amp=40)
+    # Normale ademhaling, met teug-tot-teug amplitudevariatie. Een zuivere
+    # sinus heeft een ademamplitude-CV van ~0 en dan wijst het
+    # stabiele-ademhalingsfilter (v0.2.8, CV-drempel per profiel) élke
+    # hypopneu af. Rond elk event wordt de modulatie gedempt zodat de
+    # pre-event-basislijn schoon blijft voor de reductiemeting.
+    mod = 1.0 + 0.55 * np.sin(2 * np.pi * 0.013 * t + 1.0)
+    knopen_t = np.arange(0, t[-1] + 15, 15.0)
+    mod += np.interp(t, knopen_t,
+                     rng.standard_normal(len(knopen_t)) * 0.35)
+    mod = np.clip(mod, 0.30, 2.2)
+    if event_times is None:
+        event_times = [120, 150, 210, 260, 320, 380, 440, 510,
+                       580, 650, 720, 800, 880, 960, 1050, 1140,
+                       1230, 1320, 1410, 1500]
+    _ets = [(e[0] if isinstance(e, (tuple, list)) else e)
+            for e in event_times]
+    for _et in _ets:
+        d_s = max(int((_et - 45) * sf), 0)
+        d_e = min(int(_et * sf), n_samples)
+        if d_s < d_e:
+            mod[d_s:d_e] = 1.0 + 0.35 * (mod[d_s:d_e] - 1.0)
+    # kleine ruisvloer: zonder deze las de gap-detector elke nuldoorgang
+    # van de sinus als signaaluitval (3945 "gaten" op 30 min)
+    flow[:] = mod * _breathing_signal(t, rate_hz=0.25, amp=100) \
+        + rng.standard_normal(n_samples) * 2.5
+    thorax[:] = mod * _breathing_signal(t, rate_hz=0.25, amp=50) \
+        + rng.standard_normal(n_samples) * 1.2
+    abdomen[:] = mod * _breathing_signal(t, rate_hz=0.25, amp=40) \
+        + rng.standard_normal(n_samples) * 1.0
 
     # ── Insert respiratory events ─────────────────────────────────
     events_inserted = []
@@ -200,20 +225,24 @@ def generate_demo_edf(duration_min: int = DEMO_DURATION_MIN,
                 spo2[desat_e:rec_e] += np.linspace(0, 4, rec_e - desat_e)
         events_inserted.append({"type": "hypopnea", "onset_s": start_s, "duration_s": dur_s})
 
-    # Place events in sleep epochs (skip wake)
-    if event_times is None:
-        event_times = [120, 150, 210, 260, 320, 380, 440, 510,
-                       580, 650, 720, 800, 880, 960, 1050, 1140,
-                       1230, 1320, 1410, 1500]
+    # Place events in sleep epochs (skip wake); default staat hierboven,
+    # vóór de ademhalingsopbouw, zodat de modulatiedemping ze ook ziet.
     for i, et in enumerate(event_times):
+        # Een entry mag ook (onset_s, duur_s) zijn: de videoplaatsing legt
+        # het event-einde precies op de epochgrens, zodat de arousal-burst
+        # in de vólgende epoch valt en de staging van de event-epoch
+        # (die alleen EEG/EOG/EMG leest) onaangeroerd blijft.
+        dur = None
+        if isinstance(et, (tuple, list)):
+            et, dur = float(et[0]), float(et[1])
         if et + 30 > duration_min * 60:
             break
         if i % 5 == 0:
-            _insert_apnea(et, rng.uniform(12, 25), "obstructive")
+            _insert_apnea(et, dur or rng.uniform(12, 25), "obstructive")
         elif i % 5 == 1:
-            _insert_apnea(et, rng.uniform(12, 20), "central")
+            _insert_apnea(et, dur or rng.uniform(12, 20), "central")
         else:
-            _insert_hypopnea(et, rng.uniform(12, 22))
+            _insert_hypopnea(et, dur or rng.uniform(12, 22))
 
     # ── Autonome respons + corticale arousal per event-einde ─────────
     # (v0.38.7, voor de demovideo én realisme): na elk respiratoir event
@@ -225,12 +254,15 @@ def generate_demo_edf(duration_min: int = DEMO_DURATION_MIN,
     pulse_rise = np.zeros(n_samples)        # bpm bovenop de basislijn
     for _ev in events_inserted:
         end_s = _ev["onset_s"] + _ev["duration_s"]
-        # corticale arousal: 4 s 11 Hz-burst + EMG-bump
-        a_s = int(end_s * sf); a_e = min(int((end_s + 4) * sf), n_samples)
+        # corticale arousal: 3,5 s 11 Hz-burst + EMG-bump. Mild gehouden
+        # (42 µV, hanning-omhuld): een 55 µV-blokburst kiepte de hele
+        # epoch naar W in de YASA-staging, en een arousal in W telt niet.
+        a_s = int(end_s * sf); a_e = min(int((end_s + 3.5) * sf), n_samples)
         if a_s < a_e:
             t_b = t[a_s:a_e] - t[a_s]
-            eeg[a_s:a_e] += 55 * np.sin(2 * np.pi * 11.0 * t_b)
-            emg[a_s:a_e] += 25
+            venster = np.hanning(a_e - a_s)
+            eeg[a_s:a_e] += 42 * venster * np.sin(2 * np.pi * 11.0 * t_b)
+            emg[a_s:a_e] += 14 * venster
         # PWA-daling: amplitude naar 55 % gedurende 7 s
         p_e = min(int((end_s + 7) * sf), n_samples)
         if a_s < p_e:
