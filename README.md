@@ -11,15 +11,15 @@ AI-based sleep staging + AASM-compliant respiratory scoring + multilingual clini
 <!-- static release badge: the dynamic github/v/release endpoint intermittently
      fails with "Unable to select next GitHub token from pool" (shields.io token-pool
      rate limit). Bump the version here on each new release. -->
-[![Release](https://img.shields.io/badge/release-v0.38.5-blue)](https://github.com/bartromb/YASAFlaskified/releases/latest)
+[![Release](https://img.shields.io/badge/release-v0.38.6-blue)](https://github.com/bartromb/YASAFlaskified/releases/latest)
 
 ## Demo
 
-~90-second walkthrough of the full pipeline: landing → sign in → EDF upload → channel auto-selection → analysis start → dashboard → results → report editor.
+~90-second walkthrough of the full pipeline: landing → sign in → anonymised EDF upload → channel selection (thermistor and nasal pressure separately) → analysis → dashboard → report with provenance table (including the autonomic arousal re-ranking row) → event review on the signals.
 
-[![Demo video — click to play](images/demo-poster.png)](https://github.com/bartromb/YASAFlaskified/releases/download/v0.11.2/en.mp4)
+[![Demo video — click to play](images/demo-poster.png)](https://github.com/bartromb/YASAFlaskified/releases/download/v0.38.6/en.mp4)
 
-Available in 🇬🇧 [English](https://github.com/bartromb/YASAFlaskified/releases/download/v0.11.2/en.mp4) · 🇧🇪 [Dutch](https://github.com/bartromb/YASAFlaskified/releases/download/v0.11.2/nl.mp4) · 🇫🇷 [French](https://github.com/bartromb/YASAFlaskified/releases/download/v0.11.2/fr.mp4) · 🇩🇪 [German](https://github.com/bartromb/YASAFlaskified/releases/download/v0.11.2/de.mp4). Full-HD (1920×1080), ~7-8 MB each.
+Available in 🇬🇧 [English](https://github.com/bartromb/YASAFlaskified/releases/download/v0.38.6/en.mp4) · 🇧🇪 [Dutch](https://github.com/bartromb/YASAFlaskified/releases/download/v0.38.6/nl.mp4) · 🇫🇷 [French](https://github.com/bartromb/YASAFlaskified/releases/download/v0.38.6/fr.mp4) · 🇩🇪 [German](https://github.com/bartromb/YASAFlaskified/releases/download/v0.38.6/de.mp4). Full-HD (1920×1080), ~9 MB each. The recording in the video is synthetic (`myproject/generate_demo_edf.py`) — no patient data.
 
 ## Paper
 
