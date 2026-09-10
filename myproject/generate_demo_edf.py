@@ -88,7 +88,8 @@ def _eeg_signal(t, stage="N2"):
 
 
 def generate_demo_edf(duration_min: int = DEMO_DURATION_MIN,
-                       output_path: str = "demo_recording.edf"):
+                       output_path: str = "demo_recording.edf",
+                       event_times: list | None = None):
     """Generate a synthetic demo EDF file."""
     try:
         import pyedflib
@@ -200,9 +201,10 @@ def generate_demo_edf(duration_min: int = DEMO_DURATION_MIN,
         events_inserted.append({"type": "hypopnea", "onset_s": start_s, "duration_s": dur_s})
 
     # Place events in sleep epochs (skip wake)
-    event_times = [120, 150, 210, 260, 320, 380, 440, 510,
-                   580, 650, 720, 800, 880, 960, 1050, 1140,
-                   1230, 1320, 1410, 1500]
+    if event_times is None:
+        event_times = [120, 150, 210, 260, 320, 380, 440, 510,
+                       580, 650, 720, 800, 880, 960, 1050, 1140,
+                       1230, 1320, 1410, 1500]
     for i, et in enumerate(event_times):
         if et + 30 > duration_min * 60:
             break
