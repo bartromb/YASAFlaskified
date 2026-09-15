@@ -2,7 +2,7 @@
    YASAFlaskified v0.10.0 — typographic + density layer.
    Loaded from base.html AFTER bootstrap.min.css, so its declarations
    take precedence on the small surface area that we re-style.
-   Design notes in /home/bart/CODE/docs (UI proposal 2026-05-10).
+   Design notes in /srv/CODE/docs (UI proposal 2026-05-10).
    ───────────────────────────────────────────────────────────────── */
 
 /* ── 1. Fonts ──────────────────────────────────────────────────── */

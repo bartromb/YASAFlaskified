@@ -64,7 +64,7 @@ clip a DC-coupled amplifier's range.
 |------|------|-----|
 | 1 | Sleep staging | YASA LightGBM (Vallat & Walker, *eLife* 2021) |
 | 2 | Respiratory scoring | psgscoring — AASM Manual rules, graded evidence, measured bias corrections |
-| 3 | Arousal detection | K-complex exclusion + CVR coupling |
+| 3 | Arousal detection | Multi-derivation EEG union + LGBM re-classifier + autonomic re-ranking (Pleth/HR) |
 | 4 | PLM scoring | AASM rules + WASM criteria |
 | 5 | SpO₂ analysis | ODI 3%/4%, baseline (P90), T90 |
 | 6 | Signal quality | Per-channel grading (flat-line, clipping, disconnect), file-invariance tested |

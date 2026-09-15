@@ -3420,7 +3420,7 @@ EDF files.
 End-to-end visual / interaction refresh aimed at clinical density.
 Five interlocking changes; backward-compatible with all v0.9.x routes
 and JSON contracts. Backup of pre-v0.10.0 source tree:
-`/home/bart/CODE/YASAFlaskified.backup-pre-v010-…`.
+`/srv/CODE/YASAFlaskified.backup-pre-v010-…`.
 
 ### Added
 - `myproject/static/styles_v010.css` — typographic + density layer
