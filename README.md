@@ -35,6 +35,7 @@ BDF is read natively — 24-bit stays 24-bit, with no conversion step that would
 clip a DC-coupled amplifier's range.
 
 **Try it:** [slaapkliniek.be](https://slaapkliniek.be) — request a free account via the corresponding author.
+On slaapkliniek.be the root page is a two-tile landing (referral portal for GPs · EDF analysis for sleep professionals); the app itself starts at `/analyse` (login required). On other hosts `/` is the product page with embedded login (`LANDING_HOSTS` in config.json).
 
 ### Recent (September 2026)
 

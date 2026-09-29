@@ -4679,3 +4679,92 @@ _FP_NEW_V0386 = {
                "Positionskodierung — und REM-Prädominanz).")},
 }
 TRANSLATIONS.update(_FP_NEW_V0386)
+
+
+# ═══════════════════════════════════════════════════════════════
+# v0.38.7 — landingspagina slaapkliniek.be: twee tegels
+# ═══════════════════════════════════════════════════════════════
+_V0387_LANDING = {
+    # De instellingsnaam komt uit instance/config.json (site.name); de
+    # tegelpagina toont die als hij er is en valt anders terug op dit
+    # neutrale woord (test_site_identity: geen instellingsnaam in de code).
+    "landing_page_title": {
+        "nl": "Onderzoek aanvragen of EDF analyseren",
+        "fr": "Demander un examen ou analyser un EDF",
+        "en": "Request a sleep study or analyse an EDF",
+        "de": "Untersuchung anfragen oder EDF analysieren",
+    },
+    "landing_title": {
+        "nl": "Slaapkliniek",
+        "fr": "Clinique du sommeil",
+        "en": "Sleep clinic",
+        "de": "Schlafklinik",
+    },
+    "landing_subtitle": {
+        "nl": "Kies wat u wilt doen.",
+        "fr": "Choisissez ce que vous souhaitez faire.",
+        "en": "Choose what you want to do.",
+        "de": "Wählen Sie, was Sie tun möchten.",
+    },
+    "landing_refer_title": {
+        "nl": "Onderzoek aanvragen",
+        "fr": "Demander un examen",
+        "en": "Request a sleep study",
+        "de": "Untersuchung anfragen",
+    },
+    "landing_refer_text": {
+        "nl": "Voor huisartsen en verwijzers — polygrafie of polysomnografie aanvragen via Nexuzhealth Consult.",
+        "fr": "Pour les médecins généralistes et les prescripteurs — demander une polygraphie ou une polysomnographie via Nexuzhealth Consult.",
+        "en": "For general practitioners and referring physicians — request polygraphy or polysomnography via Nexuzhealth Consult.",
+        "de": "Für Hausärzte und Zuweiser — Polygraphie oder Polysomnographie über Nexuzhealth Consult anfragen.",
+    },
+    "landing_refer_cta": {
+        "nl": "Naar het verwijzersportaal",
+        "fr": "Vers le portail des prescripteurs",
+        "en": "Go to the referral portal",
+        "de": "Zum Zuweiserportal",
+    },
+    "landing_analyse_title": {
+        "nl": "EDF analyseren",
+        "fr": "Analyser un EDF",
+        "en": "Analyse an EDF",
+        "de": "EDF analysieren",
+    },
+    "landing_analyse_text": {
+        "nl": "Geautomatiseerde PSG-analyse (YASA + psgscoring, AASM v3) — voor slaapprofessionals, login vereist.",
+        "fr": "Analyse PSG automatisée (YASA + psgscoring, AASM v3) — pour les professionnels du sommeil, connexion requise.",
+        "en": "Automated PSG analysis (YASA + psgscoring, AASM v3) — for sleep professionals, login required.",
+        "de": "Automatisierte PSG-Analyse (YASA + psgscoring, AASM v3) — für Schlafmediziner, Anmeldung erforderlich.",
+    },
+    "landing_analyse_cta": {
+        "nl": "Aanmelden en analyseren",
+        "fr": "Se connecter et analyser",
+        "en": "Sign in and analyse",
+        "de": "Anmelden und analysieren",
+    },
+    "landing_analyse_more": {
+        "nl": "Meer over de software",
+        "fr": "En savoir plus sur le logiciel",
+        "en": "More about the software",
+        "de": "Mehr über die Software",
+    },
+    "landing_contact": {
+        "nl": "Contact",
+        "fr": "Contact",
+        "en": "Contact",
+        "de": "Kontakt",
+    },
+    "landing_source": {
+        "nl": "Broncode",
+        "fr": "Code source",
+        "en": "Source code",
+        "de": "Quellcode",
+    },
+    "landing_start_link": {
+        "nl": "Startpagina",
+        "fr": "Page d'accueil",
+        "en": "Start page",
+        "de": "Startseite",
+    },
+}
+TRANSLATIONS.update(_V0387_LANDING)

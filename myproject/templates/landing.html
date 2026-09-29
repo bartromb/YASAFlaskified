@@ -1,0 +1,127 @@
+{# v0.38.7 — landingspagina slaapkliniek.be: twee gelijkwaardige tegels.
+   Bewust een lichte, zelfstandige pagina: geen base.html (die draagt Bootstrap
+   en de app-navigatie), geen externe fonts of CDN's, geen scripts, geen trackers.
+   Werkt op 375 px en met het toetsenbord (tegels zijn gewone links). #}
+<!DOCTYPE html>
+<html lang="{{ current_lang or 'nl' }}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% set kliniek = (site_cfg.get('name') if site_cfg else None) or t('landing_title') %}
+<title>{{ kliniek }} — {{ t('landing_page_title') }}</title>
+<meta name="description" content="{{ t('landing_refer_text') }} {{ t('landing_analyse_text') }}">
+<style>
+  :root {
+    --navy: #1A3A8F;
+    --navy-dark: #12296a;
+    --bg: #f5f7fb;
+    --surface: #ffffff;
+    --text: #1a2233;
+    --text-soft: #4b5872;
+    --border: rgba(26, 58, 143, 0.14);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.55; min-height: 100vh; display: flex; flex-direction: column;
+  }
+  a { color: var(--navy); }
+  a:focus-visible, .tile:focus-visible { outline: 3px solid var(--navy); outline-offset: 3px; }
+  header.top {
+    background: var(--navy); color: #fff; padding: 1rem 1.25rem;
+    display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;
+  }
+  header.top .brand { font-weight: 700; font-size: 1.05rem; color: #fff; text-decoration: none; }
+  .lang { display: flex; gap: .35rem; }
+  .lang a {
+    color: #fff; text-decoration: none; font-size: .8rem; letter-spacing: .06em;
+    padding: .25rem .5rem; border-radius: .35rem; border: 1px solid rgba(255,255,255,.35);
+  }
+  .lang a.active { background: #fff; color: var(--navy); font-weight: 700; }
+  main { flex: 1; width: 100%; max-width: 62rem; margin: 0 auto; padding: 2.5rem 1.25rem 3rem; }
+  h1 { font-size: clamp(1.7rem, 4vw, 2.4rem); margin: 0 0 .35rem; color: var(--navy); }
+  .subtitle { margin: 0 0 2rem; color: var(--text-soft); font-size: 1.05rem; }
+  .tiles { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
+  @media (min-width: 720px) { .tiles { grid-template-columns: 1fr 1fr; } }
+  .tile {
+    display: flex; flex-direction: column; gap: .75rem;
+    background: var(--surface); border: 2px solid var(--border); border-radius: 1rem;
+    padding: 1.75rem 1.5rem; text-decoration: none; color: var(--text); min-height: 15rem;
+    transition: border-color .15s, transform .15s;
+  }
+  .tile:hover { border-color: var(--navy); transform: translateY(-2px); }
+  .tile h2 { margin: 0; font-size: 1.45rem; color: var(--navy); }
+  .tile p { margin: 0; color: var(--text-soft); flex: 1; }
+  .tile .cta {
+    align-self: flex-start; background: var(--navy); color: #fff; font-weight: 600;
+    padding: .6rem 1rem; border-radius: .5rem;
+  }
+  .tile:hover .cta { background: var(--navy-dark); }
+  .tile .who { font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; color: var(--text-soft); }
+  .note { margin: .75rem 0 0; font-size: .85rem; color: var(--text-soft); }
+  .note a { white-space: nowrap; }
+  footer {
+    border-top: 1px solid var(--border); background: var(--surface);
+    padding: 1.25rem; font-size: .85rem; color: var(--text-soft);
+    display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; justify-content: center; text-align: center;
+  }
+  footer span { display: inline-flex; gap: .4rem; flex-wrap: wrap; justify-content: center; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a class="brand" href="{{ url_for('start') }}">{{ kliniek }}</a>
+  <nav class="lang" aria-label="Taal / Langue / Language / Sprache">
+    {% for code, label in [('nl','NL'),('fr','FR'),('en','EN'),('de','DE')] %}
+    <a href="/lang/{{ code }}" class="{% if current_lang == code %}active{% endif %}" lang="{{ code }}"{% if current_lang == code %} aria-current="true"{% endif %}>{{ label }}</a>
+    {% endfor %}
+  </nav>
+</header>
+
+<main>
+  <h1>{{ kliniek }}</h1>
+  <p class="subtitle">{{ t('landing_subtitle') }}</p>
+
+  <div class="tiles">
+    <a class="tile" id="tile-refer" href="{{ verwijzers_url }}/{{ current_lang or 'nl' }}/">
+      <span class="who">Huisartsen · Médecins · GPs · Hausärzte</span>
+      <h2>{{ t('landing_refer_title') }}</h2>
+      <p>{{ t('landing_refer_text') }}</p>
+      <span class="cta">{{ t('landing_refer_cta') }} →</span>
+    </a>
+
+    <div>
+      <a class="tile" id="tile-analyse" href="{{ url_for('analyse') }}">
+        <span class="who">PSG · EDF</span>
+        <h2>{{ t('landing_analyse_title') }}</h2>
+        <p>{{ t('landing_analyse_text') }}</p>
+        <span class="cta">{{ t('landing_analyse_cta') }} →</span>
+      </a>
+      {# Zelfde tekst als de rapport-disclaimer: één bron (i18n-key disc_header). #}
+      <p class="note" id="analyse-disclaimer">{{ t('disc_header') }}
+        <a href="{{ url_for('about') }}">{{ t('landing_analyse_more') }}</a></p>
+    </div>
+  </div>
+</main>
+
+<footer>
+  {% if site_cfg and (site_cfg.get('name') or site_cfg.get('phone') or site_cfg.get('email') or site_cfg.get('address')) %}
+  <span><strong>{{ t('landing_contact') }}:</strong>
+    {% if site_cfg.get('name') %}{{ site_cfg.get('name') }}{% endif %}
+    {% if site_cfg.get('address') %}· {{ site_cfg.get('address') }}{% endif %}
+    {% if site_cfg.get('phone') %}· <a href="tel:{{ site_cfg.get('phone') | replace(' ', '') }}">{{ site_cfg.get('phone') }}</a>{% endif %}
+    {% if site_cfg.get('email') %}· <a href="mailto:{{ site_cfg.get('email') }}">{{ site_cfg.get('email') }}</a>{% endif %}
+  </span>
+  {% endif %}
+  <span>{{ t('landing_source') }}:
+    <a href="https://github.com/bartromb/psgscoring" rel="noopener">psgscoring</a> ·
+    <a href="https://github.com/bartromb/YASAFlaskified" rel="noopener">YASAFlaskified</a> v{{ APP_VERSION }}
+  </span>
+  <span><a href="{{ url_for('disclaimer_page') }}">{{ t('footer_disclaimer') }}</a> · © 2023–2026 Bart Rombaut</span>
+</footer>
+
+</body>
+</html>

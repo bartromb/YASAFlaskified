@@ -60,6 +60,8 @@ import pandas as pd
 import yasa
 
 matplotlib.use("Agg")
+from urllib.parse import urlparse
+
 import matplotlib.pyplot as plt
 from flask import (
     Flask,
@@ -142,6 +144,21 @@ def _cfg(key, default=None):
     if env_key in os.environ:
         return os.environ.get(env_key)
     return config.get(key, default)
+
+
+# v0.38.7: landingspagina met twee tegels ("Onderzoek aanvragen" voor
+# verwijzers, "EDF analyseren" voor slaapprofessionals) -- alleen op de hosts
+# hieronder. Op sleepai.be/.eu (internationaal, onderzoek) blijft "/" de
+# productpagina met ingebedde login: de verwijzerstegel is een AZORG-zaak.
+# config.json: lijst of komma-string; env: komma-string.
+def _hosts_from_cfg(value) -> frozenset:
+    if isinstance(value, str):
+        value = value.split(",")
+    return frozenset(h.strip().lower() for h in (value or []) if h and h.strip())
+
+
+LANDING_HOSTS = _hosts_from_cfg(_cfg("LANDING_HOSTS", "slaapkliniek.be,www.slaapkliniek.be"))
+VERWIJZERS_URL = str(_cfg("VERWIJZERS_URL", "https://verwijzers.slaapkliniek.be")).rstrip("/")
 
 
 # Paden
@@ -826,6 +843,29 @@ def set_language(lang_code):
     return redirect(ref or url_for("login"))
 
 
+def _on_landing_host() -> bool:
+    """True als dit verzoek een host uit LANDING_HOSTS bedient (poort genegeerd)."""
+    host = (request.host or "").split(":")[0].lower()
+    return host in LANDING_HOSTS
+
+
+def _safe_next(target) -> str | None:
+    """Alleen interne paden als `next`: begint met één "/", geen schema of host.
+
+    "//evil.example" is een protocol-relatieve URL en "/\\evil" wordt door
+    browsers ook als host gelezen -- beide vallen af. De oude code volgde
+    `next` ongecontroleerd (open redirect na login).
+    """
+    if not target or not isinstance(target, str):
+        return None
+    if not target.startswith("/") or target.startswith("//") or target.startswith("/\\"):
+        return None
+    parsed = urlparse(target)
+    if parsed.scheme or parsed.netloc:
+        return None
+    return target
+
+
 # ═══════════════════════════════════════════════════════════════
 # HULPFUNCTIES
 # ═══════════════════════════════════════════════════════════════
@@ -1179,9 +1219,12 @@ def login():
     # Authenticated users still go straight to the app.
     if request.method == "GET":
         if current_user.is_authenticated:
-            if current_user.role in ("admin", "site"):
-                return redirect(url_for("dashboard"))
-            return redirect(url_for("upload_file"))
+            return redirect(url_for("analyse"))
+        # v0.38.7: op de landing-hosts toont "/" geen loginformulier meer,
+        # dus krijgt /login daar zijn eigen pagina (login.html post naar de
+        # huidige URL, zodat ?next= van @login_required bewaard blijft).
+        if _on_landing_host():
+            return render_template("login.html")
         return redirect(url_for("index"))
     if request.method == "POST":
         username = request.form.get("username", "").strip()
@@ -1202,12 +1245,10 @@ def login():
             session["lang"] = user_lang
             session.modified = True
             flash(get_translation("login_success", user_lang), "success")
-            next_page = request.args.get("next")
+            next_page = _safe_next(request.args.get("next"))
             if next_page:
                 return redirect(next_page)
-            if user.role in ("admin", "site"):
-                return redirect(url_for("dashboard"))
-            return redirect(url_for("upload_file"))
+            return redirect(url_for("analyse"))
         logger.warning(f"Failed login for {username} from {request.remote_addr}")
         flash(get_translation("login_failed", session.get("lang", "en")), "danger")
         return redirect(url_for("index"))
@@ -1220,7 +1261,7 @@ def login():
 def logout():
     logout_user()
     flash(get_translation("logged_out", session.get("lang","en")), "info")
-    return redirect(url_for("login"))
+    return redirect(url_for("index"))
 
 
 @app.route("/register", methods=["GET","POST"])
@@ -1597,15 +1638,44 @@ def disclaimer_page():
     return render_template("disclaimer.html")
 
 
+def _render_landing():
+    """De tegelpagina van slaapkliniek.be (v0.38.7)."""
+    return render_template(
+        "landing.html",
+        verwijzers_url=VERWIJZERS_URL,
+        site_cfg=config.get("site", {}) if isinstance(config.get("site"), dict) else {},
+    )
+
+
 @app.route("/")
 def index():
-    # v0.11.0: unauthenticated visitors see the landing page (with embedded login)
-    # at "/" directly — no redirect to a separate /login screen.
+    # Ingelogd: rechtstreeks de app in, geen extra klik (v0.38.7).
+    # Niet ingelogd: op de landing-hosts de tegelpagina; elders (sleepai.be)
+    # zoals sinds v0.11.0 de productpagina met ingebedde login.
     if current_user.is_authenticated:
-        if current_user.role in ("admin", "site"):
-            return redirect(url_for("dashboard"))
-        return redirect(url_for("upload_file"))
+        return redirect(url_for("analyse"))
+    if _on_landing_host():
+        return _render_landing()
     return render_template("frontpage.html")
+
+
+@app.route("/analyse")
+@login_required
+def analyse():
+    """Canonieke startpagina van de analyse-app (v0.38.7).
+
+    Zelfde rolverdeling als de oude index: admin/site naar het dashboard,
+    gewone gebruikers naar de upload. /upload blijft bestaan als alias.
+    """
+    if current_user.role in ("admin", "site"):
+        return redirect(url_for("dashboard"))
+    return render_template("upload.html")
+
+
+@app.route("/start")
+def start():
+    """De landingspagina expliciet, ook ingelogd en op elke host (v0.38.7)."""
+    return _render_landing()
 
 
 @app.route("/upload", methods=["GET"])

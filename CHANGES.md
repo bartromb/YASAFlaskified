@@ -1,3 +1,25 @@
+# v0.38.7 — 2026-09-29 — landingspagina slaapkliniek.be met twee tegels
+
+**Op slaapkliniek.be** toont `/` aan een niet-ingelogde bezoeker nu een
+tegelpagina: **Onderzoek aanvragen** (huisartsen en verwijzers, naar
+`VERWIJZERS_URL/<taal>/`, de aparte statische verwijzerssite) en **EDF
+analyseren** (slaapprofessionals, naar `/analyse`, login vereist, met de
+rapport-disclaimer eronder). Ingelogd gaat `/` meteen door naar `/analyse`
+— geen extra klik. `/start` toont de tegelpagina altijd (link "Startpagina"
+in de voettekst). **Op sleepai.be/.eu** verandert niets: `/` blijft de
+productpagina met ingebedde login; de hosts staan in `LANDING_HOSTS`
+(config.json of `YASAFLASKIFIED_LANDING_HOSTS`, komma-gescheiden).
+
+Routing: `/analyse` is de canonieke start van de app (admin/site → dashboard,
+anders upload; `/upload` blijft als alias). Na login → `/analyse` of een
+**veilige** `next` (alleen interne paden — de oude code volgde elke URL, een
+open redirect). Na logout → `/`. Op de landing-hosts krijgt `/login` zijn
+eigen formulier (`login.html`), omdat `/` daar geen login meer draagt.
+In-app "terug"-links (kanaalkeuze, jobstatus, wachtwoord, navbar-merk) wijzen
+naar `/analyse`. Nieuwe i18n-keys `landing_*` in NL/FR/EN/DE; geen nieuwe
+fonts, CDN's of scripts op de tegelpagina. Tests: `tests/test_landing.py`.
+Geen wijziging aan tasks, psgscoring-aanroep of rapporten.
+
 # v0.38.6 — 2026-09-08 — landingspagina ververst (stond op v0.11) + README's
 
 Alleen tekst, geen gedragsverandering. De "Wat is nieuw"-sectie van
