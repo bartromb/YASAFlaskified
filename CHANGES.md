@@ -1,3 +1,16 @@
+# v0.38.8 — 2026-09-30 — numpy < 2 gepind (image-build brak op numpy 2 + scikit-learn 1.3)
+
+Geen gedragsverandering. De Docker-build van v0.38.7 faalde drie keer op de
+server met `ImportError: cannot import name 'ComplexWarning' from
+'numpy.core.numeric'`: pip loste `numpy>=1.26` op naar numpy 2.x, en de
+gepinde `scikit-learn>=1.3,<1.4` leest een naam die numpy 2 niet meer heeft.
+`requirements.txt` pint nu `numpy>=1.26,<2` (zelfde combinatie als de lokale
+testomgeving waarin de suite van 0.38.7 slaagde: numpy 1.26.4, sklearn 1.3.0,
+psgscoring 0.34.0). Runbook §2 stap 4 draait `up -d` voortaan alleen na een
+geslaagde build; op 30-09 liep `up -d` na de gefaalde builds en probeerde een
+niet-bestaande image te trekken (productie bleef op 0.38.6, alleen
+`APP_VERSION` in `.env` stond al op 0.38.7).
+
 # v0.38.7 — 2026-09-29 — landingspagina slaapkliniek.be met twee tegels
 
 **Op slaapkliniek.be** toont `/` aan een niet-ingelogde bezoeker nu een

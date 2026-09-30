@@ -157,11 +157,15 @@ find . -name __pycache__ -type d -prune -exec rm -rf {} + 2>/dev/null || true
 # dan is hij nog niet op elke CDN-rand aanwezig en faalt pip met een fout die
 # eruitziet als een echte fout. Op 26-08-2026 gebeurde dat drie keer op een rij,
 # elke keer opgelost door simpelweg opnieuw te bouwen. Vandaar de lus.
+gebouwd=0
 for poging in 1 2 3; do
-  docker compose build && break
+  docker compose build && gebouwd=1 && break
   echo "build-poging ${poging} mislukt (PyPI-propagatie?), opnieuw over 20 s"
   sleep 20
 done
+# Nooit up -d na een gefaalde build (30-09-2026: trok een niet-bestaande image
+# en liet .env op de nieuwe versie staan terwijl de oude containers doordraaiden).
+[ "$gebouwd" = 1 ] || { echo "BUILD MISLUKT — niets herstart"; exit 1; }
 docker compose up -d          # brief downtime while containers recreate
 '
 ```
