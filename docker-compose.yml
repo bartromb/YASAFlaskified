@@ -71,10 +71,11 @@ services:
     container_name: kliniek_app
     restart: unless-stopped
     ports:
-      # 30-09-2026: NPM forwardt slaapkliniek.be naar <host-IP>:8071, dus deze poort staat
-      # nog open naar buiten. Zodra NPM naar kliniek_app:5000 wijst (netwerk `proxy`
-      # hieronder), wordt dit "127.0.0.1:8071:5000" — eerder binden gaf een 502.
-      - "8071:5000"
+      # Alleen lokaal (runbook-controle `curl localhost:8071/`). Het publiek komt via Nginx
+      # Proxy Manager, dat sinds 30-09-2026 naar kliniek_app:5000 wijst over het netwerk
+      # `proxy` hieronder. Tot die dag stond dit op 0.0.0.0 en was de app over plain http
+      # bereikbaar; 127.0.0.1 binden vóór de NPM-omzetting gaf een 502.
+      - "127.0.0.1:8071:5000"
     command: >
       gunicorn
         --bind 0.0.0.0:5000
