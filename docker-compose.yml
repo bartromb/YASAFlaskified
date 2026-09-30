@@ -71,7 +71,7 @@ services:
     container_name: kliniek_app
     restart: unless-stopped
     ports:
-      - "8071:5000"
+      - "127.0.0.1:8071:5000"   # alleen lokaal: het publiek komt via Nginx Proxy Manager (https); 30-09-2026 stond dit open op 0.0.0.0
     command: >
       gunicorn
         --bind 0.0.0.0:5000

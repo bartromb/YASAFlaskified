@@ -1,5 +1,12 @@
 # v0.38.8 — 2026-09-30 — numpy < 2 gepind (image-build brak op numpy 2 + scikit-learn 1.3)
 
+**Addendum 30-09 (compose, zelfde image):** poort 8071 van de app stond op
+`0.0.0.0` en was van buitenaf bereikbaar over plain http, naast NPM en https om.
+Docker zet zijn regels vóór ufw, dus de firewall hielp niet. Nu
+`127.0.0.1:8071:5000`; het runbook-controlecommando `curl localhost:8071/`
+blijft werken. (NPM's beheerpoort 81 is dezelfde dag op localhost gezet, in
+`/data/npm/docker-compose.yml`; beheer via `ssh -L 8181:127.0.0.1:81`.)
+
 Geen gedragsverandering. De Docker-build van v0.38.7 faalde drie keer op de
 server met `ImportError: cannot import name 'ComplexWarning' from
 'numpy.core.numeric'`: pip loste `numpy>=1.26` op naar numpy 2.x, en de
