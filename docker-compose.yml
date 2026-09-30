@@ -71,7 +71,10 @@ services:
     container_name: kliniek_app
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8071:5000"   # alleen lokaal: het publiek komt via Nginx Proxy Manager (https); 30-09-2026 stond dit open op 0.0.0.0
+      # 30-09-2026: NPM forwardt slaapkliniek.be naar <host-IP>:8071, dus deze poort staat
+      # nog open naar buiten. Zodra NPM naar kliniek_app:5000 wijst (netwerk `proxy`
+      # hieronder), wordt dit "127.0.0.1:8071:5000" — eerder binden gaf een 502.
+      - "8071:5000"
     command: >
       gunicorn
         --bind 0.0.0.0:5000
@@ -97,6 +100,7 @@ services:
         condition: service_healthy
     networks:
       - kliniek_net
+      - proxy
     healthcheck:
       test: ["CMD", "python3", "-c",
              "import urllib.request; urllib.request.urlopen('http://localhost:5000/login')"]
@@ -147,3 +151,8 @@ volumes:
 networks:
   kliniek_net:
     driver: bridge
+  # Het netwerk van Nginx Proxy Manager (bestaat al op de server; op een andere host:
+  # `docker network create nginx-proxy` of PROXY_NETWORK=<naam> in .env).
+  proxy:
+    external: true
+    name: ${PROXY_NETWORK:-nginx-proxy}
