@@ -177,8 +177,8 @@ except Exception:                                            # pragma: no cover
     _REGISTRY = {}
 
 
-def _render_channel_select(user_profile):
-    """Render het echte template met een gebruiker die een profiel heeft."""
+def _render_channel_select(user_profile, default_profile="aasm_v3_rec"):
+    """Render het echte template met een gebruiker die een profiel heeft (v0.38.9: + applicatiestandaard)."""
     import os as _os
 
     from jinja2 import ChainableUndefined, ChoiceLoader, DictLoader, Environment, FileSystemLoader
@@ -205,7 +205,7 @@ def _render_channel_select(user_profile):
         available_profiles=[
             (n, p.display_name, p.aasm_version, p.family)
             for n, p in _REGISTRY.items()],
-        current_user=_U())
+        current_user=_U(), DEFAULT_PROFILE=default_profile)
 
 
 def _profile_select(html):
@@ -260,3 +260,30 @@ def test_a_profile_that_no_longer_exists_falls_back_to_the_default():
     """Verdwijnt een profiel uit de registry, dan mag de selectie niet leeg
     blijven — dan zou de eerste optie stilzwijgend winnen."""
     assert _selected(_render_channel_select("profiel_van_vroeger")) == "aasm_v3_rec"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  v0.38.9: de applicatiestandaard komt uit de configuratie
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_the_application_default_is_configurable_and_validated(monkeypatch):
+    """DEFAULT_SCORING_PROFILE uit config/env wordt de terugval; onzin valt luid terug op rec."""
+    from app import _default_scoring_profile
+    monkeypatch.setenv("YASAFLASKIFIED_DEFAULT_SCORING_PROFILE", "aasm_v3_breath")
+    assert _default_scoring_profile() == "aasm_v3_breath"
+    monkeypatch.setenv("YASAFLASKIFIED_DEFAULT_SCORING_PROFILE", "standard")      # legacy alias
+    assert _default_scoring_profile() == "aasm_v3_rec"
+    monkeypatch.setenv("YASAFLASKIFIED_DEFAULT_SCORING_PROFILE", "bestaat_niet")
+    assert _default_scoring_profile() == "aasm_v3_rec"
+    monkeypatch.setenv("YASAFLASKIFIED_DEFAULT_SCORING_PROFILE", "mesa_shhs")     # reproductieprofiel: niet selecteerbaar
+    assert _default_scoring_profile() == "aasm_v3_rec"
+    monkeypatch.delenv("YASAFLASKIFIED_DEFAULT_SCORING_PROFILE")
+    assert _default_scoring_profile() == "aasm_v3_rec"
+
+
+def test_the_dropdown_preselects_the_configured_default_unless_the_user_has_one():
+    assert _selected(_render_channel_select(None, "aasm_v3_breath")) == "aasm_v3_breath"
+    assert _selected(_render_channel_select(None, "aasm_v3_rec")) == "aasm_v3_rec"
+    assert _selected(_render_channel_select("aasm_v3_prob", "aasm_v3_breath")) == "aasm_v3_prob"
+    # onbekende configuratiewaarde in het template: terugval op rec, nooit niets
+    assert _selected(_render_channel_select(None, "bestaat_niet")) == "aasm_v3_rec"

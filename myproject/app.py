@@ -161,6 +161,32 @@ LANDING_HOSTS = _hosts_from_cfg(_cfg("LANDING_HOSTS", "slaapkliniek.be,www.slaap
 VERWIJZERS_URL = str(_cfg("VERWIJZERS_URL", "https://verwijzers.slaapkliniek.be")).rstrip("/")
 
 
+# v0.38.9: het applicatiestandaard-profiel uit de configuratie, één bron voor de
+# voorselectie in de kanaalkeuze (channel_select.html), de formulier-terugval
+# (upload) en de worker (tasks.py). Een gebruiker met `default_profile` (per
+# gebruiker, door een admin gezet) gaat daar nog altijd boven. Tot 0.38.8 stond
+# `aasm_v3_rec` op drie plaatsen hardgecodeerd; "standaard voor alle scoorders"
+# veranderen vroeg dan een release. config.json: "DEFAULT_SCORING_PROFILE";
+# env: YASAFLASKIFIED_DEFAULT_SCORING_PROFILE. Een naam die niet in de
+# psgscoring-registry staat (of een reproductie-/legacy-profiel) valt luid
+# terug op aasm_v3_rec: liever de bekende standaard dan een stille 500.
+def _default_scoring_profile() -> str:
+    gevraagd = str(_cfg("DEFAULT_SCORING_PROFILE", "aasm_v3_rec") or "aasm_v3_rec").strip()
+    try:
+        from psgscoring.profiles import PROFILES, resolve_profile_name
+        naam = resolve_profile_name(gevraagd)
+        if naam in PROFILES and PROFILES[naam].family in ("clinical", "exploratory"):
+            return naam
+        logging.getLogger(__name__).warning(
+            "DEFAULT_SCORING_PROFILE=%r is geen selecteerbaar profiel; terugval op aasm_v3_rec", gevraagd)
+    except Exception as e:  # noqa: BLE001 — registry niet laadbaar: standaard aanhouden
+        logging.getLogger(__name__).warning("DEFAULT_SCORING_PROFILE niet te valideren (%s); aasm_v3_rec", e)
+    return "aasm_v3_rec"
+
+
+app.config["DEFAULT_SCORING_PROFILE"] = _default_scoring_profile()
+
+
 # Paden
 app.config["UPLOAD_FOLDER"]    = _cfg("UPLOAD_FOLDER",    "/data/slaapkliniek/uploads")
 app.config["PROCESSED_FOLDER"] = _cfg("PROCESSED_FOLDER", "/data/slaapkliniek/processed")
@@ -807,6 +833,8 @@ def inject_i18n():
         "current_site": _site,
         "APP_VERSION":  APP_VERSION,
         "PSGSCORING_VERSION": PSGSCORING_VERSION,
+        # v0.38.9: applicatiestandaard-profiel (config), terugval van de dropdown
+        "DEFAULT_PROFILE": app.config.get("DEFAULT_SCORING_PROFILE", "aasm_v3_rec"),
         # De uploadpagina's kenden hun eigen, hardgecodeerde grens (500 MB in
         # upload.html) die los stond van MAX_CONTENT_LENGTH. Twee getallen die
         # hetzelfde horen te zijn maar apart onderhouden worden, lopen uiteen --
@@ -2390,7 +2418,7 @@ def start_analysis():
         "owner_username":   current_user.username,
         "language":         session.get("lang", "en"),
         # v0.8.22: scoring profiel
-        "scoring_profile":  request.form.get("scoring_profile", "standard"),
+        "scoring_profile":  request.form.get("scoring_profile") or app.config.get("DEFAULT_SCORING_PROFILE", "aasm_v3_rec"),
         # Split-night: "off" (default), "auto" of "manual". Bij "manual" geeft
         # de gebruiker het tijdstip van CPAP-start in minuten na opnamestart;
         # dat wint altijd van de detector, want wie erbij was weet het beter.

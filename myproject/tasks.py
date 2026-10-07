@@ -557,7 +557,7 @@ def run_analysis_job(job_id: str) -> dict:
             channel_map      = _pneumo_channel_map(pneumo_channels, emg_ch,
                                                    raw_pneumo),
             artifact_epochs  = art_epochs,
-            scoring_profile  = cfg.get("scoring_profile", "standard"),
+            scoring_profile  = cfg.get("scoring_profile") or os.environ.get("YASAFLASKIFIED_DEFAULT_SCORING_PROFILE", "standard"),
             split_night      = cfg.get("split_night", "off"),
             split_night_breakpoint_s = cfg.get("split_night_breakpoint_s"),
         )

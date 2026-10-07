@@ -1,3 +1,23 @@
+# v0.38.9 — 2026-10-07 — applicatiestandaard-profiel uit de configuratie
+
+**Nieuw: `DEFAULT_SCORING_PROFILE`** in `instance/config.json` (of
+`YASAFLASKIFIED_DEFAULT_SCORING_PROFILE`): het profiel dat de kanaalkeuze
+voorselecteert en waarop upload en worker terugvallen als er geen profiel is
+meegegeven. Tot 0.38.8 stond `aasm_v3_rec` daarvoor op drie plaatsen
+hardgecodeerd (template, upload-formulier, worker), zodat "een andere standaard
+voor alle scoorders" een release vroeg. Een per gebruiker ingesteld
+`default_profile` gaat er nog altijd boven. De waarde wordt bij het opstarten
+tegen de psgscoring-registry gecontroleerd: een onbekende naam of een
+reproductie-/legacy-profiel valt met een logwaarschuwing terug op
+`aasm_v3_rec`. **Gedragsneutraal zonder de sleutel** (default `aasm_v3_rec`).
+
+Aanleiding (07-10): Bart zet `aasm_v3_breath` voorlopig als standaard voor alle
+scoorders, na de PSG-IPA-profielvergelijking van dezelfde dag (`breath` het
+dichtst bij de twaalf scoorders op alle vijf de opnames) — mét de kanttekening
+dat `breath` op MESA (n=150) niet repliceerde en bij hoge AHI onderdetecteert.
+De keuze staat in de configuratie, niet in de code, en de rapporten tonen het
+gebruikte profiel in de herkomsttabel.
+
 # v0.38.8 — 2026-09-30 — numpy < 2 gepind (image-build brak op numpy 2 + scikit-learn 1.3)
 
 **Addendum 30-09 (compose, zelfde image):** poort 8071 van de app stond op

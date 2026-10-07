@@ -20,6 +20,8 @@
   "DEBUG": false,
   "_comment_LANDING_HOSTS": "Hosts waarop / de tegelpagina (verwijzers + analyse) toont aan niet-ingelogde bezoekers. Lijst of komma-string. Andere hosts (sleepai.be) houden de productpagina met login.",
   "LANDING_HOSTS": ["slaapkliniek.be", "www.slaapkliniek.be"],
+  "_comment_DEFAULT_SCORING_PROFILE": "Applicatiestandaard-profiel: voorgeselecteerd in de kanaalkeuze en terugval voor upload en worker. Een per-gebruiker ingesteld default_profile gaat erboven. Moet een clinical/exploratory-naam uit de psgscoring-registry zijn (bv. aasm_v3_rec, aasm_v3_breath); anders terugval op aasm_v3_rec met een waarschuwing in het log.",
+  "DEFAULT_SCORING_PROFILE": "aasm_v3_rec",
   "VERWIJZERS_URL": "https://verwijzers.slaapkliniek.be",
   "site": {
     "name": "",

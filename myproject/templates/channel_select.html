@@ -495,7 +495,8 @@
            standaard in plaats van op niets. #}
         {% set _user_prof = current_user.default_profile if current_user.is_authenticated else None %}
         {% set _known = available_profiles | map(attribute=0) | list %}
-        {% set _sel = _user_prof if _user_prof in _known else 'aasm_v3_rec' %}
+        {# v0.38.9: de terugval is de applicatiestandaard uit de configuratie (DEFAULT_SCORING_PROFILE), niet meer hardgecodeerd rec #}
+        {% set _sel = _user_prof if _user_prof in _known else (DEFAULT_PROFILE if DEFAULT_PROFILE in _known else 'aasm_v3_rec') %}
         {# v0.22.0: gegroepeerd op FAMILIE, niet meer alleen op de
            AASM-versiestring. Tot 0.21.0 stond elk exploratory profiel tussen de
            klinische in dezelfde optgroep, visueel niet te onderscheiden — en
@@ -557,7 +558,7 @@
               {% endfor %}
             </optgroup>
           {% else %}
-            <option value="aasm_v3_rec" selected>{{ t('profile_standard') }}</option>
+            <option value="{{ DEFAULT_PROFILE }}" selected>{{ t('profile_standard') }}</option>
           {% endif %}
         </select>
         <div class="form-text mt-2">{{ t('scoring_profile_hint') }}</div>
