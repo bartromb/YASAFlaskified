@@ -464,6 +464,31 @@ def provenance_rows(results, lang="nl"):
         rows.append([_lbl("prov_autonomic",
                           "Arousal-herordening (autonoom, Pleth/HR)"), _val])
 
+    # Arousal-detector (psgscoring 0.35.0): de arousalstap kan op het bevroren
+    # U-Net draaien (`arousal_detector="unet_v1"`, opt-in) en valt zonder
+    # EOG/kin-EMG of onnxruntime terug op de LGBM-keten mét reden. Welke van
+    # de twee de arousals leverde bepaalt de arousal-index en via de koppeling
+    # de hypopneeën en de RDI -- dat hoort in de Herkomst. Oudere resultaten
+    # dragen het veld niet en krijgen geen rij.
+    _det_sum = ((pneumo.get("arousal") or {}).get("summary") or {})
+    _det = _det_sum.get("detector") or _ar_sum.get("detector")
+    if _det:
+        _reason = (_det_sum.get("unet_fallback_reason")
+                   or _ar_sum.get("unet_fallback_reason"))
+        if str(_det) == "unet_v1":
+            _thr = _det_sum.get("unet_threshold", _ar_sum.get("unet_threshold"))
+            _val = _lbl("prov_arousal_detector_unet",
+                        "U-Net (unet_v1), werkpunt {thr}").format(
+                thr=(f"{float(_thr):.2f}".replace(".", ",")
+                     if isinstance(_thr, (int, float)) else "?"))
+        elif _reason:
+            _val = _lbl("prov_arousal_detector_fallback",
+                        "LGBM-keten (lgbm) — U-Net niet gebruikt: {reason}").format(
+                reason=_reason)
+        else:
+            _val = str(_det)
+        rows.append([_lbl("prov_arousal_detector", "Arousal-detector"), _val])
+
     # psgscoring kan de arousal-onsets over een vast aantal seconden schuiven
     # (`arousal_onset_offset_s`, default 0,0). Staat die vlag aan, dan liggen
     # de onsets in DIT rapport ergens anders dan de detector ze vond, en is de

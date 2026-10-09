@@ -4561,6 +4561,21 @@ TRANSLATIONS["prov_autonomic_off"] = {
     "fr": "inactif — {reason}",
     "en": "off — {reason}",
     "de": "aus — {reason}"}
+TRANSLATIONS["prov_arousal_detector"] = {
+    "nl": "Arousal-detector",
+    "fr": "Détecteur d'éveils",
+    "en": "Arousal detector",
+    "de": "Arousal-Detektor"}
+TRANSLATIONS["prov_arousal_detector_unet"] = {
+    "nl": "U-Net (unet_v1), werkpunt {thr}",
+    "fr": "U-Net (unet_v1), seuil {thr}",
+    "en": "U-Net (unet_v1), operating point {thr}",
+    "de": "U-Net (unet_v1), Arbeitspunkt {thr}"}
+TRANSLATIONS["prov_arousal_detector_fallback"] = {
+    "nl": "LGBM-keten (lgbm) — U-Net niet gebruikt: {reason}",
+    "fr": "Chaîne LGBM (lgbm) — U-Net non utilisé : {reason}",
+    "en": "LGBM chain (lgbm) — U-Net not used: {reason}",
+    "de": "LGBM-Kette (lgbm) — U-Net nicht verwendet: {reason}"}
 
 # v0.38.6 — landingspagina "Wat is nieuw" ververst (stond op v0.11).
 # Zes tegels op de stand van najaar 2026; zelfde toon als de rest van de
