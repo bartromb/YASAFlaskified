@@ -113,12 +113,18 @@ rsync -rlptz --checksum --no-owner --no-group --dry-run --itemize-changes \
   --exclude='.git' --exclude='.env' --exclude='config.json' \
   --exclude='instance' --exclude='uploads' \
   --exclude='processed' --exclude='logs' --exclude='__pycache__' --exclude='*.pyc' \
-  --exclude='.venv' --exclude='*.log' --exclude='node_modules' --exclude='.pytest_cache' \
+  --exclude='.venv' --exclude='.venv*' --exclude='*.log' --exclude='node_modules' --exclude='.pytest_cache' \
   --exclude='.ruff_cache' --exclude='.hypothesis' --exclude='.mypy_cache' \
   ~/CODE/YASAFlaskified/ root@65.108.230.243:/data/slaapkliniek/
 ```
 Inspect the list. Expect only code/docs to change — **never** `app.py`/compose/
 Dockerfile/nginx unintentionally, and **never** a data dir.
+
+> **`.venv*` staat in de lijst sinds 10-10-2026.** De sessie-omgeving op de
+> Z6 legt per repo een `.venv-claude/` aan; met alleen `--exclude='.venv'`
+> toonde de dry-run van de 0.38.10-uitrol die hele venv (honderden bestanden)
+> als nieuw voor productie. De dry-run ving het op — lees die lijst dus echt,
+> en verwacht alleen code/docs.
 
 > **`config.json` is nu ook uitgesloten.** De app leest zijn site-blok uit
 > `instance/config.json` (host-lokaal, bind-gemount) en anders uit
