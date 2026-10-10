@@ -1,6 +1,6 @@
-# v0.38.10 — 2026-10-10 — psgscoring 0.35.0: strictness 0,30, breath_dual klinisch, U-Net-herkomst
+# v0.38.10 — 2026-10-10 — psgscoring 0.35.1: strictness 0,30, breath_dual klinisch, U-Net-herkomst
 
-**Pin `psgscoring[ml]==0.35.0`.** Wat dat in het rapport verandert, zonder één regel YF-code:
+**Pin `psgscoring[ml]==0.35.1`** (0.35.0 is nooit op PyPI verschenen: de publicatiepoort wees de sdist af; 0.35.1 is inhoudelijk identiek). Wat dat in het rapport verandert, zonder één regel YF-code:
 - `aasm_v3_breath` en de productiestandaard `aasm_v3_breath_dual` scoren hypopneeën op
   werkpunt 0,30 in plaats van 0,50 (gebruikersbeslissing 09-10-2026 op MESA n=140: ΔF1
   +0,03 op 113/25, AHI-bias −2,7 → +0,5 /u, ernstklasse 78 → 83 van 140). **De AHI stijgt,
