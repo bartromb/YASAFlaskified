@@ -1,6 +1,6 @@
-# v0.38.11 — 2026-10-12 — psgscoring 0.36.0: codereview verwerkt, provenance zegt wat er liep
+# v0.38.11 — 2026-10-12 — psgscoring 0.36.1: codereview verwerkt, provenance zegt wat er liep
 
-**Pin `psgscoring[ml]==0.36.0`**, geen YF-code gewijzigd. De bibliotheek verwerkte een
+**Pin `psgscoring[ml]==0.36.1`** (0.36.0 is nooit op PyPI verschenen: de publicatiepoort wees de sdist af op een omgevingsafhankelijke testtelling; 0.36.1 is inhoudelijk identiek), geen YF-code gewijzigd. De bibliotheek verwerkte een
 leesreview van de hele codebase (psgscoring CHANGELOG v0.36.0; `docs/code_review_20261011.md`)
 en is vóór de release gemeten: op 30 held-out MESA-nachten en PSG-IPA verandert de scoring van
 apneus en hypopneeën **niet meetbaar** (ΔF1 ≤ 0,0014, AHI-bias ≤ 0,16 /u, beide profielen;
