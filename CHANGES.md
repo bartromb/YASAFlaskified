@@ -1,3 +1,31 @@
+# v0.38.11 — 2026-10-12 — psgscoring 0.36.0: codereview verwerkt, provenance zegt wat er liep
+
+**Pin `psgscoring[ml]==0.36.0`**, geen YF-code gewijzigd. De bibliotheek verwerkte een
+leesreview van de hele codebase (psgscoring CHANGELOG v0.36.0; `docs/code_review_20261011.md`)
+en is vóór de release gemeten: op 30 held-out MESA-nachten en PSG-IPA verandert de scoring van
+apneus en hypopneeën **niet meetbaar** (ΔF1 ≤ 0,0014, AHI-bias ≤ 0,16 /u, beide profielen;
+`docs/reviewvelden_hermeting_20261012.md`). Wat wél op het verslag verandert:
+
+- **OAHI (conf > 0,60), de betrouwbaarheidsbanden en `ahi_excl_noise`** tellen hypopneeën nu
+  altijd mee; dat getal springt omhoog naar ongeveer de AHI (was een boekhoudfout: hypopneeën
+  droegen hun subtypeerzekerheid en vielen onder 0,60 weg).
+- **PLM-index** kan op OSA-nachten dalen: beenbewegingen binnen een apneu/hypopneu tellen niet
+  (AASM-venster 0,5 s vóór onset tot 0,5 s na einde; was alleen rond het einde).
+- **ODI en T90/T80/T70** op de artefactvrije slaaptijd (zelfde noemer als de AHI) en over
+  geldige samples: iets hoger op nachten met artefact of uitval.
+- **Apneu-subtypes**: enkele gemengde apneus worden centraal (decompositie meet effort op de
+  envelope; MESA 13 op 2 370 onder `breath_dual`).
+- **NREM/REM-arousalindex** op `aasm_v3_rec` met Pleth + HR gevuld (was 0,0);
+  **CSR-periodiciteit** is de echte cyclusduur; **kanaalkwaliteit** niet meer "poor" op elke
+  opname met SpO2/houding.
+- Herkomst: `meta.channel_rates`, `channel_overrides_ignored`, `detector_fallback`, `models`
+  (sha256 van de drie modellen); `ahi_rule` zegt wat er liep (een gefaalde arousalstap geeft
+  `desat_only`). Patiëntnaam en geboortedatum staan niet meer in het bibliotheeklog.
+- Looptijd: `breath_dual` rekent de effort-enveloppen niet meer dubbel (+17 % weg).
+
+`rem_ahi`/`nrem_ahi` blijven als alias; `flow_reduction` is overal een verhouding (YF leest
+het niet). Rollback: image `yasaflaskified:0.38.10`.
+
 # v0.38.10 — 2026-10-10 — psgscoring 0.35.1: strictness 0,30, breath_dual klinisch, U-Net-herkomst
 
 **Pin `psgscoring[ml]==0.35.1`** (0.35.0 is nooit op PyPI verschenen: de publicatiepoort wees de sdist af; 0.35.1 is inhoudelijk identiek). Wat dat in het rapport verandert, zonder één regel YF-code:
