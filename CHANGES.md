@@ -1,3 +1,25 @@
+# v0.38.12 — 2026-10-18 — psgscoring 0.36.2: houding niet meer op duurkwantielen, dode thermistor ook additief geweerd, CPAP-druk gemeld
+
+**Pin `psgscoring[ml]==0.36.2`.** Twee defecten uit de laatste tien uploads
+(psgscoring `docs/positie_en_cpap_20261018.md`):
+
+- **Houding.** Het Somnomedics-kanaal `Pos.` (code 1–6 op 4 Hz) kwam na de volledige
+  EDF-lading met herbemonsteringsringing bij psgscoring aan; de niveaudetectie zag één
+  plateau en viel op **alle tien nachten** terug op de duurafhankelijke percentielmethode.
+  De niveaudetectie werkt nu op histogrampieken. Nieuw: de codetabel van de recorder kan mee
+  — per job (`position_code_map` in de jobconfig) of voor de hele installatie via de env
+  `YASAFLASKIFIED_POSITION_CODE_MAP` (JSON, bv. `{"1": "Upright", "2": "Supine", "3": "Left",
+  "4": "Right", "6": "Prone"}`). Met tabel wordt de methode `coded` en verdwijnt het
+  voorbehoud bij de positietabel in het PDF; zonder tabel blijft het een rangorde-gok met
+  dat voorbehoud. **De Somnomedics-legende moet nog ingevuld worden** (welke code is STA,
+  rug, links, rechts, buik).
+- **Dode thermistor onder CPAP.** Onder `aasm_v3_breath_dual` bleef een vlakke thermistor
+  (bandvermogen 0,00, onder een masker) de apneusensor: 165 valse apneus, OAHI 21,5 tegen
+  < 4 manueel. Een thermistor onder de dode vloer (0,20) wordt nu ook additief geweerd; op
+  die nacht geeft dat AHI 1,0. Het verslag toont de reden in het sensorblok.
+- **CPAP-druk.** `meta.cpap_pressure` meldt een drukkanaal (mbar/cmH2O) dat ≥ 30 min boven
+  4 staat; informatief, nog niet in het PDF en nog niet gebruikt door de split-night.
+
 # v0.38.11 — 2026-10-12 — psgscoring 0.36.1: codereview verwerkt, provenance zegt wat er liep
 
 **Pin `psgscoring[ml]==0.36.1`** (0.36.0 is nooit op PyPI verschenen: de publicatiepoort wees de sdist af op een omgevingsafhankelijke testtelling; 0.36.1 is inhoudelijk identiek), geen YF-code gewijzigd. De bibliotheek verwerkte een

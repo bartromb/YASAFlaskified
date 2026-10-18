@@ -178,6 +178,24 @@ def _pneumo_load_plan(pneumo_ch_list: list, eeg_ch: str | None,
         c for c in list(pneumo_ch_list) + [eeg_ch, emg_ch] + list(extra) if c))
 
 
+def _position_code_map(cfg: dict | None) -> dict | None:
+    """Codetabel van het houdingskanaal: per job (`position_code_map` in de
+    jobconfig) of voor de hele installatie (env YASAFLASKIFIED_POSITION_CODE_MAP
+    als JSON, bv. '{"1": "Upright", "2": "Supine", "3": "Left", "4": "Right",
+    "6": "Prone"}'). None = psgscoring raadt de rangorde en zegt dat erbij
+    (18-10-2026: op alle Somnomedics-nachten stond de methode op
+    `percentile`; zonder tabel blijft het een gok, mét tabel wordt het `coded`)."""
+    bron = (cfg or {}).get("position_code_map") or os.environ.get("YASAFLASKIFIED_POSITION_CODE_MAP")
+    if not bron:
+        return None
+    try:
+        d = json.loads(bron) if isinstance(bron, str) else dict(bron)
+        return {int(k): str(v) for k, v in d.items()} or None
+    except Exception as e:                                        # noqa: BLE001
+        logger.warning("[task] position_code_map onleesbaar, genegeerd: %s", e)
+        return None
+
+
 def _pneumo_channel_map(pneumo_channels: dict | None, emg_ch: str | None,
                         raw) -> dict:
     """De respiratoire map plus de kin-EMG, mits die er werkelijk in zit.
@@ -560,6 +578,7 @@ def run_analysis_job(job_id: str) -> dict:
             scoring_profile  = cfg.get("scoring_profile") or os.environ.get("YASAFLASKIFIED_DEFAULT_SCORING_PROFILE", "standard"),
             split_night      = cfg.get("split_night", "off"),
             split_night_breakpoint_s = cfg.get("split_night_breakpoint_s"),
+            position_code_map = _position_code_map(cfg),
         )
     finally:
         if _saved_lgbm_env is None:
