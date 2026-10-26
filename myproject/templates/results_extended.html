@@ -466,6 +466,11 @@
               {% set _vb_om = (rsum.n_obstructive|default(0)) + (rsum.n_mixed|default(0)) %}
               <tr><td>{{ t('pdf_ventilatory_burden') }}</td><td>{{ rsum.ventilatory_burden }} %{% if _vb_c <= _vb_om %} <span style="color:#6b7a99">(≤ 25%)</span>{% endif %}</td></tr>
               {% endif %}
+              {# Hartslagstijging per event (psgscoring > 0.36.2): alleen met een getal; None (geen pulse, ruw ECG) of een oudere pin = geen rij. #}
+              {% set _hrs = (pneumo.get('heart_rate', {}) or {}).get('summary', {}) or {} %}
+              {% if _hrs.get('event_hr_surge_bpm') is not none %}
+              <tr><td>{{ t('pdf_hr_surge') }}</td><td>{{ _hrs.get('event_hr_surge_bpm') }} bpm <span style="color:#6b7a99" title="{{ t('pdf_hr_surge_note') }}">(n={{ _hrs.get('event_hr_surge_n') }})</span></td></tr>
+              {% endif %}
               {% set ph = rsum.phenotypes or {} %}
               {% set posa = ph.positional_osa %}
               {% if posa %}

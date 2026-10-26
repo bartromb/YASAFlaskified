@@ -1957,6 +1957,34 @@ TRANSLATIONS.update(_PDF_V036)
 _PDF_PHENO_VB = {
     "pdf_ventilatory_burden": {"nl": "Ventilatory burden", "fr": "Charge ventilatoire",
                                "en": "Ventilatory burden", "de": "Ventilatorische Last"},
+    # Hartslagstijging per respiratoir event (Huang e.a., JACC Asia 2026):
+    # piekhartslag in het eventvenster min de gemiddelde hartslag van de 60 s
+    # ervoor, gemiddeld over de events. Geen referentiewaarde (het artikel
+    # werkt met cohortkwintielen); de rij verschijnt alleen als psgscoring het
+    # veld levert (vanaf de release ná 0.36.2).
+    "pdf_hr_surge": {"nl": "Hartslagstijging per event (HR surge)",
+                     "fr": "Accélération cardiaque par événement (HR surge)",
+                     "en": "Heart rate surge per event",
+                     "de": "Herzfrequenzanstieg pro Ereignis (HR surge)"},
+    "pdf_hr_surge_note": {
+        "nl": ("HR surge: piekhartslag in het eventvenster min de gemiddelde "
+               "hartslag van de 60 s vóór het event, gemiddeld over de "
+               "respiratoire events (Huang e.a., JACC Asia 2026). Geen "
+               "referentiewaarde; hoger betekent een sterkere autonome respons."),
+        "fr": ("HR surge : fréquence cardiaque maximale dans la fenêtre de "
+               "l'événement moins la fréquence moyenne des 60 s précédentes, "
+               "moyennée sur les événements respiratoires (Huang et al., JACC "
+               "Asia 2026). Pas de valeur de référence ; plus élevé = réponse "
+               "autonome plus forte."),
+        "en": ("HR surge: peak heart rate within the event window minus the "
+               "mean heart rate of the 60 s before the event, averaged over "
+               "respiratory events (Huang et al., JACC Asia 2026). No reference "
+               "value; higher means a stronger autonomic response."),
+        "de": ("HR surge: maximale Herzfrequenz im Ereignisfenster minus "
+               "mittlere Herzfrequenz der 60 s davor, gemittelt über die "
+               "respiratorischen Ereignisse (Huang et al., JACC Asia 2026). "
+               "Kein Referenzwert; höher bedeutet eine stärkere autonome "
+               "Antwort.")},
     "pdf_pheno_hdr":  {"nl": "Klinische fenotypes", "fr": "Phénotypes cliniques",
                        "en": "Clinical phenotypes", "de": "Klinische Phänotypen"},
     "pdf_pheno_posa": {"nl": "Positioneel OSAS (POSA)", "fr": "SAOS positionnel (POSA)",

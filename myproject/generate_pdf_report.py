@@ -3646,6 +3646,15 @@ def generate_pdf_report(results:dict, output_path:str,
                       if isinstance(e.get("min_spo2"), (int, float))]
         _ev_nadir_row = ([[t("pdf_event_spo2_nadir", lang),
                            f"{min(_ev_nadirs):.0f} %", ""]] if _ev_nadirs else [])
+        # Hartslagstijging per respiratoir event (psgscoring > 0.36.2,
+        # `heart_rate.summary.event_hr_surge_bpm`). Alleen een getal is een
+        # rij: de bibliotheek zet None mét reden (geen pulse-kanaal, ruw ECG)
+        # en een oudere pin levert het veld niet — dan geen rij, geen fout.
+        _hrs_val = ((pneumo.get("heart_rate") or {}).get("summary") or {}
+                    ).get("event_hr_surge_bpm")
+        _hrs_row = ([[t("pdf_hr_surge", lang), f"{_hrs_val} bpm", ""]]
+                    if isinstance(_hrs_val, (int, float))
+                    and not isinstance(_hrs_val, bool) else [])
         story.append(_tbl([t("pdf_param",lang),t("pdf_value",lang),"Ref"],[
             [t('pdf_mean_spo2', lang),  f"{ss.get('mean_spo2', ss.get('avg_spo2','—'))} %", "≥ 95%"],
             [t('pdf_baseline_spo2', lang),    f"{ss.get('baseline_spo2','—')} %",  ""],
@@ -3679,7 +3688,11 @@ def generate_pdf_report(results:dict, output_path:str,
              # v0.16.5: hide the ≤25% reference for central-dominant (CSAS) studies —
              # the VB norm is OBSTRUCTIVE-OSA-derived and not calibrated for central apnea.
              ("" if _is_central_dominant(rsum) else "≤ 25%")],
+            *_hrs_row,
         ],[8,4.5,4.5]))
+        if _hrs_row:
+            story.append(Paragraph(f"<i>{t('pdf_hr_surge_note', lang)}</i>",
+                                   styles["SM"])); sp(0.1)
         # Een leeg burden-veld is een uitspraak (plafond of onbruikbare
         # basislijn), geen vergeten cel — maar "—" zonder reden leest als het
         # tweede (91a67fa3). Alleen tonen wanneer het veld bewust None is.

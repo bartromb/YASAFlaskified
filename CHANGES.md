@@ -1,3 +1,24 @@
+# Ongereleased (werkboom na v0.38.12) — 2026-10-25 — HR surge in verslag en resultatenpagina; yasa < 0.8 gepind
+
+Geen versiebump, geen pin-wijziging (psgscoring blijft 0.36.2).
+
+**HR surge in verslag en resultatenpagina.** De PDF toont naast hypoxic en ventilatory burden de
+rij "Hartslagstijging per event (HR surge)" met een definitienoot (nl/fr/en/de) zodra psgscoring
+`heart_rate.summary.event_hr_surge_bpm` levert (release ná 0.36.2; Huang e.a., JACC Asia 2026);
+de resultatenpagina krijgt dezelfde rij met n. Zonder het veld of bij None (geen pulse-kanaal, ruw
+ECG) staat er geen rij en faalt niets — de huidige pin 0.36.2 kent het veld niet. Tests:
+`tests/test_hr_surge_delivery.py` (4; PDF-tekstlaag teruggelezen; faalden eerst).
+
+**`yasa>=0.7,<0.8`.** YASA 0.8.0 (2-10-2026) eist scikit-learn ≥ 1.6.1 en numpy ≥ 2.2.2 en
+verwijdert `predict_proba` en de 0.4.0-classifiers; tot nu hield alleen de pin
+`scikit-learn>=1.3,<1.4` de productie-image op 0.7.0. De overstap naar 0.8 is een staging-wissel
+en gaat als meting, niet als bijvangst van een build.
+
+**Vooruitblik (geen wijziging hier):** psgscoring zet in zijn werkboom `arousal_detector` op
+`unet_v1` als standaard voor de klinische profielen; bij de volgende pin verandert daarmee de
+arousal-index en de RDI op de verslagen (AHI nauwelijks). De PDF toont de detector al als
+provenance sinds 0.38.10.
+
 # v0.38.12 — 2026-10-18 — psgscoring 0.36.2: houding niet meer op duurkwantielen, dode thermistor ook additief geweerd, CPAP-druk gemeld
 
 **Pin `psgscoring[ml]==0.36.2`.** Twee defecten uit de laatste tien uploads
