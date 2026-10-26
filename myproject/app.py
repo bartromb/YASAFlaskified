@@ -2262,6 +2262,12 @@ def _header_identifiers(filepath: str):
         return None
 
 
+def _analysis_window_s(van, tot):
+    """Handmatig analysevenster voor een polygrafie (minuten na opnamestart) -> seconden of None."""
+    from polygraphy_window import analysis_window_s
+    return analysis_window_s(van, tot)
+
+
 def _split_breakpoint_s(waarde):
     """Minuten na opnamestart -> seconden, of None bij onbruikbare invoer.
 
@@ -2425,6 +2431,11 @@ def start_analysis():
         "split_night": request.form.get("split_night", "off"),
         "split_night_breakpoint_s": _split_breakpoint_s(
             request.form.get("split_night_minutes")),
+        # v0.39.0: handmatig analysevenster voor een polygrafie (lights off/on in minuten na
+        # opnamestart). Leeg = het automatische venster op signaalgeldigheid (psgscoring 0.37.0).
+        "analysis_window_s": _analysis_window_s(
+            request.form.get("analysis_from_minutes"),
+            request.form.get("analysis_to_minutes")),
         # v0.26.0: de studieprofiel-set wordt HIER opgelost, niet in de worker.
         # De weblaag heeft de database; een RQ-worker leest alleen zijn config.
         # Dat houdt `validate_study_set` op één plek in plaats van twee, en het

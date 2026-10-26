@@ -471,6 +471,11 @@
               {% if _hrs.get('event_hr_surge_bpm') is not none %}
               <tr><td>{{ t('pdf_hr_surge') }}</td><td>{{ _hrs.get('event_hr_surge_bpm') }} bpm <span style="color:#6b7a99" title="{{ t('pdf_hr_surge_note') }}">(n={{ _hrs.get('event_hr_surge_n') }})</span></td></tr>
               {% endif %}
+              {# Analysevenster van de polygrafieroute (psgscoring 0.37.0 / app 0.39.0): alleen als het venster werkelijk gebouwd is. #}
+              {% set _aw = (data.get('analysis_window') if data is mapping else none) or ((data.get('staging') or {}).get('analysis_window') if data is mapping else none) %}
+              {% if _aw and _aw.get('method') == 'signal_validity_window' %}
+              <tr><td>{{ t('pdf_analysis_window') }}</td><td>{{ '%d'|format(_aw.get('analysed_min') or 0) }} min <span style="color:#6b7a99" title="{{ t('pdf_analysis_window_note') }}">({{ t('pdf_aw_excluded') }} {{ '%d'|format((_aw.get('excluded_min') or {}).get('total') or 0) }} min)</span></td></tr>
+              {% endif %}
               {% set ph = rsum.phenotypes or {} %}
               {% set posa = ph.positional_osa %}
               {% if posa %}

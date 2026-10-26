@@ -1,6 +1,26 @@
-# Ongereleased (werkboom na v0.38.12) — 2026-10-25 — HR surge in verslag en resultatenpagina; yasa < 0.8 gepind
+# Ongereleased (werkboom na v0.38.12) — 2026-10-25/26 — analysevenster voor de polygrafieroute; HR surge in verslag en resultatenpagina; yasa < 0.8 gepind; U-Net-label per gewicht
 
-Geen versiebump, geen pin-wijziging (psgscoring blijft 0.36.2).
+Geen versiebump en geen pin-wijziging in deze commits (psgscoring blijft 0.36.2); de release als
+0.39.0 met pin 0.37.0 is een aparte stap.
+
+**Analysevenster voor de polygrafieroute (26-10).** De hPG-simulatie in psgscoring
+(`docs/hpg_simulatie_20261026.md`) mat dat de polygrafieroute van deze app (geen EEG → hypnogram
+"N2" × epochs, REI over de registratietijd) 56 % van haar events in waak scoort, twee derde ná het
+laatste slaapepoch, meestal op een losse sensor: op 150 MESA-nachten wijkt de REI op 85 nachten
+≥ 5 /u af van wat met een hypnogram zou komen. psgscoring 0.37.0 levert
+`polygraphy_hypnogram_from_raw` (venster op signaalgeldigheid: vlak flowsignaal of SpO2 buiten
+50–100 % aan begin/einde en runs ≥ 3 min daartussen vallen weg; prereg en meting
+`docs/waakpoort_preregistratie_20261026.md`). Nieuw hier: `polygraphy_window.py` bouwt dat
+hypnogram in `tasks.py` in plaats van "N2" × epochs; twee optionele velden op het uploadformulier
+(analyse van/tot, minuten na opnamestart = lights off/on van de technoloog); de PDF toont onder de
+REI-KPI's het venster, de analysetijd en de uitgesloten minuten per reden, de resultatenpagina
+een rij met tooltip (nl/fr/en/de). Op de huidige pin (0.36.2) of met
+`YASAFLASKIFIED_POLYGRAPHY_WINDOW=off` komt de oude route terug mét reden in de provenance —
+niets verandert tot de pin 0.37.0 wordt. Bij een PSG met hypnogram doet dit niets. Tests:
+`tests/test_polygraphy_window_delivery.py` (8; faalden eerst).
+
+**U-Net-label per gewicht.** psgscoring 0.37.0 kent naast `unet_v1` het opt-in gewicht `unet_v2`;
+de Herkomst-rij noemt nu het gewicht dat werkelijk draaide (`U-Net ({weight}), werkpunt {thr}`).
 
 **HR surge in verslag en resultatenpagina.** De PDF toont naast hypoxic en ventilatory burden de
 rij "Hartslagstijging per event (HR surge)" met een definitienoot (nl/fr/en/de) zodra psgscoring

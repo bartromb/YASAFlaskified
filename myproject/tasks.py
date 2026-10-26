@@ -433,6 +433,23 @@ def run_analysis_job(job_id: str) -> dict:
         logger.info("Geen pneumo-kanalen — gebruik staging-raw")
         raw_pneumo = raw_staging
         _pneumo_bron = "STAGING (geen pneumo-kanalen)"
+
+    # v0.39.0 — polygrafie: analysevenster op signaalgeldigheid in plaats van "N2" × epochs.
+    # De hPG-simulatie (psgscoring docs/hpg_simulatie_20261026.md) mat dat de oude route 56 %
+    # van haar events in waak scoort, twee derde ná het laatste slaapepoch, meestal op een losse
+    # sensor. psgscoring 0.37.0 bouwt het venster; op een oudere pin of met
+    # YASAFLASKIFIED_POLYGRAPHY_WINDOW=off komt de oude route terug mét reden in de provenance.
+    if is_polygraphy and raw_pneumo is not None:
+        from polygraphy_window import build_polygraphy_hypnogram
+        hypno, _aw = build_polygraphy_hypnogram(
+            raw_pneumo, _pneumo_channel_map(pneumo_channels, emg_ch, raw_pneumo),
+            n_epochs=len(hypno), manual_window_s=cfg.get("analysis_window_s"))
+        staging_result["hypnogram"] = hypno
+        staging_result["analysis_window"] = _aw
+        yasa_results["analysis_window"] = _aw
+        logger.info("[task] Polygrafie: analysevenster %s — %s min geanalyseerd, %s min uitgesloten",
+                    _aw.get("method"), _aw.get("analysed_min"),
+                    (_aw.get("excluded_min") or {}).get("total"))
     logger.info("[task] respiratoire analyse draait op raw=%s (%d kanalen)",
                 _pneumo_bron, len(getattr(raw_pneumo, "ch_names", []) or []))
 

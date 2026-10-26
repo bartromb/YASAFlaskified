@@ -1962,6 +1962,51 @@ _PDF_PHENO_VB = {
     # ervoor, gemiddeld over de events. Geen referentiewaarde (het artikel
     # werkt met cohortkwintielen); de rij verschijnt alleen als psgscoring het
     # veld levert (vanaf de release ná 0.36.2).
+    "pdf_analysis_window": {"nl": "Analysevenster (polygrafie)",
+                            "fr": "Fenêtre d'analyse (polygraphie)",
+                            "en": "Analysis window (polygraphy)",
+                            "de": "Analysefenster (Polygraphie)"},
+    "pdf_aw_excluded": {"nl": "uitgesloten", "fr": "exclu", "en": "excluded", "de": "ausgeschlossen"},
+    "pdf_analysis_window_note": {
+        "nl": ("Zonder EEG kiest de analyse haar venster op signaalgeldigheid: epochs met een vlak "
+               "flowsignaal of een SpO2 buiten 50–100 % aan begin en einde van de opname, en runs van "
+               "≥ 3 min daartussen, tellen niet mee (sensor los). De REI gaat over de geanalyseerde tijd. "
+               "Wakker liggen met een goed signaal herkent dit venster niet."),
+        "fr": ("Sans EEG, l'analyse choisit sa fenêtre selon la validité du signal : les époques à débit "
+               "plat ou SpO2 hors 50–100 % au début et à la fin, et les séquences ≥ 3 min entre les deux, "
+               "sont exclues (capteur détaché). L'IER porte sur le temps analysé."),
+        "en": ("Without EEG the analysis picks its window on signal validity: epochs with flat flow or "
+               "SpO2 outside 50–100 % at the start and end, and runs ≥ 3 min in between, are excluded "
+               "(sensor off). The REI is per hour of analysed time. Wake with a good signal is not detected."),
+        "de": ("Ohne EEG wählt die Analyse ihr Fenster nach Signalgültigkeit: Epochen mit flachem Fluss "
+               "oder SpO2 außerhalb 50–100 % am Anfang und Ende sowie Läufe ≥ 3 min dazwischen zählen "
+               "nicht (Sensor ab). Der REI bezieht sich auf die analysierte Zeit.")},
+    "pdf_analysis_window_line": {
+        "nl": ("Analysevenster {start}–{end} na start, analysetijd {analysed} min; uitgesloten (sensor los): "
+               "{before} min vóór, {after} min na, {inside} min binnen het venster{manual}"),
+        "fr": ("Fenêtre d'analyse {start}–{end} après le début, temps analysé {analysed} min ; exclu (capteur "
+               "détaché) : {before} min avant, {after} min après, {inside} min dans la fenêtre{manual}"),
+        "en": ("Analysis window {start}–{end} after start, analysed time {analysed} min; excluded (sensor off): "
+               "{before} min before, {after} min after, {inside} min inside the window{manual}"),
+        "de": ("Analysefenster {start}–{end} nach Start, analysierte Zeit {analysed} min; ausgeschlossen "
+               "(Sensor ab): {before} min davor, {after} min danach, {inside} min im Fenster{manual}")},
+    "pdf_analysis_window_manual": {"nl": "; handmatig venster {m0}–{m1}", "fr": " ; fenêtre manuelle {m0}–{m1}",
+                                   "en": "; manual window {m0}–{m1}", "de": "; manuelles Fenster {m0}–{m1}"},
+    "analysis_window_title": {"nl": "Analysevenster (alleen polygrafie)", "fr": "Fenêtre d'analyse (polygraphie seulement)",
+                              "en": "Analysis window (polygraphy only)", "de": "Analysefenster (nur Polygraphie)"},
+    "analysis_window_from": {"nl": "van (min na start)", "fr": "de (min après le début)", "en": "from (min after start)", "de": "von (min nach Start)"},
+    "analysis_window_to": {"nl": "tot (min na start)", "fr": "à (min après le début)", "en": "to (min after start)", "de": "bis (min nach Start)"},
+    "analysis_window_help": {
+        "nl": ("Leeg = automatisch venster op signaalgeldigheid (losse sensor aan begin/einde valt weg). "
+               "Ingevuld = lights off/on van de technoloog in minuten na opnamestart; daarbuiten telt niets. "
+               "Bij een PSG met hypnogram doet dit veld niets."),
+        "fr": ("Vide = fenêtre automatique selon la validité du signal. Rempli = extinction/allumage des "
+               "lumières en minutes après le début ; rien ne compte en dehors. Sans effet sur une PSG."),
+        "en": ("Empty = automatic window on signal validity (detached sensor at start/end is dropped). "
+               "Filled = lights off/on in minutes after recording start; nothing outside counts. "
+               "No effect on a PSG with a hypnogram."),
+        "de": ("Leer = automatisches Fenster nach Signalgültigkeit. Ausgefüllt = Licht aus/an in Minuten "
+               "nach Aufnahmestart; außerhalb zählt nichts. Ohne Wirkung bei einer PSG mit Hypnogramm.")},
     "pdf_hr_surge": {"nl": "Hartslagstijging per event (HR surge)",
                      "fr": "Accélération cardiaque par événement (HR surge)",
                      "en": "Heart rate surge per event",
@@ -4595,10 +4640,10 @@ TRANSLATIONS["prov_arousal_detector"] = {
     "en": "Arousal detector",
     "de": "Arousal-Detektor"}
 TRANSLATIONS["prov_arousal_detector_unet"] = {
-    "nl": "U-Net (unet_v1), werkpunt {thr}",
-    "fr": "U-Net (unet_v1), seuil {thr}",
-    "en": "U-Net (unet_v1), operating point {thr}",
-    "de": "U-Net (unet_v1), Arbeitspunkt {thr}"}
+    "nl": "U-Net ({weight}), werkpunt {thr}",
+    "fr": "U-Net ({weight}), seuil {thr}",
+    "en": "U-Net ({weight}), operating point {thr}",
+    "de": "U-Net ({weight}), Arbeitspunkt {thr}"}
 TRANSLATIONS["prov_arousal_detector_fallback"] = {
     "nl": "LGBM-keten (lgbm) — U-Net niet gebruikt: {reason}",
     "fr": "Chaîne LGBM (lgbm) — U-Net non utilisé : {reason}",

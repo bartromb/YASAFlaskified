@@ -531,6 +531,19 @@
             sel.addEventListener('change', toon); toon();
           })();
         </script>
+        {# v0.39.0: analysevenster voor een polygrafie. Leeg = automatisch venster op
+           signaalgeldigheid (psgscoring 0.37.0); ingevuld = lights off/on van de technoloog,
+           in minuten na opnamestart. Bij een PSG met hypnogram doet dit veld niets. #}
+        <div class="mb-3" id="analysisWindowBlok">
+          <label class="form-label"><strong>{{ t('analysis_window_title') }}</strong></label>
+          <div class="row g-2">
+            <div class="col"><input type="number" name="analysis_from_minutes" id="analysisFromMinutes"
+                 class="form-control" min="0" step="1" placeholder="{{ t('analysis_window_from') }}"></div>
+            <div class="col"><input type="number" name="analysis_to_minutes" id="analysisToMinutes"
+                 class="form-control" min="1" step="1" placeholder="{{ t('analysis_window_to') }}"></div>
+          </div>
+          <div class="form-text">{{ t('analysis_window_help') }}</div>
+        </div>
         <select name="scoring_profile" class="form-select" id="scoringProfile">
           {% if available_profiles %}
             <optgroup label="{{ t('prof_grp_v3') }}">

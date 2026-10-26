@@ -251,6 +251,32 @@ def _sev_with_syndrome(ahi, rsum, lang="nl"):
     syndrome = _apnea_syndrome(rsum, lang)
     return sev_text + " " + syndrome
 
+def _hhmm(sec):
+    try:
+        sec = int(round(float(sec)))
+    except (TypeError, ValueError):
+        return "?"
+    return f"{sec // 3600:02d}:{(sec % 3600) // 60:02d}"
+
+
+def _analysis_window_line(aw, lang):
+    """Eén regel onder de polygrafie-KPI's: venster, analysetijd, uitgesloten minuten per reden.
+    Niets bij afwezigheid, bij de oude route ("off"/"unavailable"/"error") of zonder venster ("none")."""
+    if not isinstance(aw, dict) or aw.get("method") != "signal_validity_window":
+        return None
+    ex = aw.get("excluded_min") or {}
+    manual = ""
+    if aw.get("manual_window_s"):
+        m0, m1 = aw["manual_window_s"]
+        manual = t("pdf_analysis_window_manual", lang).format(m0=_hhmm(m0), m1=_hhmm(m1))
+    return t("pdf_analysis_window_line", lang).format(
+        start=_hhmm(aw.get("window_start_s")), end=_hhmm(aw.get("window_end_s")),
+        analysed=f"{float(aw.get('analysed_min') or 0):.0f}",
+        before=f"{float(ex.get('before_window') or 0):.0f}",
+        after=f"{float(ex.get('after_window') or 0):.0f}",
+        inside=f"{float(ex.get('inside_window') or 0):.0f}", manual=manual)
+
+
 def _apnea_breakdown_line(rsum, lang="nl"):
     """
     Compacte breakdown-regel voor pagina 1:
@@ -475,10 +501,11 @@ def provenance_rows(results, lang="nl"):
     if _det:
         _reason = (_det_sum.get("unet_fallback_reason")
                    or _ar_sum.get("unet_fallback_reason"))
-        if str(_det) == "unet_v1":
+        if str(_det).startswith("unet_"):
             _thr = _det_sum.get("unet_threshold", _ar_sum.get("unet_threshold"))
             _val = _lbl("prov_arousal_detector_unet",
-                        "U-Net (unet_v1), werkpunt {thr}").format(
+                        "U-Net ({weight}), werkpunt {thr}").format(
+                weight=str(_det),
                 thr=(f"{float(_thr):.2f}".replace(".", ",")
                      if isinstance(_thr, (int, float)) else "?"))
         elif _reason:
@@ -2187,6 +2214,16 @@ def generate_pdf_report(results:dict, output_path:str,
             (f"{_den_h:.1f}" if isinstance(_den_h, (int, float)) else "—",
              t("pdf_rei_denominator", lang), "u", NAVY),
         ])); sp(0.15)
+        # v0.39.0: het analysevenster (psgscoring 0.37.0) hoort naast de noemer te staan,
+        # anders is "7,4 u" op een opname van 10 u onverklaard.
+        _aw_line = _analysis_window_line(results.get("analysis_window")
+                                         or (results.get("staging") or {}).get("analysis_window"), lang)
+        if _aw_line:
+            from reportlab.lib.styles import ParagraphStyle as _PS_aw
+            story.append(Paragraph(_aw_line, _PS_aw(
+                "AnalysisWindow_v0390", fontName="Helvetica", fontSize=8,
+                textColor=colors.HexColor("#6b7a99"), alignment=1, spaceAfter=2)))
+            sp(0.1)
     else:
         if _split_kpi:
             _dw = _split_kpi["waarde"]
