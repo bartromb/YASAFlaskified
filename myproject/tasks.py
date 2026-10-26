@@ -136,8 +136,16 @@ def _load_edf(edf_path: str, needed_channels: list,
 
 def _pneumo_load_plan(pneumo_ch_list: list, eeg_ch: str | None,
                       emg_ch: str | None,
-                      eeg_all: list | None = None) -> list:
+                      eeg_all: list | None = None,
+                      eog_ch: str | None = None) -> list:
     """Welke kanalen de pneumo-raw moet dragen.
+
+    Het EOG (26-10): psgscoring 0.37.0 zet het U-Net als standaard-
+    arousaldetector en dat heeft EEG + EOG + kin-EMG nodig; zonder EOG in de
+    raw valt het terug op de LGBM-keten (met reden in de provenance, maar
+    stil voor wie het verslag niet leest). Het geconfigureerde `eog_ch` gaat
+    daarom mee -- dezelfde fout als de kin-EMG hieronder, één kanaal verder
+    (klinische controle 26-10: terugval op 20/20 eigen nachten).
 
     De kin-EMG stond hier NIET bij. Gevolg: `raw_pneumo` bevatte het kanaal per
     constructie niet, `channel_map_from_user` in psgscoring negeert stil elke
@@ -175,7 +183,8 @@ def _pneumo_load_plan(pneumo_ch_list: list, eeg_ch: str | None,
             logger.warning("[task] arousal-afleidingen niet bepaald (%s); "
                            "alleen het stagings-EEG gaat mee", e)
     return list(dict.fromkeys(
-        c for c in list(pneumo_ch_list) + [eeg_ch, emg_ch] + list(extra) if c))
+        c for c in list(pneumo_ch_list) + [eeg_ch, emg_ch, eog_ch] + list(extra)
+        if c))
 
 
 def _position_code_map(cfg: dict | None) -> dict | None:
@@ -197,8 +206,8 @@ def _position_code_map(cfg: dict | None) -> dict | None:
 
 
 def _pneumo_channel_map(pneumo_channels: dict | None, emg_ch: str | None,
-                        raw) -> dict:
-    """De respiratoire map plus de kin-EMG, mits die er werkelijk in zit.
+                        raw, eog_ch: str | None = None) -> dict:
+    """De respiratoire map plus de kin-EMG en het EOG, mits die er werkelijk in zitten.
 
     De sleutel "emg" ontbrak volledig: YASAFlaskified gaf de respiratoire map
     door en psgscoring's `ch.get("emg")` was dus altijd None vanuit de
@@ -215,6 +224,13 @@ def _pneumo_channel_map(pneumo_channels: dict | None, emg_ch: str | None,
         logger.warning(
             "[task] kin-EMG %r zit niet in de pneumo-raw; niet in de "
             "channel_map gezet (psgscoring zoekt zelf verder)", emg_ch)
+    if eog_ch and eog_ch in getattr(raw, "ch_names", []):
+        m["eog"] = eog_ch
+    elif eog_ch:
+        logger.warning(
+            "[task] EOG %r zit niet in de pneumo-raw; niet in de channel_map "
+            "gezet (psgscoring zoekt zelf verder; zonder EOG valt het U-Net "
+            "terug op de LGBM-keten)", eog_ch)
     return m
 
 
@@ -414,9 +430,9 @@ def run_analysis_job(job_id: str) -> dict:
 
     if pneumo_ch_list:
         pneumo_needed = _pneumo_load_plan(pneumo_ch_list, eeg_ch, emg_ch,
-                                          eeg_all=_hdr_names)
-        logger.info("PNEUMO EDF laden (%d kanalen, kin-EMG=%s)...",
-                    len(pneumo_needed), emg_ch or "geen")
+                                          eeg_all=_hdr_names, eog_ch=eog_ch)
+        logger.info("PNEUMO EDF laden (%d kanalen, kin-EMG=%s, EOG=%s)...",
+                    len(pneumo_needed), emg_ch or "geen", eog_ch or "geen")
         try:
             raw_pneumo = _load_edf(edf_path, pneumo_needed, label="PNEUMO")
             _pneumo_bron = "PNEUMO"
@@ -442,7 +458,8 @@ def run_analysis_job(job_id: str) -> dict:
     if is_polygraphy and raw_pneumo is not None:
         from polygraphy_window import build_polygraphy_hypnogram
         hypno, _aw = build_polygraphy_hypnogram(
-            raw_pneumo, _pneumo_channel_map(pneumo_channels, emg_ch, raw_pneumo),
+            raw_pneumo, _pneumo_channel_map(pneumo_channels, emg_ch, raw_pneumo,
+                                            eog_ch=eog_ch),
             n_epochs=len(hypno), manual_window_s=cfg.get("analysis_window_s"))
         staging_result["hypnogram"] = hypno
         staging_result["analysis_window"] = _aw
@@ -590,7 +607,7 @@ def run_analysis_job(job_id: str) -> dict:
             raw              = raw_pneumo,
             hypno            = hypno,
             channel_map      = _pneumo_channel_map(pneumo_channels, emg_ch,
-                                                   raw_pneumo),
+                                                   raw_pneumo, eog_ch=eog_ch),
             artifact_epochs  = art_epochs,
             scoring_profile  = cfg.get("scoring_profile") or os.environ.get("YASAFLASKIFIED_DEFAULT_SCORING_PROFILE", "standard"),
             split_night      = cfg.get("split_night", "off"),
@@ -1265,7 +1282,7 @@ def run_profile_comparison(edf_path: str, results_dir: str, *,
         _cmp_names = None
     _pneumo_needed = _pneumo_load_plan(
         _detect_pneumo_channels(edf_path, pneumo_channels or {}),
-        eeg_ch, emg_ch, eeg_all=_cmp_names)
+        eeg_ch, emg_ch, eeg_all=_cmp_names, eog_ch=eog_ch)
     # Zonder eeg_ch en emg_ch draaide de arousal/RDI-arm van ELK profielrapport
     # zonder kin-EMG en mogelijk zonder arousal-EEG. De studie-RDI was daardoor
     # niet vergelijkbaar met de klinische run -- terwijl vergelijkbaarheid het
@@ -1297,7 +1314,8 @@ def run_profile_comparison(edf_path: str, results_dir: str, *,
         _t0 = time.monotonic()
         pneumo = run_pneumo_analysis(
             raw=raw, hypno=hypno,
-            channel_map=_pneumo_channel_map(pneumo_channels, emg_ch, raw),
+            channel_map=_pneumo_channel_map(pneumo_channels, emg_ch, raw,
+                                            eog_ch=eog_ch),
             scoring_profile=profile)
         _wall[profile] = round(time.monotonic() - _t0, 1)
         rsum = pneumo.get("respiratory", {}).get("summary", {})

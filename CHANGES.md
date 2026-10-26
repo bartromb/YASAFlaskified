@@ -1,3 +1,28 @@
+# v0.39.2 — 2026-10-26 — het EOG bereikt de pneumo-raw: het U-Net draait nu werkelijk
+
+**Gedragswijziging op elk PSG-verslag met een geconfigureerd EOG.** psgscoring 0.37.0 zet het
+U-Net (`unet_v1`) als standaard-arousaldetector op de klinische profielen, maar dat heeft
+EEG + EOG + kin-EMG nodig. `_pneumo_load_plan` laadde het stagings-EEG, de kin-EMG en de
+arousal-afleidingen — niet het `eog_ch` — en `_pneumo_channel_map` gaf geen sleutel `"eog"` door.
+psgscoring viel daardoor op elke productienacht terug op de LGBM-keten (Herkomst-rij: "LGBM-keten
+(lgbm) — U-Net niet gebruikt: geen EOG-kanaal"). De klinische controle van 26-10 op de 20 eigen
+PSG's (psgscoring `docs/unet_klinische_controle_eigen_psg_20261026.md`) mat die terugval op
+20/20: 0.39.0 en 0.39.1 leverden de arousalketen van vóór 25-10, niet de nieuwe standaard.
+Dezelfde fout als de kin-EMG van 24-08 (0.34.1), één kanaal verder.
+
+- `tasks.py`: `_pneumo_load_plan(..., eog_ch=)` en `_pneumo_channel_map(..., eog_ch=)`; alle vijf
+  aanroepen (klinisch pad, polygrafievenster, profielvergelijking) geven het `eog_ch` mee. Zonder
+  geconfigureerd EOG verandert niets; een EOG-naam die niet in de raw zit wordt niet geclaimd.
+- Tests: `tests/test_eog_reaches_unet.py` (6; vijf faalden eerst), waaronder een die elke aanroep
+  op het argument controleert. Suite 751 passed / 22 skipped; ruff 0.16.3 en mypy 2.3.0 schoon.
+- **Wat verandert op een verslag** (zelfde 20 nachten, `unet_v1` tegen de LGBM-keten, geen
+  menselijke referentie): apneus identiek 20/20; AHI mediaan +0,6 /u (bereik −3,2 … +9,7),
+  uitsluitend via arousal-hypopneeën (266 → 335 over 20 nachten); arousal-index mediaan +2,35 /u,
+  hoger op 13 van 19 nachten (R18 43 → 82); RDI mediaan +1,45; ernstklasse op 4 van 20 nachten
+  een stap omhoog rond de grenzen van 5 en 15 /u (drie grensgevallen). `unet_v2` blijft opt-in.
+- Rollback: image 0.39.1 (zelfde psgscoring 0.37.0, EOG niet geladen → LGBM-keten) of 0.38.12
+  (psgscoring 0.36.2); beide images blijven op de server staan.
+
 # v0.39.1 — 2026-10-26 — CI groen zonder gedragswijziging (testimport, ruff, mypy)
 
 Inhoudelijk gelijk aan 0.39.0 (pin `psgscoring[ml]==0.37.0`); alleen de CI-poort is gerepareerd.
