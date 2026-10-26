@@ -265,10 +265,20 @@ def test_hypoxic_burden_aanwezig_geen_reden_nodig(tmp_path):
 
 def test_besluit_meldt_experimenteel_profiel(tmp_path):
     """De subtitel zegt "(experimental)" maar het Besluit — wat de verwijzer
-    leest — verzweeg dat dit niet het klinische standaardprofiel is."""
-    txt = _render(_results(profiel="aasm_v3_breath_dual"), tmp_path)
+    leest — verzweeg dat dit niet het klinische standaardprofiel is.
+
+    Tot psgscoring 0.35.0 was `aasm_v3_breath_dual` het voorbeeld; sinds 0.35.1
+    (10-10-2026) is dat profiel `clinical` en de productiestandaard, dus mag het
+    Besluit er níet meer over waarschuwen. Het voorbeeld is nu `aasm_v3_prob`
+    (exploratory sinds zijn ontstaan); de familie komt uit psgscoring zelf."""
+    from psgscoring.profiles import PROFILES
+    assert PROFILES["aasm_v3_prob"].family == "exploratory"
+    txt = _render(_results(profiel="aasm_v3_prob"), tmp_path)
     assert "experimenteel profiel" in txt
-    assert "aasm_v3_breath_dual" in txt
+    assert "aasm_v3_prob" in txt
+    if PROFILES["aasm_v3_breath_dual"].family == "clinical":
+        txt2 = _render(_results(profiel="aasm_v3_breath_dual"), tmp_path, naam="dual.pdf")
+        assert "experimenteel profiel" not in txt2
 
 
 def test_besluit_zwijgt_over_profiel_bij_klinische_standaard(tmp_path):

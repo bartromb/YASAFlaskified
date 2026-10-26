@@ -1,7 +1,10 @@
-# Ongereleased (werkboom na v0.38.12) — 2026-10-25/26 — analysevenster voor de polygrafieroute; HR surge in verslag en resultatenpagina; yasa < 0.8 gepind; U-Net-label per gewicht
+# v0.39.0 — 2026-10-26 — pin psgscoring 0.37.0: U-Net-arousaldetector standaard, analysevenster voor de polygrafieroute, HR surge in verslag en resultatenpagina, yasa < 0.8
 
-Geen versiebump en geen pin-wijziging in deze commits (psgscoring blijft 0.36.2); de release als
-0.39.0 met pin 0.37.0 is een aparte stap.
+**Pin `psgscoring[ml]==0.37.0`.** Wat verandert er op een verslag: op de klinische profielen levert
+het U-Net (`unet_v1`) de arousals — arousal-index en RDI bewegen, de AHI nauwelijks (doorwerking
+09-10: AHI −0,2 /u mediaan op 100 MESA-nachten); een polygrafie krijgt een analysevenster op
+signaalgeldigheid in plaats van de hele registratietijd (de REI-noemer wordt de geanalyseerde tijd,
+het venster staat onder de KPI's); de rij HR surge verschijnt. Rollback: image 0.38.12 (pin 0.36.2).
 
 **Analysevenster voor de polygrafieroute (26-10).** De hPG-simulatie in psgscoring
 (`docs/hpg_simulatie_20261026.md`) mat dat de polygrafieroute van deze app (geen EEG → hypnogram
