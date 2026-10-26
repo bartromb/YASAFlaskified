@@ -1,3 +1,24 @@
+# v0.39.1 — 2026-10-26 — CI groen zonder gedragswijziging (testimport, ruff, mypy)
+
+Inhoudelijk gelijk aan 0.39.0 (pin `psgscoring[ml]==0.37.0`); alleen de CI-poort is gerepareerd.
+De CI stond sinds 12-10 rood zonder dat het opviel (runs op 51c8216, 2e0dfee, e268a90 en ab9deea):
+precies de genegeerde poort waar `pyproject.toml` zelf voor waarschuwt.
+
+- `myproject/tests/test_position_code_map.py` (0.38.12) importeerde `from myproject.tasks`; CI
+  draait `pytest myproject/tests` met `pythonpath = ["myproject"]` en zonder de repo-root op
+  `sys.path`, dus de collectie stopte vóór élke test. Nu `from tasks import …` zoals de andere
+  tests; ongebruikte imports weg.
+- ruff 0.16.3: f-string zonder placeholders in `generate_pdf_report.py` (sinds 08-09) en een
+  ongebruikt `import os` in `test_polygraphy_window_delivery.py`.
+- mypy 2.3.0 draaide nog nooit op deze code (de Lint-job stopte bij ruff): in
+  `generate_demo_edf.py` was de lusvariabele `et` afwisselend float en (onset, duur)-tupel; nu
+  een eigen `entry`, `et = float(entry)` in de andere tak. Zelfde uitvoer (rooktest: tupel geeft
+  het event met de opgegeven duur, een los getal een willekeurige).
+- Lokaal op CI-wijze: suite 745 passed / 22 skipped met psgscoring 0.37.0; ruff en mypy schoon.
+  CI op ce138a8 groen (Docker build, pytest, Lint). Een beschadigde lokale `.mypy_cache`
+  (sqlite "database disk image is malformed") geeft een mypy INTERNAL ERROR die geen typefout
+  is: draai met `--cache-dir` op een verse map.
+
 # v0.39.0 — 2026-10-26 — pin psgscoring 0.37.0: U-Net-arousaldetector standaard, analysevenster voor de polygrafieroute, HR surge in verslag en resultatenpagina, yasa < 0.8
 
 **Pin `psgscoring[ml]==0.37.0`.** Wat verandert er op een verslag: op de klinische profielen levert
