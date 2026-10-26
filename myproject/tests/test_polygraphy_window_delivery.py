@@ -7,7 +7,6 @@ oude pin (0.36.2) of met de vlag uit terugvallen op de oude route mét reden, en
 tonen in PDF en resultatenpagina. Het provenance-label voor de arousaldetector moet ook `unet_v2`
 kunnen noemen.
 """
-import os
 import sys
 from pathlib import Path
 

@@ -3009,7 +3009,7 @@ def generate_pdf_report(results:dict, output_path:str,
             if _n_ce > 0:
                 _pct_ce = 100.0 * _n_ce / _n_alle_ap if _n_alle_ap else 0.0
                 story.append(Paragraph(
-                    f"<i><font color='#e67e22'>"
+                    "<i><font color='#e67e22'>"
                     + t("pdf_central_review_note", lang).format(
                         n=_n_ce, pct=f"{_pct_ce:.0f}")
                     + "</font></i>", styles["SM"]))

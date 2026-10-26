@@ -227,14 +227,16 @@ def generate_demo_edf(duration_min: int = DEMO_DURATION_MIN,
 
     # Place events in sleep epochs (skip wake); default staat hierboven,
     # vóór de ademhalingsopbouw, zodat de modulatiedemping ze ook ziet.
-    for i, et in enumerate(event_times):
+    for i, entry in enumerate(event_times):
         # Een entry mag ook (onset_s, duur_s) zijn: de videoplaatsing legt
         # het event-einde precies op de epochgrens, zodat de arousal-burst
         # in de vólgende epoch valt en de staging van de event-epoch
         # (die alleen EEG/EOG/EMG leest) onaangeroerd blijft.
         dur = None
-        if isinstance(et, (tuple, list)):
-            et, dur = float(et[0]), float(et[1])
+        if isinstance(entry, (tuple, list)):
+            et, dur = float(entry[0]), float(entry[1])
+        else:
+            et = float(entry)
         if et + 30 > duration_min * 60:
             break
         if i % 5 == 0:

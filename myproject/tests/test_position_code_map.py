@@ -1,11 +1,12 @@
 """De codetabel van het houdingskanaal bereikt psgscoring: per job of via de
 installatie-env (18-10-2026)."""
 import json
-import os
+import sys
+from pathlib import Path
 
-import pytest
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from myproject.tasks import _position_code_map
+from tasks import _position_code_map  # noqa: E402
 
 
 def test_zonder_config_geen_tabel(monkeypatch):
