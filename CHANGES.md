@@ -1,3 +1,25 @@
+# v0.39.3 — 2026-11-02 — pin psgscoring 0.38.0: de klinische AHI deelt door de volle slaaptijd
+
+**Pin `psgscoring[ml]==0.38.0`.** Wat verandert er op een verslag: op elk profiel dat in de app
+gekozen kan worden (alle behalve de bevroren reproductieprofielen `mesa_shhs` en `chicago_1999`)
+is de noemer van de AHI-familie (AHI, OAHI, REM/NREM-AHI, indices per type), van de RERA-index en
+RDI, van de PLM-index en van de ODI voortaan de volle slaaptijd uit het hypnogram, niet meer de
+slaap zonder artefact-epochs; de interne arousal-index deelde al door de volle slaaptijd, zodat
+elke index op een nacht door dezelfde slaaptijd deelt (psgscoring-profielveld
+`index_denominator="sleep"`). Aanleiding: de laatste tien eigen PSG's (psgscoring
+`docs/laatste10_humaan_vs_machine_20261102.md`): de artefactdetectie vlagde 234–511 epochs per
+nacht (tot 43 %), waardoor de AHI tot een derde boven dezelfde telling op de volle TST lag
+(130,5 tegen 97,1 /u; 17,8 tegen 13,5; 22,0 tegen 18,6), terwijl een menselijke scoorder door de
+TST deelt. Beslissing Bart 02-11-2026: "AHI op volle TST benadert menselijke scoring. Pas toe."
+Verwacht effect: de AHI daalt op nachten met veel artefact-epochs en de ernstklasse kan zakken; op
+nachten met weinig artefact-epochs minder dan 2 %. De detectie zelf slaat artefact-epochs nog
+steeds over (open meetvraag in psgscoring, los van dit veld). Polygrafie ongewijzigd: het
+analysevenster staat als "W" in het hypnogram, niet als artefact, en deze route geeft geen
+artefact-epochs door. Geen app-codewijziging — resultatenpagina, PDF en Excel lezen `ahi_total`
+c.s. ongewijzigd; de respiratoire samenvatting in `_results.json` draagt nu ook
+`index_denominator`, `sleep_minutes` en `artifact_free_sleep_minutes`. Rollback: image 0.39.2
+(pin 0.37.0).
+
 # v0.39.2 — 2026-10-26 — het EOG bereikt de pneumo-raw: het U-Net draait nu werkelijk
 
 **Gedragswijziging op elk PSG-verslag met een geconfigureerd EOG.** psgscoring 0.37.0 zet het
