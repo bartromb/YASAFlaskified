@@ -74,13 +74,29 @@ warning points at did not exist. It does now:
 
 ```bash
 ssh root@65.108.230.243 'cd /data/slaapkliniek && \
+  du -sh --exclude=./uploads --exclude=./processed --exclude=./metingen . && \
+  df -h / | tail -1 && \
   tar czf /root/predeploy-$(date +%F-%H%M).tgz \
-    --exclude=uploads --exclude=processed .'
+    --exclude=./uploads --exclude=./processed --exclude=./metingen .'
 ```
 
 This captures `.env`, `myproject/.env`, `instance/`, `logs/` and the code —
 everything an `rsync` mistake can remove — without the multi-GB recording
-directories. Keep it until the deploy is verified healthy.
+directories. Keep it until the deploy is verified healthy. Expect tens of MB
+(30 MB on 2026-11-07); if `du` reports gigabytes, stop and find out what is
+new in the app dir before running the tar.
+
+> **`metingen/` staat sinds 07-11-2026 in de uitsluitingen.** Op productie
+> staat in de app-map een map `metingen/` (160 GB, herrekeningen van 03-11).
+> De oude opdracht sloot alleen `uploads` en `processed` uit en schreef het
+> archief naar `/root` op de systeemschijf `/` (58 GB vrij); bij de
+> 0.39.4-uitrol stond het archief na 5 minuten op 8,8 GB en is het gestopt.
+> Een volle `/` legt Docker en Redis plat (zie de gotcha "volle schijf leest
+> als Redis-fout"). De build hindert `metingen/` niet: Compose v5 bouwt via
+> BuildKit, dat uit de context alleen de COPY-paden overzet.
+> Stop een vastgelopen tar niet met `pkill -f` over ssh: het patroon raakt
+> ook de eigen ssh-shell (exit 255), zodat een opruimstap in dezelfde
+> opdracht niet meer draait.
 
 **Step 0b — check for jobs in flight, and wait for them.** `up -d` recreates
 the workers, and a job running at that moment loses its worker: it stays
@@ -114,7 +130,7 @@ rsync -rlptz --checksum --no-owner --no-group --dry-run --itemize-changes \
   --exclude='instance' --exclude='uploads' \
   --exclude='processed' --exclude='logs' --exclude='__pycache__' --exclude='*.pyc' \
   --exclude='.venv' --exclude='.venv*' --exclude='*.log' --exclude='node_modules' --exclude='.pytest_cache' \
-  --exclude='.ruff_cache' --exclude='.hypothesis' --exclude='.mypy_cache' \
+  --exclude='.ruff_cache' --exclude='.hypothesis' --exclude='.mypy_cache' --exclude='metingen' \
   ~/CODE/YASAFlaskified/ root@65.108.230.243:/data/slaapkliniek/
 ```
 Inspect the list. Expect only code/docs to change — **never** `app.py`/compose/
