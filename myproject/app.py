@@ -1083,54 +1083,6 @@ def job_access_required(view):
     return wrapper
 
 
-def _filter_studies_for_user(json_files: list) -> list:
-    """
-    Filter een lijst van result-bestanden op basis van site-toegang.
-
-    v0.8.11: Centrale filterfunctie voor dashboard EN results-history.
-    """
-    upload_folder = app.config["UPLOAD_FOLDER"]
-    filtered = []
-    for jf in json_files:
-        job_id = os.path.basename(jf).replace("_results.json", "")
-        try:
-            with open(jf) as f:
-                data = json.load(f)
-        except Exception:
-            continue
-
-        # Admin ziet alles
-        if current_user.role == "admin":
-            filtered.append((job_id, data, jf))
-            continue
-
-        stored_site = data.get("site_id")
-        owner       = data.get("owner_username", "")
-
-        # Geen site_id (legacy data van voor multi-site)
-        # v0.8.11 FIX: enkel admin ziet legacy studies zonder site_id.
-        # Site-managers en users zien alleen studies van hun eigen site.
-        if stored_site is None:
-            if current_user.role == "admin":
-                filtered.append((job_id, data, jf))
-            elif owner == current_user.username:
-                # Eigen studie, ook al heeft die geen site_id
-                filtered.append((job_id, data, jf))
-            continue
-
-        # Eigen site
-        if current_user.site_id is not None and int(stored_site) == current_user.site_id:
-            filtered.append((job_id, data, jf))
-            continue
-
-        # Eigen studie (voor users zonder site_id)
-        if owner == current_user.username:
-            filtered.append((job_id, data, jf))
-            continue
-
-    return filtered
-
-
 # ═══════════════════════════════════════════════════════════════
 # v0.12.0: ARCHIVERING + BULK-ONDERHOUD
 # ═══════════════════════════════════════════════════════════════
@@ -3572,157 +3524,222 @@ def _severity_class_plmi(value):
 # ordening.
 
 
+_DASH_VERSIE = 1          # ophogen wanneer de velden van een overzichtsrij veranderen
+_DASH_PER_PAGINA = 50
+
+
+def _dash_rij(job_id: str, data: dict) -> dict:
+    """Eén rij van het overzicht, alleen uit results.json (wat in de cache mag)."""
+    pat    = data.get("patient_info", {})
+    meta   = data.get("meta", {})
+    stats  = data.get("sleep_statistics", {}).get("stats", {})
+    rsum   = data.get("pneumo", {}).get("respiratory", {}).get("summary", {})
+    ssum   = data.get("pneumo", {}).get("spo2", {}).get("summary", {})
+    lsum   = data.get("pneumo", {}).get("plm", {}).get("summary", {})
+    scorer = pat.get("scorer", "")
+
+    ahi = rsum.get("ahi_total")
+    try:
+        ahi_f = float(ahi)
+        sev_cls = "success" if ahi_f < 5 else \
+                  "warning" if ahi_f < 15 else \
+                  "orange"  if ahi_f < 30 else "danger"
+    except Exception:
+        ahi_f = None; sev_cls = "secondary"
+
+    # ── Split-night: één AHI is hier misleidend ────
+    # De lijst toont per studie één getal. Op een split-night middelt
+    # dat de diagnostische uren met de titratie-uren, en juist het
+    # eerste deel draagt de diagnose. Toon dan beide helften in plaats
+    # van het gemiddelde; de ernstkleur volgt het deel ZONDER therapie.
+    _sn_d  = (data.get("pneumo", {}) or {}).get("split_night") or {}
+    _seg_d = _sn_d.get("segments") or {}
+    split_detected = bool(_sn_d.get("detected") and _seg_d)
+    ahi_diag = ahi_ther = None
+    ahi_diag_sev = None
+    if split_detected:
+        def _seg_ahi(naam):
+            _sg = _seg_d.get(naam) or {}
+            _v = (_sg.get("ahi_incl_uncertain")
+                  if (_sg.get("uncertain_fraction") or 0) >= 0.20
+                  else _sg.get("ahi"))
+            try:
+                return float(_v) if _v is not None else None
+            except (TypeError, ValueError):
+                return None
+        ahi_diag, ahi_ther = _seg_ahi("diagnostic"), _seg_ahi("therapeutic")
+        if ahi_diag is None:
+            split_detected = False
+        else:
+            sev_cls = "success" if ahi_diag < 5 else \
+                      "warning" if ahi_diag < 15 else \
+                      "orange"  if ahi_diag < 30 else "danger"
+            # De ernstwoord-string die de balk kleurt hoort bij het
+            # DIAGNOSTISCHE deel; `rsum["severity"]` slaat op de hele
+            # nacht en zou hier de verkeerde klasse tonen.
+            ahi_diag_sev = ("normal" if ahi_diag < 5 else
+                            "mild"   if ahi_diag < 15 else
+                            "moderate" if ahi_diag < 30 else "severe")
+    # ── v0.8.39: ODI + PLMi ────────────────────────
+    # ODI_3% (confirmed key: pneumo.spo2.summary.odi_3pct)
+    odi_val = ssum.get("odi_3pct")
+    try:
+        odi_f = float(odi_val) if odi_val is not None else None
+    except (TypeError, ValueError):
+        odi_f = None
+    odi_display = f"{odi_f:.1f}" if odi_f is not None else "—"
+    odi_cls = _severity_class_ahi_odi(odi_f)
+
+    # PLMi (confirmed key: pneumo.plm.summary.plm_index)
+    plmi_val = lsum.get("plm_index")
+    try:
+        plmi_f = float(plmi_val) if plmi_val is not None else None
+    except (TypeError, ValueError):
+        plmi_f = None
+    plmi_display = f"{plmi_f:.1f}" if plmi_f is not None else "—"
+    plmi_cls = _severity_class_plmi(plmi_f)
+
+    # ── v0.8.41: Signal quality badge ──────────────
+    sq_info    = _extract_signal_quality(data)
+    sq_level   = sq_info["level"]
+    sq_label   = sq_info["label"]
+    sq_tooltip = sq_info["tooltip"]
+
+    return {
+        "job_id":            job_id,
+        "patient_name":      pat.get("patient_name", "—"),
+        "patient_firstname": pat.get("patient_firstname", ""),
+        "patient_id":        pat.get("patient_id", "—"),
+        "dob":               pat.get("dob", "—"),
+        "duration_min":      meta.get("duration_min", "—"),
+        "tst":               stats.get("TST", "—"),
+        "se":                stats.get("SE", "—"),
+        "ahi":               f"{ahi_f:.1f}" if ahi_f is not None else "—",
+        "ahi_sev":           rsum.get("severity", "—"),
+        "split_night":       split_detected,
+        "ahi_diag":          f"{ahi_diag:.1f}" if ahi_diag is not None else "—",
+        "ahi_ther":          f"{ahi_ther:.1f}" if ahi_ther is not None else "—",
+        "ahi_diag_sev":      ahi_diag_sev or "—",
+        "sev_cls":           sev_cls,
+        # v0.18.3: uit de losse geschiedenislijst hierheen. Die lijst
+        # toonde dezelfde studies met net andere kolommen, dus je moest
+        # weten in welke van de twee views je moest kijken.
+        "oahi":              _fmt1(rsum.get("oahi")),
+        "central":           _fmt1(rsum.get("central_index")),
+        "sas_type":          _sas_type(rsum.get("ahi_total"),
+                                       rsum.get("central_index")),
+        "eeg_ch":            meta.get("eeg_channel", "—"),
+        "scorer":            scorer or "—",
+        "status":            "klaar",
+        # v0.8.39: ODI / PLMi
+        "odi":      odi_display,
+        "odi_cls":  odi_cls,
+        "plmi":     plmi_display,
+        "plmi_cls": plmi_cls,
+        # v0.8.41: Signal quality badge
+        "sq_level":   sq_level,
+        "sq_label":   sq_label,
+        "sq_tooltip": sq_tooltip,
+    }
+
+
+def _dash_samenvatting(job_id: str, jf: str) -> dict | None:
+    """Overzichtsrij + site/eigenaar uit `<job>_dash.json`; opnieuw opgebouwd zodra results.json
+    van grootte of wijzigingstijd verandert. Zo leest het overzicht een paar honderd bytes per
+    studie in plaats van het volledige results.json (mediaan 6,5 MB; 269 studies = 1,8 GB, 15 s)."""
+    try:
+        st = os.stat(jf)
+    except OSError:
+        return None
+    sleutel = [_DASH_VERSIE, st.st_size, st.st_mtime_ns]
+    cache = jf[: -len("_results.json")] + "_dash.json"
+    try:
+        with open(cache) as f:
+            c = json.load(f)
+        if c.get("sleutel") == sleutel:
+            return c
+    except (OSError, ValueError):
+        pass
+    try:
+        with open(jf) as f:
+            data = json.load(f)
+        c = {"sleutel": sleutel, "site_id": data.get("site_id"), "owner": data.get("owner_username", ""),
+             "rij": _dash_rij(job_id, data)}
+    except Exception as e:  # noqa: BLE001 — één kapotte studie mag het overzicht niet breken
+        logger.warning(f"Dashboard: {jf}: {e}")
+        return None
+    try:
+        tmp = f"{cache}.{os.getpid()}.tmp"
+        with open(tmp, "w") as f:
+            json.dump(c, f)
+        os.replace(tmp, cache)
+    except OSError as e:
+        logger.warning(f"Dashboard-cache niet geschreven ({cache}): {e}")
+    return c
+
+
+def _dash_zichtbaar(site_id, owner: str) -> bool:
+    """Toegang tot een studie in het overzicht (sinds v0.8.11): admin alles; studies zonder site_id
+    alleen voor admin en de eigenaar; anders de eigen site of de eigen studie."""
+    if current_user.role == "admin":
+        return True
+    if site_id is None:
+        return owner == current_user.username
+    if current_user.site_id is not None and int(site_id) == current_user.site_id:
+        return True
+    return owner == current_user.username
+
+
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    """Patiëntenoverzicht — gefilterd op rol."""
+    """Patiëntenoverzicht — gefilterd op rol, per 50, zoeken over alle studies (v0.39.4)."""
     import glob
+    from datetime import datetime as _dt
     upload_folder = app.config["UPLOAD_FOLDER"]
-    # v0.12.0: archief-weergave via ?archived=1
     show_archived = request.args.get("archived") == "1"
-    all_files = sorted(
-        glob.glob(os.path.join(upload_folder, "*_results.json")),
-        key=os.path.getmtime, reverse=True
-    )
-    # v0.12.0: site-filter VÓÓR de archief-split, zodat zowel de
-    # archief-badge als de lijst enkel tellen/tonen wat deze
-    # gebruiker mag zien (een site-manager mag het archief van
-    # andere sites niet meetellen).
-    accessible_all = _filter_studies_for_user(all_files)
-    n_archived = sum(1 for job_id, _data, _jf in accessible_all if _is_archived(job_id))
-    if show_archived:
-        accessible = [t for t in accessible_all if _is_archived(t[0])][:300]
-    else:
-        accessible = [t for t in accessible_all if not _is_archived(t[0])][:300]
+    q = (request.args.get("q") or "").strip()
+    all_files = sorted(glob.glob(os.path.join(upload_folder, "*_results.json")), key=os.path.getmtime, reverse=True)
+
+    zichtbaar = []          # (job_id, jf, samenvatting) die deze gebruiker mag zien
+    for jf in all_files:
+        job_id = os.path.basename(jf)[: -len("_results.json")]
+        c = _dash_samenvatting(job_id, jf)
+        if c and _dash_zichtbaar(c.get("site_id"), c.get("owner") or ""):
+            zichtbaar.append((job_id, jf, c))
+    n_archived = sum(1 for job_id, _jf, _c in zichtbaar if _is_archived(job_id))
+    lijst = [t for t in zichtbaar if _is_archived(t[0]) == show_archived]
+    if q:
+        ql = q.casefold()
+        def _past(t):
+            r = t[2]["rij"]
+            hooiberg = " ".join(str(r.get(k, "")) for k in ("patient_name", "patient_firstname", "patient_id", "dob", "scorer"))
+            datum = _dt.fromtimestamp(os.path.getmtime(t[1])).strftime("%d-%m-%Y")
+            return ql in f"{hooiberg} {datum} {t[0]}".casefold()
+        lijst = [t for t in lijst if _past(t)]
+
+    totaal = len(lijst)
+    n_osa = sum(1 for t in lijst if t[2]["rij"].get("sev_cls") in ("warning", "orange", "danger"))
+    n_paginas = max(1, -(-totaal // _DASH_PER_PAGINA))
+    pagina = min(max(1, request.args.get("p", default=1, type=int) or 1), n_paginas)
+    stuk = lijst[(pagina - 1) * _DASH_PER_PAGINA: pagina * _DASH_PER_PAGINA]
 
     studies = []
-    for job_id, data, jf in accessible:
-        try:
-            pat    = data.get("patient_info", {})
-            meta   = data.get("meta", {})
-            stats  = data.get("sleep_statistics", {}).get("stats", {})
-            rsum   = data.get("pneumo", {}).get("respiratory", {}).get("summary", {})
-            ssum   = data.get("pneumo", {}).get("spo2", {}).get("summary", {})
-            lsum   = data.get("pneumo", {}).get("plm", {}).get("summary", {})
-            scorer = pat.get("scorer", "")
-
-            ahi = rsum.get("ahi_total")
-            try:
-                ahi_f = float(ahi)
-                sev_cls = "success" if ahi_f < 5 else \
-                          "warning" if ahi_f < 15 else \
-                          "orange"  if ahi_f < 30 else "danger"
-            except Exception:
-                ahi_f = None; sev_cls = "secondary"
-
-            # ── Split-night: één AHI is hier misleidend ────
-            # De lijst toont per studie één getal. Op een split-night middelt
-            # dat de diagnostische uren met de titratie-uren, en juist het
-            # eerste deel draagt de diagnose. Toon dan beide helften in plaats
-            # van het gemiddelde; de ernstkleur volgt het deel ZONDER therapie.
-            _sn_d  = (data.get("pneumo", {}) or {}).get("split_night") or {}
-            _seg_d = _sn_d.get("segments") or {}
-            split_detected = bool(_sn_d.get("detected") and _seg_d)
-            ahi_diag = ahi_ther = None
-            ahi_diag_sev = None
-            if split_detected:
-                def _seg_ahi(naam):
-                    _sg = _seg_d.get(naam) or {}
-                    _v = (_sg.get("ahi_incl_uncertain")
-                          if (_sg.get("uncertain_fraction") or 0) >= 0.20
-                          else _sg.get("ahi"))
-                    try:
-                        return float(_v) if _v is not None else None
-                    except (TypeError, ValueError):
-                        return None
-                ahi_diag, ahi_ther = _seg_ahi("diagnostic"), _seg_ahi("therapeutic")
-                if ahi_diag is None:
-                    split_detected = False
-                else:
-                    sev_cls = "success" if ahi_diag < 5 else \
-                              "warning" if ahi_diag < 15 else \
-                              "orange"  if ahi_diag < 30 else "danger"
-                    # De ernstwoord-string die de balk kleurt hoort bij het
-                    # DIAGNOSTISCHE deel; `rsum["severity"]` slaat op de hele
-                    # nacht en zou hier de verkeerde klasse tonen.
-                    ahi_diag_sev = ("normal" if ahi_diag < 5 else
-                                    "mild"   if ahi_diag < 15 else
-                                    "moderate" if ahi_diag < 30 else "severe")
-            # ── v0.8.39: ODI + PLMi ────────────────────────
-            # ODI_3% (confirmed key: pneumo.spo2.summary.odi_3pct)
-            odi_val = ssum.get("odi_3pct")
-            try:
-                odi_f = float(odi_val) if odi_val is not None else None
-            except (TypeError, ValueError):
-                odi_f = None
-            odi_display = f"{odi_f:.1f}" if odi_f is not None else "—"
-            odi_cls = _severity_class_ahi_odi(odi_f)
-
-            # PLMi (confirmed key: pneumo.plm.summary.plm_index)
-            plmi_val = lsum.get("plm_index")
-            try:
-                plmi_f = float(plmi_val) if plmi_val is not None else None
-            except (TypeError, ValueError):
-                plmi_f = None
-            plmi_display = f"{plmi_f:.1f}" if plmi_f is not None else "—"
-            plmi_cls = _severity_class_plmi(plmi_f)
-
-            # ── v0.8.41: Signal quality badge ──────────────
-            sq_info    = _extract_signal_quality(data)
-            sq_level   = sq_info["level"]
-            sq_label   = sq_info["label"]
-            sq_tooltip = sq_info["tooltip"]
-
-            from datetime import datetime as _dt
-            analyse_date = _dt.fromtimestamp(os.path.getmtime(jf)).strftime("%d-%m-%Y %H:%M")
-
-            studies.append({
-                "job_id":            job_id,
-                "patient_name":      pat.get("patient_name", "—"),
-                "patient_firstname": pat.get("patient_firstname", ""),
-                "patient_id":        pat.get("patient_id", "—"),
-                "dob":               pat.get("dob", "—"),
-                "date":              analyse_date,
-                "duration_min":      meta.get("duration_min", "—"),
-                "tst":               stats.get("TST", "—"),
-                "se":                stats.get("SE", "—"),
-                "ahi":               f"{ahi_f:.1f}" if ahi_f is not None else "—",
-                "ahi_sev":           rsum.get("severity", "—"),
-                "split_night":       split_detected,
-                "ahi_diag":          f"{ahi_diag:.1f}" if ahi_diag is not None else "—",
-                "ahi_ther":          f"{ahi_ther:.1f}" if ahi_ther is not None else "—",
-                "ahi_diag_sev":      ahi_diag_sev or "—",
-                "sev_cls":           sev_cls,
-                # v0.18.3: uit de losse geschiedenislijst hierheen. Die lijst
-                # toonde dezelfde studies met net andere kolommen, dus je moest
-                # weten in welke van de twee views je moest kijken.
-                "oahi":              _fmt1(rsum.get("oahi")),
-                "central":           _fmt1(rsum.get("central_index")),
-                "sas_type":          _sas_type(rsum.get("ahi_total"),
-                                               rsum.get("central_index")),
-                "eeg_ch":            meta.get("eeg_channel", "—"),
-                "scorer":            scorer or "—",
-                "status":            "klaar",
-                "archived":          show_archived,  # v0.12.0
-                "has_pdf":     os.path.exists(os.path.join(upload_folder, f"{job_id}_rapport.pdf")),
-                "has_psg":     os.path.exists(os.path.join(upload_folder, f"{job_id}_rapport.pdf")),
-                "has_excel":   os.path.exists(os.path.join(upload_folder, f"{job_id}_rapport.xlsx")),
-                "has_edfplus": os.path.exists(os.path.join(upload_folder, f"{job_id}_scored.edf")),
-                # v0.8.39: ODI / PLMi
-                "odi":      odi_display,
-                "odi_cls":  odi_cls,
-                "plmi":     plmi_display,
-                "plmi_cls": plmi_cls,
-                # v0.8.41: Signal quality badge
-                "sq_level":   sq_level,
-                "sq_label":   sq_label,
-                "sq_tooltip": sq_tooltip,
-            })
-        except Exception as e:
-            logger.warning(f"Dashboard: {jf}: {e}")
+    for job_id, jf, c in stuk:
+        r = dict(c["rij"])
+        r.update(
+            date=_dt.fromtimestamp(os.path.getmtime(jf)).strftime("%d-%m-%Y %H:%M"),
+            archived=show_archived,
+            has_pdf=os.path.exists(os.path.join(upload_folder, f"{job_id}_rapport.pdf")),
+            has_psg=os.path.exists(os.path.join(upload_folder, f"{job_id}_rapport.pdf")),
+            has_excel=os.path.exists(os.path.join(upload_folder, f"{job_id}_rapport.xlsx")),
+            has_edfplus=os.path.exists(os.path.join(upload_folder, f"{job_id}_scored.edf")),
+        )
+        studies.append(r)
 
     sites = Site.query.order_by(Site.name).all() if current_user.is_admin else []
-    return render_template("dashboard.html", studies=studies, total=len(studies),
+    return render_template("dashboard.html", studies=studies, total=totaal, n_klaar=totaal, n_osa=n_osa,
+                           pagina=pagina, n_paginas=n_paginas, per_pagina=_DASH_PER_PAGINA, q=q,
                            sites=sites,
                            show_archived=show_archived,      # v0.12.0
                            n_archived=n_archived,

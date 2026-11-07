@@ -1,3 +1,26 @@
+# v0.39.4 — 2026-11-07 — het overzicht per 50 en zonder alle resultaten in te lezen
+
+**Probleem.** `/dashboard` werd traag naarmate er studies bijkwamen. Bij elke weergave werd voor
+ALLE studies het volledige `results.json` ingelezen, alleen om site, eigenaar en een tiental
+getallen te tonen. Op slaapkliniek.be (07-11): 269 studies, samen 1,8 GB (mediaan 6,5 MB per
+studie), ± 15 s parsen per weergave en per worker.
+
+**Oplossing.**
+- Per studie een klein overzichtsbestand `<job>_dash.json` met de rij en site/eigenaar. Het wordt
+  bij de eerste weergave aangemaakt en vernieuwd zodra `results.json` van grootte of
+  wijzigingstijd verandert (herrekening). Verwijderen van een studie neemt het mee (`<job>*`).
+  Rapportbestanden, archiefstatus en datum blijven live.
+- Paginering per 50, nieuwste eerst, met paginalinks onderaan; een te hoge pagina toont de laatste.
+- Zoeken: typen filtert de huidige pagina zoals voorheen; **Enter zoekt in alle studies** (naam,
+  voornaam, ID, geboortedatum, scorer, datum), ook in het archief.
+- De tellers bovenaan (totaal, OSA) tellen alle studies, niet de 50 op de pagina.
+- Toegangsregels ongewijzigd (admin alles; zonder site_id alleen admin en eigenaar; anders eigen
+  site of eigen studie); de oude `_filter_studies_for_user`, die enkel het overzicht nog
+  gebruikte, is vervangen door dezelfde regels op de samenvatting.
+
+Tests: `tests/test_dashboard_paginering.py` (6; drie faalden eerst, drie bewaken toegang, archief
+en tellers). Volledige suite 757 groen.
+
 # v0.39.3 — 2026-11-02 — pin psgscoring 0.38.0: de klinische AHI deelt door de volle slaaptijd
 
 **Pin `psgscoring[ml]==0.38.0`.** Wat verandert er op een verslag: op elk profiel dat in de app

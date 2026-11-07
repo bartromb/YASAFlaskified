@@ -103,8 +103,12 @@
     <div class="card-body py-2 px-3">
       <div class="row g-2 align-items-center">
         <div class="col-md-4">
-          <input type="text" id="searchInput" class="form-control form-control-sm"
-                 placeholder="🔍  {{ t('search_placeholder') }}">
+          <form method="get" action="{{ url_for('dashboard') }}" class="m-0" role="search">
+            {% if show_archived %}<input type="hidden" name="archived" value="1">{% endif %}
+            <input type="search" id="searchInput" name="q" value="{{ q }}" class="form-control form-control-sm"
+                   placeholder="🔍  {{ t('search_placeholder') }}"
+                   title="Typen filtert deze pagina; Enter zoekt in alle studies">
+          </form>
         </div>
         <div class="col-md-3">
           <select id="sevFilter" class="form-select form-select-sm">
@@ -124,17 +128,18 @@
           </select>
         </div>
         <div class="col-md-2 text-end">
+          {% if q %}<a class="btn btn-outline-secondary btn-sm" href="{{ url_for('dashboard', archived='1' if show_archived else None) }}">
+            <i class="bi bi-x-circle me-1"></i>{{ t('clear') }}</a>{% else %}
           <button class="btn btn-outline-secondary btn-sm" onclick="clearFilters()">
             <i class="bi bi-x-circle me-1"></i>{{ t('clear') }}
-          </button>
+          </button>{% endif %}
         </div>
       </div>
     </div>
   </div>
 
   {# ── Statistieken balk (v0.10.0 — compact stripe) ────── #}
-  {% set n_klaar = studies | selectattr("status","equalto","klaar") | list | length %}
-  {% set n_osa   = studies | selectattr("sev_cls","in",["warning","orange","danger"]) | list | length %}
+  {# v0.39.4: tellers over ALLE studies (server), niet over de 50 op deze pagina #}
   <div class="row g-2 mb-4">
     {% set stats = [
       ('T', total,    t('total_studies'), 'navy'),
@@ -429,6 +434,23 @@
       </div>
     </div>
   </div>
+
+  {# ── Paginering (v0.39.4): per 50, nieuwste eerst ─────── #}
+  {% if n_paginas > 1 %}
+  {% set basis = {'archived': '1' if show_archived else None, 'q': q or None} %}
+  <nav class="d-flex justify-content-between align-items-center mt-3" aria-label="Pagina's">
+    <small class="text-muted">{{ (pagina - 1) * per_pagina + 1 }}–{{ [pagina * per_pagina, total]|min }} van {{ total }}</small>
+    <ul class="pagination pagination-sm mb-0">
+      <li class="page-item {% if pagina == 1 %}disabled{% endif %}"><a class="page-link" href="{{ url_for('dashboard', p=pagina - 1, **basis) }}" aria-label="Vorige">&laquo;</a></li>
+      {% for n in range(1, n_paginas + 1) %}
+        {% if n == 1 or n == n_paginas or (n - pagina)|abs <= 2 %}
+        <li class="page-item {% if n == pagina %}active{% endif %}"><a class="page-link" href="{{ url_for('dashboard', p=n, **basis) }}" {% if n == pagina %}aria-current="page"{% endif %}>{{ n }}</a></li>
+        {% elif (n - pagina)|abs == 3 %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
+      {% endfor %}
+      <li class="page-item {% if pagina == n_paginas %}disabled{% endif %}"><a class="page-link" href="{{ url_for('dashboard', p=pagina + 1, **basis) }}" aria-label="Volgende">&raquo;</a></li>
+    </ul>
+  </nav>
+  {% endif %}
 
 </div><!-- /container -->
 
